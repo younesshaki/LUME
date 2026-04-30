@@ -1,0 +1,40 @@
+@import "../shared/sceneFonts.css";
+
+.scene12ContinueButton {
+  margin-top: 2.8rem;
+  min-width: 10rem;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.045);
+  cursor: default;
+  transition:
+    transform 220ms ease,
+    opacity 800ms ease;
+}
+
+.scene12ContinueButton.isReady {
+  cursor: pointer;
+}
+
+.scene12ContinueButton.isReady:hover {
+  transform: translateY(-2px);
+}
+
+.scene12ContinueButton__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 9.85rem;
+  padding: 0.85rem 2.4rem;
+  border-radius: inherit;
+  background: rgba(5, 5, 7, 0.9);
+  color: rgba(245, 238, 231, 0.76);
+  font-family: var(--scene-font-family);
+  font-size: clamp(0.78rem, 1.6vw, 0.9rem);
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.scene12ContinueButton.isReady .scene12ContinueButton__inner {
+  color: rgba(245, 238, 231, 0.92);
+}

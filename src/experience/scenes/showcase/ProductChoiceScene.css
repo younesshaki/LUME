@@ -1,0 +1,169 @@
+@import "../shared/sceneFonts.css";
+
+.productChoiceStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.productChoiceCarouselCorner {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.productChoiceCopy {
+  text-align: center;
+  min-width: 0;
+}
+
+.productChoiceCarousel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  animation: productChoiceModelFadeIn 1300ms ease 320ms both;
+}
+
+.productChoiceCarouselTrack {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.productChoiceArrow {
+  min-width: 0 !important;
+}
+
+.productChoiceArrow .productChoiceChoiceButton__inner {
+  min-width: 0;
+  padding: 0.85rem 1.2rem;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.productChoiceRewardText {
+  margin: 0;
+  font-family: "Higher Jump", Georgia, "Times New Roman", serif;
+  font-size: clamp(0.68rem, 1.5vw, 0.84rem);
+  font-style: italic;
+  letter-spacing: 0.07em;
+  color: rgba(245, 238, 231, 0.38);
+  text-align: center;
+}
+
+.productChoiceModelPreview {
+  width: min(33rem, 55vw);
+  min-width: 24rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  cursor: grab;
+  pointer-events: auto;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 52% 48%, rgba(245, 238, 231, 0.1), transparent 38%),
+    radial-gradient(circle at 50% 95%, rgba(0, 0, 0, 0.36), transparent 52%);
+}
+
+.productChoiceModelPreview:active {
+  cursor: grabbing;
+}
+
+.productChoiceModelPreview canvas {
+  outline: none;
+}
+
+.productChoiceChoiceButton {
+  min-width: 8.8rem;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+  transition:
+    transform 220ms ease,
+    opacity 220ms ease;
+}
+
+.productChoiceChoiceButton:hover {
+  transform: translateY(-2px);
+}
+
+.productChoiceChoiceButton--no {
+  opacity: 0.66;
+}
+
+.productChoiceChoiceButton--no:hover {
+  opacity: 0.9;
+}
+
+.productChoiceChoiceButton__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8.65rem;
+  padding: 0.85rem 2.4rem;
+  border-radius: inherit;
+  background: rgba(5, 5, 7, 0.92);
+  color: rgba(245, 238, 231, 0.9);
+  font-family: var(--scene-font-family);
+  font-size: clamp(0.85rem, 1.8vw, 1rem);
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.productChoiceChoiceButton--no .productChoiceChoiceButton__inner {
+  color: rgba(245, 238, 231, 0.58);
+  background: rgba(5, 5, 7, 0.82);
+}
+
+@keyframes productChoiceModelFadeIn {
+  from {
+    opacity: 0;
+    transform: translate3d(24px, 0, 0) scale(0.96);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@media (max-width: 600px) {
+  /* Stack carousel above the question/buttons so the 3D canvas never covers them */
+  .productChoiceOverlay {
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    padding: 2.5rem 1rem 2rem;
+    overflow-y: auto;
+    gap: 1.5rem;
+  }
+
+  .productChoiceCarouselCorner {
+    position: static;
+    bottom: auto;
+    right: auto;
+    order: -1; /* carousel appears above the question on mobile */
+  }
+
+  .productChoiceModelPreview {
+    width: min(18rem, 72vw);
+    min-width: 0;
+  }
+
+  .productChoiceChoiceButton {
+    min-width: 7.4rem;
+  }
+
+  .productChoiceChoiceButton__inner {
+    min-width: 7.25rem;
+    padding-inline: 1.7rem;
+  }
+}

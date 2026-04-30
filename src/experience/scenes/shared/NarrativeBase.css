@@ -1,0 +1,108 @@
+@import "./sceneFonts.css";
+
+.narrativeOverlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  transform-style: flat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8vh 10vw;
+  font-family: var(--scene-font-family);
+  color: #151515;
+  text-align: center;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  perspective: none;
+  z-index: 450;
+}
+
+.narrativeScene {
+  position: absolute;
+  width: min(900px, 92vw);
+  transform: translate3d(var(--scene-x, 0px), var(--scene-y, 0px), 0);
+  text-align: var(--scene-align, center);
+  opacity: 1;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.narrativeSceneInner {
+  opacity: 0;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity, filter;
+}
+
+.narrativeTitle {
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  color: rgba(10, 10, 10, 0.55);
+  margin-bottom: 24px;
+  transform-origin: center bottom;
+  font-weight: 700;
+}
+
+.narrativeLine {
+  font-size: clamp(18px, 2.2vw, 26px);
+  margin: 0 0 14px;
+  text-shadow: none;
+  transform-style: preserve-3d;
+  transform-origin: center top;
+}
+
+.narrativeLine:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .narrativeOverlay {
+    padding: 10vh 7vw 18vh;
+  }
+
+  .narrativeScene {
+    width: min(680px, 90vw);
+  }
+
+  .narrativeTitle {
+    font-size: 15px;
+    letter-spacing: 0.22em;
+    margin-bottom: 18px;
+  }
+
+  .narrativeLine {
+    font-size: clamp(16px, 3.8vw, 22px);
+    margin: 0 0 10px;
+    line-height: 1.55;
+  }
+}
+
+@media (max-width: 640px) {
+  .narrativeOverlay {
+    align-items: flex-start;
+    padding: 12vh 6vw 20vh;
+  }
+
+  .narrativeScene {
+    width: min(100%, 88vw);
+    transform: none;
+    left: auto;
+    top: auto;
+  }
+
+  .narrativeTitle {
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    margin-bottom: 14px;
+  }
+
+  .narrativeLine {
+    font-size: clamp(15px, 4.5vw, 20px);
+    line-height: 1.5;
+  }
+}

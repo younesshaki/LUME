@@ -1,0 +1,23 @@
+.flipWords {
+  position: relative;
+  display: inline-grid;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.flipWords__sizer {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.flipWords__word {
+  grid-area: 1 / 1;
+  display: inline-block;
+  color: #ff4d5f;
+  font-weight: 900;
+  text-shadow:
+    0 0 18px rgba(209, 31, 50, 0.38),
+    0 0 42px rgba(127, 11, 18, 0.34);
+  will-change: transform, opacity, filter;
+}

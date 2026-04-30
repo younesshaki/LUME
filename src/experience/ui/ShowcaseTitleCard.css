@@ -1,0 +1,114 @@
+.showcaseTitleCard {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top, rgba(123, 31, 47, 0.25), transparent 38%),
+    linear-gradient(180deg, #050507 0%, #09070a 45%, #020203 100%);
+}
+
+.showcaseTitleCard__image {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: saturate(0.45) brightness(0.4);
+  transform: scale(1.03);
+}
+
+.showcaseTitleCard__overlay {
+  position: absolute;
+  inset: 0;
+  background: none;
+}
+
+.showcaseTitleCard__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  color: #f5efe7;
+}
+
+.showcaseTitleCard__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 231, 0.58);
+}
+
+.showcaseTitleCard__title {
+  margin: 0;
+  font-family: var(--experience-font-family);
+  font-size: clamp(3rem, 9vw, 6.8rem);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.showcaseTitleCard__text {
+  margin: 0;
+  max-width: 32rem;
+  font-size: clamp(0.98rem, 2.3vw, 1.2rem);
+  line-height: 1.8;
+  color: rgba(245, 239, 231, 0.7);
+}
+
+.showcaseTitleCard__play {
+  margin-top: 1.5rem;
+  min-width: 10.2rem;
+  border-color: rgba(245, 239, 231, 0.2);
+  background: rgba(245, 239, 231, 0.06);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
+}
+
+.showcaseTitleCard__play:hover {
+  transform: translateY(-2px);
+}
+
+.showcaseTitleCard__playInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 10rem;
+  padding: 0.95rem 1.8rem;
+  border-radius: inherit;
+  background: rgba(7, 7, 9, 0.92);
+  color: #f5efe7;
+  font-size: 0.82rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+}
+
+.showcaseTitleCard__play:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .showcaseTitleCard__content {
+    padding: 1.5rem;
+  }
+
+  .showcaseTitleCard__play {
+    width: 100%;
+    max-width: 18rem;
+  }
+
+  .showcaseTitleCard__playInner {
+    width: 100%;
+  }
+}

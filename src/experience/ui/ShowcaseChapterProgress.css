@@ -1,0 +1,55 @@
+.showcaseChapterProgress {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 2300;
+  pointer-events: none;
+  opacity: 0.96;
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.34));
+}
+
+.progressBarCircle {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: var(--progress-circle-size);
+  height: var(--progress-circle-size);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(7, 7, 9, 0.82), rgba(7, 7, 9, 0.46) 64%, transparent 70%),
+    rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.progressBarCircle svg {
+  grid-area: 1 / 1;
+  transform: rotate(-90deg);
+}
+
+.progressBarCircle__track {
+  stroke: rgba(245, 238, 231, 0.16);
+}
+
+.progressBarCircle__value {
+  stroke: rgba(245, 238, 231, 0.92);
+  transition: stroke-dashoffset 720ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.progressBarCircle__text {
+  grid-area: 1 / 1;
+  color: rgba(245, 238, 231, 0.88);
+  font-family: var(--experience-font-family);
+  font-size: var(--progress-circle-text);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  transform: translateY(1px);
+}
+
+@media (max-width: 640px) {
+  .showcaseChapterProgress {
+    right: 16px;
+    bottom: 16px;
+  }
+}

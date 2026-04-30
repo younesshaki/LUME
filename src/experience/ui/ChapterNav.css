@@ -1,0 +1,462 @@
+.chapterNav {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1rem;
+  z-index: 1000;
+  align-items: center;
+  flex-wrap: nowrap;
+  justify-content: center;
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+}
+
+.chapterNav--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chapterNavLabel {
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chapterNavLabelText {
+  color: #0f0f12;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(15, 15, 20, 0.2);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 12px rgba(15, 15, 20, 0.12);
+}
+
+.chapterNavSelectWrap {
+  --h-button: 48px;
+  --w-button: 220px;
+  --round: 0.75rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  transition: all 0.25s ease;
+  background: radial-gradient(
+      65.28% 65.28% at 50% 100%,
+      rgba(80, 80, 88, 0.8) 0%,
+      rgba(80, 80, 88, 0) 100%
+    ),
+    linear-gradient(0deg, #2a2a2f, #2a2a2f);
+  border-radius: var(--round);
+  border: none;
+  outline: none;
+  padding: 0;
+  min-height: var(--h-button);
+  min-width: var(--w-button);
+  box-shadow: 0 8px 20px rgba(116, 24, 24, 0.35);
+}
+.chapterNavSelectWrap::before,
+.chapterNavSelectWrap::after {
+  content: "";
+  position: absolute;
+  inset: var(--space);
+  transition: all 0.5s ease-in-out;
+  border-radius: calc(var(--round) - var(--space));
+  z-index: 0;
+}
+.chapterNavSelectWrap::before {
+  --space: 1px;
+  background: linear-gradient(
+    177.95deg,
+    rgba(255, 255, 255, 0.19) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+.chapterNavSelectWrap::after {
+  --space: 2px;
+  background: radial-gradient(
+      65.28% 65.28% at 50% 100%,
+      rgba(80, 80, 88, 0.8) 0%,
+      rgba(80, 80, 88, 0) 100%
+    ),
+    linear-gradient(0deg, #2a2a2f, #2a2a2f);
+}
+
+.chapterNavSelectButton {
+  z-index: 2;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: var(--h-button);
+  padding: 12px 44px 12px 18px;
+  background: transparent;
+  color: #fff;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chapterNavSelectButton:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.chapterNavSelectValue {
+  flex: 1;
+  text-align: left;
+}
+
+.chapterNavSelectWrap:active {
+  transform: scale(0.98);
+}
+
+.chapterNavSelectWrap.isOpen {
+  box-shadow: 0 12px 24px rgba(15, 15, 20, 0.45);
+}
+
+.chapterNavSelectWrap.isDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chapterNavSelectMenu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: 100%;
+  background: #2a2a2f;
+  border-radius: 0.65rem;
+  padding: 6px;
+  box-shadow: 0 12px 24px rgba(10, 10, 14, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.chapterNavSelectOption {
+  padding: 10px 12px;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5f5f7;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.chapterNavSelectOption:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.chapterNavSelectOption.isSelected {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.chapterNavSelectChevron {
+  z-index: 2;
+  position: absolute;
+  right: 14px;
+  pointer-events: none;
+  width: 18px;
+  height: 18px;
+  color: #fff;
+  opacity: 0.9;
+}
+
+.chapterNavButtonRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* === Fancy button style (user-provided) === */
+.button {
+  --h-button: 48px;
+  --w-button: 102px;
+  --round: 0.75rem;
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  background: radial-gradient(
+      65.28% 65.28% at 50% 100%,
+      rgba(155, 13, 13, 0.8) 0%,
+      rgba(223, 113, 255, 0) 100%
+    ),
+    linear-gradient(0deg, #f85a5a, #f85a5a);
+  border-radius: var(--round);
+  border: none;
+  outline: none;
+  padding: 12px 18px;
+  min-height: var(--h-button);
+  min-width: var(--w-button);
+}
+.button::before,
+.button::after {
+  content: "";
+  position: absolute;
+  inset: var(--space);
+  transition: all 0.5s ease-in-out;
+  border-radius: calc(var(--round) - var(--space));
+  z-index: 0;
+}
+.button::before {
+  --space: 1px;
+  background: linear-gradient(
+    177.95deg,
+    rgba(255, 255, 255, 0.19) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+.button::after {
+  --space: 2px;
+  background: radial-gradient(
+      65.28% 65.28% at 50% 100%,
+      rgba(255, 113, 113, 0.8) 0%,
+      rgba(223, 113, 255, 0) 100%
+    ),
+    linear-gradient(0deg, #dd0606, #f85a5a);
+}
+.button:active {
+  transform: scale(0.95);
+}
+
+.fold {
+  z-index: 1;
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 1rem;
+  width: 1rem;
+  display: inline-block;
+  transition: all 0.5s ease-in-out;
+  background: radial-gradient(
+    100% 75% at 55%,
+    rgba(128, 10, 10, 0.8) 0%,
+    rgba(223, 113, 255, 0) 100%
+  );
+  box-shadow: 0 0 3px black;
+  border-bottom-left-radius: 0.5rem;
+  border-top-right-radius: var(--round);
+}
+.fold::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150%;
+  height: 150%;
+  transform: rotate(45deg) translateX(0%) translateY(-18px);
+  background-color: #e8e8e8;
+  pointer-events: none;
+}
+.button:hover .fold {
+  margin-top: -1rem;
+  margin-right: -1rem;
+}
+
+.points_wrapper {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.points_wrapper .point {
+  bottom: -10px;
+  position: absolute;
+  animation: floating-points infinite ease-in-out;
+  pointer-events: none;
+  width: 2px;
+  height: 2px;
+  background-color: #fff;
+  border-radius: 9999px;
+}
+@keyframes floating-points {
+  0% {
+    transform: translateY(0);
+  }
+  85% {
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(-55px);
+    opacity: 0;
+  }
+}
+.points_wrapper .point:nth-child(1) {
+  left: 10%;
+  opacity: 1;
+  animation-duration: 2.35s;
+  animation-delay: 0.2s;
+}
+.points_wrapper .point:nth-child(2) {
+  left: 30%;
+  opacity: 0.7;
+  animation-duration: 2.5s;
+  animation-delay: 0.5s;
+}
+.points_wrapper .point:nth-child(3) {
+  left: 25%;
+  opacity: 0.8;
+  animation-duration: 2.2s;
+  animation-delay: 0.1s;
+}
+.points_wrapper .point:nth-child(4) {
+  left: 44%;
+  opacity: 0.6;
+  animation-duration: 2.05s;
+}
+.points_wrapper .point:nth-child(5) {
+  left: 50%;
+  opacity: 1;
+  animation-duration: 1.9s;
+}
+.points_wrapper .point:nth-child(6) {
+  left: 75%;
+  opacity: 0.5;
+  animation-duration: 1.5s;
+  animation-delay: 1.5s;
+}
+.points_wrapper .point:nth-child(7) {
+  left: 88%;
+  opacity: 0.9;
+  animation-duration: 2.2s;
+  animation-delay: 0.2s;
+}
+.points_wrapper .point:nth-child(8) {
+  left: 58%;
+  opacity: 0.8;
+  animation-duration: 2.25s;
+  animation-delay: 0.2s;
+}
+.points_wrapper .point:nth-child(9) {
+  left: 98%;
+  opacity: 0.6;
+  animation-duration: 2.6s;
+  animation-delay: 0.1s;
+}
+.points_wrapper .point:nth-child(10) {
+  left: 65%;
+  opacity: 1;
+  animation-duration: 2.5s;
+  animation-delay: 0.2s;
+}
+
+.inner {
+  z-index: 2;
+  gap: 6px;
+  position: relative;
+  width: 100%;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  transition: color 0.2s ease-in-out;
+  user-select: none;
+}
+
+.inner svg.icon {
+  width: 18px;
+  height: 18px;
+  transition: fill 0.1s linear;
+}
+
+.button:focus svg.icon {
+  fill: white;
+}
+.button:hover svg.icon {
+  fill: transparent;
+  animation:
+    dasharray 1s linear forwards,
+    filled 0.1s linear forwards 0.95s;
+}
+@keyframes dasharray {
+  from {
+    stroke-dasharray: 0 0 0 0;
+  }
+  to {
+    stroke-dasharray: 68 68 0 0;
+  }
+}
+@keyframes filled {
+  to {
+    fill: white;
+  }
+}
+
+/* Minimal disabled treatment (not in original snippet) */
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  .chapterNav {
+    gap: 0.75rem;
+  }
+
+  .chapterNavSelectWrap {
+    --w-button: 190px;
+  }
+}
+
+@media (max-width: 640px) {
+  .chapterNav {
+    width: calc(100vw - 24px);
+    max-width: 420px;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .chapterNavLabel {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .chapterNavSelectWrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .chapterNavButtonRow {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .inner {
+    font-size: 14px;
+  }
+}

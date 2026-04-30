@@ -1,0 +1,136 @@
+@import "../shared/tokens.css";
+
+.loader-variant-d {
+  --bal-bg-top: #ff6b35;
+  --bal-bg-bottom: #1a0500;
+  --bal-bird-primary: #ff4500;
+  --bal-bird-secondary: #ffb347;
+  --bal-bird-highlight: #ff8c00;
+  --bal-flame-core: rgba(255, 200, 50, 0.9);
+  --bal-flame-outer: rgba(255, 69, 0, 0.7);
+  --bal-wind-color: rgba(255, 140, 0, 0.6);
+  --bal-text-color: #ffd700;
+  --bal-cloud-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 20px 50px rgba(255, 69, 0, 0.4);
+  border: 2px solid rgba(255, 140, 0, 0.5);
+}
+
+.loader-variant-d .wind-line {
+  width: 3px;
+  background: linear-gradient(180deg, transparent, var(--bal-wind-color), transparent);
+  bottom: -100px;
+  top: auto;
+  animation: balEmberRise 1.5s linear infinite;
+  box-shadow: 0 0 8px var(--bal-wind-color);
+}
+
+.loader-variant-d .wind-1 {
+  height: 80px;
+  animation-duration: 1.8s;
+}
+.loader-variant-d .wind-2 {
+  height: 100px;
+  animation-duration: 2.2s;
+  animation-delay: 0.3s;
+}
+.loader-variant-d .wind-3 {
+  height: 50px;
+  animation-duration: 1.5s;
+  animation-delay: 0.6s;
+}
+.loader-variant-d .wind-4 {
+  height: 70px;
+  animation-duration: 2s;
+  animation-delay: 0.9s;
+}
+
+.loader-variant-d .flame {
+  position: absolute;
+  width: 60px;
+  height: 80px;
+  bottom: -120px;
+  display: block;
+  z-index: 4;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--bal-flame-core) 30%,
+    var(--bal-flame-outer) 60%,
+    transparent 100%
+  );
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  filter: blur(8px);
+  animation: balFlameRise 2.5s ease-in-out infinite;
+  box-shadow: 0 0 20px var(--bal-flame-core), 0 0 40px var(--bal-flame-outer),
+    inset 0 0 20px rgba(255, 255, 100, 0.3);
+}
+
+.loader-variant-d .flame::after,
+.loader-variant-d .flame::before {
+  content: "";
+  position: absolute;
+  background: radial-gradient(
+    ellipse at center,
+    var(--bal-flame-core) 0%,
+    var(--bal-flame-outer) 50%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  filter: blur(4px);
+}
+
+.loader-variant-d .flame-1 {
+  left: -20px;
+  animation-duration: 3s;
+  animation-delay: 0s;
+}
+.loader-variant-d .flame-1::after {
+  width: 50px;
+  height: 50px;
+  top: 10px;
+  left: 5px;
+  animation: balFlameFlicker 0.8s ease-in-out infinite alternate;
+}
+.loader-variant-d .flame-1::before {
+  width: 30px;
+  height: 30px;
+  top: 5px;
+  left: 15px;
+  background: var(--bal-flame-core);
+  animation: balFlameFlicker 0.6s ease-in-out infinite alternate-reverse;
+}
+
+.loader-variant-d .flame-2 {
+  width: 80px;
+  height: 100px;
+  right: -30px;
+  animation-duration: 3.5s;
+  animation-delay: 1.2s;
+}
+.loader-variant-d .flame-2::after {
+  width: 60px;
+  height: 60px;
+  top: 15px;
+  left: 10px;
+  animation: balFlameFlicker 0.9s ease-in-out infinite alternate;
+}
+.loader-variant-d .flame-2::before {
+  width: 40px;
+  height: 40px;
+  top: 10px;
+  left: 20px;
+  background: var(--bal-flame-core);
+  animation: balFlameFlicker 0.7s ease-in-out infinite alternate-reverse;
+}
+
+.loader-variant-d .cloud {
+  display: none !important;
+}
+
+.loader-variant-d .bird-svg {
+  filter: drop-shadow(0 15px 25px rgba(255, 69, 0, 0.5));
+}
+
+.loader-variant-d .loading-text {
+  text-shadow: 0 2px 8px rgba(255, 69, 0, 0.8);
+}

@@ -1,0 +1,15 @@
+.narrative-gradient-text {
+  display: inline;
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: narrativeGradientShift 4s ease infinite;
+}
+
+@keyframes narrativeGradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

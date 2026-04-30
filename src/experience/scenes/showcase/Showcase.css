@@ -1,0 +1,100 @@
+.showcaseOverlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  /* Visually hidden — GSAP still animates child elements for scene detection */
+  opacity: 0 !important;
+}
+
+.showcaseScene {
+  left: 50%;
+  top: 50%;
+  transform: translate3d(
+    calc(-50% + var(--scene-x, 0px)),
+    calc(-50% + var(--scene-y, 0px)),
+    0
+  );
+  text-align: center;
+}
+
+.showcaseScene .narrativeSceneInner {
+  max-width: min(52rem, calc(100vw - 3rem));
+  padding: 1.5rem;
+}
+
+.showcaseTitle {
+  font-family: var(--scene-font-family);
+  font-size: clamp(2.8rem, 7vw, 5.8rem);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(245, 238, 231, 0.94);
+  text-shadow: 0 12px 40px rgba(0, 0, 0, 0.42);
+}
+
+.showcaseScene.showcase-scene-1,
+.showcaseScene.showcase-scene-2,
+.showcaseScene.showcase-scene-3,
+.showcaseScene.showcase-scene-4,
+.showcaseScene.showcase-scene-5,
+.showcaseScene.showcase-scene-6,
+.showcaseScene.showcase-scene-7,
+.showcaseScene.showcase-scene-8 {
+  --scene-font-family: var(--scene-font-moralana);
+}
+
+.showcaseScene.showcase-scene-9,
+.showcaseScene.showcase-scene-10,
+.showcaseScene.showcase-scene-11,
+.showcaseScene.showcase-scene-12 {
+  --scene-font-family: var(--scene-font-higher-jump);
+}
+
+.showcaseLine {
+  max-width: 42rem;
+  margin-inline: auto;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  line-height: 1.9;
+  letter-spacing: 0.02em;
+  color: rgba(245, 238, 231, 0.74);
+}
+
+@media (max-width: 900px) {
+  .showcaseScene {
+    left: 50%;
+    top: 50%;
+    transform: translate3d(
+      calc(-50% + var(--scene-x, 0px)),
+      calc(-50% + var(--scene-y, 0px)),
+      0
+    );
+  }
+}
+
+@media (max-width: 640px) {
+  .showcaseOverlay {
+    align-items: center;
+    padding: 0;
+  }
+
+  .showcaseScene {
+    left: 50%;
+    top: 50%;
+    transform: translate3d(
+      calc(-50% + var(--scene-x, 0px)),
+      calc(-50% + var(--scene-y, 0px)),
+      0
+    );
+  }
+
+  .showcaseScene .narrativeSceneInner {
+    max-width: calc(100vw - 2rem);
+    padding: 1rem;
+  }
+
+  .showcaseLine {
+    line-height: 1.75;
+  }
+}

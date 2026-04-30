@@ -1,0 +1,37 @@
+.phoneExperienceNotice {
+  display: none;
+}
+
+@media (max-width: 767px) and (pointer: coarse) {
+  .phoneExperienceNotice {
+    position: fixed;
+    top: max(18px, env(safe-area-inset-top));
+    left: 50%;
+    z-index: 950;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: min(88vw, 360px);
+    min-height: 40px;
+    padding: 10px 14px;
+    color: #ffd84d;
+    background: rgba(0, 0, 0, 0.62);
+    border: 1px solid rgba(255, 216, 77, 0.42);
+    border-radius: 6px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .phoneExperienceNotice__icon {
+    flex: 0 0 auto;
+    margin-right: 8px;
+    font-size: 16px;
+    line-height: 1;
+  }
+}

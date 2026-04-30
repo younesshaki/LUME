@@ -1,0 +1,12 @@
+@import "../shared/tokens.css";
+
+.loader-variant-c {
+  --bal-bg-top: #1d1a12;
+  --bal-bg-bottom: #0d0b08;
+  --bal-bird-primary: #f2e8d5;
+  --bal-bird-secondary: #c8b79a;
+  --bal-bird-highlight: #8a7657;
+  --bal-cloud-color: rgba(242, 232, 213, 0.25);
+  --bal-wind-color: rgba(242, 232, 213, 0.18);
+  --bal-text-color: #f2e8d5;
+}

@@ -1,0 +1,141 @@
+.mediaQualitySettings {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 2147483000;
+  font-family: "Mileast", var(--experience-font-family);
+  color: #fff7d7;
+}
+
+.mediaQualitySettings__trigger {
+  width: 50px;
+  height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 242, 190, 0.36);
+  border-radius: 999px;
+  color: #fff4c8;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2), transparent 34%),
+    rgba(12, 8, 8, 0.72);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  transition:
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.mediaQualitySettings__trigger svg {
+  width: 22px;
+  height: 22px;
+}
+
+.mediaQualitySettings__trigger:hover,
+.mediaQualitySettings__trigger:focus-visible {
+  border-color: rgba(255, 229, 126, 0.86);
+  color: #ffe57e;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.mediaQualitySettings__menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(236px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid rgba(255, 232, 164, 0.26);
+  border-radius: 14px;
+  background: rgba(10, 7, 9, 0.88);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(18px);
+}
+
+.mediaQualitySettings__option {
+  width: 100%;
+  min-height: 58px;
+  font-family: "Mileast", var(--experience-font-family);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  color: rgba(255, 247, 215, 0.8);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.mediaQualitySettings__option:hover,
+.mediaQualitySettings__option:focus-visible {
+  color: #fff7d7;
+  background: rgba(255, 231, 159, 0.1);
+  outline: none;
+}
+
+.mediaQualitySettings__option[aria-checked="true"] {
+  color: #ffe57e;
+  background: rgba(255, 218, 109, 0.13);
+}
+
+.mediaQualitySettings__optionText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mediaQualitySettings__label {
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.1;
+}
+
+.mediaQualitySettings__note {
+  font-size: 11px;
+  font-weight: 520;
+  line-height: 1.2;
+  color: rgba(255, 247, 215, 0.58);
+}
+
+.mediaQualitySettings__check {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #130d05;
+  background: transparent;
+}
+
+.mediaQualitySettings__check[data-selected="true"] {
+  background: #ffe57e;
+}
+
+@media (max-width: 640px) {
+  .mediaQualitySettings {
+    top: max(14px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+  }
+
+  .mediaQualitySettings__trigger {
+    width: 48px;
+    height: 48px;
+  }
+
+  .mediaQualitySettings__trigger svg {
+    width: 21px;
+    height: 21px;
+  }
+}

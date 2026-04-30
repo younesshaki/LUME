@@ -1,0 +1,156 @@
+/* ─── Butterfly Swarm ─── */
+
+.butterfly-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  will-change: transform;
+  z-index: 600;
+  animation: butterflyFly var(--bdur, 12s) ease-in-out var(--bdelay, 0s) infinite alternate;
+}
+
+@keyframes butterflyFly {
+  from {
+    transform: translate(var(--bx, 40vw), var(--by, 30vh)) scale(var(--bscale, 0.7));
+  }
+  to {
+    transform: translate(
+        calc(var(--bx, 40vw) + var(--bdrift, 18vw)),
+        calc(var(--by, 30vh) - 13vh)
+      )
+      scale(var(--bscale, 0.7));
+  }
+}
+
+.butterfly {
+  position: relative;
+  width: 0;
+  height: 0;
+  animation: butterflyHover 3.2s ease-in-out infinite;
+}
+
+@keyframes butterflyHover {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-18px);
+  }
+}
+
+/* ─── Wings ─── */
+
+.butterfly .wing {
+  position: absolute;
+  width: 60px;
+  height: 78px;
+  transform-style: preserve-3d;
+  background: white;
+  opacity: 0.75;
+}
+
+/* Left wing */
+.butterfly .wing:first-child {
+  right: 2px;
+  border-radius: 50% 50% 50% 0;
+  transform-origin: right center;
+  animation: butterflyLeftFlap 0.42s ease-in-out infinite alternate;
+}
+
+.butterfly .wing:first-child .bit:first-child {
+  position: absolute;
+  width: 42px;
+  height: 54px;
+  border-radius: 50% 0 50% 50%;
+  background: white;
+  opacity: 0.9;
+  bottom: -28px;
+  right: 0;
+}
+
+.butterfly .wing:first-child .bit:last-child {
+  position: absolute;
+  width: 30px;
+  height: 48px;
+  border-radius: 50% 50% 50% 0;
+  background: rgba(255, 255, 255, 0.45);
+  top: 12px;
+  right: 10px;
+}
+
+/* Right wing */
+.butterfly .wing:last-child {
+  left: 2px;
+  border-radius: 50% 50% 0 50%;
+  transform-origin: left center;
+  animation: butterflyRightFlap 0.42s ease-in-out infinite alternate;
+}
+
+.butterfly .wing:last-child .bit:first-child {
+  position: absolute;
+  width: 42px;
+  height: 54px;
+  border-radius: 0 50% 50% 50%;
+  background: white;
+  opacity: 0.9;
+  bottom: -28px;
+  left: 0;
+}
+
+.butterfly .wing:last-child .bit:last-child {
+  position: absolute;
+  width: 30px;
+  height: 48px;
+  border-radius: 50% 50% 0 50%;
+  background: rgba(255, 255, 255, 0.45);
+  top: 12px;
+  left: 10px;
+}
+
+@keyframes butterflyLeftFlap {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(68deg);
+  }
+}
+
+@keyframes butterflyRightFlap {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-68deg);
+  }
+}
+
+/* ─── Shadow ─── */
+
+.butterfly-wrapper .shadow {
+  position: absolute;
+  width: 80px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  bottom: -72px;
+  left: -40px;
+  filter: blur(5px);
+  animation: butterflyShadow 3.2s ease-in-out infinite;
+}
+
+@keyframes butterflyShadow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.18;
+  }
+  50% {
+    transform: scale(0.72);
+    opacity: 0.08;
+  }
+}

@@ -1,0 +1,28 @@
+@import "../shared/tokens.css";
+
+.loader-variant-f {
+  --bal-bg-top: #ffffff;
+  --bal-bg-bottom: #ffffff;
+  --bal-text-color: #111111;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border: 2px solid #e6e6e6;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+.loader-variant-f .loader-video {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.loader-variant-f .loading-text {
+  text-shadow: none;
+  letter-spacing: 0.2em;
+}

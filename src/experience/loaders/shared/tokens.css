@@ -1,0 +1,306 @@
+.loadingIndicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2250;
+  pointer-events: none;
+}
+
+.loader-container {
+  width: 320px;
+  height: 320px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--bal-bg-top) 0%, var(--bal-bg-bottom) 100%);
+  border-radius: 40px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  font-family: var(--experience-font-family);
+  perspective: 800px;
+  margin: 20px auto;
+}
+
+.loader-container .wind-line {
+  position: absolute;
+  width: 2px;
+  background: var(--bal-wind-color);
+  border-radius: 4px;
+  top: -100px;
+  animation: balWindFall 0.4s linear infinite;
+}
+
+.loader-container .wind-1 {
+  left: 10%;
+  height: 80px;
+  animation-duration: 0.3s;
+}
+.loader-container .wind-2 {
+  left: 90%;
+  height: 100px;
+  animation-duration: 0.5s;
+  animation-delay: 0.1s;
+}
+.loader-container .wind-3 {
+  left: 50%;
+  height: 50px;
+  animation-duration: 0.4s;
+  animation-delay: 0.3s;
+}
+.loader-container .wind-4 {
+  left: 75%;
+  height: 70px;
+  animation-duration: 0.35s;
+  animation-delay: 0.2s;
+}
+
+.loader-container .cloud {
+  position: absolute;
+  background: var(--bal-cloud-color);
+  border-radius: 50px;
+  top: -150px;
+  filter: blur(4px);
+  animation: balCloudFall 3s linear infinite;
+}
+
+.loader-container .cloud::after,
+.loader-container .cloud::before {
+  content: "";
+  position: absolute;
+  background: inherit;
+  border-radius: 50%;
+}
+
+.loader-container .cloud-1 {
+  width: 80px;
+  height: 30px;
+  left: -10px;
+  animation-duration: 2.5s;
+}
+.loader-container .cloud-1::after {
+  width: 40px;
+  height: 40px;
+  top: -15px;
+  left: 15px;
+}
+
+.loader-container .cloud-2 {
+  width: 100px;
+  height: 40px;
+  right: -20px;
+  animation-duration: 4s;
+  animation-delay: 1s;
+}
+.loader-container .cloud-2::after {
+  width: 50px;
+  height: 50px;
+  top: -20px;
+  left: 25px;
+}
+
+.loader-container .bird-wrapper {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform-style: preserve-3d;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
+  z-index: 10;
+  animation: balGentleBob 2s ease-in-out infinite;
+}
+
+.loader-container .bird-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.3));
+}
+
+.loader-container .wing-right {
+  transform-origin: 256px 256px;
+  animation: balFlapRight3D 0.4s ease-in-out infinite alternate;
+}
+
+.loader-container .wing-left {
+  transform-origin: 256px 256px;
+  animation: balFlapLeft3D 0.4s ease-in-out infinite alternate;
+}
+
+.loader-container:not(.loader-variant-d) .flame {
+  display: none;
+}
+
+.loader-container .loading-text {
+  position: absolute;
+  bottom: 30px;
+  width: 100%;
+  text-align: center;
+  color: var(--bal-text-color);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 20;
+}
+
+@keyframes balFlapRight3D {
+  0% {
+    transform: rotateZ(30deg) rotateY(0deg) rotateX(0deg) scale(0.9);
+  }
+  100% {
+    transform: rotateZ(-20deg) rotateY(-40deg) rotateX(20deg) scale(1.1);
+  }
+}
+
+@keyframes balFlapLeft3D {
+  0% {
+    transform: rotateZ(-30deg) rotateY(0deg) rotateX(0deg) scale(0.9);
+  }
+  100% {
+    transform: rotateZ(20deg) rotateY(40deg) rotateX(20deg) scale(1.1);
+  }
+}
+
+@keyframes balGentleBob {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotateX(5deg);
+  }
+  50% {
+    transform: translate(-50%, -56%) rotateX(15deg);
+  }
+}
+
+@keyframes balSunPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 40px rgba(253, 184, 19, 0.6), 0 0 80px rgba(253, 184, 19, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 50px rgba(253, 184, 19, 0.8), 0 0 100px rgba(253, 184, 19, 0.5);
+  }
+}
+
+@keyframes balSunbeamFall {
+  0% {
+    top: -50px;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.4;
+  }
+  100% {
+    top: 350px;
+    opacity: 0;
+  }
+}
+
+@keyframes balFlowerRise {
+  0% {
+    bottom: -50px;
+    opacity: 0;
+    transform: rotate(0deg) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    bottom: 350px;
+    opacity: 0;
+    transform: rotate(360deg) scale(1.2);
+  }
+}
+
+@keyframes balContainerGlow {
+  0%,
+  100% {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1), 0 0 80px rgba(255, 255, 255, 0.8),
+      inset 0 0 60px rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.15), 0 0 120px rgba(255, 255, 255, 1),
+      inset 0 0 80px rgba(255, 255, 255, 0.7);
+  }
+}
+
+@keyframes balCloudFall {
+  0% {
+    top: -150px;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    top: 400px;
+    opacity: 0;
+  }
+}
+
+@keyframes balFlameRise {
+  0% {
+    bottom: -120px;
+    opacity: 0;
+    transform: translateX(0) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    bottom: 400px;
+    opacity: 0;
+    transform: translateX(20px) scale(1.2);
+  }
+}
+
+@keyframes balFlameFlicker {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.15) translateY(-5px);
+    opacity: 1;
+  }
+}
+
+@keyframes balEmberRise {
+  0% {
+    bottom: -100px;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    bottom: 400px;
+    opacity: 0;
+  }
+}
+
+@keyframes balWindFall {
+  0% {
+    top: -100px;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 400px;
+    opacity: 0;
+  }
+}

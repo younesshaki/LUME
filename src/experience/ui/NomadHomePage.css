@@ -1,0 +1,83 @@
+.nomadHome {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.nomadHome__hero {
+  position: relative;
+  display: flex;
+  min-height: 46vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 2rem 3rem;
+  text-align: center;
+}
+
+.nomadHome__back {
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+  padding: 0.7rem 1.05rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.62);
+  cursor: pointer;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: all 0.25s ease;
+}
+
+.nomadHome__back:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.nomadHome__eyebrow {
+  margin: 0 0 0.9rem;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.7rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.nomadHome__title {
+  max-width: 760px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.95);
+  font-family: var(--experience-font-family);
+  font-size: clamp(2rem, 5vw, 4.1rem);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  line-height: 1.08;
+  text-shadow: 0 12px 42px rgba(0, 0, 0, 0.55);
+}
+
+.nomadHome__subtitle {
+  max-width: 520px;
+  margin: 1.15rem 0 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: clamp(0.82rem, 1.8vw, 1rem);
+  letter-spacing: 0.08em;
+  line-height: 1.7;
+  text-transform: uppercase;
+}
+
+.nomadHome__chapters {
+  animation-delay: 0.3s;
+}
+
+@media (max-width: 640px) {
+  .nomadHome__hero {
+    min-height: 42vh;
+    padding: 5.5rem 1.25rem 2.5rem;
+  }
+
+  .nomadHome__back {
+    top: 1.25rem;
+    left: 1.25rem;
+  }
+}
