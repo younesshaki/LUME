@@ -16,8 +16,7 @@ import {
   CardItem,
 } from "@/components/ui/3d-card";
 import { mediaUrl } from "@/config/cdn";
-const showcaseOptionImage = mediaUrl("showcase-option.png");
-const deepDiveOptionImage  = mediaUrl("deep-dive-option.png");
+const redBullCyclesImage = mediaUrl("blackredbullcycles.png");
 import "./StoryHomePage.css";
 
 type StoryHomePageProps = {
@@ -330,7 +329,7 @@ export default function StoryHomePage({
               <StoryOptionCard
                 title={standaloneChapter.definition.title}
                 actionLabel="Open"
-                imageSrc={showcaseOptionImage}
+                imageSrc={redBullCyclesImage}
                 imageAlt="LUME product showcase preview"
                 unlocked
                 onSelect={() =>
@@ -340,7 +339,7 @@ export default function StoryHomePage({
               <StoryOptionCard
                 title="Product Deep Dive"
                 actionLabel="Locked"
-                imageSrc={deepDiveOptionImage}
+                imageSrc={redBullCyclesImage}
                 imageAlt="Locked product deep dive preview"
                 unlocked={deepDiveUnlocked}
                 onSelect={undefined}

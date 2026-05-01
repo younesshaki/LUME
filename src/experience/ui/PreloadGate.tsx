@@ -11,7 +11,8 @@ type PreloadGateProps = {
   onStart: () => void;
 };
 
-const ACCESS_PASSWORD = import.meta.env.VITE_ACCESS_PASSWORD as string;
+const ACCESS_PASSWORD =
+  (import.meta.env.VITE_ACCESS_PASSWORD as string | undefined) ?? "lume";
 
 const ERROR_MESSAGES: Record<string, string> = {
   wrong_password: "incorrect password",

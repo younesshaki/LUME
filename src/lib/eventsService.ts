@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { isSupabaseConfigured, supabase } from "./supabase";
 
 /**
  * Append-only event log.
@@ -36,6 +36,10 @@ export async function logStoryEvent({
   payload = {},
   username,
 }: LogEventInput): Promise<void> {
+  if (!isSupabaseConfigured) {
+    return;
+  }
+
   try {
     const {
       data: { session },

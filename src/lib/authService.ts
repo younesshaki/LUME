@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { isSupabaseConfigured, supabase } from "./supabase";
 import { logStoryEvent } from "./eventsService";
 
 export type AuthUser = {
@@ -27,7 +27,14 @@ function toEmail(username: string): string {
   return `${username}@lume.local`;
 }
 
+const LOCAL_AUTH_KEY = "lume.preview-auth.v1";
+
 export async function checkExistingSession(): Promise<AuthUser | null> {
+  if (!isSupabaseConfigured && typeof window !== "undefined") {
+    const username = window.localStorage.getItem(LOCAL_AUTH_KEY);
+    return username ? { userId: "local-preview", username } : null;
+  }
+
   try {
     const {
       data: { session },
@@ -55,6 +62,17 @@ export async function loginOrRegister(
 ): Promise<AuthResult> {
   const username = sanitize(rawUsername);
   if (!username) return { success: false, error: "invalid_username" };
+
+  if (!isSupabaseConfigured) {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LOCAL_AUTH_KEY, username);
+    }
+    return {
+      success: true,
+      user: { userId: "local-preview", username },
+      isNew: false,
+    };
+  }
 
   const email = toEmail(username);
 
@@ -151,5 +169,10 @@ export async function loginOrRegister(
 }
 
 export async function logout(): Promise<void> {
+  if (!isSupabaseConfigured && typeof window !== "undefined") {
+    window.localStorage.removeItem(LOCAL_AUTH_KEY);
+    return;
+  }
+
   await supabase.auth.signOut();
 }

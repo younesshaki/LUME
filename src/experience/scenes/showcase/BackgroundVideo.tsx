@@ -32,7 +32,8 @@ const PAUSE_POINTS: PausePoint[] = [
 // visible behind the blur until the new video has a frame ready.
 const BLUR_DURATION_MS = 380;
 const BLUR_PEAK_PX = 14;
-const INTRO_VIDEO_FADE_MS = 5200;
+const INTRO_BLACK_HOLD_MS = 2000;
+const INTRO_VIDEO_FADE_MS = 2000;
 
 const videoSource = (quality: ShowcaseVideoQuality, index: number) =>
   getShowcaseVideoSource(showcaseSceneAssets.video.blenderScenes[quality][index]);
@@ -58,6 +59,7 @@ export function BackgroundVideo({
   const transitionInProgressRef = useRef(false);
   const shouldPlayRef = useRef(shouldPlay);
   const introFadeDoneRef = useRef(false);
+  const introTimerRef = useRef<number | null>(null);
 
   // Keep a live ref to activeSceneIndex for timeupdate callback
   useEffect(() => {
@@ -71,31 +73,55 @@ export function BackgroundVideo({
 
     if (!active) return;
 
+    if (introTimerRef.current !== null) {
+      window.clearTimeout(introTimerRef.current);
+      introTimerRef.current = null;
+    }
+
     if (shouldPlay) {
       const revealIntroVideo = () => {
         if (introFadeDoneRef.current) return;
         introFadeDoneRef.current = true;
+        active.currentTime = 0;
         active.style.transition = `opacity ${INTRO_VIDEO_FADE_MS}ms ease`;
         active.style.opacity = "1";
+        void active.play().catch(() => {});
       };
 
-      if (!introFadeDoneRef.current) {
-        if (active.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-          window.setTimeout(revealIntroVideo, 160);
-        } else {
-          active.addEventListener("loadeddata", revealIntroVideo, { once: true });
-          active.addEventListener("canplay", revealIntroVideo, { once: true });
-        }
+      if (introFadeDoneRef.current) {
+        void active.play().catch(() => {});
+        return;
       }
 
-      void active.play().catch(() => {});
+      active.pause();
+      active.currentTime = 0;
+      active.style.opacity = "0";
+
+      let introScheduled = false;
+      const startIntro = () => {
+        if (introScheduled) return;
+        introScheduled = true;
+        introTimerRef.current = window.setTimeout(revealIntroVideo, INTRO_BLACK_HOLD_MS);
+      };
+
+      if (active.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        startIntro();
+      } else {
+        active.addEventListener("loadeddata", startIntro, { once: true });
+        active.addEventListener("canplay", startIntro, { once: true });
+      }
 
       return () => {
-        active.removeEventListener("loadeddata", revealIntroVideo);
-        active.removeEventListener("canplay", revealIntroVideo);
+        if (introTimerRef.current !== null) {
+          window.clearTimeout(introTimerRef.current);
+          introTimerRef.current = null;
+        }
+        active.removeEventListener("loadeddata", startIntro);
+        active.removeEventListener("canplay", startIntro);
       };
     }
 
+    introFadeDoneRef.current = false;
     slots.forEach((video) => video?.pause());
   }, [shouldPlay]);
 
@@ -128,11 +154,7 @@ export function BackgroundVideo({
     front.src = videoSource(quality, 0);
     front.currentTime = 0;
     currentVideoIndexRef.current = 0;
-    if (shouldPlayRef.current) {
-      void front.play().catch(() => {});
-    } else {
-      front.load();
-    }
+    front.load();
   }, [quality]);
 
   // ── timeupdate — enforce pause points ────────────────────────────────────

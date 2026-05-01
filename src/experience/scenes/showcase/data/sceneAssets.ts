@@ -13,14 +13,14 @@ export const showcaseSceneAssets = {
     background:   mediaUrl("video/showcase-background.mp4"),
     blenderScenes: {
       high: [
-        mediaUrl("video/showcase-scene-1-high.mp4"),
+        mediaUrl("premiumredbull4Khandbrake3.mp4"),
         mediaUrl("video/showcase-scene-2-high.mp4"),
         mediaUrl("video/showcase-scene-3-high.mp4"),
         mediaUrl("video/showcase-scene-4-high.mp4"),
         mediaUrl("video/showcase-scene-final-high.mp4"),
       ],
       normal: [
-        mediaUrl("video/showcase-scene-1-normal.mp4"),
+        mediaUrl("premiumredbull4Khandbrake3.mp4"),
         mediaUrl("video/showcase-scene-2-normal.mp4"),
         mediaUrl("video/showcase-scene-3-normal.mp4"),
         mediaUrl("video/showcase-scene-4-normal.mp4"),

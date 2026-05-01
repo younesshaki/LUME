@@ -45,7 +45,7 @@ function holdDuration(line: NarrativeLine): number {
   const text = line.text;
   const words = text.trim().split(/\s+/).length;
   const readingHold = Math.min(MAX_HOLD_MS, Math.max(MIN_HOLD_MS, words * MS_PER_WORD));
-  return Math.max(readingHold, flipWordsDuration(line));
+  return Math.max(readingHold, flipWordsDuration(line), line.minHoldMs ?? 0);
 }
 
 function revealFallbackDuration(text: string): number {

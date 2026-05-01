@@ -9,10 +9,11 @@ export const scene1: NarrativeScene = {
   position: { x: 0, y: 0, align: "center" },
   lines: [
     {
-      text: "A cinematic product showcase for LUME.",
+      text: "A Cinematic product showcase for LUME.",
+      blankBeforeMs: 6500,
       flipWords: {
-        target: "cinematic",
-        words: ["cinematic", "immersive", "focused", "memorable"],
+        target: "Cinematic",
+        words: ["Cinematic", "immersive", "focused", "memorable"],
         intervalMs: 1500,
         finalHoldMs: 1500,
       },
