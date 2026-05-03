@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { MouseEvent, useState } from "react";
 import { mediaUrl } from "@/config/cdn";
 import { useUiSounds } from "../audio/useUiSounds";
 import CinematicShell from "./CinematicShell";
@@ -13,9 +13,13 @@ type Product = {
   name: string;
   category: Exclude<Category, "all">;
   status: ProductStatus;
+  imageSrc?: string;
   partIndex?: number;
   chapterIndex?: number;
 };
+
+const redBullImage = mediaUrl("blackredbullcycles.png");
+const lumeLogoImage = mediaUrl("LUMElogo.png");
 
 const PRODUCTS: Product[] = [
   {
@@ -24,6 +28,7 @@ const PRODUCTS: Product[] = [
     name: "Special Edition",
     category: "drink",
     status: "live",
+    imageSrc: redBullImage,
     partIndex: 6,
     chapterIndex: 0,
   },
@@ -33,6 +38,7 @@ const PRODUCTS: Product[] = [
     name: "Reserve Blend",
     category: "drink",
     status: "coming-soon",
+    imageSrc: mediaUrl("starbucksLUME.png"),
   },
   {
     id: "moet",
@@ -40,6 +46,7 @@ const PRODUCTS: Product[] = [
     name: "Blanc de Blancs",
     category: "drink",
     status: "coming-soon",
+    imageSrc: mediaUrl("products/moet.webp"),
   },
   {
     id: "ysl-femme",
@@ -47,6 +54,7 @@ const PRODUCTS: Product[] = [
     name: "Libre — Femme",
     category: "fragrance",
     status: "coming-soon",
+    imageSrc: mediaUrl("YSLfemmeLUME.png"),
   },
   {
     id: "ysl-homme",
@@ -54,6 +62,7 @@ const PRODUCTS: Product[] = [
     name: "Y — Homme",
     category: "fragrance",
     status: "coming-soon",
+    imageSrc: mediaUrl("YSLmenLUME.png"),
   },
   {
     id: "hermes",
@@ -61,6 +70,7 @@ const PRODUCTS: Product[] = [
     name: "Carré Soie",
     category: "fashion",
     status: "coming-soon",
+    imageSrc: mediaUrl("products/hermes.webp"),
   },
   {
     id: "rolex",
@@ -68,6 +78,7 @@ const PRODUCTS: Product[] = [
     name: "Daytona Edition",
     category: "fashion",
     status: "coming-soon",
+    imageSrc: mediaUrl("products/rolex.webp"),
   },
 ];
 
@@ -78,9 +89,6 @@ const CATEGORIES: { id: Category; label: string }[] = [
   { id: "fashion", label: "Fashion" },
 ];
 
-const redBullImage = mediaUrl("blackredbullcycles.png");
-const lumeLogoImage = mediaUrl("LUMElogo.png");
-
 function ProductCard({
   product,
   onEnter,
@@ -89,7 +97,9 @@ function ProductCard({
   onEnter: (partIndex: number, chapterIndex: number) => void;
 }) {
   const { playHover, playNavClick } = useUiSounds();
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const isLive = product.status === "live";
+  const imageSrc = imageLoadFailed ? undefined : product.imageSrc;
 
   const handleClick = () => {
     if (!isLive || product.partIndex === undefined || product.chapterIndex === undefined) return;
@@ -97,11 +107,18 @@ function ProductCard({
     onEnter(product.partIndex, product.chapterIndex);
   };
 
+  const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--spotlight-x", `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty("--spotlight-y", `${event.clientY - rect.top}px`);
+  };
+
   return (
     <div
       className={`productsPage__card${isLive ? " productsPage__card--live" : ""}`}
       onClick={isLive ? handleClick : undefined}
       onMouseEnter={isLive ? playHover : undefined}
+      onMouseMove={handleMouseMove}
       role={isLive ? "button" : undefined}
       tabIndex={isLive ? 0 : undefined}
       onKeyDown={isLive ? (e) => {
@@ -109,8 +126,12 @@ function ProductCard({
       } : undefined}
     >
       <div className="productsPage__cardImage">
-        {isLive ? (
-          <img src={redBullImage} alt={`${product.brand} ${product.name}`} />
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={`${product.brand} ${product.name}`}
+            onError={() => setImageLoadFailed(true)}
+          />
         ) : (
           <div className="productsPage__cardImagePlaceholder">
             <span>{product.brand}</span>
@@ -180,6 +201,7 @@ export default function ProductsPage({ onGoHome, onEnter, onNavigateToContact }:
 
         <main className="productsPage__main">
           <div className="productsPage__hero">
+            <div className="productsPage__lamp" aria-hidden="true" />
             <p className="productsPage__eyebrow">Exclusive Editions</p>
             <h1 className="productsPage__title">Products</h1>
             <p className="productsPage__subtitle">

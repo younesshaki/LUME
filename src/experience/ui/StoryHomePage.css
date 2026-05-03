@@ -1,4 +1,5 @@
 .storyHome {
+  --trace-progress: 0;
   --lume-ink: #fff8ec;
   --lume-muted: rgba(255, 248, 236, 0.64);
   --lume-soft: rgba(255, 248, 236, 0.4);
@@ -12,6 +13,41 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
   scroll-behavior: smooth;
+}
+
+.storyHome main {
+  position: relative;
+}
+
+.storyHome__tracingBeam {
+  position: absolute;
+  top: 2.2rem;
+  bottom: 2.2rem;
+  left: clamp(1rem, 4vw, 2.5rem);
+  width: 1px;
+  pointer-events: none;
+  background: rgba(255, 248, 236, 0.1);
+}
+
+.storyHome__tracingBeam::before {
+  content: "";
+  position: sticky;
+  top: 5.5rem;
+  display: block;
+  width: 1px;
+  height: min(28rem, 58vh);
+  background:
+    linear-gradient(
+      180deg,
+      transparent,
+      rgba(217, 183, 106, 0.24),
+      rgba(255, 229, 126, 0.9),
+      rgba(217, 183, 106, 0.24),
+      transparent
+    );
+  filter: drop-shadow(0 0 12px rgba(217, 183, 106, 0.55));
+  transform: translateY(calc(var(--trace-progress) * 54vh));
+  transition: transform 90ms linear;
 }
 
 .storyHome::-webkit-scrollbar {
@@ -93,10 +129,27 @@
 }
 
 .storyHome__heroCopy {
+  position: relative;
   width: min(100%, 760px);
   text-align: center;
   opacity: 0;
   animation: storyHomeFadeUp 0.9s ease 0.12s forwards;
+}
+
+.storyHome__lamp {
+  position: absolute;
+  left: 50%;
+  top: -3.6rem;
+  width: min(44rem, 88vw);
+  height: 11rem;
+  pointer-events: none;
+  transform: translateX(-50%);
+  background:
+    linear-gradient(90deg, transparent, rgba(217, 183, 106, 0.58), transparent),
+    radial-gradient(ellipse at center top, rgba(217, 183, 106, 0.34), transparent 64%);
+  filter: blur(22px);
+  opacity: 0.82;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 80%);
 }
 
 .storyHome__eyebrow,
@@ -384,6 +437,10 @@
 
   .storyHome__hero {
     padding-inline: 1.25rem;
+  }
+
+  .storyHome__tracingBeam {
+    display: none;
   }
 
   .storyHome__featureBand {

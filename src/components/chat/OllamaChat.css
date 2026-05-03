@@ -1,0 +1,254 @@
+.ollamaChat {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 2147482980;
+  font-family: var(--experience-font-family);
+  color: #fff9e8;
+}
+
+.ollamaChat__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 232, 164, 0.34);
+  border-radius: 999px;
+  color: #fff8de;
+  background:
+    radial-gradient(circle at 32% 18%, rgba(255, 255, 255, 0.18), transparent 36%),
+    rgba(12, 8, 8, 0.76);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.44);
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition:
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.ollamaChat__toggle:hover,
+.ollamaChat__toggle:focus-visible {
+  border-color: rgba(255, 229, 126, 0.9);
+  color: #ffe57e;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.ollamaChat__panel {
+  width: min(380px, calc(100vw - 36px));
+  height: min(560px, calc(100vh - 116px));
+  min-height: 390px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+  border: 1px solid rgba(255, 232, 164, 0.28);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(12, 8, 8, 0.94), rgba(20, 18, 16, 0.9)),
+    rgba(12, 8, 8, 0.92);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.56);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.ollamaChat__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 0.95rem;
+  border-bottom: 1px solid rgba(255, 232, 164, 0.16);
+}
+
+.ollamaChat__title {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.ollamaChat__title strong {
+  color: #fff7d7;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ollamaChat__title span {
+  color: rgba(255, 249, 232, 0.64);
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.ollamaChat__headerActions {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 0.35rem;
+}
+
+.ollamaChat__iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 232, 164, 0.18);
+  border-radius: 999px;
+  color: rgba(255, 249, 232, 0.82);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.ollamaChat__iconButton:hover,
+.ollamaChat__iconButton:focus-visible {
+  border-color: rgba(255, 229, 126, 0.72);
+  color: #ffe57e;
+  background: rgba(255, 229, 126, 0.1);
+  outline: none;
+}
+
+.ollamaChat__messages {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.72rem;
+  overflow-y: auto;
+  padding: 0.95rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 232, 164, 0.34) transparent;
+}
+
+.ollamaChat__message {
+  max-width: 88%;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.72rem 0.78rem;
+  border: 1px solid rgba(255, 232, 164, 0.14);
+  border-radius: 14px;
+  color: rgba(255, 249, 232, 0.92);
+  background: rgba(255, 255, 255, 0.07);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.ollamaChat__message--user {
+  align-self: flex-end;
+  border-color: rgba(255, 229, 126, 0.34);
+  color: #120e08;
+  background: #ffe57e;
+}
+
+.ollamaChat__message--assistant {
+  align-self: flex-start;
+}
+
+.ollamaChat__messageLabel {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.62;
+}
+
+.ollamaChat__messageText {
+  font-size: 0.9rem;
+}
+
+.ollamaChat__error {
+  padding: 0.72rem 0.78rem;
+  border: 1px solid rgba(255, 116, 88, 0.42);
+  border-radius: 14px;
+  color: #ffd7ce;
+  background: rgba(128, 24, 12, 0.24);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.ollamaChat__composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+  padding: 0.8rem;
+  border-top: 1px solid rgba(255, 232, 164, 0.16);
+}
+
+.ollamaChat__input {
+  min-width: 0;
+  min-height: 44px;
+  max-height: 120px;
+  resize: none;
+  border: 1px solid rgba(255, 232, 164, 0.18);
+  border-radius: 14px;
+  padding: 0.72rem 0.78rem;
+  color: #fff9e8;
+  background: rgba(255, 255, 255, 0.07);
+  outline: none;
+  line-height: 1.35;
+}
+
+.ollamaChat__input::placeholder {
+  color: rgba(255, 249, 232, 0.45);
+}
+
+.ollamaChat__input:focus {
+  border-color: rgba(255, 229, 126, 0.76);
+}
+
+.ollamaChat__send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 229, 126, 0.5);
+  border-radius: 14px;
+  color: #120e08;
+  background: #ffe57e;
+  cursor: pointer;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.ollamaChat__send:hover,
+.ollamaChat__send:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.ollamaChat__send:disabled,
+.ollamaChat__input:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.ollamaChat__spinner {
+  animation: ollamaChatSpin 820ms linear infinite;
+}
+
+@keyframes ollamaChatSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .ollamaChat {
+    left: max(14px, env(safe-area-inset-left));
+    bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .ollamaChat__panel {
+    width: calc(100vw - 28px);
+    height: min(520px, calc(100vh - 96px));
+    min-height: 360px;
+  }
+}

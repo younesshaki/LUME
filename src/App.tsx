@@ -1,6 +1,7 @@
 import "./App.scss";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { OllamaChat } from "./components/chat/OllamaChat";
 import { OutsideShowcaseMusic } from "./experience/audio/OutsideShowcaseMusic";
 import { UiSoundProvider } from "./experience/audio/UiSoundProvider";
 import Experience from "./experience/Experience";
@@ -191,6 +192,7 @@ export default function App() {
         {screen !== "gate" && (
           <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
         )}
+        {screen !== "gate" && <OllamaChat />}
         {!(isShowcaseExperience && showcaseChapterRevealed) && <HeadphonesIcon />}
         {screen === "admin" ? (
           <AdminPage onExit={handleGoHome} />

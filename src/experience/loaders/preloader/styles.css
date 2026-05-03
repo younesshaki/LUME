@@ -388,7 +388,7 @@
 
 .pgAuth {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   font-family: "Mileast", var(--experience-font-family);
   display: flex;
   align-items: center;

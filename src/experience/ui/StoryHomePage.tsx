@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { UIEvent, useMemo, useRef } from "react";
 import { useUiSounds } from "../audio/useUiSounds";
 import { useStory } from "../story/StoryProvider";
 import { getPartDisplayList } from "../story/selectors";
@@ -97,6 +97,7 @@ export default function StoryHomePage({
   onNavigateToContact,
 }: StoryHomePageProps) {
   const { isReady, state } = useStory();
+  const pageRef = useRef<HTMLDivElement | null>(null);
 
   const showcaseChapters = useMemo(() => {
     if (!isReady) return [];
@@ -110,9 +111,15 @@ export default function StoryHomePage({
       }));
   }, [isReady, state]);
 
+  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    const maxScroll = Math.max(1, element.scrollHeight - element.clientHeight);
+    element.style.setProperty("--trace-progress", `${element.scrollTop / maxScroll}`);
+  };
+
   return (
     <CinematicShell>
-      <div className="storyHome">
+      <div ref={pageRef} className="storyHome" onScroll={handleScroll}>
         <div className="storyHome__floatingLogo" aria-hidden="true">
           <img src={lumeLogoImage} alt="" />
         </div>
@@ -134,8 +141,10 @@ export default function StoryHomePage({
         </header>
 
         <main id="top">
+          <div className="storyHome__tracingBeam" aria-hidden="true" />
           <section id="showcases" className="storyHome__hero">
             <div className="storyHome__heroCopy">
+              <div className="storyHome__lamp" aria-hidden="true" />
               <h1 className="storyHome__title">Luxury versions of everyday energy.</h1>
               <p className="storyHome__subtitle">
                 LUME reframes familiar products through black-gold design,
