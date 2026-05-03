@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import BlurText from "@/components/BlurText";
 import { getShowcaseSceneFontFamily } from "../shared/sceneTypography";
-import { showcaseScenes } from "./data";
 import { showcaseScrollGate } from "./showcaseScrollGate";
-import type { NarrativeLine } from "../shared/narrativeTypes";
+import type { NarrativeLine, NarrativeScene } from "../shared/narrativeTypes";
 
 type Props = {
   activeSceneIndex: number;
   isActive: boolean;
+  scenes: NarrativeScene[];
 };
 
 // ── Timing constants ────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ function revealFallbackDuration(text: string): number {
   return Math.max(APPEAR_S * 1000, words * BLUR_TEXT_DELAY_MS + BLUR_TEXT_STEP_MS * 2 + 500);
 }
 
-export function ShowcaseLyricsDisplay({ activeSceneIndex, isActive }: Props) {
+export function ShowcaseLyricsDisplay({ activeSceneIndex, isActive, scenes }: Props) {
   const lineRef  = useRef<HTMLDivElement>(null);
   const timers   = useRef<ReturnType<typeof setTimeout>[]>([]);
   const currentSceneRef = useRef(-1);
@@ -173,7 +173,7 @@ export function ShowcaseLyricsDisplay({ activeSceneIndex, isActive }: Props) {
 
   const startScene = useCallback(
     (sceneIndex: number) => {
-      const scene = showcaseScenes[sceneIndex];
+      const scene = scenes[sceneIndex];
       if (!scene) return;
 
       const lineEl = lineRef.current;
@@ -183,7 +183,7 @@ export function ShowcaseLyricsDisplay({ activeSceneIndex, isActive }: Props) {
       // Brief settling pause, then start lines
       after(() => runLines(scene.lines ?? [], 0), 400);
     },
-    [after, runLines]
+    [after, runLines, scenes]
   );
 
   // ── Scene change effect ──────────────────────────────────────────────────

@@ -110,6 +110,22 @@ export const storyManifest: PartDefinition[] = [
         cinematicScene("showcase-scene-11", "Choice"),
         cinematicScene("showcase-scene-12", "Product"),
       ]),
+      chapter("showcase-chapter-2", "Showcase II", "cinematic", [
+        cinematicScene("showcase-2-scene-1", "Opening"),
+        cinematicScene("showcase-2-scene-2", "Material"),
+        cinematicScene("showcase-2-scene-3", "Ritual"),
+        cinematicScene("showcase-2-scene-4", "Detail"),
+        cinematicScene("showcase-2-scene-5", "Desire"),
+        cinematicScene("showcase-2-scene-6", "Close"),
+      ]),
+      chapter("showcase-chapter-3", "Showcase III", "cinematic", [
+        cinematicScene("showcase-3-scene-1", "Signal"),
+        cinematicScene("showcase-3-scene-2", "World"),
+        cinematicScene("showcase-3-scene-3", "Object"),
+        cinematicScene("showcase-3-scene-4", "Benefit"),
+        cinematicScene("showcase-3-scene-5", "Proof"),
+        cinematicScene("showcase-3-scene-6", "Signature"),
+      ]),
     ],
   },
 ];

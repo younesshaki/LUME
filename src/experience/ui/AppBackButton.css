@@ -1,0 +1,56 @@
+.appBackButton {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(86px, calc(env(safe-area-inset-right) + 86px));
+  z-index: 2147482990;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 50px;
+  padding: 0 1.05rem;
+  border: 1px solid rgba(255, 232, 164, 0.3);
+  border-radius: 999px;
+  color: #fff7d7;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.14), transparent 34%),
+    rgba(12, 8, 8, 0.72);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+  font-family: "Mileast", var(--experience-font-family);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition:
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.appBackButton:hover,
+.appBackButton:focus-visible {
+  border-color: rgba(255, 229, 126, 0.86);
+  color: #ffe57e;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.appBackButton__arrow {
+  font-size: 1rem;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .appBackButton {
+    top: max(14px, env(safe-area-inset-top));
+    right: max(74px, calc(env(safe-area-inset-right) + 74px));
+    min-height: 48px;
+    padding: 0 0.9rem;
+    font-size: 0.7rem;
+  }
+}

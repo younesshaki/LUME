@@ -38,6 +38,16 @@
   color: #f5efe7;
 }
 
+.showcaseTitleCard__logo {
+  width: clamp(20rem, 40vw, 32rem);
+  height: auto;
+  margin-bottom: 0.35rem;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 8px 24px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 28px rgba(218, 175, 86, 0.2));
+}
+
 .showcaseTitleCard__eyebrow {
   margin: 0;
   font-size: 0.72rem;

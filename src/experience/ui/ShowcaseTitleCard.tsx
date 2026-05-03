@@ -10,6 +10,7 @@ type ShowcaseTitleCardProps = {
 
 export default function ShowcaseTitleCard({ onPlay }: ShowcaseTitleCardProps) {
   const showcaseTitleBackground = useCdnImage("showcaseentry2.png");
+  const lumeLogo = useCdnImage("LUMElogo.png");
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
 
@@ -60,6 +61,11 @@ export default function ShowcaseTitleCard({ onPlay }: ShowcaseTitleCardProps) {
       />
       <div className="showcaseTitleCard__overlay" />
       <div className="showcaseTitleCard__content">
+        <img
+          className="showcaseTitleCard__logo showcaseTitleCard__fade"
+          src={lumeLogo}
+          alt="LUME"
+        />
         <p className="showcaseTitleCard__eyebrow showcaseTitleCard__fade">Cinematic Product Showcase</p>
         <h1 className="showcaseTitleCard__title showcaseTitleCard__fade">LUME</h1>
         <HoverBorderGradient

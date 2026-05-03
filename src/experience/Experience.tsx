@@ -19,6 +19,10 @@ import { useSmoothScroll } from "./hooks/useSmoothScroll";
 import { BackgroundVideo as ShowcaseBackgroundVideo } from "./scenes/showcase/BackgroundVideo";
 import { ShowcaseLyricsDisplay } from "./scenes/showcase/ShowcaseLyricsDisplay";
 import {
+  getShowcaseChapterConfig,
+  isShowcaseChapterId,
+} from "./scenes/showcase/data";
+import {
   preloadShowcaseBackgroundVideos,
   subscribeToShowcaseVideoPreload,
   type VideoPreloadSnapshot,
@@ -169,10 +173,15 @@ export default function Experience({
     "Loading Part 6",
     "Loading Showcase",
   ];
-  const isShowcaseChapter = visiblePartIndex === 6 && visibleChapterIndex === 0;
+  const visibleChapterDefinition = getChapterDefinition(visiblePartIndex + 1, visibleChapterIndex + 1);
+  const visibleShowcaseConfig = getShowcaseChapterConfig(visibleChapterDefinition?.id);
+  const isShowcaseChapter = isShowcaseChapterId(visibleChapterDefinition?.id);
+  const showcaseHasBackgroundVideo = isShowcaseChapter && visibleShowcaseConfig.hasBackgroundVideo;
   const threeAssetProgress = isLoading ? progress : 100;
   const videoAssetProgress = showcaseVideoPreload.status === "ready" ? 100 : showcaseVideoPreload.progress;
-  const combinedShowcaseProgress = Math.round((threeAssetProgress + videoAssetProgress) / 2);
+  const combinedShowcaseProgress = showcaseHasBackgroundVideo
+    ? Math.round((threeAssetProgress + videoAssetProgress) / 2)
+    : threeAssetProgress;
   const progressLabel = isShowcaseChapter
     ? `Loading ${Math.min(99, combinedShowcaseProgress)}%`
     : isLoading
@@ -227,19 +236,19 @@ export default function Experience({
   }, [mediaQuality]);
 
   useEffect(() => {
-    if (!isShowcaseChapter || initialRevealReady) return;
+    if (!showcaseHasBackgroundVideo || initialRevealReady) return;
     void preloadShowcaseBackgroundVideos(mediaQuality);
-  }, [initialRevealReady, isShowcaseChapter, mediaQuality]);
+  }, [initialRevealReady, showcaseHasBackgroundVideo, mediaQuality]);
 
   useEffect(() => {
-    if (!isShowcaseChapter || showcaseVideoPreload.status !== "error" || initialRevealReady) return;
+    if (!showcaseHasBackgroundVideo || showcaseVideoPreload.status !== "error" || initialRevealReady) return;
 
     const retry = window.setTimeout(() => {
       void preloadShowcaseBackgroundVideos(mediaQuality);
     }, 3000);
 
     return () => window.clearTimeout(retry);
-  }, [initialRevealReady, isShowcaseChapter, mediaQuality, showcaseVideoPreload.status]);
+  }, [initialRevealReady, showcaseHasBackgroundVideo, mediaQuality, showcaseVideoPreload.status]);
 
   useEffect(() => {
     if (!storyReady) {
@@ -327,7 +336,7 @@ export default function Experience({
       return;
     }
 
-    const showcaseVideosReady = !isShowcaseChapter || showcaseVideoPreload.status === "ready";
+    const showcaseVideosReady = !showcaseHasBackgroundVideo || showcaseVideoPreload.status === "ready";
 
     if (preloadMinElapsed && !isLoading && showcaseVideosReady) {
       const rafId = window.requestAnimationFrame(() => {
@@ -335,7 +344,7 @@ export default function Experience({
       });
       return () => window.cancelAnimationFrame(rafId);
     }
-  }, [isLoading, isShowcaseChapter, preloadMinElapsed, modelsPreloaded, showcaseVideoPreload.status]);
+  }, [isLoading, showcaseHasBackgroundVideo, preloadMinElapsed, modelsPreloaded, showcaseVideoPreload.status]);
 
   useEffect(() => {
     if (!modelsPreloaded || initialRevealReady) {
@@ -422,7 +431,7 @@ export default function Experience({
   return (
     <SoundProvider value={{ soundEnabled, soundBlocked }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        {isShowcaseChapter ? (
+        {showcaseHasBackgroundVideo ? (
           <ShowcaseBackgroundVideo
             key={mediaQuality}
             isVisible={!preloaderVisible}
@@ -431,7 +440,13 @@ export default function Experience({
             quality={mediaQuality}
           />
         ) : null}
-        {isShowcaseChapter ? <ShowcaseLyricsDisplay activeSceneIndex={showcaseSceneIndex} isActive={isShowcaseChapter} /> : null}
+        {isShowcaseChapter ? (
+          <ShowcaseLyricsDisplay
+            activeSceneIndex={showcaseSceneIndex}
+            isActive={isShowcaseChapter}
+            scenes={visibleShowcaseConfig.scenes}
+          />
+        ) : null}
         <ModelPreloader />
         <CanvasErrorBoundary key={`part-${visiblePartIndex}-chapter-${visibleChapterIndex}`}>
           <Canvas
@@ -464,7 +479,9 @@ export default function Experience({
               onDecline={() => undefined}
             />
             <AdaptiveDpr pixelated />
-            {!isShowcaseChapter ? <color attach="background" args={["black"]} /> : null}
+            {(!isShowcaseChapter || !showcaseHasBackgroundVideo) ? (
+              <color attach="background" args={["black"]} />
+            ) : null}
             {devToolsEnabled && debugEnabled && <DebugWrapper enabled={debugEnabled} />}
             <CameraRig
               key={`${sceneIndex}-${visiblePartIndex}-${visibleChapterIndex}`}
@@ -478,6 +495,7 @@ export default function Experience({
                 
                 
                 scenesHidden={scenesHidden}
+                showcaseChapterId={visibleChapterDefinition?.id}
                 onGoHome={onGoHome}
                 onShowcaseSceneChange={setShowcaseSceneIndex}
                 onShowcaseProgressChange={setShowcaseChapterProgress}

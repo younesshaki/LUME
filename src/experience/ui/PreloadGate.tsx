@@ -23,9 +23,10 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 const USERNAME_PLACEHOLDERS = ["enter your name"];
 const PASSWORD_PLACEHOLDERS = ["enter access password"];
+const PRELOAD_GATE_BACKGROUND_IMAGE = "ChatGPT Image May 1, 2026, 09_26_21 PM.png";
 
 export default function PreloadGate({ onStart }: PreloadGateProps) {
-  const preloadGateBackground = useCdnImage("showcase-entry.png");
+  const preloadGateBackground = useCdnImage(PRELOAD_GATE_BACKGROUND_IMAGE);
   const { playGateClick, playHover } = useUiSounds();
   const startTimeoutRef = useRef<number | null>(null);
   const authRef = useRef<HTMLDivElement | null>(null);

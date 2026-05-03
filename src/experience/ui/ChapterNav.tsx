@@ -180,9 +180,8 @@ export default function ChapterNav({
 }: ChapterNavProps) {
   const [isHidden, setIsHidden] = useState(false);
   const activePart = parts[activePartIndex];
-  const activeChapter = activePart?.chapters[activeChapterIndex];
   const activeChapters = activePart?.chapters ?? [];
-  const shouldHideForShowcase = activePartIndex === 6 && activeChapterIndex === 0 && activeChapter?.title === "Showcase";
+  const shouldHideForShowcase = activePart?.title === "Showcase";
   const chapterOffsets = useMemo(() => {
     let sum = 0;
     return parts.map((part) => {

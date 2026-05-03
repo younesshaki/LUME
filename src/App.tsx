@@ -1,5 +1,5 @@
 import "./App.scss";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { OutsideShowcaseMusic } from "./experience/audio/OutsideShowcaseMusic";
 import { UiSoundProvider } from "./experience/audio/UiSoundProvider";
@@ -8,12 +8,18 @@ import { StoryProvider } from "./experience/story/StoryProvider";
 import PreloadGate from "./experience/ui/PreloadGate";
 import ShowcaseTitleCard from "./experience/ui/ShowcaseTitleCard";
 import StoryHomePage from "./experience/ui/StoryHomePage";
+import ProductsPage from "./experience/ui/ProductsPage";
+import ContactPage from "./experience/ui/ContactPage";
 import PhoneExperienceNotice from "./experience/ui/PhoneExperienceNotice";
 import AdminPage from "./experience/ui/AdminPage";
 import { MediaQualitySettings } from "./experience/ui/MediaQualitySettings";
+import { AppBackButton } from "./experience/ui/AppBackButton";
 import type { ShowcaseVideoQuality } from "./experience/scenes/showcase/data/sceneAssets";
+import { isShowcaseChapterId } from "./experience/scenes/showcase/data";
+import { getChapterDefinition } from "./experience/story/manifest";
+import { logStoryEvent } from "./lib/eventsService";
 
-type AppScreen = "gate" | "home" | "titlecard" | "experience" | "admin";
+type AppScreen = "gate" | "home" | "products" | "contact" | "titlecard" | "experience" | "admin";
 
 function HeadphonesIcon() {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
@@ -42,11 +48,6 @@ function HeadphonesIcon() {
   );
 }
 
-const SHOWCASE_ENTRY = {
-  partIndex: 6,
-  chapterIndex: 0,
-};
-
 const MEDIA_QUALITY_STORAGE_KEY = "nomad.media-quality.v1";
 
 function readInitialMediaQuality(): ShowcaseVideoQuality {
@@ -67,6 +68,11 @@ export default function App() {
   const [mediaQuality, setMediaQuality] = useState<ShowcaseVideoQuality>(
     readInitialMediaQuality
   );
+  const screenEnteredAtRef = useRef(Date.now());
+
+  useEffect(() => {
+    screenEnteredAtRef.current = Date.now();
+  }, [screen]);
 
   // React to hash changes (e.g., user manually types #admin to enter, or removes it to exit)
   useEffect(() => {
@@ -85,15 +91,68 @@ export default function App() {
     setScreen("home");
   }, []);
 
+  const logNavigationAction = useCallback(
+    (action: string, fromScreen: AppScreen, toScreen: AppScreen) => {
+      const nowMs = Date.now();
+      const durationMs = Math.max(0, nowMs - screenEnteredAtRef.current);
+      const chapterDefinition = getChapterDefinition(entryPartIndex + 1, entryChapterIndex + 1);
+
+      void logStoryEvent({
+        type: "navigation_action",
+        payload: {
+          action,
+          fromScreen,
+          toScreen,
+          durationMs,
+          occurredAt: new Date(nowMs).toISOString(),
+          entryPartIndex,
+          entryChapterIndex,
+          chapterId: chapterDefinition?.id ?? null,
+          chapterTitle: chapterDefinition?.title ?? null,
+        },
+      });
+    },
+    [entryChapterIndex, entryPartIndex]
+  );
+
+  const handleBack = useCallback(() => {
+    if (screen === "titlecard") {
+      logNavigationAction("back", "titlecard", "home");
+      handleGoHome();
+      return;
+    }
+
+    if (screen === "experience") {
+      logNavigationAction("back", "experience", "home");
+      handleGoHome();
+      return;
+    }
+
+    if (screen === "admin") {
+      logNavigationAction("back", "admin", "home");
+      handleGoHome();
+      return;
+    }
+
+    if (screen === "products") {
+      logNavigationAction("back", "products", "home");
+      handleGoHome();
+      return;
+    }
+
+    if (screen === "contact") {
+      logNavigationAction("back", "contact", "home");
+      handleGoHome();
+    }
+  }, [handleGoHome, logNavigationAction, screen]);
+
   const handleEnterExperience = useCallback(
     (partIndex: number, chapterIndex: number) => {
       setShowcaseChapterRevealed(false);
       setEntryPartIndex(partIndex);
       setEntryChapterIndex(chapterIndex);
-      if (
-        partIndex === SHOWCASE_ENTRY.partIndex &&
-        chapterIndex === SHOWCASE_ENTRY.chapterIndex
-      ) {
+      const chapterDefinition = getChapterDefinition(partIndex + 1, chapterIndex + 1);
+      if (isShowcaseChapterId(chapterDefinition?.id)) {
         setScreen("titlecard");
         return;
       }
@@ -114,8 +173,9 @@ export default function App() {
 
   const isShowcaseExperience =
     screen === "experience" &&
-    entryPartIndex === SHOWCASE_ENTRY.partIndex &&
-    entryChapterIndex === SHOWCASE_ENTRY.chapterIndex;
+    isShowcaseChapterId(
+      getChapterDefinition(entryPartIndex + 1, entryChapterIndex + 1)?.id
+    );
 
   return (
     <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>
@@ -125,6 +185,9 @@ export default function App() {
           visible={!isShowcaseExperience}
           onQualityChange={handleMediaQualityChange}
         />
+        {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "contact") && (
+          <AppBackButton onClick={handleBack} />
+        )}
         {screen !== "gate" && (
           <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
         )}
@@ -148,8 +211,23 @@ export default function App() {
                 onShowcaseChapterRevealChange={setShowcaseChapterRevealed}
                 mediaQuality={mediaQuality}
               />
+            ) : screen === "products" ? (
+              <ProductsPage
+                onGoHome={handleGoHome}
+                onEnter={handleEnterExperience}
+                onNavigateToContact={() => setScreen("contact")}
+              />
+            ) : screen === "contact" ? (
+              <ContactPage
+                onGoHome={handleGoHome}
+                onNavigateToProducts={() => setScreen("products")}
+              />
             ) : (
-              <StoryHomePage onEnter={handleEnterExperience} />
+              <StoryHomePage
+                onEnter={handleEnterExperience}
+                onNavigateToProducts={() => setScreen("products")}
+                onNavigateToContact={() => setScreen("contact")}
+              />
             )}
           </StoryProvider>
         )}

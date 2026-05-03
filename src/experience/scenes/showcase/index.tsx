@@ -5,7 +5,7 @@ import { ShowcaseNarrative } from "./ShowcaseNarrative";
 import { useShowcaseTimeline } from "./ShowcaseTimeline";
 import { useShowcaseSceneMusic } from "./useShowcaseSceneMusic";
 import { useActiveNarrativeScene } from "../shared/useActiveNarrativeScene";
-import { showcaseScenes } from "./data";
+import { getShowcaseChapterConfig } from "./data";
 import { showcaseSceneAssets } from "./data/sceneAssets";
 import { ProductChoiceScene } from "./ProductChoiceScene";
 import { Scene12 } from "./Scene12";
@@ -18,6 +18,7 @@ type ShowcasePhase = "cinematic" | "productChoice" | "scene12" | "ending";
 
 type ShowcaseChapterProps = {
   isActive?: boolean;
+  chapterId?: string | null;
   onGoHome?: () => void;
   onSceneChange?: (index: number) => void;
   onProgressChange?: (progress: number) => void;
@@ -25,32 +26,41 @@ type ShowcaseChapterProps = {
 
 export default function ShowcaseChapter({
   isActive = true,
+  chapterId,
   onGoHome,
   onSceneChange,
   onProgressChange,
 }: ShowcaseChapterProps) {
+  const config = getShowcaseChapterConfig(chapterId);
+  const scenes = config.scenes;
   const overlayRef = useRef<HTMLDivElement>(null);
-  const activeScene = useActiveNarrativeScene(overlayRef, showcaseScenes, isActive);
+  const activeScene = useActiveNarrativeScene(overlayRef, scenes, isActive);
   const [phase, setPhase] = useState<ShowcasePhase>("cinematic");
 
   // Preload all 3D models in the background as soon as the chapter mounts.
   // They're only needed at scene 12, so we intentionally excluded them from the
   // preloader gate, so they should be ready by the final product scene.
   useEffect(() => {
+    if (!config.hasFinalChoice) {
+      return;
+    }
     Object.values(showcaseSceneAssets.models).forEach((url) => useGLTF.preload(url));
-  }, []);
+  }, [config.hasFinalChoice]);
   const finalChoiceSceneId = "showcase-scene-11";
   const endingSceneId = "showcase-ending";
   const scene12Id = "showcase-scene-12";
   const trackedSceneIdRef = useRef<string | null>(null);
   const trackedSceneStartedAtRef = useRef<number | null>(null);
 
-  const activeSceneIndex = showcaseScenes.findIndex((s) => s.id === activeScene.id);
+  useEffect(() => {
+    setPhase("cinematic");
+    trackedSceneIdRef.current = null;
+    trackedSceneStartedAtRef.current = null;
+  }, [config.chapterId]);
+
+  const activeSceneIndex = scenes.findIndex((s) => s.id === activeScene.id);
   const safeSceneIndex = activeSceneIndex >= 0 ? activeSceneIndex : 0;
-  const cinematicSceneId =
-    activeScene.id && safeSceneIndex >= 0
-      ? `showcase-scene-${safeSceneIndex + 1}`
-      : null;
+  const cinematicSceneId = activeScene.id && safeSceneIndex >= 0 ? activeScene.id : null;
   const trackedStorySceneId =
     phase === "cinematic"
       ? cinematicSceneId
@@ -78,8 +88,8 @@ export default function ShowcaseChapter({
     }
 
     const completedSceneCount = Math.max(0, activeSceneIndex);
-    onProgressChange?.((completedSceneCount / showcaseScenes.length) * 100);
-  }, [activeSceneIndex, isActive, onProgressChange, phase]);
+    onProgressChange?.((completedSceneCount / scenes.length) * 100);
+  }, [activeSceneIndex, isActive, onProgressChange, phase, scenes.length]);
 
   const { recordChoice, setAnalytics, setCurrentLocation, state: storyState } = useStory();
 
@@ -89,10 +99,10 @@ export default function ShowcaseChapter({
 
   const persistTrackedSceneState = useCallback(
     async (sceneId: string, analytics: StoryAnalytics) => {
-      await setCurrentLocation("showcase", "showcase-chapter-1", sceneId);
+      await setCurrentLocation("showcase", config.chapterId, sceneId);
       await setAnalytics(analytics);
     },
-    [setAnalytics, setCurrentLocation]
+    [config.chapterId, setAnalytics, setCurrentLocation]
   );
 
   useEffect(() => {
@@ -150,8 +160,17 @@ export default function ShowcaseChapter({
   ]);
 
   const handleAllScenesComplete = useCallback(() => {
-    setPhase("productChoice");
-  }, []);
+    if (config.hasFinalChoice) {
+      setPhase("productChoice");
+      return;
+    }
+
+    void logStoryEvent({
+      type: "chapter_completed",
+      payload: { chapterId: config.chapterId },
+    });
+    onGoHome?.();
+  }, [config.chapterId, config.hasFinalChoice, onGoHome]);
 
   useShowcaseTimeline({
     overlayRef,
@@ -233,7 +252,7 @@ export default function ShowcaseChapter({
     <>
       <ShowcaseScene isActive={isActive} activeSceneId={activeScene.id} />
       {phase === "cinematic" && (
-        <ShowcaseNarrative isActive={isActive} overlayRef={overlayRef} />
+        <ShowcaseNarrative isActive={isActive} overlayRef={overlayRef} scenes={scenes} />
       )}
       {phase === "productChoice" && (
         <ProductChoiceScene onYes={handleYes} onNo={handleNo} />

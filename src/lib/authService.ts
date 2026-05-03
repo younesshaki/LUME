@@ -24,7 +24,7 @@ function sanitize(input: string): string | null {
 }
 
 function toEmail(username: string): string {
-  return `${username}@lume.local`;
+  return `${username}@lume-users.com`;
 }
 
 const LOCAL_AUTH_KEY = "lume.preview-auth.v1";
@@ -100,7 +100,8 @@ export async function loginOrRegister(
     const isWrongCreds =
       signInError?.message?.toLowerCase().includes("invalid login credentials") ||
       signInError?.message?.toLowerCase().includes("invalid credentials") ||
-      signInError?.status === 400;
+      signInError?.status === 400 ||
+      signInError?.status === 422;
 
     if (!isWrongCreds) {
       return { success: false, error: "network_error" };

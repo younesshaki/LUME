@@ -11,6 +11,7 @@ export type StoryEventType =
   | "session_started"      // login or session resume at the gate
   | "registered"           // first-time registration
   | "experience_entered"   // user clicked "play" past the title card
+  | "navigation_action"    // app-level navigation such as Back/Home
   | "scene_entered"        // entered a specific scene (showcase-scene-N)
   | "choice_made"          // yes/no at the productChoice scene
   | "chapter_completed"    // reached the end of the showcase chapter

@@ -14,7 +14,7 @@
 .flipWords__word {
   grid-area: 1 / 1;
   display: inline-block;
-  color: #ff4d5f;
+  color: #e09c14;
   font-weight: 900;
   text-shadow:
     0 0 18px rgba(209, 31, 50, 0.38),
