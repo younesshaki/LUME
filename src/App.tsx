@@ -1,6 +1,5 @@
 import "./App.scss";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { OllamaChat } from "./components/chat/OllamaChat";
 import { OutsideShowcaseMusic } from "./experience/audio/OutsideShowcaseMusic";
 import { UiSoundProvider } from "./experience/audio/UiSoundProvider";
@@ -22,32 +21,6 @@ import { logStoryEvent } from "./lib/eventsService";
 
 type AppScreen = "gate" | "home" | "products" | "contact" | "titlecard" | "experience" | "admin";
 
-function HeadphonesIcon() {
-  const [host, setHost] = useState<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const div = document.createElement("div");
-    div.style.cssText = "position:fixed;bottom:1.5rem;right:1.5rem;z-index:900;pointer-events:none;";
-    document.body.appendChild(div);
-    setHost(div);
-    return () => { div.remove(); };
-  }, []);
-
-  if (!host) return null;
-
-  return createPortal(
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      width="44"
-      height="44"
-      fill="#ffffff"
-    >
-      <path d="m12,3C6.49,3,2,7.49,2,13v6c0,.55.45,1,1,1h3c.55,0,1-.45,1-1v-5c0-.55-.45-1-1-1h-2c0-4.41,3.59-8,8-8s8,3.59,8,8h-2c-.55,0-1,.45-1,1v5c0,.55.45,1,1,1h3c.55,0,1-.45,1-1v-6c0-5.51-4.49-10-10-10Z"/>
-    </svg>,
-    host
-  );
-}
 
 const MEDIA_QUALITY_STORAGE_KEY = "nomad.media-quality.v1";
 
@@ -193,7 +166,6 @@ export default function App() {
           <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
         )}
         {screen !== "gate" && <OllamaChat />}
-        {!(isShowcaseExperience && showcaseChapterRevealed) && <HeadphonesIcon />}
         {screen === "admin" ? (
           <AdminPage onExit={handleGoHome} />
         ) : screen === "gate" ? (
