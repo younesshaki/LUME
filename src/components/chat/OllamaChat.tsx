@@ -1,7 +1,13 @@
 import "./OllamaChat.css";
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Loader2, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 import { getSystemPromptWithContext } from "@/lib/ragService";
+import { EncryptedText } from "@/components/ui/encrypted-text";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
+import { Meteors } from "@/components/ui/meteors";
+import { MovingBorder } from "@/components/ui/moving-border";
+import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 
 type ChatRole = "user" | "assistant";
 
@@ -36,6 +42,13 @@ const welcomeMessage: ChatMessage = {
   content: "Ask me anything about LUME — our products, philosophy, or how access works.",
 };
 
+const WELCOME_WORDS = welcomeMessage.content
+  .split(" ")
+  .map((text) => ({ text }));
+
+// module-level flag — typewriter plays once per session
+let welcomeHasAnimated = false;
+
 function createMessage(role: ChatRole, content: string): ChatMessage {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -55,12 +68,30 @@ function loadStoredMessages(): ChatMessage[] {
   }
 }
 
+const panelVariants = {
+  hidden: { opacity: 0, scale: 0.94, y: 12 },
+  visible: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.94, y: 12 },
+};
+
+const toggleVariants = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.9 },
+};
+
+const messageVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0 },
+};
+
 export function OllamaChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(loadStoredMessages);
   const [isSending, setIsSending] = useState(false);
   const [isRetrieving, setIsRetrieving] = useState(false);
+  const [retrievalKey, setRetrievalKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -74,23 +105,42 @@ export function OllamaChat() {
     [messages]
   );
 
+  // auto-scroll
   useEffect(() => {
     if (!isOpen) return;
     messagesEndRef.current?.scrollIntoView({ block: "end" });
   }, [isOpen, messages, isSending, isRetrieving, error]);
 
+  // cleanup on unmount
   useEffect(() => {
     return () => abortControllerRef.current?.abort();
   }, []);
 
+  // persist chat (skip during active stream to avoid partial messages)
   useEffect(() => {
     if (isSending || isRetrieving) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
     } catch {
-      // storage quota exceeded or private mode — silent
+      // quota exceeded or private mode
     }
   }, [messages, isSending, isRetrieving]);
+
+  // mark typewriter as done after it finishes
+  useEffect(() => {
+    if (!isOpen || welcomeHasAnimated) return;
+    const ms = WELCOME_WORDS.reduce((acc, w) => acc + w.text.length, 0) * 25 + 800;
+    const t = setTimeout(() => { welcomeHasAnimated = true; }, ms);
+    return () => clearTimeout(t);
+  }, [isOpen]);
+
+  const handlePanelMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty("--sl-x", `${x}%`);
+    e.currentTarget.style.setProperty("--sl-y", `${y}%`);
+  };
 
   const resetChat = () => {
     abortControllerRef.current?.abort();
@@ -122,6 +172,7 @@ export function OllamaChat() {
     abortControllerRef.current = abortController;
 
     // Phase A: RAG retrieval
+    setRetrievalKey((k) => k + 1);
     setIsRetrieving(true);
     let systemPrompt: string;
     try {
@@ -154,12 +205,8 @@ export function OllamaChat() {
         signal: abortController.signal,
       });
 
-      if (!response.ok) {
-        throw new Error(`Ollama returned ${response.status} ${response.statusText}`);
-      }
-      if (!response.body) {
-        throw new Error("No response body from Ollama.");
-      }
+      if (!response.ok) throw new Error(`Ollama returned ${response.status} ${response.statusText}`);
+      if (!response.body) throw new Error("No response body from Ollama.");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -168,7 +215,6 @@ export function OllamaChat() {
       outer: while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
@@ -177,11 +223,7 @@ export function OllamaChat() {
           const trimmed = line.trim();
           if (!trimmed) continue;
           let chunk: OllamaStreamChunk;
-          try {
-            chunk = JSON.parse(trimmed) as OllamaStreamChunk;
-          } catch {
-            continue;
-          }
+          try { chunk = JSON.parse(trimmed) as OllamaStreamChunk; } catch { continue; }
           if (chunk.error) throw new Error(chunk.error);
           const token = chunk.message?.content ?? "";
           if (token) {
@@ -195,7 +237,6 @@ export function OllamaChat() {
         }
       }
 
-      // flush any remaining buffer content
       if (buffer.trim()) {
         try {
           const chunk = JSON.parse(buffer.trim()) as OllamaStreamChunk;
@@ -208,9 +249,7 @@ export function OllamaChat() {
               )
             );
           }
-        } catch {
-          // ignore malformed final buffer
-        }
+        } catch { /* ignore */ }
       }
 
       setMessages((prev) =>
@@ -224,13 +263,10 @@ export function OllamaChat() {
         return;
       }
       setMessages((prev) => prev.filter((m) => m.id !== assistantMessageId));
-      const message =
-        caughtError instanceof Error ? caughtError.message : "Unable to reach Ollama.";
+      const message = caughtError instanceof Error ? caughtError.message : "Unable to reach Ollama.";
       setError(message);
     } finally {
-      if (abortControllerRef.current === abortController) {
-        abortControllerRef.current = null;
-      }
+      if (abortControllerRef.current === abortController) abortControllerRef.current = null;
       streamingMessageIdRef.current = null;
       setIsSending(false);
     }
@@ -249,106 +285,177 @@ export function OllamaChat() {
 
   const isActive = isSending || isRetrieving;
 
-  if (!isOpen) {
-    return (
-      <div className="ollamaChat">
-        <button
-          className="ollamaChat__toggle"
-          type="button"
-          aria-label="Open LUME assistant"
-          title="Open LUME assistant"
-          onClick={() => setIsOpen(true)}
-        >
-          <MessageCircle size={23} aria-hidden="true" />
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <section className="ollamaChat ollamaChat__panel" aria-label="LUME assistant">
-      <header className="ollamaChat__header">
-        <div className="ollamaChat__title">
-          <strong>LUME</strong>
-          <span>{OLLAMA_MODEL}</span>
-        </div>
-        <div className="ollamaChat__headerActions">
-          <button
-            className="ollamaChat__iconButton"
-            type="button"
-            aria-label="Reset chat"
-            title="Reset chat"
-            onClick={resetChat}
+    <div className="ollamaChat">
+      <AnimatePresence mode="wait">
+        {!isOpen ? (
+          <motion.div
+            key="toggle"
+            className="ollamaChat__toggleWrapper"
+            variants={toggleVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ duration: 0.15 }}
           >
-            <RotateCcw size={17} aria-hidden="true" />
-          </button>
-          <button
-            className="ollamaChat__iconButton"
-            type="button"
-            aria-label="Close chat"
-            title="Close chat"
-            onClick={() => setIsOpen(false)}
-          >
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
-      </header>
-
-      <div className="ollamaChat__messages" aria-live="polite">
-        {messages.map((message) => (
-          <article
-            className={`ollamaChat__message ollamaChat__message--${message.role}`}
-            key={message.id}
-          >
-            <span className="ollamaChat__messageLabel">
-              {message.role === "user" ? "You" : "LUME"}
-            </span>
-            <span
-              className={`ollamaChat__messageText${
-                isSending && message.id === streamingMessageIdRef.current && message.content
-                  ? " ollamaChat__streamingCursor"
-                  : ""
-              }`}
+            <div className="absolute inset-0">
+              <MovingBorder duration={3000} rx="50%" ry="50%">
+                <div className="ollamaChat__toggleBorderGlow" />
+              </MovingBorder>
+            </div>
+            <button
+              className="ollamaChat__toggle"
+              type="button"
+              aria-label="Open LUME assistant"
+              title="Open LUME assistant"
+              onClick={() => setIsOpen(true)}
             >
-              {message.content}
-            </span>
-          </article>
-        ))}
-        {isRetrieving && (
-          <article className="ollamaChat__message ollamaChat__message--assistant">
-            <span className="ollamaChat__messageLabel">LUME</span>
-            <span className="ollamaChat__messageText">Searching knowledge base…</span>
-          </article>
-        )}
-        {error && <div className="ollamaChat__error">{error}</div>}
-        <div ref={messagesEndRef} />
-      </div>
+              <MessageCircle size={23} aria-hidden="true" />
+            </button>
+          </motion.div>
+        ) : (
+          <motion.section
+            key="panel"
+            className="ollamaChat__panel"
+            aria-label="LUME assistant"
+            variants={panelVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+            onMouseMove={handlePanelMouseMove}
+          >
+            {/* Gold glowing border effect */}
+            <GlowingEffect disabled={false} spread={35} borderWidth={1} proximity={80} movementDuration={1.5} />
 
-      <form className="ollamaChat__composer" onSubmit={handleSubmit}>
-        <textarea
-          className="ollamaChat__input"
-          aria-label="Message LUME assistant"
-          placeholder="Message LUME"
-          rows={1}
-          value={input}
-          disabled={isActive}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={handleInputKeyDown}
-        />
-        <button
-          className="ollamaChat__send"
-          type="submit"
-          aria-label="Send message"
-          title="Send message"
-          disabled={!input.trim() || isActive}
-        >
-          {isActive ? (
-            <Loader2 className="ollamaChat__spinner" size={18} aria-hidden="true" />
-          ) : (
-            <Send size={18} aria-hidden="true" />
-          )}
-        </button>
-      </form>
-    </section>
+            {/* Meteor background */}
+            <div className="ollamaChat__meteorsBg" aria-hidden="true">
+              <Meteors number={6} />
+            </div>
+
+            {/* Mouse-tracking spotlight overlay */}
+            <div className="ollamaChat__spotlight" aria-hidden="true" />
+
+            <header className="ollamaChat__header">
+              <div className="ollamaChat__title">
+                <strong>LUME</strong>
+                <span>{OLLAMA_MODEL}</span>
+              </div>
+              <div className="ollamaChat__headerActions">
+                <button
+                  className="ollamaChat__iconButton"
+                  type="button"
+                  aria-label="Reset chat"
+                  title="Reset chat"
+                  onClick={resetChat}
+                >
+                  <RotateCcw size={17} aria-hidden="true" />
+                </button>
+                <button
+                  className="ollamaChat__iconButton"
+                  type="button"
+                  aria-label="Close chat"
+                  title="Close chat"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <X size={18} aria-hidden="true" />
+                </button>
+              </div>
+            </header>
+
+            <div className="ollamaChat__messages" aria-live="polite">
+              {messages.map((message) => (
+                <motion.article
+                  className={`ollamaChat__message ollamaChat__message--${message.role}`}
+                  key={message.id}
+                  variants={messageVariants}
+                  initial="hidden"
+                  animate="visible"
+                  transition={{ duration: 0.2 }}
+                >
+                  <span className="ollamaChat__messageLabel">
+                    {message.role === "user" ? "You" : "LUME"}
+                  </span>
+                  <span
+                    className={`ollamaChat__messageText${
+                      isSending && message.id === streamingMessageIdRef.current && message.content
+                        ? " ollamaChat__streamingCursor"
+                        : ""
+                    }`}
+                  >
+                    {message.id === welcomeMessage.id && !welcomeHasAnimated ? (
+                      <TypewriterEffect
+                        words={WELCOME_WORDS}
+                        className="text-[0.9rem] leading-[1.45]"
+                        cursorClassName="opacity-60"
+                      />
+                    ) : (
+                      message.content
+                    )}
+                  </span>
+                </motion.article>
+              ))}
+
+              {isRetrieving && (
+                <motion.article
+                  className="ollamaChat__message ollamaChat__message--assistant"
+                  variants={messageVariants}
+                  initial="hidden"
+                  animate="visible"
+                  transition={{ duration: 0.2 }}
+                >
+                  <span className="ollamaChat__messageLabel">LUME</span>
+                  <span className="ollamaChat__messageText">
+                    <EncryptedText
+                      key={retrievalKey}
+                      text="Searching knowledge base..."
+                      revealDelayMs={22}
+                      flipDelayMs={35}
+                      encryptedClassName="opacity-50"
+                    />
+                  </span>
+                </motion.article>
+              )}
+
+              {error && <div className="ollamaChat__error">{error}</div>}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <form className="ollamaChat__composer" onSubmit={handleSubmit}>
+              <textarea
+                className="ollamaChat__input"
+                aria-label="Message LUME assistant"
+                placeholder="Message LUME"
+                rows={1}
+                value={input}
+                disabled={isActive}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+              />
+              <div className="ollamaChat__sendWrapper">
+                <div className="absolute inset-0" style={{ borderRadius: "calc(14px * 0.96)" }}>
+                  <MovingBorder duration={2500} rx="30%" ry="30%">
+                    <div className="ollamaChat__sendBorderGlow" />
+                  </MovingBorder>
+                </div>
+                <button
+                  className="ollamaChat__send"
+                  type="submit"
+                  aria-label="Send message"
+                  title="Send message"
+                  disabled={!input.trim() || isActive}
+                >
+                  {isActive ? (
+                    <Loader2 className="ollamaChat__spinner" size={18} aria-hidden="true" />
+                  ) : (
+                    <Send size={18} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+            </form>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
