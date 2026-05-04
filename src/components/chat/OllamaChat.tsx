@@ -5,8 +5,6 @@ import { Loader2, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 import { getSystemPromptWithContext } from "@/lib/ragService";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
-import { Meteors } from "@/components/ui/meteors";
-import { MovingBorder } from "@/components/ui/moving-border";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 
 type ChatRole = "user" | "assistant";
@@ -133,14 +131,6 @@ export function OllamaChat() {
     const t = setTimeout(() => { welcomeHasAnimated = true; }, ms);
     return () => clearTimeout(t);
   }, [isOpen]);
-
-  const handlePanelMouseMove = (e: React.MouseEvent<HTMLElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    e.currentTarget.style.setProperty("--sl-x", `${x}%`);
-    e.currentTarget.style.setProperty("--sl-y", `${y}%`);
-  };
 
   const resetChat = () => {
     abortControllerRef.current?.abort();
@@ -289,30 +279,21 @@ export function OllamaChat() {
     <div className="ollamaChat">
       <AnimatePresence mode="wait">
         {!isOpen ? (
-          <motion.div
+          <motion.button
             key="toggle"
-            className="ollamaChat__toggleWrapper"
+            className="ollamaChat__toggle"
+            type="button"
+            aria-label="Open LUME assistant"
+            title="Open LUME assistant"
             variants={toggleVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             transition={{ duration: 0.15 }}
+            onClick={() => setIsOpen(true)}
           >
-            <div className="absolute inset-0">
-              <MovingBorder duration={3000} rx="50%" ry="50%">
-                <div className="ollamaChat__toggleBorderGlow" />
-              </MovingBorder>
-            </div>
-            <button
-              className="ollamaChat__toggle"
-              type="button"
-              aria-label="Open LUME assistant"
-              title="Open LUME assistant"
-              onClick={() => setIsOpen(true)}
-            >
-              <MessageCircle size={23} aria-hidden="true" />
-            </button>
-          </motion.div>
+            <MessageCircle size={23} aria-hidden="true" />
+          </motion.button>
         ) : (
           <motion.section
             key="panel"
@@ -323,18 +304,9 @@ export function OllamaChat() {
             animate="visible"
             exit="exit"
             transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-            onMouseMove={handlePanelMouseMove}
           >
             {/* Gold glowing border effect */}
             <GlowingEffect disabled={false} spread={35} borderWidth={1} proximity={80} movementDuration={1.5} />
-
-            {/* Meteor background */}
-            <div className="ollamaChat__meteorsBg" aria-hidden="true">
-              <Meteors number={6} />
-            </div>
-
-            {/* Mouse-tracking spotlight overlay */}
-            <div className="ollamaChat__spotlight" aria-hidden="true" />
 
             <header className="ollamaChat__header">
               <div className="ollamaChat__title">
@@ -432,26 +404,19 @@ export function OllamaChat() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleInputKeyDown}
               />
-              <div className="ollamaChat__sendWrapper">
-                <div className="absolute inset-0" style={{ borderRadius: "calc(14px * 0.96)" }}>
-                  <MovingBorder duration={2500} rx="30%" ry="30%">
-                    <div className="ollamaChat__sendBorderGlow" />
-                  </MovingBorder>
-                </div>
-                <button
-                  className="ollamaChat__send"
-                  type="submit"
-                  aria-label="Send message"
-                  title="Send message"
-                  disabled={!input.trim() || isActive}
-                >
-                  {isActive ? (
-                    <Loader2 className="ollamaChat__spinner" size={18} aria-hidden="true" />
-                  ) : (
-                    <Send size={18} aria-hidden="true" />
-                  )}
-                </button>
-              </div>
+              <button
+                className="ollamaChat__send"
+                type="submit"
+                aria-label="Send message"
+                title="Send message"
+                disabled={!input.trim() || isActive}
+              >
+                {isActive ? (
+                  <Loader2 className="ollamaChat__spinner" size={18} aria-hidden="true" />
+                ) : (
+                  <Send size={18} aria-hidden="true" />
+                )}
+              </button>
             </form>
           </motion.section>
         )}

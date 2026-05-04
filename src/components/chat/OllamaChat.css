@@ -9,32 +9,13 @@
 }
 
 /* ─── Toggle button (closed state) ──────────────────────────────────────── */
-.ollamaChat__toggleWrapper {
-  position: relative;
-  width: 54px;
-  height: 54px;
-  overflow: hidden;
-  border-radius: 999px;
-  padding: 1px;
-}
-
-.ollamaChat__toggleBorderGlow {
-  height: 40px;
-  width: 40px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #ffe57e 40%, transparent 60%);
-  opacity: 0.4;
-}
-
 .ollamaChat__toggle {
-  position: relative;
-  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  border: none;
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 232, 164, 0.34);
   border-radius: 999px;
   color: #fff8de;
   background:
@@ -48,6 +29,7 @@
 
 .ollamaChat__toggle:hover,
 .ollamaChat__toggle:focus-visible {
+  border-color: rgba(255, 229, 126, 0.9);
   color: #ffe57e;
   transform: translateY(-1px);
   outline: none;
@@ -70,52 +52,6 @@
   box-shadow: 0 22px 58px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  --sl-x: 50%;
-  --sl-y: 30%;
-}
-
-/* ─── Spotlight overlay ──────────────────────────────────────────────────── */
-.ollamaChat__spotlight {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    circle 180px at var(--sl-x) var(--sl-y),
-    rgba(255, 229, 126, 0.07),
-    transparent 70%
-  );
-}
-
-/* ─── Meteors background ─────────────────────────────────────────────────── */
-.ollamaChat__meteorsBg {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  border-radius: inherit;
-}
-
-.ollamaChat__meteor {
-  position: absolute;
-  top: -4px;
-  display: block;
-  height: 1px;
-  width: 60px;
-  border-radius: 9999px;
-  background: linear-gradient(to right, rgba(255, 229, 126, 0.6), transparent);
-  transform: rotate(215deg);
-  opacity: 0;
-  animation: ollamaMeteor linear infinite;
-}
-
-@keyframes ollamaMeteor {
-  0%   { opacity: 0; transform: rotate(215deg) translateX(0); }
-  5%   { opacity: 0.5; }
-  80%  { opacity: 0.3; }
-  100% { opacity: 0; transform: rotate(215deg) translateX(-320px); }
 }
 
 /* ─── Header ─────────────────────────────────────────────────────────────── */
@@ -273,37 +209,17 @@
   border-color: rgba(255, 229, 126, 0.76);
 }
 
-/* ─── Send button with MovingBorder ─────────────────────────────────────── */
-.ollamaChat__sendWrapper {
-  position: relative;
-  overflow: hidden;
-  border-radius: 14px;
-  padding: 1px;
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-}
-
-.ollamaChat__sendBorderGlow {
-  height: 36px;
-  width: 36px;
-  border-radius: 8px;
-  background: radial-gradient(#ffe57e 40%, transparent 60%);
-  opacity: 0.55;
-}
-
+/* ─── Send button ────────────────────────────────────────────────────────── */
 .ollamaChat__send {
-  position: relative;
-  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  border: none;
-  border-radius: 13px;
-  color: #ffe57e;
-  background: rgba(10, 8, 6, 0.95);
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 229, 126, 0.5);
+  border-radius: 14px;
+  color: #120e08;
+  background: #ffe57e;
   cursor: pointer;
   transition: opacity 160ms ease, transform 160ms ease;
 }
