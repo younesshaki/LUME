@@ -1,7 +1,7 @@
 /* ─── Root container (fixed anchor) ─────────────────────────────────────── */
 .ollamaChat {
   position: fixed;
-  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
   bottom: max(18px, env(safe-area-inset-bottom));
   z-index: 2147482980;
   font-family: var(--experience-font-family);
@@ -261,7 +261,7 @@
 /* ─── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .ollamaChat {
-    left: max(14px, env(safe-area-inset-left));
+    right: max(14px, env(safe-area-inset-right));
     bottom: max(14px, env(safe-area-inset-bottom));
   }
 
