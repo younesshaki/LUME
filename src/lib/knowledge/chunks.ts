@@ -66,6 +66,11 @@ export const chunks: KnowledgeChunk[] = [
     text: "LUME × Rolex Daytona Edition is a watch created in direct collaboration between LUME and Rolex. Guests wear it inside LUME during their stay. When they check out, the watch stays behind. It is not for sale anywhere in the world. The collaboration produces a timepiece that exists only as a LUME experience object — worn once per stay, returned at departure, worn again on the next visit. Category: fashion. Status: coming soon.",
   },
   {
+    id: "product-summary",
+    category: "product",
+    text: "LUME currently has exactly seven product collaborations. One is live and six are coming soon. The live product is LUME × Red Bull Special Edition — a drink available now with a cinematic showcase on the website. The six coming soon products are: LUME × Starbucks Reserve Blend (drink), LUME × Moët & Chandon Blanc de Blancs (drink), LUME × YSL Libre — Femme (fragrance), LUME × YSL Y — Homme (fragrance), LUME × Hermès Carré Soie (fashion), and LUME × Rolex Daytona Edition (fashion). All products are exclusive collaborations that exist only within LUME and cannot be purchased or taken home. None of these are personal care products. LUME is a luxury hotel, not a personal care or deodorant brand.",
+  },
+  {
     id: "product-future",
     category: "product",
     text: "LUME has a roadmap of future product collaborations planned across multiple categories. In technology, the LUME × Bang & Olufsen in-room audio system is an exclusive hardware line that will never be sold commercially. The LUME × Leica camera edition will be available to use during a stay and left behind at checkout. In wellness, LUME × Technogym will equip the hotel gym with a machine line that does not exist outside LUME. LUME × a rotating Michelin-starred chef will create a private dining experience with a menu that changes per guest. LUME × Ferrari or Lamborghini will offer a private driving experience in Monaco exclusive to guests. An annual rotating artist commission will produce a permanent installation, replaced each year and created only for LUME.",
