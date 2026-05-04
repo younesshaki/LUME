@@ -10,10 +10,33 @@
   --bal-flower-petal: #d6d6d6;
   --bal-flower-center: #ffffff;
   --bal-text-color: #f2f2f2;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 0 80px rgba(255, 255, 255, 0.08),
-    inset 0 0 60px rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  animation: balContainerGlow 3s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+.loader-variant-preload::before,
+.loader-variant-preload::after {
+  content: none;
+}
+
+.loader-variant-preload .loaderFour,
+.loader-variant-preload .loaderFive {
+  z-index: 2;
+}
+
+.loader-variant-preload .loaderFive--preloader {
+  min-height: 2.25rem;
+  max-width: min(9rem, 52vw);
+  font-size: clamp(0.6rem, 2.2vw, 1.08rem);
 }
 
 .loader-variant-preload .sunbeam {
