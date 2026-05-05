@@ -30,16 +30,21 @@ Current implementation branch: `codex-max`
   - `npm run typecheck`
   - `npm run build`
 
-### In Progress Now
+### Completed After First P0 Pass
 
-- Merge `chatbot-design` into `codex-max` so the newer chatbot/RAG changes are included before continuing the rest of this plan.
+- Merged `chatbot-design` into `codex-max`.
+- Brought in the newer chatbot work:
+  - streaming Ollama responses
+  - RAG context retrieval
+  - persistent local chat history
+  - local knowledge chunks and embeddings
+  - chatbot UI motion/encryption/glow components
+- Confirmed the local chat still remains production-guarded by `VITE_ENABLE_LOCAL_CHAT`.
 
 ### Next Recommended Work After Merge
 
-1. Resolve any chatbot feature-flag conflicts so the improved chatbot remains optional in production.
-2. Re-run `npm run typecheck` and `npm run build`.
-3. Re-check `chatbot details.md` because `chatbot-design` likely changes the chatbot architecture and may make parts of that doc stale again.
-4. Continue with the remaining P0 items:
+1. Re-run `npm run typecheck` and `npm run build`.
+2. Continue with the remaining P0 items:
    - normalize product image R2 paths
    - finish product asset upload/check workflow
    - clean any remaining stale docs
@@ -125,14 +130,18 @@ Main files:
 }
 ```
 
-There is no:
+Originally missing:
 
 - `test`
 - `lint`
 - `format`
-- `typecheck` separate from build
 - `e2e`
+
+Implemented in the first `codex-max` pass:
+
+- `typecheck` separate from build
 - CI workflow
+- `check:assets` R2 verification script
 
 Current build output shows:
 
@@ -142,22 +151,17 @@ Current build output shows:
 
 ### Documentation Drift
 
-Files with stale or partially incorrect statements:
+Files that originally had stale or partially incorrect statements and were updated in the first `codex-max` pass:
 
 - `components-map.md`
-  - Still says `HeadphonesIcon` exists inline in `App.tsx`, but it was removed.
-  - Says the pre-loader is pending replacement with `LoaderFour`, but the code now uses local `LoaderFive`.
-  - Says `uiSounds` is a static map of UI sound file URLs, but the sounds are generated oscillators.
-  - Says `cdn` resolves `VITE_CDN_BASE_URL`, but current code uses `VITE_R2_PUBLIC_BASE_URL`.
-
 - `user-workflow.md`
-  - Still says the initial preloader uses `BirdSvg` with sunbeams and flowers.
-  - Still lists `HeadphonesIcon` as persistent UI.
-
 - `.github/agents/code-navigator.agent.md`
-  - Refers to older project structure like `src/experience/scenes/part1/`.
-  - Refers to `src/ui/` while this repo uses `src/experience/ui/`.
-  - Mentions components that are not current source-of-truth.
+- `README.md`
+- `chatbot details.md`
+
+Remaining documentation risk:
+
+- Keep these docs in sync as `chatbot-design`/RAG and future product showcase work continue to evolve.
 
 ### Media And Asset Flow
 
@@ -755,25 +759,19 @@ Acceptance criteria:
 - Production users do not see a broken local AI widget.
 - Local developers can enable it easily.
 
-### 20. Make Chat Streaming Accurate Or Remove Streaming Claims
+### 20. Keep Chat Streaming And RAG Docs Accurate
 
 Current:
 
-- Docs say the chat streams.
-- Code sends `stream: false`.
+- `chatbot-design` has been merged into `codex-max`.
+- The chatbot now streams responses with `stream: true`.
+- The chatbot uses `ragService` for local context retrieval.
+- Chat history persists locally in `localStorage`.
 
-Options:
+Next:
 
-1. Update docs to say non-streaming.
-2. Implement Ollama streaming response handling.
-
-Recommended short-term:
-
-- Update docs to non-streaming.
-
-Recommended long-term:
-
-- Implement streaming if the UX should feel alive.
+- Keep `chatbot details.md`, `components-map.md`, and README aligned with future chatbot changes.
+- If the chatbot moves server-side, document the production API and rate-limit model.
 
 Acceptance criteria:
 

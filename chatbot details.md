@@ -2,7 +2,7 @@
 
 ## Overview
 
-The LUME chatbot is an optional first-pass local AI chat widget that connects the React app to an Ollama model running on a Linux device on the local network.
+The LUME chatbot is an optional local AI chat widget that connects the React app to an Ollama model running on a Linux device on the local network. It now supports streaming responses, persistent local chat history, and a small RAG layer backed by local LUME knowledge chunks and embeddings.
 
 The current model target is:
 
@@ -54,6 +54,15 @@ Vite env typings:
 
 ```txt
 src/vite-env.d.ts
+```
+
+RAG service and local knowledge:
+
+```txt
+src/lib/ragService.ts
+src/lib/knowledge/chunks.ts
+src/lib/knowledge/embeddings.json
+scripts/generateEmbeddings.ts
 ```
 
 ## How It Is Mounted
@@ -120,7 +129,9 @@ http://192.168.11.118:11434/api/chat
 
 ## Request Shape
 
-When the user sends a message, `OllamaChat.tsx` sends a POST request to Ollama:
+When the user sends a message, `OllamaChat.tsx` first asks `getSystemPromptWithContext()` for a context-aware system prompt. That function embeds the query, retrieves relevant local LUME knowledge chunks, and appends those chunks to a strict system prompt.
+
+Then the component sends a streaming POST request to Ollama:
 
 ```ts
 await fetch(OLLAMA_CHAT_URL, {
@@ -130,44 +141,36 @@ await fetch(OLLAMA_CHAT_URL, {
   },
   body: JSON.stringify({
     model: OLLAMA_MODEL,
-    stream: false,
-    messages: [
-      {
-        role: "system",
-        content: SYSTEM_PROMPT,
-      },
-      ...nextApiMessages,
-    ],
+    stream: true,
+    messages: [{ role: "system", content: systemPrompt }, ...nextApiMessages],
   }),
 });
 ```
 
-The system prompt is currently:
+The base system prompt lives in `src/lib/ragService.ts`. It instructs the assistant to treat LUME as an invitation-only luxury hotel in Monaco and to answer only from the retrieved context.
 
-```txt
-You are LUME's local assistant. Be concise, helpful, and clear. If you do not know something, say so.
-```
+Streaming chunks are read from `response.body.getReader()` and appended token-by-token into the in-progress assistant message.
 
 ## Memory Behavior
 
-The chatbot currently has short-term memory only.
+The chatbot has two memory layers:
 
-Messages are stored in React state:
+- Current session state in React.
+- Persistent local browser history in `localStorage` under `lume-chat-v1`.
 
 ```ts
 const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage]);
 ```
 
-On every request, the current conversation is converted into Ollama chat messages and sent with the new user message.
+On every request, the current conversation is converted into Ollama chat messages and sent with the new user message. When the chat is not actively retrieving or streaming, messages are persisted to local storage.
 
 This means:
 
 - The model can follow the current conversation while the page is open.
-- The conversation is lost on page refresh.
-- The conversation is lost if the component unmounts.
+- The conversation survives page refresh.
+- The conversation survives component unmount/remount.
 - Nothing is stored in Supabase.
-- Nothing is stored in `localStorage`.
-- No RAG memory has been added yet.
+- Reset clears the stored local chat.
 
 ## UI Behavior
 
@@ -183,6 +186,8 @@ When opened, it shows:
 - Send button.
 - Loading state.
 - Error state.
+- RAG retrieval state.
+- Streaming assistant response cursor.
 
 Keyboard behavior:
 
@@ -198,6 +203,7 @@ VITE_ENABLE_LOCAL_CHAT=true
 VITE_OLLAMA_HOST=http://192.168.11.118:11434
 VITE_OLLAMA_CHAT_URL=/ollama/api/chat
 VITE_OLLAMA_MODEL=llama3.1:8b
+VITE_OLLAMA_EMBED_MODEL=nomic-embed-text
 ```
 
 Typical local development setup should use `VITE_OLLAMA_HOST` and keep `VITE_OLLAMA_CHAT_URL` as the default proxy path.
@@ -222,31 +228,48 @@ This keeps the frontend request same-origin from the browser's point of view.
 
 ## Current Limitations
 
-- No persistent chat history.
-- No streaming response UI yet.
-- No RAG.
-- No document retrieval.
-- No user-specific memory.
+- Persistent chat history is local-browser only.
+- RAG uses static local chunks and embeddings.
+- Embeddings must be regenerated manually when knowledge chunks change.
+- No server-side rate limiting.
+- No Supabase-backed user-specific chat memory.
 - The model is only available when the Linux Ollama device is online and reachable on the network.
 - The current implementation is client-side and meant for local/dev use.
 
-## Future RAG Direction
+## RAG Maintenance
 
-The next RAG step should happen before calling Ollama:
+Knowledge source:
+
+```txt
+src/lib/knowledge/chunks.ts
+```
+
+Generated embeddings:
+
+```txt
+src/lib/knowledge/embeddings.json
+```
+
+Regeneration command:
+
+```bash
+npm run embed
+```
+
+The current request flow:
 
 1. User sends a message.
-2. App searches project/product/brand knowledge.
-3. Relevant context snippets are selected.
-4. The snippets are inserted into the prompt.
-5. Ollama answers using both the conversation and retrieved context.
+2. `ragService` embeds the query through Ollama embeddings.
+3. `ragService` scores local chunks with cosine similarity.
+4. Top chunks are inserted into the system prompt.
+5. Ollama streams the final answer.
 
 Likely future pieces:
 
-- A knowledge source for LUME brand/product content.
-- An embedding model.
-- A vector store.
-- A retrieval function.
-- A server/API layer so retrieval and model calls are not handled only in the browser.
+- Move retrieval/model calls to a server/API layer for production.
+- Add rate limits.
+- Add authenticated user-specific memory if needed.
+- Add automated embedding regeneration in CI or release workflow.
 
 ## Verification Commands
 
@@ -257,7 +280,7 @@ curl http://192.168.11.118:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{
     "model": "llama3.1:8b",
-    "stream": false,
+    "stream": true,
     "messages": [
       {
         "role": "user",
@@ -274,7 +297,7 @@ curl http://localhost:5173/ollama/api/chat \
   -H "Content-Type: application/json" \
   -d '{
     "model": "llama3.1:8b",
-    "stream": false,
+    "stream": true,
     "messages": [
       {
         "role": "user",

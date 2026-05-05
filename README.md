@@ -18,6 +18,7 @@ VITE_ENABLE_LOCAL_CHAT=false
 VITE_OLLAMA_HOST=http://127.0.0.1:11434
 VITE_OLLAMA_CHAT_URL=/ollama/api/chat
 VITE_OLLAMA_MODEL=llama3.1:8b
+VITE_OLLAMA_EMBED_MODEL=nomic-embed-text
 ```
 
 Media currently loads from Cloudflare R2 first with Supabase storage as the
@@ -38,6 +39,7 @@ Ollama endpoint.
 npm run dev
 npm run typecheck
 npm run check:assets
+npm run embed
 npm run build
 npm run preview
 ```
@@ -45,3 +47,6 @@ npm run preview
 `npm run check:assets` verifies the required Cloudflare R2 media keys used by
 the current product cards and Red Bull showcase. Optional future product assets
 are reported as warnings without failing the command.
+
+`npm run embed` regenerates the local chatbot knowledge embeddings after edits
+to `src/lib/knowledge/chunks.ts`.

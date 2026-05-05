@@ -31,7 +31,7 @@ Installed via the Shadcn CLI with the `@aceternity` registry.
 
 | Component | File | Purpose |
 |---|---|---|
-| `OllamaChat` | [`src/components/chat/OllamaChat.tsx`](src/components/chat/OllamaChat.tsx) | Floating AI chat widget. Connects to a local Ollama instance (`llama3.1:8b` by default) via `VITE_OLLAMA_CHAT_URL`. It is non-streaming today and only renders when `VITE_ENABLE_LOCAL_CHAT=true`. |
+| `OllamaChat` | [`src/components/chat/OllamaChat.tsx`](src/components/chat/OllamaChat.tsx) | Optional floating AI chat widget. Connects to local Ollama, retrieves LUME context through `ragService`, streams responses, persists local browser history, and only renders when `VITE_ENABLE_LOCAL_CHAT=true`. |
 
 ---
 
@@ -157,6 +157,7 @@ The loader system uses a **variant registry** — `Experience.tsx` selects a var
 | `supabase` | [`src/lib/supabase.ts`](src/lib/supabase.ts) | Supabase client singleton. Gracefully no-ops when `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are not set. |
 | `cdn` | [`src/config/cdn.ts`](src/config/cdn.ts) | `mediaUrl()` and `useCdnImage()` helpers. Resolves asset paths via `VITE_R2_PUBLIC_BASE_URL`, with optional Supabase storage fallback via `VITE_SUPABASE_STORAGE_URL`. |
 | `utils` | [`src/lib/utils.ts`](src/lib/utils.ts) | `cn()` — Tailwind class merging utility (clsx + tailwind-merge). |
+| `ragService` | [`src/lib/ragService.ts`](src/lib/ragService.ts) | Local chatbot retrieval layer. Embeds user queries, scores local knowledge chunks, and builds context-aware system prompts for Ollama. |
 
 ---
 
