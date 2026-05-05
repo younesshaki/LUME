@@ -37,9 +37,12 @@ dist-ssr
 *.otf
 !src/experience/ui/moralana/Moralana DEMO.otf
 !src/experience/ui/mileast/Mileast.otf
+!src/experience/assets/fonts/**/*.otf
 *.ttf
 !src/experience/ui/higher-jump/Higher Jump.ttf
+!src/experience/assets/fonts/**/*.ttf
 *.png
+!src/experience/assets/images/lume-homepage-background.png
 *.jpg
 *.jpeg
 *.gif

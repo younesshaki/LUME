@@ -9,6 +9,8 @@ import PreloadGate from "./experience/ui/PreloadGate";
 import ShowcaseTitleCard from "./experience/ui/ShowcaseTitleCard";
 import StoryHomePage from "./experience/ui/StoryHomePage";
 import ProductsPage from "./experience/ui/ProductsPage";
+import ProductDetailPage from "./experience/ui/ProductDetailPage";
+import ShowcasePage from "./experience/ui/ShowcasePage";
 import ContactPage from "./experience/ui/ContactPage";
 import PhoneExperienceNotice from "./experience/ui/PhoneExperienceNotice";
 import AdminPage from "./experience/ui/AdminPage";
@@ -19,7 +21,16 @@ import { isShowcaseChapterId } from "./experience/scenes/showcase/data";
 import { getChapterDefinition } from "./experience/story/manifest";
 import { logStoryEvent } from "./lib/eventsService";
 
-type AppScreen = "gate" | "home" | "products" | "contact" | "titlecard" | "experience" | "admin";
+type AppScreen =
+  | "gate"
+  | "home"
+  | "products"
+  | "productDetail"
+  | "showcase"
+  | "contact"
+  | "titlecard"
+  | "experience"
+  | "admin";
 
 
 const MEDIA_QUALITY_STORAGE_KEY = "nomad.media-quality.v1";
@@ -37,6 +48,7 @@ export default function App() {
   const [screen, setScreen] = useState<AppScreen>(
     initialHash === "#admin" ? "admin" : "gate"
   );
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [entryPartIndex, setEntryPartIndex] = useState(0);
   const [entryChapterIndex, setEntryChapterIndex] = useState(0);
   const [showcaseChapterRevealed, setShowcaseChapterRevealed] = useState(false);
@@ -115,6 +127,18 @@ export default function App() {
       return;
     }
 
+    if (screen === "productDetail") {
+      logNavigationAction("back", "productDetail", "products");
+      setScreen("products");
+      return;
+    }
+
+    if (screen === "showcase") {
+      logNavigationAction("back", "showcase", "home");
+      handleGoHome();
+      return;
+    }
+
     if (screen === "contact") {
       logNavigationAction("back", "contact", "home");
       handleGoHome();
@@ -141,6 +165,19 @@ export default function App() {
     setScreen("experience");
   }, []);
 
+  const handleNavigateToProducts = useCallback(() => {
+    setScreen("products");
+  }, []);
+
+  const handleNavigateToShowcase = useCallback(() => {
+    setScreen("showcase");
+  }, []);
+
+  const handleSelectProduct = useCallback((productId: string) => {
+    setSelectedProductId(productId);
+    setScreen("productDetail");
+  }, []);
+
   const handleMediaQualityChange = useCallback((quality: ShowcaseVideoQuality) => {
     setMediaQuality(quality);
     window.localStorage.setItem(MEDIA_QUALITY_STORAGE_KEY, quality);
@@ -160,7 +197,7 @@ export default function App() {
           visible={!isShowcaseExperience}
           onQualityChange={handleMediaQualityChange}
         />
-        {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "contact") && (
+        {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "productDetail" || screen === "showcase" || screen === "contact") && (
           <AppBackButton onClick={handleBack} />
         )}
         {screen !== "gate" && (
@@ -189,18 +226,37 @@ export default function App() {
             ) : screen === "products" ? (
               <ProductsPage
                 onGoHome={handleGoHome}
-                onEnter={handleEnterExperience}
+                onSelectProduct={handleSelectProduct}
+                onNavigateToShowcase={handleNavigateToShowcase}
                 onNavigateToContact={() => setScreen("contact")}
+              />
+            ) : screen === "productDetail" ? (
+              <ProductDetailPage
+                productId={selectedProductId}
+                onGoHome={handleGoHome}
+                onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToShowcase={handleNavigateToShowcase}
+                onNavigateToContact={() => setScreen("contact")}
+                onViewShowcase={handleEnterExperience}
+              />
+            ) : screen === "showcase" ? (
+              <ShowcasePage
+                onGoHome={handleGoHome}
+                onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToContact={() => setScreen("contact")}
+                onEnter={handleEnterExperience}
               />
             ) : screen === "contact" ? (
               <ContactPage
                 onGoHome={handleGoHome}
-                onNavigateToProducts={() => setScreen("products")}
+                onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToShowcase={handleNavigateToShowcase}
               />
             ) : (
               <StoryHomePage
                 onEnter={handleEnterExperience}
-                onNavigateToProducts={() => setScreen("products")}
+                onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToShowcase={handleNavigateToShowcase}
                 onNavigateToContact={() => setScreen("contact")}
               />
             )}
