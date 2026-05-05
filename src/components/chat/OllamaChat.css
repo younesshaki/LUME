@@ -1,3 +1,4 @@
+/* ─── Root container (fixed anchor) ─────────────────────────────────────── */
 .ollamaChat {
   position: fixed;
   right: max(18px, env(safe-area-inset-right));
@@ -7,6 +8,7 @@
   color: #fff9e8;
 }
 
+/* ─── Toggle button (closed state) ──────────────────────────────────────── */
 .ollamaChat__toggle {
   display: inline-flex;
   align-items: center;
@@ -18,15 +20,11 @@
   color: #fff8de;
   background:
     radial-gradient(circle at 32% 18%, rgba(255, 255, 255, 0.18), transparent 36%),
-    rgba(12, 8, 8, 0.76);
-  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.44);
+    rgba(12, 8, 8, 0.82);
   cursor: pointer;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  transition:
-    border-color 180ms ease,
-    color 180ms ease,
-    transform 180ms ease;
+  transition: color 180ms ease, transform 180ms ease;
 }
 
 .ollamaChat__toggle:hover,
@@ -37,7 +35,9 @@
   outline: none;
 }
 
+/* ─── Panel (open state) ─────────────────────────────────────────────────── */
 .ollamaChat__panel {
+  position: relative;
   width: min(380px, calc(100vw - 36px));
   height: min(560px, calc(100vh - 116px));
   min-height: 390px;
@@ -47,14 +47,17 @@
   border: 1px solid rgba(255, 232, 164, 0.28);
   border-radius: 18px;
   background:
-    linear-gradient(145deg, rgba(12, 8, 8, 0.94), rgba(20, 18, 16, 0.9)),
-    rgba(12, 8, 8, 0.92);
-  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.56);
+    linear-gradient(145deg, rgba(12, 8, 8, 0.96), rgba(20, 18, 16, 0.92)),
+    rgba(12, 8, 8, 0.94);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
+/* ─── Header ─────────────────────────────────────────────────────────────── */
 .ollamaChat__header {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -100,10 +103,7 @@
   color: rgba(255, 249, 232, 0.82);
   background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition:
-    border-color 160ms ease,
-    color 160ms ease,
-    background 160ms ease;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
 }
 
 .ollamaChat__iconButton:hover,
@@ -114,7 +114,10 @@
   outline: none;
 }
 
+/* ─── Messages ───────────────────────────────────────────────────────────── */
 .ollamaChat__messages {
+  position: relative;
+  z-index: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -172,7 +175,10 @@
   line-height: 1.4;
 }
 
+/* ─── Composer ───────────────────────────────────────────────────────────── */
 .ollamaChat__composer {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.55rem;
@@ -192,6 +198,7 @@
   background: rgba(255, 255, 255, 0.07);
   outline: none;
   line-height: 1.35;
+  font-family: inherit;
 }
 
 .ollamaChat__input::placeholder {
@@ -202,6 +209,7 @@
   border-color: rgba(255, 229, 126, 0.76);
 }
 
+/* ─── Send button ────────────────────────────────────────────────────────── */
 .ollamaChat__send {
   display: inline-flex;
   align-items: center;
@@ -213,12 +221,10 @@
   color: #120e08;
   background: #ffe57e;
   cursor: pointer;
-  transition:
-    opacity 160ms ease,
-    transform 160ms ease;
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
-.ollamaChat__send:hover,
+.ollamaChat__send:hover:not(:disabled),
 .ollamaChat__send:focus-visible {
   transform: translateY(-1px);
   outline: none;
@@ -227,19 +233,32 @@
 .ollamaChat__send:disabled,
 .ollamaChat__input:disabled {
   cursor: not-allowed;
-  opacity: 0.58;
+  opacity: 0.5;
 }
 
+/* ─── Animations ─────────────────────────────────────────────────────────── */
 .ollamaChat__spinner {
   animation: ollamaChatSpin 820ms linear infinite;
 }
 
 @keyframes ollamaChatSpin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
+.ollamaChat__streamingCursor::after {
+  content: "▋";
+  display: inline-block;
+  animation: ollamaChatBlink 900ms step-end infinite;
+  margin-left: 1px;
+  opacity: 0.7;
+}
+
+@keyframes ollamaChatBlink {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 0; }
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .ollamaChat {
     right: max(14px, env(safe-area-inset-right));
