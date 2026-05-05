@@ -23,7 +23,7 @@ Installed via the Shadcn CLI with the `@aceternity` registry.
 | `flip-words` | [`src/components/ui/flip-words.tsx`](src/components/ui/flip-words.tsx) | Installed, not yet wired |
 | `hover-border-gradient` | [`src/components/ui/hover-border-gradient.tsx`](src/components/ui/hover-border-gradient.tsx) | Showcase title card "Play" button border animation |
 | `placeholders-and-vanish-input` | [`src/components/ui/placeholders-and-vanish-input.tsx`](src/components/ui/placeholders-and-vanish-input.tsx) | Gate auth form — username + password inputs |
-| `loader` (`LoaderFour`) | [`src/components/ui/loader.tsx`](src/components/ui/loader.tsx) | Installed (Glitch Loader), pending wire-up into pre-loader |
+| `loader` (`LoaderFour`, `LoaderFive`) | [`src/components/ui/loader.tsx`](src/components/ui/loader.tsx) | Local Aceternity-compatible loader exports. `LoaderFive` is wired into the initial pre-loader. |
 
 ---
 
@@ -31,7 +31,7 @@ Installed via the Shadcn CLI with the `@aceternity` registry.
 
 | Component | File | Purpose |
 |---|---|---|
-| `OllamaChat` | [`src/components/chat/OllamaChat.tsx`](src/components/chat/OllamaChat.tsx) | Floating AI chat widget. Connects to a local Ollama instance (`llama3.1:8b` by default) via `VITE_OLLAMA_CHAT_URL`. Streams responses. Persistent across all screens except the gate. |
+| `OllamaChat` | [`src/components/chat/OllamaChat.tsx`](src/components/chat/OllamaChat.tsx) | Floating AI chat widget. Connects to a local Ollama instance (`llama3.1:8b` by default) via `VITE_OLLAMA_CHAT_URL`. It is non-streaming today and only renders when `VITE_ENABLE_LOCAL_CHAT=true`. |
 
 ---
 
@@ -56,7 +56,6 @@ Documented in detail in [`user-workflow.md`](user-workflow.md). Quick reference:
 |---|---|---|
 | `AppBackButton` | [`src/experience/ui/AppBackButton.tsx`](src/experience/ui/AppBackButton.tsx) | Back arrow shown on all screens except the gate. Always returns to `home`. |
 | `MediaQualitySettings` | [`src/experience/ui/MediaQualitySettings.tsx`](src/experience/ui/MediaQualitySettings.tsx) | Settings cog (bottom corner). Lets the user switch between Normal and High video quality. Hidden during the showcase experience. Persists selection to `localStorage`. |
-| `HeadphonesIcon` | inline in [`src/App.tsx`](src/App.tsx) | Fixed SVG reminder to use headphones. Rendered into a portal, hidden during the showcase. |
 | `PhoneExperienceNotice` | [`src/experience/ui/PhoneExperienceNotice.tsx`](src/experience/ui/PhoneExperienceNotice.tsx) | Banner shown to mobile users on the gate screen warning that the experience is desktop-optimised. |
 
 ---
@@ -112,7 +111,7 @@ The loader system uses a **variant registry** — `Experience.tsx` selects a var
 | `LoaderOverlay` | [`src/experience/loaders/shared/LoaderOverlay.tsx`](src/experience/loaders/shared/LoaderOverlay.tsx) | Orchestrator. Renders the correct variant, plays associated audio, handles fade-in/out. |
 | `LoaderShell` | [`src/experience/loaders/shared/LoaderShell.tsx`](src/experience/loaders/shared/LoaderShell.tsx) | Shared wrapper `div` used by most loader variants. Provides the square card layout. |
 | `BirdSvg` | [`src/experience/loaders/shared/BirdSvg.tsx`](src/experience/loaders/shared/BirdSvg.tsx) | Butterfly-wing SVG with CSS 3D flap animation (`balFlapLeft3D` / `balFlapRight3D`). Used by variants a–e and pre. |
-| **Pre-loader** (`pre`) | [`src/experience/loaders/preloader/Loader.tsx`](src/experience/loaders/preloader/Loader.tsx) | Shown on initial app load while 3D assets are fetched. BirdSvg + sunbeams + rising flowers. **Pending replacement with Aceternity `LoaderFour` (Glitch Loader).** |
+| **Pre-loader** (`pre`) | [`src/experience/loaders/preloader/Loader.tsx`](src/experience/loaders/preloader/Loader.tsx) | Shown on initial app/showcase load while 3D and video assets are fetched. Uses `LoaderFive` from [`src/components/ui/loader.tsx`](src/components/ui/loader.tsx) with a stable progress footer. |
 | Loader A (`a`) | [`src/experience/loaders/loader-a/Loader.tsx`](src/experience/loaders/loader-a/Loader.tsx) | Part 0 between-scene loader. BirdSvg + sun + wind lines + flowers + clouds. |
 | Loader B (`b`) | [`src/experience/loaders/loader-b/Loader.tsx`](src/experience/loaders/loader-b/Loader.tsx) | Part 1 between-scene loader. |
 | Loader C (`c`) | [`src/experience/loaders/loader-c/Loader.tsx`](src/experience/loaders/loader-c/Loader.tsx) | Part 2 between-scene loader. |
@@ -129,7 +128,7 @@ The loader system uses a **variant registry** — `Experience.tsx` selects a var
 | `UiSoundProvider` | [`src/experience/audio/UiSoundProvider.tsx`](src/experience/audio/UiSoundProvider.tsx) | Context provider. Wraps the app and exposes `UiSoundService` via context. Enables/disables sounds based on user preferences. |
 | `UiSoundService` | [`src/experience/audio/uiSoundService.ts`](src/experience/audio/uiSoundService.ts) | Class that manages UI sound playback (hover, click, gate). Primed on first pointer/keydown interaction to satisfy browser autoplay rules. |
 | `useUiSounds` | [`src/experience/audio/useUiSounds.ts`](src/experience/audio/useUiSounds.ts) | Hook used by every interactive component (`playHover`, `playNavClick`, `playGateClick`). |
-| `uiSounds` | [`src/experience/audio/uiSounds.ts`](src/experience/audio/uiSounds.ts) | Static map of UI sound file URLs. |
+| `uiSounds` | [`src/experience/audio/uiSounds.ts`](src/experience/audio/uiSounds.ts) | Static map of generated Web Audio oscillator definitions for hover/click/gate sounds. No sound files are used for UI interaction sounds. |
 | `OutsideShowcaseMusic` | [`src/experience/audio/OutsideShowcaseMusic.tsx`](src/experience/audio/OutsideShowcaseMusic.tsx) | Looping ambient background music (`showcase-ambient-loop.mp3`). Plays on all screens outside the 3D showcase. GSAP fade-in/out, auto-resume watchdog. |
 | `useAmbientMusic` (showcase) | [`src/experience/scenes/showcase/useAmbientMusic.ts`](src/experience/scenes/showcase/useAmbientMusic.ts) | Hook managing music inside the showcase experience. |
 | `useShowcaseSceneMusic` | [`src/experience/scenes/showcase/useShowcaseSceneMusic.ts`](src/experience/scenes/showcase/useShowcaseSceneMusic.ts) | Per-scene music switching logic within the showcase. |
@@ -156,7 +155,7 @@ The loader system uses a **variant registry** — `Experience.tsx` selects a var
 | `authService` | [`src/lib/authService.ts`](src/lib/authService.ts) | Handles login, registration, and session checks via Supabase. Returns typed `AuthResult`. Validates username format server-side. |
 | `eventsService` | [`src/lib/eventsService.ts`](src/lib/eventsService.ts) | Append-only event log to Supabase `story_events` table. Tracks every user action (`session_started`, `scene_entered`, `choice_made`, `navigation_action`, etc.). |
 | `supabase` | [`src/lib/supabase.ts`](src/lib/supabase.ts) | Supabase client singleton. Gracefully no-ops when `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are not set. |
-| `cdn` | [`src/config/cdn.ts`](src/config/cdn.ts) | `mediaUrl()` and `useCdnImage()` helpers. Resolves asset paths via `VITE_CDN_BASE_URL`, falling back to local paths. |
+| `cdn` | [`src/config/cdn.ts`](src/config/cdn.ts) | `mediaUrl()` and `useCdnImage()` helpers. Resolves asset paths via `VITE_R2_PUBLIC_BASE_URL`, with optional Supabase storage fallback via `VITE_SUPABASE_STORAGE_URL`. |
 | `utils` | [`src/lib/utils.ts`](src/lib/utils.ts) | `cn()` — Tailwind class merging utility (clsx + tailwind-merge). |
 
 ---

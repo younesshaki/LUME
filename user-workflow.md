@@ -62,7 +62,7 @@ Only shown when the selected chapter is a showcase chapter (e.g. the Red Bull ex
 
 The core 3D cinematic experience powered by React Three Fiber. Contains:
 
-- An **initial preloader** (`variant="pre"`) — shown while 3D assets load. Uses the `BirdSvg` (flapping wings) with sunbeams and rising flowers. File: [`src/experience/loaders/preloader/Loader.tsx`](src/experience/loaders/preloader/Loader.tsx)
+- An **initial preloader** (`variant="pre"`) — shown while 3D and showcase media assets load. Uses `LoaderFive` from [`src/components/ui/loader.tsx`](src/components/ui/loader.tsx), rendered by [`src/experience/loaders/preloader/Loader.tsx`](src/experience/loaders/preloader/Loader.tsx).
 - **Between-scene loaders** (`variant` a–f) — shown when navigating between chapters. The active variant depends on which story part is loaded (Red Bull showcase = variant `f`, the bat video).
 - **Chapter navigation** — `ChapterNav` lets users scrub between the 12 scenes.
 - **Showcase progress bar** — `ShowcaseChapterProgress` shows progress through the showcase.
@@ -148,7 +148,6 @@ Accessed via `window.location.hash = "#admin"`. Not reachable through the normal
 |---|---|---|
 | `AppBackButton` | [`src/experience/ui/AppBackButton.tsx`](src/experience/ui/AppBackButton.tsx) | Back arrow, always returns to `home` |
 | `OutsideShowcaseMusic` | [`src/experience/audio/OutsideShowcaseMusic.tsx`](src/experience/audio/OutsideShowcaseMusic.tsx) | Ambient music outside the 3D experience |
-| `OllamaChat` | [`src/components/chat/OllamaChat.tsx`](src/components/chat/OllamaChat.tsx) | Floating AI chat widget |
-| `HeadphonesIcon` | inline in `App.tsx` | Reminder to use headphones, fixed bottom-right |
+| `OllamaChat` | [`src/components/chat/OllamaChat.tsx`](src/components/chat/OllamaChat.tsx) | Optional floating AI chat widget, shown only when `VITE_ENABLE_LOCAL_CHAT=true` |
 | `MediaQualitySettings` | [`src/experience/ui/MediaQualitySettings.tsx`](src/experience/ui/MediaQualitySettings.tsx) | Video quality toggle (Normal / High), hidden during showcase |
 | `PhoneExperienceNotice` | [`src/experience/ui/PhoneExperienceNotice.tsx`](src/experience/ui/PhoneExperienceNotice.tsx) | Notice shown on mobile devices (gate screen only) |

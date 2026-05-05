@@ -23,6 +23,7 @@ type AppScreen = "gate" | "home" | "products" | "contact" | "titlecard" | "exper
 
 
 const MEDIA_QUALITY_STORAGE_KEY = "nomad.media-quality.v1";
+const LOCAL_CHAT_ENABLED = import.meta.env.VITE_ENABLE_LOCAL_CHAT === "true";
 
 function readInitialMediaQuality(): ShowcaseVideoQuality {
   if (typeof window === "undefined") return "high";
@@ -165,7 +166,7 @@ export default function App() {
         {screen !== "gate" && (
           <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
         )}
-        {screen !== "gate" && <OllamaChat />}
+        {LOCAL_CHAT_ENABLED && screen !== "gate" && <OllamaChat />}
         {screen === "admin" ? (
           <AdminPage onExit={handleGoHome} />
         ) : screen === "gate" ? (

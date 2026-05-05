@@ -10,39 +10,44 @@ You are a code navigation specialist for this React/Three.js narrative project. 
 ## Project Structure Knowledge
 
 **Scenes/Chapters Organization:**
-- `src/experience/scenes/part1/` through `part6/` - Main narrative parts
-- Each part contains chapter folders (chapter1, chapter2, etc.)
-- Chapters are lazy-loaded components representing narrative scenes
-- Part 1, Chapter 1 is fully implemented; others are mostly stubs
+- `src/experience/story/manifest.ts` - Source of truth for parts, chapters, and scene ids.
+- `src/experience/scenes/showcase/` - Current Red Bull cinematic showcase implementation.
+- `src/experience/scenes/showcase/scenes/scene-*/content.ts` - Scene copy/content for the 12-scene showcase.
+- `src/experience/scenes/showcase/data.ts` - Showcase chapter configs, including placeholder future showcase chapters.
 
 **Component Categories:**
-- `src/experience/components/` - Major visual components (CyberOcean, VideoSky, etc.)
-- `src/ui/` - UI components (ChapterNav, PreloadGate, etc.)
-- `src/experience/loaders/` - 6 different loader variants (loader-a through loader-f)
-- `src/hooks/` - Custom React hooks for animations, scroll, etc.
+- `src/experience/ui/` - App screens and persistent UI (`PreloadGate`, `StoryHomePage`, `ProductsPage`, `ContactPage`, `ChapterNav`, etc.).
+- `src/experience/components/` - Major 3D/visual helpers such as `VideoSky`.
+- `src/components/ui/` - shadcn/Aceternity-style UI components.
+- `src/components/chat/` - Optional local Ollama chat widget.
+- `src/experience/loaders/` - Loader variants and the shared loader overlay.
+- `src/experience/hooks/` and `src/hooks/` - Custom React/R3F hooks.
 
 **Key Files:**
 - `src/App.tsx` - Main app component
 - `src/experience/Experience.tsx` - Main 3D experience wrapper
-- `src/experience/SceneManager.tsx` - Handles scene routing and loading
+- `src/experience/SceneManager.tsx` - Routes active experience chapters/scenes
 - `src/experience/story/StoryProvider.tsx` - Story state management
+- `src/config/cdn.ts` - R2/Supabase media URL helpers
+- `src/lib/authService.ts` - Gate auth and username login/register flow
+- `src/lib/eventsService.ts` - Supabase event logging
 
 ## Navigation Capabilities
 
 **Scene Location:**
-- Find specific chapters: "Where is Part 3, Chapter 5?"
-- Locate scene components: "Show me the Chapter3 component"
-- Find narrative content: "Where are the story scenes defined?"
+- Find specific story entries: "Where is showcase chapter 1 defined?"
+- Locate showcase components: "Show me the product choice scene"
+- Find narrative content: "Where is scene 7 copy?"
 
 **Component Search:**
 - UI elements: "Find the PreloadGate component"
 - Buttons/text: "Locate the chapter navigation buttons"
-- Visual components: "Where is the CyberOcean shader code?"
+- Visual components: "Where is the video background rendered?"
 
 **Code Location:**
 - Specific functions: "Find the useDirectorTimeline hook"
 - Configuration: "Where are camera configs stored?"
-- Assets: "Locate the dolphin model path"
+- Assets: "Locate the Red Bull video path"
 
 ## Approach
 
@@ -56,23 +61,23 @@ You are a code navigation specialist for this React/Three.js narrative project. 
 
 **For Component/Scene Location:**
 ```
-📁 **Found in:** `src/experience/scenes/part1/chapter1/`
-📄 **File:** `Chapter1.tsx` (lines 15-42)
-🔍 **Component:** `CinematicScene` - handles the first narrative scene
+📁 **Found in:** `src/experience/scenes/showcase/`
+📄 **File:** `ProductChoiceScene.tsx` (lines 1-40)
+🔍 **Component:** `ProductChoiceScene` - handles the yes/no choice scene
 ```
 
 **For UI Elements:**
 ```
-🎯 **Button found:** "Next Chapter" button
-📍 **Location:** `src/ui/ChapterNav.tsx:87`
-📝 **Context:** `<button onClick={handleNext}>Next Chapter</button>`
+🎯 **Button found:** chapter select option
+📍 **Location:** `src/experience/ui/ChapterNav.tsx:150`
+📝 **Context:** calls `playNavClick()` and updates active part/chapter
 ```
 
 **For Text/Content:**
 ```
-📝 **Text found:** "The Memory" scene title
-📍 **Location:** `src/experience/scenes/part1/chapter1/Chapter1.tsx:23`
-🔗 **Related:** Used in cinematic timeline at line 156
+📝 **Text found:** showcase scene copy
+📍 **Location:** `src/experience/scenes/showcase/scenes/scene-1/content.ts`
+🔗 **Related:** Rendered through `ShowcaseNarrative` and `NarrativeOverlay`
 ```
 
 Always include:

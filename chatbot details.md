@@ -2,7 +2,7 @@
 
 ## Overview
 
-The LUME chatbot is a first-pass local AI chat widget that connects the React app to an Ollama model running on a Linux device on the local network.
+The LUME chatbot is an optional first-pass local AI chat widget that connects the React app to an Ollama model running on a Linux device on the local network.
 
 The current model target is:
 
@@ -64,13 +64,15 @@ The chatbot is imported in `src/App.tsx`:
 import { OllamaChat } from "./components/chat/OllamaChat";
 ```
 
-It is rendered on every screen except the gate screen:
+It is rendered on every screen except the gate screen when local chat is enabled:
 
 ```tsx
-{screen !== "gate" && <OllamaChat />}
+const LOCAL_CHAT_ENABLED = import.meta.env.VITE_ENABLE_LOCAL_CHAT === "true";
+
+{LOCAL_CHAT_ENABLED && screen !== "gate" && <OllamaChat />}
 ```
 
-This means users can access it after they pass the access gate and enter the main LUME experience.
+This keeps the local/dev chatbot out of production unless `VITE_ENABLE_LOCAL_CHAT=true` is explicitly set.
 
 ## Local Model Integration
 
@@ -192,6 +194,7 @@ Keyboard behavior:
 Optional environment variables:
 
 ```txt
+VITE_ENABLE_LOCAL_CHAT=true
 VITE_OLLAMA_HOST=http://192.168.11.118:11434
 VITE_OLLAMA_CHAT_URL=/ollama/api/chat
 VITE_OLLAMA_MODEL=llama3.1:8b

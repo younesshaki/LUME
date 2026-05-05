@@ -120,8 +120,6 @@ export default function AdminPage({ onExit }: AdminPageProps) {
           .maybeSingle();
 
         if (cancelled) return;
-        console.log("[admin] session.user.id:", session.user.id, "isAdmin:", isAdmin, "profile:", profile);
-
         setAuthorized(isAdmin);
         setAdminUsername((profile?.username as string | null) ?? null);
         setAuthChecked(true);
