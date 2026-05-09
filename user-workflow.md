@@ -27,6 +27,7 @@ The first thing every user sees. Two sub-states managed inside the same componen
 The main landing page inside the experience. Contains:
 
 - A hero section with the LUME headline and the three showcase cards (3D-card Aceternity component).
+- A background image from `src/experience/assets/images/lume-homepage-background.png`.
 - A feature band section with the Red Bull product image and copy.
 - A footer.
 
@@ -36,6 +37,7 @@ The main landing page inside the experience. Contains:
 |---|---|
 | Click a showcase card | → `titlecard` (if showcase chapter) or `experience` directly |
 | Click "Product" in nav | → `products` |
+| Click "Showcase" in nav | → `showcase` |
 | Click "Contact" in nav | → `contact` |
 
 ---
@@ -80,8 +82,9 @@ The core 3D cinematic experience powered by React Three Fiber. Contains:
 A filterable grid of all LUME product collaborations (drinks, fragrances, fashion). 
 
 - Category filter tabs: All / Drink / Fragrance / Fashion.
-- Each live product card (currently only Red Bull) is clickable and leads into the experience via the same `titlecard → experience` flow.
-- Coming-soon cards are display-only.
+- Product metadata comes from [`src/experience/products/catalog.json`](src/experience/products/catalog.json).
+- Every product card is clickable and opens a product detail page.
+- Products without uploaded images intentionally render a brand placeholder.
 - Card spotlight effect: mouse position drives a CSS `--spotlight-x/y` gradient on hover.
 - Cards blur on hover of siblings (focus-cards behaviour, pure CSS).
 
@@ -89,14 +92,60 @@ A filterable grid of all LUME product collaborations (drinks, fragrances, fashio
 
 | Action | Destination |
 |---|---|
-| Click a live product card | → `titlecard` → `experience` |
+| Click a product card | → `productDetail` |
 | Click "Home" in nav | → `home` |
+| Click "Showcase" in nav | → `showcase` |
 | Click "Contact" in nav | → `contact` |
 | Back button | → `home` |
 
 ---
 
-## 6. Contact
+## 6. Product Detail
+
+**Screen key:** `productDetail`
+**File:** [`src/experience/ui/ProductDetailPage.tsx`](src/experience/ui/ProductDetailPage.tsx)
+
+Editorial detail page for one product from the central catalog.
+
+- Shows the product image when available.
+- Falls back to a brand placeholder if the R2 image is missing or not assigned.
+- Shows a showcase CTA when the product has a live `showcase` mapping.
+
+**Navigation available from here:**
+
+| Action | Destination |
+|---|---|
+| Click "View Showcase" on a live product | → `titlecard` → `experience` |
+| Click "Back to Products" | → `products` |
+| Click "Home" in nav | → `home` |
+| Click "Products" in nav | → `products` |
+| Click "Showcase" in nav | → `showcase` |
+| Click "Contact" in nav | → `contact` |
+| Back button | → `products` |
+
+---
+
+## 7. Showcase Index
+
+**Screen key:** `showcase`
+**File:** [`src/experience/ui/ShowcasePage.tsx`](src/experience/ui/ShowcasePage.tsx)
+
+Dedicated index of cinematic showcase entries. It uses the same central product
+catalog for preview images as the homepage cards.
+
+**Navigation available from here:**
+
+| Action | Destination |
+|---|---|
+| Click a showcase card | → `titlecard` → `experience` |
+| Click "Home" in nav | → `home` |
+| Click "Products" in nav | → `products` |
+| Click "Contact" in nav | → `contact` |
+| Back button | → `home` |
+
+---
+
+## 8. Contact
 
 **Screen key:** `contact`
 **File:** [`src/experience/ui/ContactPage.tsx`](src/experience/ui/ContactPage.tsx)
@@ -109,11 +158,12 @@ Static editorial page explaining LUME's invitation-only access philosophy. Three
 |---|---|
 | Click "Home" in nav | → `home` |
 | Click "Product" in nav | → `products` |
+| Click "Showcase" in nav | → `showcase` |
 | Back button | → `home` |
 
 ---
 
-## 7. Admin *(hidden)*
+## 9. Admin *(hidden)*
 
 **Screen key:** `admin`
 **File:** [`src/experience/ui/AdminPage.tsx`](src/experience/ui/AdminPage.tsx)
@@ -131,8 +181,11 @@ Accessed via `window.location.hash = "#admin"`. Not reachable through the normal
   └─ auth passed
        └─► [Home]
               ├─► [Products]
-              │      ├─► [Contact]
-              │      └─► [Title Card] ──► [Experience]
+              │      ├─► [Product Detail]
+              │      │      └─► [Title Card] ──► [Experience]
+              │      ├─► [Showcase]
+              │      └─► [Contact]
+              ├─► [Showcase] ──► [Title Card] ──► [Experience]
               ├─► [Contact]
               │      └─► [Products]
               └─► [Title Card] ──► [Experience]

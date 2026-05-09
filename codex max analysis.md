@@ -8,6 +8,117 @@ Last reviewed from branch: `aceternity-updates`
 
 Current implementation branch: `codex-max`
 
+### Completed In Codex Max Completion Pass - May 5, 2026
+
+- Added route-level lazy loading in `src/App.tsx` for:
+  - `Experience`
+  - `AdminPage`
+  - `OllamaChat`
+  - `StoryHomePage`
+  - `ProductsPage`
+  - `ProductDetailPage`
+  - `ShowcasePage`
+  - `ContactPage`
+  - `ShowcaseTitleCard`
+- Added manual Rollup chunks in `vite.config.ts` for:
+  - React
+  - Three/R3F/postprocessing
+  - GSAP/Motion
+  - Supabase
+- Changed the default local Ollama proxy host from the LAN IP to `http://127.0.0.1:11434`.
+- Added network-aware media quality defaults:
+  - mobile, low-memory, save-data, and slow effective connections default to `normal`
+  - stored user preference still wins
+- Added top-level UI sound preference persistence:
+  - `src/experience/audio/uiSoundPreferences.ts`
+  - `UiSoundProvider` now reads a top-level local preference
+  - `Experience` syncs the story sound toggle into that preference
+  - UI hover/click sounds now stay disabled after the user turns sound off
+- Centralized product/showcase metadata:
+  - `src/experience/products/catalog.json`
+  - `src/experience/products/catalog.ts`
+  - `src/experience/data/products.ts` now re-exports the catalog for compatibility
+- Updated product, product detail, homepage showcase cards, and showcase index cards to read from the catalog.
+- Added current and preferred future product image keys to the catalog.
+- Made products without uploaded images render intentional placeholders instead of broken future R2 keys.
+- Reworked `scripts/check-r2-assets.mjs` to read the product catalog.
+- Added `npm run check:assets:strict` for full-launch R2 verification.
+- Added Vitest setup:
+  - `vitest.config.ts`
+  - `src/test/setup.ts`
+  - `npm test`
+  - `npm run test:watch`
+- Added initial tests:
+  - `src/config/cdn.test.ts`
+  - `src/experience/products/catalog.test.ts`
+  - `src/experience/ui/ProductsPage.test.tsx`
+  - `src/lib/authService.test.ts`
+- Exported `sanitizeUsername()` from `authService` for focused validation tests.
+- Updated GitHub Actions CI to run tests.
+- Chose npm as the package manager source of truth:
+  - kept `package-lock.json`
+  - removed `pnpm-lock.yaml`
+  - removed `pnpm-workspace.yaml`
+- Added Vercel production headers:
+  - `X-Content-Type-Options`
+  - `Referrer-Policy`
+  - `Permissions-Policy`
+  - immutable cache headers for built assets and Draco files
+- Improved `AdminPage`:
+  - event type filter
+  - CSV export
+  - last-event health indicator
+  - keyboard-friendly profile row buttons
+  - improved focus states
+- Added planning/operations docs:
+  - `docs/new-showcase-template.md`
+  - `docs/deployment-checklist.md`
+- Updated docs to reflect the current implementation:
+  - `README.md`
+  - `components-map.md`
+  - `user-workflow.md`
+  - `chatbot details.md`
+  - `FONTS.md`
+  - `worktree-setup.md`
+  - `r2-upload/products/README.md`
+  - `.github/agents/code-navigator.agent.md`
+
+Verification for this pass:
+
+- `npm run typecheck` passed.
+- `npm test` passed: 4 test files, 9 tests.
+- `npm run build` passed.
+- `npm run check:assets` passed for 7 current required R2 assets and reported 26 optional/full-launch assets missing.
+
+Build result after this pass:
+
+- Route-level chunks are split out.
+- The large monolithic app bundle was reduced into separate route/vendor chunks.
+- Vite still warns about the `three` vendor chunk being larger than 500 kB.
+- `Higher Jump.ttf` and the homepage PNG remain large payloads.
+
+### Remaining External Blockers After Completion Pass
+
+These are not code blockers, but they require new media assets or product decisions:
+
+- Full normalized product image migration under `products/<product-id>.webp`.
+  - Current uploaded root-level keys still in use:
+    - `blackredbullcycles.png`
+    - `starbucksLUME.png`
+    - `YSLfemmeLUME.png`
+    - `YSLmenLUME.png`
+  - Preferred future keys are tracked in `src/experience/products/catalog.json`.
+- Missing optional/full-launch R2 assets reported by `npm run check:assets`:
+  - normalized product WebP files
+  - `showcase-entry.png`
+  - `showcaseentry2.png`
+  - showcase audio tracks
+  - showcase GLB models
+  - remaining normal/high showcase scene videos
+- `npm run check:assets:strict` is expected to fail until those uploads are complete.
+- Font WOFF2 conversion/subsetting still needs a font conversion tool and license review.
+- A fully polished second live showcase still needs final creative direction, media, scene copy, and R2 uploads.
+
 ### Completed In First P0 Pass
 
 - Created `codex-max` from `aceternity-updates`.
@@ -41,28 +152,14 @@ Current implementation branch: `codex-max`
   - chatbot UI motion/encryption/glow components
 - Confirmed the local chat still remains production-guarded by `VITE_ENABLE_LOCAL_CHAT`.
 
-### Next Recommended Work After Merge
+### Remaining Recommended Work
 
-1. Re-run `npm run typecheck` and `npm run build`.
-2. Continue with the remaining P0 items:
-   - normalize product image R2 paths
-   - finish product asset upload/check workflow
-   - clean any remaining stale docs
-   - decide package manager source of truth
-
-### Not Done Yet
-
-- Full product image path normalization.
-- Bundle splitting / route-level lazy loading.
-- Font conversion/subsetting.
-- Vitest or Playwright setup.
-- UI sound preference rewiring.
-- Centralized product catalog.
-- Admin dashboard improvements.
-- Mobile strategy improvements.
-- Production security/cache headers.
-- Package-manager cleanup.
-- New showcase template system.
+- Upload the optional/full-launch R2 assets and run `npm run check:assets:strict`.
+- Convert/subset large fonts to WOFF2, starting with `Higher Jump.ttf`.
+- Optimize the homepage background PNG or move it to a remote optimized asset pipeline.
+- Add Playwright smoke tests for the full browser flow.
+- Continue breaking down `Experience.tsx` into smaller hooks/components.
+- Build the next real product showcase after media/copy are available.
 
 ## Executive Summary
 
@@ -106,46 +203,44 @@ Main files:
 
 ### Current Weak Spots
 
-- Documentation is drifting from code in several places.
-- There is no automated test suite.
-- There is no GitHub Actions build check.
-- The main production bundle is too large.
-- The local Ollama chatbot is always included on non-gate screens, even though it depends on local infrastructure.
-- Some production config still assumes local development values.
-- Several product image paths still point to expected future R2 keys that may not exist yet.
+- Documentation drift has been reduced, but docs must still be updated with future feature work.
+- Automated tests now exist, but browser-level Playwright coverage is still missing.
+- GitHub Actions build/typecheck/test CI now exists.
+- The app is chunked, but the Three vendor chunk and large font/image payloads remain performance risks.
+- The local Ollama chatbot is feature-flagged and lazy-loaded.
+- Several full-launch media paths still depend on future R2 uploads.
 - The showcase is highly custom and not yet a reusable template for other product chapters.
-- Some files contain debug logging that should be gated or removed before production.
+- `Experience.tsx` remains too large and should still be split into smaller hooks/components.
 
 ## Evidence From Current Repo
 
 ### Build And Tooling
 
-`package.json` has only:
+`package.json` now includes:
 
 ```json
 "scripts": {
   "dev": "vite",
+  "typecheck": "tsc --noEmit",
+  "check:assets": "node scripts/check-r2-assets.mjs",
+  "check:assets:strict": "node scripts/check-r2-assets.mjs --strict",
+  "test": "vitest run",
   "build": "tsc && vite build",
   "preview": "vite preview"
 }
 ```
 
-Originally missing:
-
-- `test`
-- `lint`
-- `format`
-- `e2e`
-
-Implemented in the first `codex-max` pass:
+Implemented:
 
 - `typecheck` separate from build
 - CI workflow
 - `check:assets` R2 verification script
+- Vitest unit/component test setup
 
 Current build output shows:
 
-- Main JS bundle around `1.6 MB`.
+- Route and vendor chunks are split out.
+- The Three vendor chunk is still larger than `500 kB`.
 - `Higher Jump` font around `1.8 MB`.
 - Vite warns that chunks exceed `500 kB`.
 
@@ -169,34 +264,30 @@ Central files:
 
 - `src/config/cdn.ts`
 - `src/experience/scenes/showcase/data/sceneAssets.ts`
-- `src/experience/ui/ProductsPage.tsx`
+- `src/experience/products/catalog.json`
+- `src/experience/products/catalog.ts`
 - `r2-upload/products/README.md`
 
-Current product card R2 paths:
+Current uploaded product card R2 paths:
 
 - `blackredbullcycles.png`
 - `starbucksLUME.png`
 - `YSLfemmeLUME.png`
 - `YSLmenLUME.png`
-- `products/moet.webp`
-- `products/hermes.webp`
-- `products/rolex.webp`
 
 Risk:
 
-- Product paths are split between root-level R2 keys and `products/` folder keys.
-- The remaining product images may not exist at those expected paths yet.
-- There is no manifest or validation script to verify media exists before deployment.
+- Product paths are still split between root-level R2 keys and the preferred `products/` folder convention.
+- The remaining normalized product images do not exist yet.
+- `npm run check:assets:strict` will fail until full-launch media is uploaded.
 
 ### Performance Risk
 
 Potential contributors:
 
-- Heavy Three/R3F code in the main bundle.
-- Local chat and admin included in app bundle.
+- Heavy Three/R3F code in a large vendor chunk.
+- Local chat, admin, experience, and page screens are now lazy-loaded.
 - Font asset `Higher Jump.ttf` is very large.
-- No manual chunking in `vite.config.ts`.
-- No route-level lazy loading for top-level screens.
 - Showcase preloading grabs videos aggressively, especially high quality.
 
 ### Production Config Risk
@@ -204,7 +295,7 @@ Potential contributors:
 `vite.config.ts` default:
 
 ```ts
-const ollamaHost = env.VITE_OLLAMA_HOST ?? 'http://192.168.11.118:11434';
+const ollamaHost = env.VITE_OLLAMA_HOST ?? 'http://127.0.0.1:11434';
 ```
 
 Risk:
@@ -423,8 +514,8 @@ Acceptance criteria:
 
 Current issue:
 
-- Main JS bundle is around `1.6 MB`.
-- Vite warns about chunk size.
+- Route-level screens and major vendors are now split.
+- Vite still warns because the Three vendor chunk is larger than `500 kB`.
 
 Recommended changes:
 
@@ -458,8 +549,8 @@ build: {
 
 Acceptance criteria:
 
-- Initial non-experience screens load without pulling the full 3D/showcase stack.
-- Vite chunk warning is reduced or intentionally managed.
+- Initial non-experience screens no longer pull the full 3D/showcase route component.
+- The chunk warning is reduced to the known Three vendor chunk.
 - No visual regressions.
 
 ### 7. Optimize Fonts
@@ -488,6 +579,7 @@ Current behavior:
 - High quality preloads first two videos as blobs.
 - Normal quality warms first two streams and hints the rest.
 - Initial gate waits at least `7800ms`.
+- App media quality now defaults to `normal` on mobile, low-memory, save-data, and slow effective network connections unless the user has stored a preference.
 
 Potential issue:
 
@@ -738,8 +830,8 @@ Acceptance criteria:
 
 Current:
 
-- `OllamaChat` renders on every non-gate screen.
-- It assumes an Ollama host/proxy exists.
+- `OllamaChat` is lazy-loaded and only renders when `VITE_ENABLE_LOCAL_CHAT=true`.
+- It still assumes an Ollama host/proxy exists when the feature flag is enabled.
 
 Recommended:
 
@@ -833,18 +925,14 @@ Acceptance criteria:
 
 Current:
 
-- Product data lives inside `ProductsPage.tsx`.
-- Showcase data lives elsewhere.
-
-Recommended:
-
-- Create `src/experience/products/catalog.ts`.
-- Use it from `ProductsPage`, `StoryHomePage`, showcase routing, and R2 asset checks.
+- Product metadata lives in `src/experience/products/catalog.json`.
+- Typed product helpers live in `src/experience/products/catalog.ts`.
+- Product pages, homepage showcase previews, showcase index previews, and asset checks now read from the central catalog.
 
 Acceptance criteria:
 
-- Product changes happen in one file.
-- Product card path and showcase chapter path cannot drift.
+- Product copy/image/status changes happen in the catalog.
+- Product card path and showcase preview path are shared through helpers.
 
 ### 24. Remove Or Update Unused Legacy Components
 
@@ -923,24 +1011,18 @@ Acceptance criteria:
 
 Current:
 
-- Both `package-lock.json` and `pnpm-lock.yaml` exist.
-- `package.json` scripts use npm.
-- `pnpm-workspace.yaml` exists.
+- npm is the documented source of truth.
+- `package-lock.json` is retained.
+- `pnpm-lock.yaml` and `pnpm-workspace.yaml` were removed.
 
 Risk:
 
 - Mixed package manager locks create confusion and inconsistent installs.
 
-Recommended:
-
-- Choose npm or pnpm.
-- If npm, remove `pnpm-lock.yaml` and `pnpm-workspace.yaml`.
-- If pnpm, update scripts/docs and remove `package-lock.json`.
-
 Acceptance criteria:
 
 - One package manager is the documented source of truth.
-- CI uses the same package manager.
+- CI uses npm with `npm ci --legacy-peer-deps`.
 
 ## P2: Content And Brand Polish
 

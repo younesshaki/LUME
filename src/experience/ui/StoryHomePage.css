@@ -162,8 +162,6 @@
   position: relative;
   width: min(100%, 760px);
   text-align: center;
-  opacity: 0;
-  animation: storyHomeFadeUp 0.9s ease 0.12s forwards;
 }
 
 .storyHome__lamp {
@@ -223,17 +221,7 @@
   width: min(100%, 400px);
   flex: 1 1 320px;
   max-width: 400px;
-  opacity: 0;
-  animation: storyHomeFadeUp 0.95s ease 0.34s forwards;
   outline: none;
-}
-
-.storyHome__option3dWrap:nth-child(2) {
-  animation-delay: 0.48s;
-}
-
-.storyHome__option3dWrap:nth-child(3) {
-  animation-delay: 0.62s;
 }
 
 .storyHome__option3dWrap--available {
@@ -433,17 +421,6 @@
   color: var(--lume-soft);
   font-size: 0.82rem;
   letter-spacing: 0.06em;
-}
-
-@keyframes storyHomeFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 @media (max-width: 900px) {

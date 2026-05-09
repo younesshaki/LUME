@@ -6,7 +6,7 @@ import {
   PRODUCT_CATEGORIES,
   type Product,
   type ProductFilterCategory,
-} from "../data/products";
+} from "../products/catalog";
 import { useUiSounds } from "../audio/useUiSounds";
 import CinematicShell from "./CinematicShell";
 import "./ProductsPage.css";

@@ -8,7 +8,7 @@ All major components in the project, grouped by domain.
 
 | Component | File | Purpose |
 |---|---|---|
-| `App` | [`src/App.tsx`](src/App.tsx) | Root component. Owns the `screen` state machine (`gate → home → titlecard → experience → products → contact → admin`). Composes all providers and persistent UI. |
+| `App` | [`src/App.tsx`](src/App.tsx) | Root component. Owns the `screen` state machine (`gate`, `home`, `products`, `productDetail`, `showcase`, `contact`, `titlecard`, `experience`, `admin`). Lazy-loads route-level screens and composes providers/persistent UI. |
 | `main` | [`src/main.tsx`](src/main.tsx) | Entry point. Mounts `<App />` into the DOM. |
 
 ---
@@ -43,8 +43,10 @@ Documented in detail in [`user-workflow.md`](user-workflow.md). Quick reference:
 |---|---|
 | `PreloadGate` | [`src/experience/ui/PreloadGate.tsx`](src/experience/ui/PreloadGate.tsx) |
 | `StoryHomePage` | [`src/experience/ui/StoryHomePage.tsx`](src/experience/ui/StoryHomePage.tsx) |
+| `ShowcasePage` | [`src/experience/ui/ShowcasePage.tsx`](src/experience/ui/ShowcasePage.tsx) |
 | `ShowcaseTitleCard` | [`src/experience/ui/ShowcaseTitleCard.tsx`](src/experience/ui/ShowcaseTitleCard.tsx) |
 | `ProductsPage` | [`src/experience/ui/ProductsPage.tsx`](src/experience/ui/ProductsPage.tsx) |
+| `ProductDetailPage` | [`src/experience/ui/ProductDetailPage.tsx`](src/experience/ui/ProductDetailPage.tsx) |
 | `ContactPage` | [`src/experience/ui/ContactPage.tsx`](src/experience/ui/ContactPage.tsx) |
 | `AdminPage` | [`src/experience/ui/AdminPage.tsx`](src/experience/ui/AdminPage.tsx) |
 
@@ -54,7 +56,7 @@ Documented in detail in [`user-workflow.md`](user-workflow.md). Quick reference:
 
 | Component | File | Purpose |
 |---|---|---|
-| `AppBackButton` | [`src/experience/ui/AppBackButton.tsx`](src/experience/ui/AppBackButton.tsx) | Back arrow shown on all screens except the gate. Always returns to `home`. |
+| `AppBackButton` | [`src/experience/ui/AppBackButton.tsx`](src/experience/ui/AppBackButton.tsx) | Back arrow shown on all screens except the gate. Returns to the previous logical top-level screen (`productDetail` goes back to products; most other screens go home). |
 | `MediaQualitySettings` | [`src/experience/ui/MediaQualitySettings.tsx`](src/experience/ui/MediaQualitySettings.tsx) | Settings cog (bottom corner). Lets the user switch between Normal and High video quality. Hidden during the showcase experience. Persists selection to `localStorage`. |
 | `PhoneExperienceNotice` | [`src/experience/ui/PhoneExperienceNotice.tsx`](src/experience/ui/PhoneExperienceNotice.tsx) | Banner shown to mobile users on the gate screen warning that the experience is desktop-optimised. |
 
@@ -125,8 +127,9 @@ The loader system uses a **variant registry** — `Experience.tsx` selects a var
 
 | Component / Service | File | Purpose |
 |---|---|---|
-| `UiSoundProvider` | [`src/experience/audio/UiSoundProvider.tsx`](src/experience/audio/UiSoundProvider.tsx) | Context provider. Wraps the app and exposes `UiSoundService` via context. Enables/disables sounds based on user preferences. |
+| `UiSoundProvider` | [`src/experience/audio/UiSoundProvider.tsx`](src/experience/audio/UiSoundProvider.tsx) | Context provider. Wraps the app and exposes `UiSoundService` via context. Enables/disables generated UI sounds from a top-level persisted preference. |
 | `UiSoundService` | [`src/experience/audio/uiSoundService.ts`](src/experience/audio/uiSoundService.ts) | Class that manages UI sound playback (hover, click, gate). Primed on first pointer/keydown interaction to satisfy browser autoplay rules. |
+| `uiSoundPreferences` | [`src/experience/audio/uiSoundPreferences.ts`](src/experience/audio/uiSoundPreferences.ts) | Local-storage preference bridge used by the top-level sound provider and story preference sync. |
 | `useUiSounds` | [`src/experience/audio/useUiSounds.ts`](src/experience/audio/useUiSounds.ts) | Hook used by every interactive component (`playHover`, `playNavClick`, `playGateClick`). |
 | `uiSounds` | [`src/experience/audio/uiSounds.ts`](src/experience/audio/uiSounds.ts) | Static map of generated Web Audio oscillator definitions for hover/click/gate sounds. No sound files are used for UI interaction sounds. |
 | `OutsideShowcaseMusic` | [`src/experience/audio/OutsideShowcaseMusic.tsx`](src/experience/audio/OutsideShowcaseMusic.tsx) | Looping ambient background music (`showcase-ambient-loop.mp3`). Plays on all screens outside the 3D showcase. GSAP fade-in/out, auto-resume watchdog. |
@@ -158,6 +161,14 @@ The loader system uses a **variant registry** — `Experience.tsx` selects a var
 | `cdn` | [`src/config/cdn.ts`](src/config/cdn.ts) | `mediaUrl()` and `useCdnImage()` helpers. Resolves asset paths via `VITE_R2_PUBLIC_BASE_URL`, with optional Supabase storage fallback via `VITE_SUPABASE_STORAGE_URL`. |
 | `utils` | [`src/lib/utils.ts`](src/lib/utils.ts) | `cn()` — Tailwind class merging utility (clsx + tailwind-merge). |
 | `ragService` | [`src/lib/ragService.ts`](src/lib/ragService.ts) | Local chatbot retrieval layer. Embeds user queries, scores local knowledge chunks, and builds context-aware system prompts for Ollama. |
+
+## Product Catalog
+
+| Module | File | Purpose |
+|---|---|---|
+| `catalog.json` | [`src/experience/products/catalog.json`](src/experience/products/catalog.json) | Single source of truth for product metadata, current image keys, preferred normalized image keys, product status, and showcase mappings. |
+| `catalog.ts` | [`src/experience/products/catalog.ts`](src/experience/products/catalog.ts) | Typed helpers for product cards, product detail pages, showcase preview cards, and tests. |
+| `scripts/check-r2-assets.mjs` | [`scripts/check-r2-assets.mjs`](scripts/check-r2-assets.mjs) | Reads the product catalog and verifies R2 media. Default mode checks current required assets; strict mode requires full launch media. |
 
 ---
 
