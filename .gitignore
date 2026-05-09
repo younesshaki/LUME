@@ -32,6 +32,8 @@ dist-ssr
 *.mp3
 *.wav
 *.ogg
+!public/sounds/
+!public/sounds/**
 *.wasm
 *.zip
 *.otf
