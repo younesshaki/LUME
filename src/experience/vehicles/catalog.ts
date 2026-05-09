@@ -27,10 +27,36 @@ export type VehicleFilters = {
   yearMin: number;
   yearMax: number;
   mileageMax: number;
+  priceMin: number;
+  priceMax: number;
 };
 
 export const YEAR_MIN = 2003;
 export const YEAR_MAX = 2027;
+
+export const PRICE_OPTIONS = [
+  { label: "No min", value: 0 },
+  { label: "$20,000", value: 20000 },
+  { label: "$30,000", value: 30000 },
+  { label: "$50,000", value: 50000 },
+  { label: "$75,000", value: 75000 },
+  { label: "$100,000", value: 100000 },
+  { label: "$150,000", value: 150000 },
+  { label: "$200,000", value: 200000 },
+  { label: "$300,000", value: 300000 },
+];
+
+export const PRICE_MAX_OPTIONS = [
+  { label: "No max", value: 0 },
+  { label: "$30,000", value: 30000 },
+  { label: "$50,000", value: 50000 },
+  { label: "$75,000", value: 75000 },
+  { label: "$100,000", value: 100000 },
+  { label: "$150,000", value: 150000 },
+  { label: "$200,000", value: 200000 },
+  { label: "$300,000", value: 300000 },
+  { label: "$500,000", value: 500000 },
+];
 
 export const DEFAULT_FILTERS: VehicleFilters = {
   stockType: "",
@@ -42,6 +68,8 @@ export const DEFAULT_FILTERS: VehicleFilters = {
   yearMin: YEAR_MIN,
   yearMax: YEAR_MAX,
   mileageMax: 0,
+  priceMin: 0,
+  priceMax: 0,
 };
 
 export const BODY_STYLES = [
@@ -230,6 +258,7 @@ export function countActiveFilters(filters: VehicleFilters): number {
   if (filters.drivetrain) count++;
   if (filters.yearMin > YEAR_MIN || filters.yearMax < YEAR_MAX) count++;
   if (filters.mileageMax > 0) count++;
+  if (filters.priceMin > 0 || filters.priceMax > 0) count++;
   return count;
 }
 
@@ -243,6 +272,8 @@ export function filterVehicles(vehicles: Vehicle[], filters: VehicleFilters): Ve
     if (filters.drivetrain && v.drivetrain !== filters.drivetrain) return false;
     if (v.year < filters.yearMin || v.year > filters.yearMax) return false;
     if (filters.mileageMax > 0 && v.mileage !== null && v.mileage > filters.mileageMax) return false;
+    if (filters.priceMin > 0 && v.price < filters.priceMin) return false;
+    if (filters.priceMax > 0 && v.price > filters.priceMax) return false;
     return true;
   });
 }

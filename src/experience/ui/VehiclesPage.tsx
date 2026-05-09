@@ -12,6 +12,8 @@ import {
   FUEL_TYPES,
   DRIVETRAINS,
   MILEAGE_OPTIONS,
+  PRICE_OPTIONS,
+  PRICE_MAX_OPTIONS,
   YEAR_MIN,
   YEAR_MAX,
   type Vehicle,
@@ -271,6 +273,32 @@ function FilterPanel({ vehicles, filters, activeCount, onChange, onClear }: Filt
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
+      </div>
+
+      {/* Price */}
+      <div className="vehiclesPage__filterGroup">
+        <span className="vehiclesPage__filterLabel">Price</span>
+        <div className="vehiclesPage__rangeRow">
+          <select
+            className="vehiclesPage__select vehiclesPage__select--sm vehiclesPage__select--gold"
+            value={filters.priceMin}
+            onChange={(e) => { play("product.filter.click"); onChange({ priceMin: Number(e.target.value) }); }}
+          >
+            {PRICE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <span className="vehiclesPage__rangeSep">–</span>
+          <select
+            className="vehiclesPage__select vehiclesPage__select--sm vehiclesPage__select--gold"
+            value={filters.priceMax}
+            onChange={(e) => { play("product.filter.click"); onChange({ priceMax: Number(e.target.value) }); }}
+          >
+            {PRICE_MAX_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Clear */}
