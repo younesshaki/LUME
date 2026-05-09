@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { useUiSounds } from "../audio/useUiSounds";
+import { useSound } from "../../lib/sound";
 import { checkExistingSession, loginOrRegister } from "../../lib/authService";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import "../loaders/preloader/styles.css";
@@ -27,7 +27,7 @@ const PRELOAD_GATE_BACKGROUND_IMAGE = "ChatGPT Image May 1, 2026, 09_26_21 PM.pn
 
 export default function PreloadGate({ onStart }: PreloadGateProps) {
   const preloadGateBackground = useCdnImage(PRELOAD_GATE_BACKGROUND_IMAGE);
-  const { playGateClick, playHover } = useUiSounds();
+  const { play } = useSound();
   const startTimeoutRef = useRef<number | null>(null);
   const authRef = useRef<HTMLDivElement | null>(null);
   const buttonShellRef = useRef<HTMLDivElement | null>(null);
@@ -89,6 +89,7 @@ export default function PreloadGate({ onStart }: PreloadGateProps) {
       return;
     }
 
+    play("gate.submit");
     setSubmitting(true);
     const result = await loginOrRegister(username, ACCESS_PASSWORD);
     setSubmitting(false);
@@ -115,7 +116,7 @@ export default function PreloadGate({ onStart }: PreloadGateProps) {
   const handleStart = () => {
     if (isStarting) return;
     setIsStarting(true);
-    playGateClick();
+    play("gate.start");
     startTimeoutRef.current = window.setTimeout(() => {
       onStart();
     }, 1080);
@@ -166,7 +167,7 @@ export default function PreloadGate({ onStart }: PreloadGateProps) {
               className="pgAuth__item pgAuth__submit"
               type="submit"
               disabled={busy || !username.trim() || !password.trim()}
-              onMouseEnter={!busy ? playHover : undefined}
+              onMouseEnter={!busy ? () => play("nav.hover") : undefined}
             >
               {submitting ? "..." : "Enter"}
             </button>
@@ -186,8 +187,8 @@ export default function PreloadGate({ onStart }: PreloadGateProps) {
           <button
             className="preloadGateButton"
             type="button"
-            onMouseEnter={isStarting ? undefined : playHover}
-            onFocus={isStarting ? undefined : playHover}
+            onMouseEnter={isStarting ? undefined : () => play("nav.hover")}
+            onFocus={isStarting ? undefined : () => play("nav.hover")}
             onClick={handleStart}
             disabled={isStarting}
           >

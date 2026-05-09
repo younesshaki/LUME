@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { useSound } from "../../lib/sound";
 import "./AdminPage.css";
 
 type Profile = {
@@ -81,6 +82,7 @@ function describeEvent(e: StoryEvent): string {
 }
 
 export default function AdminPage({ onExit }: AdminPageProps) {
+  const { play } = useSound();
   const [authChecked, setAuthChecked] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const [adminUsername, setAdminUsername] = useState<string | null>(null);
@@ -257,7 +259,15 @@ export default function AdminPage({ onExit }: AdminPageProps) {
       <div className="adminPage adminPage--denied">
         <h2>Access denied</h2>
         <p>This page is private. You need an admin account to view it.</p>
-        <button type="button" className="adminPage__exitBtn" onClick={onExit}>
+        <button
+          type="button"
+          className="adminPage__exitBtn"
+          onMouseEnter={() => play("nav.hover")}
+          onClick={() => {
+            play("admin.exit");
+            onExit();
+          }}
+        >
           Go home
         </button>
       </div>
@@ -277,7 +287,15 @@ export default function AdminPage({ onExit }: AdminPageProps) {
             Last event: {lastEvent ? `${fmtRelative(lastEvent.created_at)} (${lastEvent.event_type})` : "none yet"}
           </p>
         </div>
-        <button type="button" className="adminPage__exitBtn" onClick={onExit}>
+        <button
+          type="button"
+          className="adminPage__exitBtn"
+          onMouseEnter={() => play("nav.hover")}
+          onClick={() => {
+            play("admin.exit");
+            onExit();
+          }}
+        >
           Exit
         </button>
       </header>
@@ -290,7 +308,11 @@ export default function AdminPage({ onExit }: AdminPageProps) {
               <button
                 type="button"
                 className="adminPage__clearFilter"
-                onClick={() => setSelectedUserId(null)}
+                onMouseEnter={() => play("nav.hover")}
+                onClick={() => {
+                  play("admin.filter.clear");
+                  setSelectedUserId(null);
+                }}
               >
                 clear filter
               </button>
@@ -314,7 +336,11 @@ export default function AdminPage({ onExit }: AdminPageProps) {
                     className={`adminPage__profileRow${
                       selectedUserId === p.id ? " is-selected" : ""
                     }${p.is_admin ? " is-admin" : ""}`}
-                    onClick={() => setSelectedUserId(p.id)}
+                    onMouseEnter={() => play("product.card.hover")}
+                    onClick={() => {
+                      play("admin.profile.select");
+                      setSelectedUserId(p.id);
+                    }}
                   >
                     <span className="adminPage__profileName">
                       {p.username}

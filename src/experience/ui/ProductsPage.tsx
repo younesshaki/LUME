@@ -7,7 +7,7 @@ import {
   type Product,
   type ProductFilterCategory,
 } from "../products/catalog";
-import { useUiSounds } from "../audio/useUiSounds";
+import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
 import "./ProductsPage.css";
 
@@ -20,12 +20,11 @@ function ProductCard({
   product: Product;
   onSelectProduct: (productId: string) => void;
 }) {
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const imageSrc = imageLoadFailed ? undefined : product.imageSrc;
 
   const handleClick = () => {
-    playNavClick();
     onSelectProduct(product.id);
   };
 
@@ -39,7 +38,7 @@ function ProductCard({
     <div
       className="productsPage__card productsPage__card--live"
       onClick={handleClick}
-      onMouseEnter={playHover}
+      onMouseEnter={() => play("product.card.hover")}
       onMouseMove={handleMouseMove}
       role="button"
       tabIndex={0}
@@ -91,7 +90,7 @@ export default function ProductsPage({
   const [touchedCategory, setTouchedCategory] = useState<ProductFilterCategory | null>(null);
   const [previousCategory, setPreviousCategory] = useState<ProductFilterCategory>("all");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
 
   useEffect(() => {
     return () => {
@@ -111,7 +110,7 @@ export default function ProductsPage({
   const handleCategoryClick = (category: ProductFilterCategory) => {
     if (category === activeCategory) return;
 
-    playNavClick();
+    play("product.filter.click");
     setPreviousCategory(activeCategory);
     setActiveCategory(category);
     setTouchedCategory(category);
@@ -137,8 +136,8 @@ export default function ProductsPage({
             <button
               type="button"
               className="productsPage__navLink"
-              onMouseEnter={playHover}
-              onClick={() => { playNavClick(); onGoHome(); }}
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onGoHome}
             >
               Home
             </button>
@@ -146,16 +145,16 @@ export default function ProductsPage({
             <button
               type="button"
               className="productsPage__navLink"
-              onMouseEnter={playHover}
-              onClick={() => { playNavClick(); onNavigateToShowcase(); }}
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToShowcase}
             >
               Showcase
             </button>
             <button
               type="button"
               className="productsPage__navLink"
-              onMouseEnter={playHover}
-              onClick={() => { playNavClick(); onNavigateToContact(); }}
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToContact}
             >
               Contact
             </button>
@@ -198,7 +197,7 @@ export default function ProductsPage({
                     aria-selected={isActive}
                     aria-pressed={isActive}
                     className={`luxuryTabs__button${isActive ? " luxuryTabs__button--active" : ""}${isTouched ? " luxuryTabs__button--touched" : ""}`}
-                    onMouseEnter={playHover}
+                    onMouseEnter={() => play("navbar.tab.hover")}
                     onClick={() => handleCategoryClick(cat.id)}
                   >
                     <span className="luxuryTabs__label">{cat.label}</span>

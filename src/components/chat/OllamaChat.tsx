@@ -3,7 +3,7 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { getSystemPromptWithContext } from "@/lib/ragService";
-import { useChatSounds } from "@/components/chat/useChatSounds";
+import { useSound } from "@/lib/sound";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
@@ -108,7 +108,7 @@ export function OllamaChat() {
   const [isRetrieving, setIsRetrieving] = useState(false);
   const [retrievalKey, setRetrievalKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const sounds = useChatSounds();
+  const { play } = useSound();
   const [ratings, setRatings] = useState<Record<string, "up" | "down" | null>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
@@ -168,7 +168,7 @@ export function OllamaChat() {
     setCopiedId(null);
     setOpenSources({});
     localStorage.removeItem(STORAGE_KEY);
-    sounds.playReset();
+    play("chat.reset");
   };
 
   const sendMessage = async (overrideText?: string) => {
@@ -185,7 +185,7 @@ export function OllamaChat() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setError(null);
-    sounds.playSend();
+    play("chat.send");
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -214,7 +214,7 @@ export function OllamaChat() {
       ...prev,
       { id: assistantMessageId, role: "assistant" as const, content: "", sourceCategories },
     ]);
-    sounds.playReceive();
+    play("chat.receive");
 
     try {
       const response = await fetch(OLLAMA_CHAT_URL, {
@@ -307,24 +307,25 @@ export function OllamaChat() {
   };
 
   const handleSuggestion = (suggestion: string) => {
-    sounds.playSuggestion();
+    play("chat.suggestion");
     void sendMessage(suggestion);
   };
 
   const handleCopy = (id: string, content: string) => {
     void navigator.clipboard.writeText(content).then(() => {
       setCopiedId(id);
-      sounds.playCopy();
+      play("chat.copy");
       setTimeout(() => setCopiedId((prev) => (prev === id ? null : prev)), 1800);
     });
   };
 
   const handleRate = (id: string, rating: "up" | "down") => {
     setRatings((prev) => ({ ...prev, [id]: prev[id] === rating ? null : rating }));
-    sounds.playRate();
+    play("chat.rate");
   };
 
   const toggleSources = (id: string) => {
+    play("chat.sources.toggle");
     setOpenSources((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
@@ -345,7 +346,8 @@ export function OllamaChat() {
             animate="visible"
             exit="exit"
             transition={{ duration: 0.15 }}
-            onClick={() => { sounds.playOpen(); setIsOpen(true); }}
+            onMouseEnter={() => play("nav.hover")}
+            onClick={() => { play("chat.open"); setIsOpen(true); }}
           >
             <MessageCircle size={23} aria-hidden="true" />
           </motion.button>
@@ -374,6 +376,7 @@ export function OllamaChat() {
                   type="button"
                   aria-label="Reset chat"
                   title="Reset chat"
+                  onMouseEnter={() => play("nav.hover")}
                   onClick={resetChat}
                 >
                   <RotateCcw size={17} aria-hidden="true" />
@@ -383,7 +386,8 @@ export function OllamaChat() {
                   type="button"
                   aria-label="Close chat"
                   title="Close chat"
-                  onClick={() => { sounds.playClose(); setIsOpen(false); }}
+                  onMouseEnter={() => play("nav.hover")}
+                  onClick={() => { play("chat.close"); setIsOpen(false); }}
                 >
                   <X size={18} aria-hidden="true" />
                 </button>
@@ -432,6 +436,7 @@ export function OllamaChat() {
                       <button
                         className="ollamaChat__sourcesTrigger"
                         type="button"
+                        onMouseEnter={() => play("nav.hover")}
                         onClick={() => toggleSources(message.id)}
                         aria-expanded={!!openSources[message.id]}
                       >
@@ -465,6 +470,7 @@ export function OllamaChat() {
                         type="button"
                         aria-label="Copy message"
                         title="Copy"
+                        onMouseEnter={() => play("nav.hover")}
                         onClick={() => handleCopy(message.id, message.content)}
                       >
                         {copiedId === message.id ? (
@@ -478,6 +484,7 @@ export function OllamaChat() {
                         type="button"
                         aria-label="Rate response helpful"
                         title="Helpful"
+                        onMouseEnter={() => play("nav.hover")}
                         onClick={() => handleRate(message.id, "up")}
                       >
                         <ThumbsUp size={13} aria-hidden="true" />
@@ -487,6 +494,7 @@ export function OllamaChat() {
                         type="button"
                         aria-label="Rate response unhelpful"
                         title="Not helpful"
+                        onMouseEnter={() => play("nav.hover")}
                         onClick={() => handleRate(message.id, "down")}
                       >
                         <ThumbsDown size={13} aria-hidden="true" />
@@ -529,6 +537,7 @@ export function OllamaChat() {
                     key={s}
                     className="ollamaChat__suggestion"
                     type="button"
+                    onMouseEnter={() => play("nav.hover")}
                     onClick={() => handleSuggestion(s)}
                   >
                     {s}
@@ -554,6 +563,7 @@ export function OllamaChat() {
                 aria-label="Send message"
                 title="Send message"
                 disabled={!input.trim() || isActive}
+                onMouseEnter={!input.trim() || isActive ? undefined : () => play("nav.hover")}
               >
                 {isActive ? (
                   <Loader2 className="ollamaChat__spinner" size={18} aria-hidden="true" />

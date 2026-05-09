@@ -1,5 +1,5 @@
 import { CSSProperties, UIEvent, useMemo, useRef } from "react";
-import { useUiSounds } from "../audio/useUiSounds";
+import { useSound } from "../../lib/sound";
 import { useStory } from "../story/StoryProvider";
 import { getPartDisplayList } from "../story/selectors";
 import CinematicShell from "./CinematicShell";
@@ -46,18 +46,18 @@ function StoryOptionCard({
   imageAlt: string;
   onSelect: () => void;
 }) {
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
 
   const handleSelect = () => {
-    playNavClick();
+    play("showcase.card.open");
     onSelect();
   };
 
   return (
     <div
       className="storyHome__option3dWrap storyHome__option3dWrap--available"
-      onMouseEnter={playHover}
-      onFocus={playHover}
+      onMouseEnter={() => play("showcase.card.hover")}
+      onFocus={() => play("showcase.card.hover")}
       onClick={handleSelect}
       role="button"
       tabIndex={0}
@@ -105,6 +105,7 @@ export default function StoryHomePage({
   onNavigateToContact,
 }: StoryHomePageProps) {
   const { isReady, state } = useStory();
+  const { play } = useSound();
   const pageRef = useRef<HTMLDivElement | null>(null);
 
   const showcaseChapters = useMemo(() => {
@@ -141,18 +142,21 @@ export default function StoryHomePage({
           <nav className="storyHome__nav" aria-label="Primary">
             <a
                 href="#product"
+                onMouseEnter={() => play("nav.hover")}
                 onClick={onNavigateToProducts ? (e) => { e.preventDefault(); onNavigateToProducts(); } : undefined}
               >
                 Product
               </a>
             <a
               href="#showcase"
+              onMouseEnter={() => play("nav.hover")}
               onClick={onNavigateToShowcase ? (e) => { e.preventDefault(); onNavigateToShowcase(); } : undefined}
             >
               Showcase
             </a>
             <a
               href="#contact"
+              onMouseEnter={() => play("nav.hover")}
               onClick={onNavigateToContact ? (e) => { e.preventDefault(); onNavigateToContact(); } : undefined}
             >
               Contact

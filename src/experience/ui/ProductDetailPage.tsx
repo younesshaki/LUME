@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { mediaUrl } from "@/config/cdn";
 import { getProductById } from "../products/catalog";
-import { useUiSounds } from "../audio/useUiSounds";
+import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
 import "./ProductDetailPage.css";
 
@@ -24,7 +24,7 @@ export default function ProductDetailPage({
   onNavigateToContact,
   onViewShowcase,
 }: ProductDetailPageProps) {
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const product = getProductById(productId);
   const imageSrc = product && !imageLoadFailed ? product.imageSrc : undefined;
@@ -32,7 +32,7 @@ export default function ProductDetailPage({
   const handleShowcaseClick = () => {
     if (!product?.showcase) return;
 
-    playNavClick();
+    play("product.detail.showcase");
     onViewShowcase(product.showcase.partIndex, product.showcase.chapterIndex);
   };
 
@@ -45,16 +45,16 @@ export default function ProductDetailPage({
 
         <header className="productDetail__header">
           <nav className="productDetail__nav" aria-label="Primary">
-            <button type="button" onMouseEnter={playHover} onClick={() => { playNavClick(); onGoHome(); }}>
+            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onGoHome}>
               Home
             </button>
-            <button type="button" onMouseEnter={playHover} onClick={() => { playNavClick(); onNavigateToProducts(); }}>
+            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToProducts}>
               Products
             </button>
-            <button type="button" onMouseEnter={playHover} onClick={() => { playNavClick(); onNavigateToShowcase(); }}>
+            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToShowcase}>
               Showcase
             </button>
-            <button type="button" onMouseEnter={playHover} onClick={() => { playNavClick(); onNavigateToContact(); }}>
+            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToContact}>
               Contact
             </button>
           </nav>
@@ -65,7 +65,7 @@ export default function ProductDetailPage({
             <section className="productDetail__missing">
               <p className="productDetail__eyebrow">Product</p>
               <h1>Product not found</h1>
-              <button type="button" onMouseEnter={playHover} onClick={() => { playNavClick(); onNavigateToProducts(); }}>
+              <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToProducts}>
                 Back to Products
               </button>
             </section>
@@ -95,7 +95,7 @@ export default function ProductDetailPage({
                     <button
                       type="button"
                       className="productDetail__primaryAction"
-                      onMouseEnter={playHover}
+                      onMouseEnter={() => play("product.card.hover")}
                       onClick={handleShowcaseClick}
                     >
                       {product.showcase.label}
@@ -106,8 +106,8 @@ export default function ProductDetailPage({
                   <button
                     type="button"
                     className="productDetail__secondaryAction"
-                    onMouseEnter={playHover}
-                    onClick={() => { playNavClick(); onNavigateToProducts(); }}
+                    onMouseEnter={() => play("nav.hover")}
+                    onClick={onNavigateToProducts}
                   >
                     Back to Products
                   </button>

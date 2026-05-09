@@ -1,18 +1,18 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { UiSoundProvider } from "../audio/UiSoundProvider";
+import { SoundProvider } from "../../lib/sound";
 import ProductsPage from "./ProductsPage";
 
 function renderProductsPage() {
   return render(
-    <UiSoundProvider>
+    <SoundProvider>
       <ProductsPage
         onGoHome={vi.fn()}
         onSelectProduct={vi.fn()}
         onNavigateToShowcase={vi.fn()}
         onNavigateToContact={vi.fn()}
       />
-    </UiSoundProvider>
+    </SoundProvider>
   );
 }
 

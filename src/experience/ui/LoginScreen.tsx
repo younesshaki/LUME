@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { loginOrRegister, type AuthUser } from "../../lib/authService";
+import { useSound } from "../../lib/sound";
 import "./LoginScreen.css";
 
 type LoginScreenProps = {
@@ -20,6 +21,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export default function LoginScreen({ onSuccess }: LoginScreenProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const { play } = useSound();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
       return;
     }
 
+    play("gate.submit");
     setLoading(true);
 
     const result = await loginOrRegister(username, ACCESS_PASSWORD);
@@ -121,6 +124,7 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
           className="loginScreen__submit"
           type="submit"
           disabled={busy || !username.trim() || !password.trim()}
+          onMouseEnter={busy ? undefined : () => play("nav.hover")}
         >
           {loading ? "..." : "Enter"}
         </button>

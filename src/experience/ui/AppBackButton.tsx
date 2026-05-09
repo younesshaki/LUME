@@ -1,3 +1,4 @@
+import { useSound } from "../../lib/sound";
 import "./AppBackButton.css";
 
 type AppBackButtonProps = {
@@ -6,8 +7,15 @@ type AppBackButtonProps = {
 };
 
 export function AppBackButton({ onClick, label = "Back" }: AppBackButtonProps) {
+  const { play } = useSound();
+
   return (
-    <button className="appBackButton" type="button" onClick={onClick}>
+    <button
+      className="appBackButton"
+      type="button"
+      onMouseEnter={() => play("nav.hover")}
+      onClick={onClick}
+    >
       <span aria-hidden="true" className="appBackButton__arrow">←</span>
       <span>{label}</span>
     </button>

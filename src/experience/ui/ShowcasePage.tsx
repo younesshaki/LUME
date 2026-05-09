@@ -5,7 +5,7 @@ import {
   CardContainer,
   CardItem,
 } from "@/components/ui/3d-card";
-import { useUiSounds } from "../audio/useUiSounds";
+import { useSound } from "../../lib/sound";
 import { getShowcasePreviewForChapter } from "../products/catalog";
 import { useStory } from "../story/StoryProvider";
 import { getPartDisplayList } from "../story/selectors";
@@ -40,18 +40,18 @@ function ShowcaseCard({
   imageAlt: string;
   onSelect: () => void;
 }) {
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
 
   const handleSelect = () => {
-    playNavClick();
+    play("showcase.card.open");
     onSelect();
   };
 
   return (
     <div
       className="storyHome__option3dWrap storyHome__option3dWrap--available"
-      onMouseEnter={playHover}
-      onFocus={playHover}
+      onMouseEnter={() => play("showcase.card.hover")}
+      onFocus={() => play("showcase.card.hover")}
       onClick={handleSelect}
       role="button"
       tabIndex={0}
@@ -99,7 +99,7 @@ export default function ShowcasePage({
   onEnter,
 }: ShowcasePageProps) {
   const { isReady, state } = useStory();
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
 
   const showcaseChapters = useMemo(() => {
     if (!isReady) return [];
@@ -122,14 +122,14 @@ export default function ShowcasePage({
 
         <header className="showcasePage__header">
           <nav className="showcasePage__nav" aria-label="Primary">
-            <button type="button" onMouseEnter={playHover} onClick={() => { playNavClick(); onGoHome(); }}>
+            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onGoHome}>
               Home
             </button>
-            <button type="button" onMouseEnter={playHover} onClick={() => { playNavClick(); onNavigateToProducts(); }}>
+            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToProducts}>
               Products
             </button>
             <span>Showcase</span>
-            <button type="button" onMouseEnter={playHover} onClick={() => { playNavClick(); onNavigateToContact(); }}>
+            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToContact}>
               Contact
             </button>
           </nav>
