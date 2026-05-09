@@ -1,7 +1,7 @@
 export type KnowledgeChunk = {
   id: string;
   text: string;
-  category: "brand" | "product" | "experience" | "access";
+  category: "brand" | "product" | "experience" | "access" | "vehicles";
 };
 
 export const chunks: KnowledgeChunk[] = [
@@ -99,5 +99,10 @@ export const chunks: KnowledgeChunk[] = [
     id: "access-contact",
     category: "access",
     text: "LUME is located in Monaco. It operates by invitation only. There is no public booking system and no way to reserve a stay directly. Guests who believe they meet LUME's access criteria — having positively influenced society and helped others — can submit a request through the access form at the slash access page on the website. The form is the only intake mechanism. Questions about LUME's products, experience, or philosophy can be directed to the LUME assistant. Questions about specific invitation status or guest management are handled through the access page exclusively.",
+  },
+  {
+    id: "vehicles-overview",
+    category: "vehicles",
+    text: "LUME curates an exclusive vehicle inventory of premium and exotic cars available for guest use and exploration during a stay. The collection spans new and pre-owned vehicles from the world's most prestigious manufacturers including Ferrari, Lamborghini, Rolls-Royce, Porsche, Mercedes-Benz, BMW, Tesla, and many others. Vehicles include SUVs, sedans, coupes, convertibles, trucks, and more — covering all drivetrain types and fuel systems including electric and hybrid. You can ask about specific makes, models, body styles, or availability.",
   },
 ];

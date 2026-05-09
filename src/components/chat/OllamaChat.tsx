@@ -3,6 +3,7 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { getSystemPromptWithContext } from "@/lib/ragService";
+import { loadVehicles, type Vehicle } from "@/experience/vehicles/catalog";
 import { useSound } from "@/lib/sound";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
@@ -39,8 +40,8 @@ const STORAGE_KEY = "lume-chat-v1";
 const SUGGESTIONS = [
   "What is LUME?",
   "What products does LUME have?",
+  "Do you have any Ferraris?",
   "How do I get access to LUME?",
-  "Tell me about the Red Bull collab",
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -48,6 +49,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   product: "Products",
   experience: "Experience",
   access: "Access",
+  vehicles: "Vehicles",
 };
 
 const welcomeMessage: ChatMessage = {
@@ -115,6 +117,7 @@ export function OllamaChat() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
+  const vehiclesRef = useRef<Vehicle[]>([]);
 
   const apiMessages = useMemo<OllamaApiMessage[]>(
     () =>
@@ -135,6 +138,11 @@ export function OllamaChat() {
   // cleanup on unmount
   useEffect(() => {
     return () => abortControllerRef.current?.abort();
+  }, []);
+
+  // load vehicle inventory once for RAG context
+  useEffect(() => {
+    loadVehicles().then((v) => { vehiclesRef.current = v; });
   }, []);
 
   // persist chat (skip during active stream to avoid partial messages)
@@ -196,7 +204,7 @@ export function OllamaChat() {
     let systemPrompt: string;
     let sourceCategories: string[] = [];
     try {
-      const result = await getSystemPromptWithContext(trimmedInput, abortController.signal);
+      const result = await getSystemPromptWithContext(trimmedInput, abortController.signal, vehiclesRef.current);
       systemPrompt = result.prompt;
       sourceCategories = result.sourceCategories;
     } catch (e) {
