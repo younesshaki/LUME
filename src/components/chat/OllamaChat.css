@@ -1,11 +1,113 @@
-/* ─── Root container (fixed anchor) ─────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   LUME Chat — Isolated Design System
+   All visual values live here as --lc-* tokens. Nothing is inherited from
+   the app or shared with any other component. To retheme the chat widget,
+   only this token block needs to change.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+.ollamaChat {
+  /* Typography — copied from app, but independent. Change here only. */
+  --lc-font-family: "Instrument Serif", Georgia, serif;
+  --lc-font-size-base: 0.9rem;
+  --lc-font-size-sm: 0.76rem;
+  --lc-font-size-xs: 0.66rem;
+  --lc-font-size-label: 0.62rem;
+  --lc-line-height: 1.45;
+  --lc-letter-spacing-wide: 0.12em;
+  --lc-letter-spacing-md: 0.08em;
+
+  /* Gold palette */
+  --lc-gold: #ffe57e;
+  --lc-gold-dark: #120e08;
+  --lc-gold-border-strong: rgba(255, 229, 126, 0.9);
+  --lc-gold-border: rgba(255, 232, 164, 0.28);
+  --lc-gold-border-md: rgba(255, 232, 164, 0.22);
+  --lc-gold-border-soft: rgba(255, 232, 164, 0.18);
+  --lc-gold-border-faint: rgba(255, 232, 164, 0.16);
+  --lc-gold-border-subtle: rgba(255, 232, 164, 0.14);
+  --lc-gold-border-dim: rgba(255, 232, 164, 0.1);
+  --lc-gold-glow: rgba(255, 229, 126, 0.5);
+  --lc-gold-glow-hover: rgba(255, 229, 126, 0.7);
+  --lc-gold-tint: rgba(255, 229, 126, 0.08);
+  --lc-gold-tint-md: rgba(255, 229, 126, 0.1);
+  --lc-gold-tint-strong: rgba(255, 232, 164, 0.06);
+  --lc-gold-scroll: rgba(255, 232, 164, 0.34);
+  --lc-gold-toggle-border: rgba(255, 232, 164, 0.34);
+
+  /* Text */
+  --lc-text: #fff9e8;
+  --lc-text-title: #fff7d7;
+  --lc-text-muted: rgba(255, 249, 232, 0.64);
+  --lc-text-dim: rgba(255, 249, 232, 0.50);
+  --lc-text-faint: rgba(255, 249, 232, 0.45);
+  --lc-text-ghost: rgba(255, 249, 232, 0.38);
+  --lc-text-strong: rgba(255, 249, 232, 0.82);
+  --lc-text-near: rgba(255, 249, 232, 0.92);
+  --lc-text-near2: rgba(255, 249, 232, 0.72);
+  --lc-text-near3: rgba(255, 249, 232, 0.78);
+  --lc-text-near4: rgba(255, 249, 232, 0.62);
+
+  /* Backgrounds */
+  --lc-bg-toggle: rgba(12, 8, 8, 0.82);
+  --lc-bg-panel-a: rgba(12, 8, 8, 0.96);
+  --lc-bg-panel-b: rgba(20, 18, 16, 0.92);
+  --lc-bg-surface: rgba(255, 255, 255, 0.07);
+  --lc-bg-surface-faint: rgba(255, 255, 255, 0.06);
+  --lc-bg-surface-xs: rgba(255, 255, 255, 0.05);
+  --lc-bg-user-msg: #ffe57e;
+  --lc-bg-error: rgba(128, 24, 12, 0.24);
+
+  /* Error */
+  --lc-error-border: rgba(255, 116, 88, 0.42);
+  --lc-error-text: #ffd7ce;
+
+  /* Shape */
+  --lc-radius-panel: 18px;
+  --lc-radius-message: 14px;
+  --lc-radius-input: 14px;
+  --lc-radius-send: 14px;
+  --lc-radius-action: 7px;
+  --lc-radius-pill: 999px;
+
+  /* Spacing */
+  --lc-panel-width: min(380px, calc(100vw - 36px));
+  --lc-panel-height: min(560px, calc(100vh - 116px));
+  --lc-panel-min-height: 390px;
+  --lc-toggle-size: 54px;
+  --lc-icon-btn-size: 36px;
+  --lc-send-size: 44px;
+  --lc-action-btn-size: 26px;
+  --lc-message-max-width: 88%;
+
+  /* Shadows & blur */
+  --lc-shadow-panel: 0 22px 58px rgba(0, 0, 0, 0.6);
+  --lc-blur-toggle: blur(16px);
+  --lc-blur-panel: blur(20px);
+
+  /* Transitions */
+  --lc-transition-fast: 140ms ease;
+  --lc-transition-base: 160ms ease;
+  --lc-transition-slow: 180ms ease;
+  --lc-transition-source-chevron: 200ms ease;
+
+  /* Animation durations */
+  --lc-spin-duration: 820ms;
+  --lc-blink-duration: 900ms;
+}
+
+/* ─── Root container — inheritance break ─────────────────────────────────── */
 .ollamaChat {
   position: fixed;
   right: max(18px, env(safe-area-inset-right));
   bottom: max(18px, env(safe-area-inset-bottom));
   z-index: 2147482980;
-  font-family: var(--experience-font-family);
-  color: #fff9e8;
+
+  /* Explicit values — not inherited from parent */
+  font-family: var(--lc-font-family);
+  font-size: var(--lc-font-size-base);
+  color: var(--lc-text);
+  line-height: var(--lc-line-height);
 }
 
 /* ─── Toggle button (closed state) ──────────────────────────────────────── */
@@ -13,24 +115,24 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 54px;
-  border: 1px solid rgba(255, 232, 164, 0.34);
-  border-radius: 999px;
-  color: #fff8de;
+  width: var(--lc-toggle-size);
+  height: var(--lc-toggle-size);
+  border: 1px solid var(--lc-gold-toggle-border);
+  border-radius: var(--lc-radius-pill);
+  color: var(--lc-text);
   background:
     radial-gradient(circle at 32% 18%, rgba(255, 255, 255, 0.18), transparent 36%),
-    rgba(12, 8, 8, 0.82);
+    var(--lc-bg-toggle);
   cursor: pointer;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  transition: color 180ms ease, transform 180ms ease;
+  backdrop-filter: var(--lc-blur-toggle);
+  -webkit-backdrop-filter: var(--lc-blur-toggle);
+  transition: color var(--lc-transition-slow), transform var(--lc-transition-slow);
 }
 
 .ollamaChat__toggle:hover,
 .ollamaChat__toggle:focus-visible {
-  border-color: rgba(255, 229, 126, 0.9);
-  color: #ffe57e;
+  border-color: var(--lc-gold-border-strong);
+  color: var(--lc-gold);
   transform: translateY(-1px);
   outline: none;
 }
@@ -38,20 +140,18 @@
 /* ─── Panel (open state) ─────────────────────────────────────────────────── */
 .ollamaChat__panel {
   position: relative;
-  width: min(380px, calc(100vw - 36px));
-  height: min(560px, calc(100vh - 116px));
-  min-height: 390px;
+  width: var(--lc-panel-width);
+  height: var(--lc-panel-height);
+  min-height: var(--lc-panel-min-height);
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   overflow: hidden;
-  border: 1px solid rgba(255, 232, 164, 0.28);
-  border-radius: 18px;
-  background:
-    linear-gradient(145deg, rgba(12, 8, 8, 0.96), rgba(20, 18, 16, 0.92)),
-    rgba(12, 8, 8, 0.94);
-  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--lc-gold-border);
+  border-radius: var(--lc-radius-panel);
+  background: linear-gradient(145deg, var(--lc-bg-panel-a), var(--lc-bg-panel-b));
+  box-shadow: var(--lc-shadow-panel);
+  backdrop-filter: var(--lc-blur-panel);
+  -webkit-backdrop-filter: var(--lc-blur-panel);
 }
 
 /* ─── Header ─────────────────────────────────────────────────────────────── */
@@ -63,7 +163,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.9rem 0.95rem;
-  border-bottom: 1px solid rgba(255, 232, 164, 0.16);
+  border-bottom: 1px solid var(--lc-gold-border-faint);
 }
 
 .ollamaChat__title {
@@ -73,16 +173,16 @@
 }
 
 .ollamaChat__title strong {
-  color: #fff7d7;
+  color: var(--lc-text-title);
   font-size: 0.8rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--lc-letter-spacing-wide);
   text-transform: uppercase;
 }
 
 .ollamaChat__title span {
-  color: rgba(255, 249, 232, 0.64);
-  font-size: 0.76rem;
+  color: var(--lc-text-muted);
+  font-size: var(--lc-font-size-sm);
   line-height: 1.25;
 }
 
@@ -96,21 +196,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid rgba(255, 232, 164, 0.18);
-  border-radius: 999px;
-  color: rgba(255, 249, 232, 0.82);
-  background: rgba(255, 255, 255, 0.06);
+  width: var(--lc-icon-btn-size);
+  height: var(--lc-icon-btn-size);
+  border: 1px solid var(--lc-gold-border-soft);
+  border-radius: var(--lc-radius-pill);
+  color: var(--lc-text-strong);
+  background: var(--lc-bg-surface-faint);
   cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  transition: border-color var(--lc-transition-base), color var(--lc-transition-base), background var(--lc-transition-base);
 }
 
 .ollamaChat__iconButton:hover,
 .ollamaChat__iconButton:focus-visible {
   border-color: rgba(255, 229, 126, 0.72);
-  color: #ffe57e;
-  background: rgba(255, 229, 126, 0.1);
+  color: var(--lc-gold);
+  background: var(--lc-gold-tint-md);
   outline: none;
 }
 
@@ -125,28 +225,28 @@
   overflow-y: auto;
   padding: 0.95rem;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 232, 164, 0.34) transparent;
+  scrollbar-color: var(--lc-gold-scroll) transparent;
 }
 
 .ollamaChat__message {
-  max-width: 88%;
+  max-width: var(--lc-message-max-width);
   display: grid;
   gap: 0.25rem;
   padding: 0.72rem 0.78rem;
-  border: 1px solid rgba(255, 232, 164, 0.14);
-  border-radius: 14px;
-  color: rgba(255, 249, 232, 0.92);
-  background: rgba(255, 255, 255, 0.07);
-  line-height: 1.45;
+  border: 1px solid var(--lc-gold-border-subtle);
+  border-radius: var(--lc-radius-message);
+  color: var(--lc-text-near);
+  background: var(--lc-bg-surface);
+  line-height: var(--lc-line-height);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
 .ollamaChat__message--user {
   align-self: flex-end;
-  border-color: rgba(255, 229, 126, 0.34);
-  color: #120e08;
-  background: #ffe57e;
+  border-color: var(--lc-gold-glow);
+  color: var(--lc-gold-dark);
+  background: var(--lc-bg-user-msg);
 }
 
 .ollamaChat__message--assistant {
@@ -154,25 +254,145 @@
 }
 
 .ollamaChat__messageLabel {
-  font-size: 0.62rem;
+  font-size: var(--lc-font-size-label);
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--lc-letter-spacing-wide);
   text-transform: uppercase;
   opacity: 0.62;
 }
 
 .ollamaChat__messageText {
-  font-size: 0.9rem;
+  font-size: var(--lc-font-size-base);
 }
 
 .ollamaChat__error {
   padding: 0.72rem 0.78rem;
-  border: 1px solid rgba(255, 116, 88, 0.42);
-  border-radius: 14px;
-  color: #ffd7ce;
-  background: rgba(128, 24, 12, 0.24);
+  border: 1px solid var(--lc-error-border);
+  border-radius: var(--lc-radius-message);
+  color: var(--lc-error-text);
+  background: var(--lc-bg-error);
   font-size: 0.84rem;
   line-height: 1.4;
+}
+
+/* ─── Sources ────────────────────────────────────────────────────────────── */
+.ollamaChat__sources {
+  margin-top: 0.45rem;
+}
+
+.ollamaChat__sourcesTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--lc-text-dim);
+  font-size: var(--lc-font-size-xs);
+  font-weight: 700;
+  letter-spacing: var(--lc-letter-spacing-md);
+  text-transform: uppercase;
+  font-family: var(--lc-font-family);
+  cursor: pointer;
+  transition: color var(--lc-transition-fast);
+}
+
+.ollamaChat__sourcesTrigger:hover {
+  color: rgba(255, 229, 126, 0.9);
+}
+
+.ollamaChat__sourcesChevron {
+  transition: transform var(--lc-transition-source-chevron);
+  flex-shrink: 0;
+}
+
+.ollamaChat__sourcesChevron--open {
+  transform: rotate(180deg);
+}
+
+.ollamaChat__sourcesContent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+.ollamaChat__sourceTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.52rem;
+  border: 1px solid var(--lc-gold-border-md);
+  border-radius: var(--lc-radius-pill);
+  color: var(--lc-text-near4);
+  background: var(--lc-gold-tint-strong);
+  font-size: var(--lc-font-size-label);
+  font-weight: 700;
+  letter-spacing: var(--lc-letter-spacing-md);
+  text-transform: uppercase;
+}
+
+/* ─── Actions ────────────────────────────────────────────────────────────── */
+.ollamaChat__actions {
+  display: flex;
+  gap: 0.2rem;
+  margin-top: 0.4rem;
+}
+
+.ollamaChat__actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--lc-action-btn-size);
+  height: var(--lc-action-btn-size);
+  border: 1px solid transparent;
+  border-radius: var(--lc-radius-action);
+  color: var(--lc-text-ghost);
+  background: none;
+  cursor: pointer;
+  font-family: var(--lc-font-family);
+  transition: border-color var(--lc-transition-fast), color var(--lc-transition-fast), background var(--lc-transition-fast);
+}
+
+.ollamaChat__actionBtn:hover {
+  border-color: var(--lc-gold-border-md);
+  color: var(--lc-text-near3);
+  background: var(--lc-bg-surface-xs);
+}
+
+.ollamaChat__actionBtn--active {
+  border-color: var(--lc-gold-glow);
+  color: var(--lc-gold);
+  background: var(--lc-gold-tint);
+}
+
+/* ─── Suggestions ────────────────────────────────────────────────────────── */
+.ollamaChat__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.55rem 0.8rem 0.2rem;
+  border-top: 1px solid var(--lc-gold-border-dim);
+}
+
+.ollamaChat__suggestion {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--lc-gold-border-md);
+  border-radius: var(--lc-radius-pill);
+  color: var(--lc-text-near2);
+  background: var(--lc-bg-surface-xs);
+  font-size: 0.72rem;
+  font-family: var(--lc-font-family);
+  cursor: pointer;
+  transition: border-color var(--lc-transition-base), color var(--lc-transition-base), background var(--lc-transition-base);
+  white-space: nowrap;
+}
+
+.ollamaChat__suggestion:hover {
+  border-color: var(--lc-gold-glow-hover);
+  color: var(--lc-gold);
+  background: var(--lc-gold-tint);
 }
 
 /* ─── Composer ───────────────────────────────────────────────────────────── */
@@ -183,26 +403,27 @@
   grid-template-columns: 1fr auto;
   gap: 0.55rem;
   padding: 0.8rem;
-  border-top: 1px solid rgba(255, 232, 164, 0.16);
+  border-top: 1px solid var(--lc-gold-border-faint);
 }
 
 .ollamaChat__input {
   min-width: 0;
-  min-height: 44px;
+  min-height: var(--lc-send-size);
   max-height: 120px;
   resize: none;
-  border: 1px solid rgba(255, 232, 164, 0.18);
-  border-radius: 14px;
+  border: 1px solid var(--lc-gold-border-soft);
+  border-radius: var(--lc-radius-input);
   padding: 0.72rem 0.78rem;
-  color: #fff9e8;
-  background: rgba(255, 255, 255, 0.07);
+  color: var(--lc-text);
+  background: var(--lc-bg-surface);
   outline: none;
   line-height: 1.35;
-  font-family: inherit;
+  font-family: var(--lc-font-family);
+  font-size: var(--lc-font-size-base);
 }
 
 .ollamaChat__input::placeholder {
-  color: rgba(255, 249, 232, 0.45);
+  color: var(--lc-text-faint);
 }
 
 .ollamaChat__input:focus {
@@ -214,14 +435,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgba(255, 229, 126, 0.5);
-  border-radius: 14px;
-  color: #120e08;
-  background: #ffe57e;
+  width: var(--lc-send-size);
+  height: var(--lc-send-size);
+  border: 1px solid var(--lc-gold-glow);
+  border-radius: var(--lc-radius-send);
+  color: var(--lc-gold-dark);
+  background: var(--lc-gold);
   cursor: pointer;
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition: opacity var(--lc-transition-base), transform var(--lc-transition-base);
 }
 
 .ollamaChat__send:hover:not(:disabled),
@@ -238,7 +459,7 @@
 
 /* ─── Animations ─────────────────────────────────────────────────────────── */
 .ollamaChat__spinner {
-  animation: ollamaChatSpin 820ms linear infinite;
+  animation: ollamaChatSpin var(--lc-spin-duration) linear infinite;
 }
 
 @keyframes ollamaChatSpin {
@@ -248,7 +469,7 @@
 .ollamaChat__streamingCursor::after {
   content: "▋";
   display: inline-block;
-  animation: ollamaChatBlink 900ms step-end infinite;
+  animation: ollamaChatBlink var(--lc-blink-duration) step-end infinite;
   margin-left: 1px;
   opacity: 0.7;
 }

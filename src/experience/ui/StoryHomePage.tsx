@@ -1,5 +1,5 @@
-import { UIEvent, useMemo, useRef } from "react";
-import { useUiSounds } from "../audio/useUiSounds";
+import { CSSProperties, UIEvent, useMemo, useRef } from "react";
+import { useSound } from "../../lib/sound";
 import { useStory } from "../story/StoryProvider";
 import { getPartDisplayList } from "../story/selectors";
 import CinematicShell from "./CinematicShell";
@@ -9,11 +9,13 @@ import {
   CardItem,
 } from "@/components/ui/3d-card";
 import { mediaUrl } from "@/config/cdn";
+import homepageBackgroundImage from "../assets/images/lume-homepage-background.png";
 import "./StoryHomePage.css";
 
 type StoryHomePageProps = {
   onEnter: (partIndex: number, chapterIndex: number) => void;
   onNavigateToProducts?: () => void;
+  onNavigateToShowcase?: () => void;
   onNavigateToContact?: () => void;
 };
 
@@ -24,7 +26,19 @@ const VISIBLE_CHAPTER_IDS = [
 ];
 
 const redBullCyclesImage = mediaUrl("blackredbullcycles.png");
+const starbucksImage = mediaUrl("starbucksLUME.png");
+const yslFemmeImage = mediaUrl("YSLfemmeLUME.png");
 const lumeLogoImage = mediaUrl("LUMElogo.png");
+
+const SHOWCASE_CARD_IMAGES = [
+  { src: redBullCyclesImage, alt: "Red Bull Special Edition LUME product preview" },
+  { src: starbucksImage, alt: "Starbucks Reserve Blend LUME product preview" },
+  { src: yslFemmeImage, alt: "YSL Libre Femme LUME product preview" },
+];
+
+const homepageBackgroundStyle = {
+  "--story-home-bg-image": `url(${homepageBackgroundImage})`,
+} as CSSProperties & Record<"--story-home-bg-image", string>;
 
 function StoryOptionCard({
   title,
@@ -39,18 +53,18 @@ function StoryOptionCard({
   imageAlt: string;
   onSelect: () => void;
 }) {
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
 
   const handleSelect = () => {
-    playNavClick();
+    play("showcase.card.open");
     onSelect();
   };
 
   return (
     <div
       className="storyHome__option3dWrap storyHome__option3dWrap--available"
-      onMouseEnter={playHover}
-      onFocus={playHover}
+      onMouseEnter={() => play("showcase.card.hover")}
+      onFocus={() => play("showcase.card.hover")}
       onClick={handleSelect}
       role="button"
       tabIndex={0}
@@ -94,9 +108,11 @@ function StoryOptionCard({
 export default function StoryHomePage({
   onEnter,
   onNavigateToProducts,
+  onNavigateToShowcase,
   onNavigateToContact,
 }: StoryHomePageProps) {
   const { isReady, state } = useStory();
+  const { play } = useSound();
   const pageRef = useRef<HTMLDivElement | null>(null);
 
   const showcaseChapters = useMemo(() => {
@@ -119,7 +135,13 @@ export default function StoryHomePage({
 
   return (
     <CinematicShell>
-      <div ref={pageRef} className="storyHome" onScroll={handleScroll}>
+      <div
+        ref={pageRef}
+        className="storyHome"
+        style={homepageBackgroundStyle}
+        onScroll={handleScroll}
+      >
+        <div className="storyHome__background" aria-hidden="true" />
         <div className="storyHome__floatingLogo" aria-hidden="true">
           <img src={lumeLogoImage} alt="" />
         </div>
@@ -127,12 +149,21 @@ export default function StoryHomePage({
           <nav className="storyHome__nav" aria-label="Primary">
             <a
                 href="#product"
+                onMouseEnter={() => play("nav.hover")}
                 onClick={onNavigateToProducts ? (e) => { e.preventDefault(); onNavigateToProducts(); } : undefined}
               >
                 Product
               </a>
             <a
+              href="#showcase"
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToShowcase ? (e) => { e.preventDefault(); onNavigateToShowcase(); } : undefined}
+            >
+              Showcase
+            </a>
+            <a
               href="#contact"
+              onMouseEnter={() => play("nav.hover")}
               onClick={onNavigateToContact ? (e) => { e.preventDefault(); onNavigateToContact(); } : undefined}
             >
               Contact
@@ -153,16 +184,20 @@ export default function StoryHomePage({
             </div>
 
             <div className="storyHome__showcaseCards" aria-label="LUME showcases">
-              {showcaseChapters.map((chapter) => (
-                <StoryOptionCard
-                  key={chapter.definition.id}
-                  title={chapter.definition.title}
-                  actionLabel="Open"
-                  imageSrc={redBullCyclesImage}
-                  imageAlt={`${chapter.definition.title} preview`}
-                  onSelect={() => onEnter(chapter.partIndex, chapter.chapterIndex)}
-                />
-              ))}
+              {showcaseChapters.map((chapter, index) => {
+                const preview = SHOWCASE_CARD_IMAGES[index] ?? SHOWCASE_CARD_IMAGES[0];
+
+                return (
+                  <StoryOptionCard
+                    key={chapter.definition.id}
+                    title={chapter.definition.title}
+                    actionLabel="Open"
+                    imageSrc={preview.src}
+                    imageAlt={preview.alt}
+                    onSelect={() => onEnter(chapter.partIndex, chapter.chapterIndex)}
+                  />
+                );
+              })}
             </div>
           </section>
 

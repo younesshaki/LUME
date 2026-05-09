@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
 import { useCdnImage } from "@/config/cdn";
+import { useSound } from "../../lib/sound";
 import "./ShowcaseTitleCard.css";
 
 type ShowcaseTitleCardProps = {
@@ -11,6 +12,7 @@ type ShowcaseTitleCardProps = {
 export default function ShowcaseTitleCard({ onPlay }: ShowcaseTitleCardProps) {
   const showcaseTitleBackground = useCdnImage("showcaseentry2.png");
   const lumeLogo = useCdnImage("LUMElogo.png");
+  const { play } = useSound();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
 
@@ -44,6 +46,7 @@ export default function ShowcaseTitleCard({ onPlay }: ShowcaseTitleCardProps) {
     }
 
     setIsLeaving(true);
+    play("showcase.title.play");
 
     gsap.to(rootRef.current, {
       autoAlpha: 0,

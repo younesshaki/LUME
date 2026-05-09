@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useUiSounds } from "../audio/useUiSounds";
+import { useSound } from "../../lib/sound";
 import type { Part } from "../parts";
 import "./ChapterNav.css";
 
@@ -20,14 +20,14 @@ function FancyButton({
   onClick: () => void;
   disabled?: boolean;
 }) {
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
 
   const handleClick = () => {
     if (disabled) {
       return;
     }
 
-    playNavClick();
+    play("chapter.nav.click");
     onClick();
   };
 
@@ -35,8 +35,8 @@ function FancyButton({
     <button
       type="button"
       className="button"
-      onMouseEnter={disabled ? undefined : playHover}
-      onFocus={disabled ? undefined : playHover}
+      onMouseEnter={disabled ? undefined : () => play("chapter.nav.hover")}
+      onFocus={disabled ? undefined : () => play("chapter.nav.hover")}
       onClick={handleClick}
       disabled={disabled}
     >
@@ -87,7 +87,7 @@ function ChapterSelect({
   onChange: (nextValue: number) => void;
   disabled?: boolean;
 }) {
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement | null>(null);
   const selected = options.find((option) => option.value === value) ?? options[0];
@@ -105,7 +105,7 @@ function ChapterSelect({
 
   const handleToggle = () => {
     if (disabled) return;
-    playNavClick();
+    play("chapter.select.open");
     setOpen((prev) => !prev);
   };
 
@@ -119,8 +119,8 @@ function ChapterSelect({
         <button
           type="button"
           className="chapterNavSelectButton"
-          onMouseEnter={disabled ? undefined : playHover}
-          onFocus={disabled ? undefined : playHover}
+          onMouseEnter={disabled ? undefined : () => play("chapter.nav.hover")}
+          onFocus={disabled ? undefined : () => play("chapter.nav.hover")}
           onClick={handleToggle}
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -152,10 +152,10 @@ function ChapterSelect({
                   role="option"
                   aria-selected={isSelected}
                   className={`chapterNavSelectOption${isSelected ? " isSelected" : ""}`}
-                  onMouseEnter={playHover}
-                  onFocus={playHover}
+                  onMouseEnter={() => play("chapter.nav.hover")}
+                  onFocus={() => play("chapter.nav.hover")}
                   onClick={() => {
-                    playNavClick();
+                    play("chapter.select.choose");
                     onChange(option.value);
                     setOpen(false);
                   }}

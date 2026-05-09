@@ -2,13 +2,14 @@ import "./App.scss";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OllamaChat } from "./components/chat/OllamaChat";
 import { OutsideShowcaseMusic } from "./experience/audio/OutsideShowcaseMusic";
-import { UiSoundProvider } from "./experience/audio/UiSoundProvider";
 import Experience from "./experience/Experience";
 import { StoryProvider } from "./experience/story/StoryProvider";
 import PreloadGate from "./experience/ui/PreloadGate";
 import ShowcaseTitleCard from "./experience/ui/ShowcaseTitleCard";
 import StoryHomePage from "./experience/ui/StoryHomePage";
 import ProductsPage from "./experience/ui/ProductsPage";
+import ProductDetailPage from "./experience/ui/ProductDetailPage";
+import ShowcasePage from "./experience/ui/ShowcasePage";
 import ContactPage from "./experience/ui/ContactPage";
 import PhoneExperienceNotice from "./experience/ui/PhoneExperienceNotice";
 import AdminPage from "./experience/ui/AdminPage";
@@ -18,8 +19,18 @@ import type { ShowcaseVideoQuality } from "./experience/scenes/showcase/data/sce
 import { isShowcaseChapterId } from "./experience/scenes/showcase/data";
 import { getChapterDefinition } from "./experience/story/manifest";
 import { logStoryEvent } from "./lib/eventsService";
+import { useSound } from "./lib/sound";
 
-type AppScreen = "gate" | "home" | "products" | "contact" | "titlecard" | "experience" | "admin";
+type AppScreen =
+  | "gate"
+  | "home"
+  | "products"
+  | "productDetail"
+  | "showcase"
+  | "contact"
+  | "titlecard"
+  | "experience"
+  | "admin";
 
 
 const MEDIA_QUALITY_STORAGE_KEY = "nomad.media-quality.v1";
@@ -36,6 +47,7 @@ export default function App() {
   const [screen, setScreen] = useState<AppScreen>(
     initialHash === "#admin" ? "admin" : "gate"
   );
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [entryPartIndex, setEntryPartIndex] = useState(0);
   const [entryChapterIndex, setEntryChapterIndex] = useState(0);
   const [showcaseChapterRevealed, setShowcaseChapterRevealed] = useState(false);
@@ -43,6 +55,7 @@ export default function App() {
     readInitialMediaQuality
   );
   const screenEnteredAtRef = useRef(Date.now());
+  const sound = useSound();
 
   useEffect(() => {
     screenEnteredAtRef.current = Date.now();
@@ -57,13 +70,16 @@ export default function App() {
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
-  const handleGoHome = useCallback(() => {
+  const handleGoHome = useCallback((playSound = true) => {
+    if (playSound) {
+      sound.play("nav.toHome");
+    }
     setShowcaseChapterRevealed(false);
     if (window.location.hash === "#admin") {
       window.history.replaceState(null, "", window.location.pathname);
     }
     setScreen("home");
-  }, []);
+  }, [sound]);
 
   const logNavigationAction = useCallback(
     (action: string, fromScreen: AppScreen, toScreen: AppScreen) => {
@@ -90,35 +106,49 @@ export default function App() {
   );
 
   const handleBack = useCallback(() => {
+    sound.play("nav.back");
+
     if (screen === "titlecard") {
       logNavigationAction("back", "titlecard", "home");
-      handleGoHome();
+      handleGoHome(false);
       return;
     }
 
     if (screen === "experience") {
       logNavigationAction("back", "experience", "home");
-      handleGoHome();
+      handleGoHome(false);
       return;
     }
 
     if (screen === "admin") {
       logNavigationAction("back", "admin", "home");
-      handleGoHome();
+      handleGoHome(false);
       return;
     }
 
     if (screen === "products") {
       logNavigationAction("back", "products", "home");
-      handleGoHome();
+      handleGoHome(false);
+      return;
+    }
+
+    if (screen === "productDetail") {
+      logNavigationAction("back", "productDetail", "products");
+      setScreen("products");
+      return;
+    }
+
+    if (screen === "showcase") {
+      logNavigationAction("back", "showcase", "home");
+      handleGoHome(false);
       return;
     }
 
     if (screen === "contact") {
       logNavigationAction("back", "contact", "home");
-      handleGoHome();
+      handleGoHome(false);
     }
-  }, [handleGoHome, logNavigationAction, screen]);
+  }, [handleGoHome, logNavigationAction, screen, sound]);
 
   const handleEnterExperience = useCallback(
     (partIndex: number, chapterIndex: number) => {
@@ -136,9 +166,31 @@ export default function App() {
   );
 
   const handleStartExperience = useCallback(() => {
+    sound.play("showcase.enter");
     setShowcaseChapterRevealed(false);
     setScreen("experience");
-  }, []);
+  }, [sound]);
+
+  const handleNavigateToProducts = useCallback(() => {
+    sound.play("nav.toProducts");
+    setScreen("products");
+  }, [sound]);
+
+  const handleNavigateToShowcase = useCallback(() => {
+    sound.play("nav.toShowcase");
+    setScreen("showcase");
+  }, [sound]);
+
+  const handleNavigateToContact = useCallback(() => {
+    sound.play("nav.toContact");
+    setScreen("contact");
+  }, [sound]);
+
+  const handleSelectProduct = useCallback((productId: string) => {
+    sound.play("product.card.click");
+    setSelectedProductId(productId);
+    setScreen("productDetail");
+  }, [sound]);
 
   const handleMediaQualityChange = useCallback((quality: ShowcaseVideoQuality) => {
     setMediaQuality(quality);
@@ -153,59 +205,76 @@ export default function App() {
 
   return (
     <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>
-      <UiSoundProvider>
-        <MediaQualitySettings
-          quality={mediaQuality}
-          visible={!isShowcaseExperience}
-          onQualityChange={handleMediaQualityChange}
-        />
-        {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "contact") && (
-          <AppBackButton onClick={handleBack} />
-        )}
-        {screen !== "gate" && (
-          <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
-        )}
-        {screen !== "gate" && <OllamaChat />}
-        {screen === "admin" ? (
-          <AdminPage onExit={handleGoHome} />
-        ) : screen === "gate" ? (
-          <>
-            <PhoneExperienceNotice />
-            <PreloadGate onStart={handleGoHome} />
-          </>
-        ) : (
-          <StoryProvider>
-            {screen === "titlecard" ? (
-              <ShowcaseTitleCard onPlay={handleStartExperience} />
-            ) : screen === "experience" ? (
-              <Experience
-                initialPartIndex={entryPartIndex}
-                initialChapterIndex={entryChapterIndex}
-                onGoHome={handleGoHome}
-                onShowcaseChapterRevealChange={setShowcaseChapterRevealed}
-                mediaQuality={mediaQuality}
-              />
-            ) : screen === "products" ? (
-              <ProductsPage
-                onGoHome={handleGoHome}
-                onEnter={handleEnterExperience}
-                onNavigateToContact={() => setScreen("contact")}
-              />
-            ) : screen === "contact" ? (
-              <ContactPage
-                onGoHome={handleGoHome}
-                onNavigateToProducts={() => setScreen("products")}
-              />
-            ) : (
-              <StoryHomePage
-                onEnter={handleEnterExperience}
-                onNavigateToProducts={() => setScreen("products")}
-                onNavigateToContact={() => setScreen("contact")}
-              />
-            )}
-          </StoryProvider>
-        )}
-      </UiSoundProvider>
+      <MediaQualitySettings
+        quality={mediaQuality}
+        visible={!isShowcaseExperience}
+        onQualityChange={handleMediaQualityChange}
+      />
+      {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "productDetail" || screen === "showcase" || screen === "contact") && (
+        <AppBackButton onClick={handleBack} />
+      )}
+      {screen !== "gate" && (
+        <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
+      )}
+      {screen !== "gate" && <OllamaChat />}
+      {screen === "admin" ? (
+        <AdminPage onExit={() => handleGoHome(false)} />
+      ) : screen === "gate" ? (
+        <>
+          <PhoneExperienceNotice />
+          <PreloadGate onStart={() => handleGoHome(false)} />
+        </>
+      ) : (
+        <StoryProvider>
+          {screen === "titlecard" ? (
+            <ShowcaseTitleCard onPlay={handleStartExperience} />
+          ) : screen === "experience" ? (
+            <Experience
+              initialPartIndex={entryPartIndex}
+              initialChapterIndex={entryChapterIndex}
+              onGoHome={handleGoHome}
+              onShowcaseChapterRevealChange={setShowcaseChapterRevealed}
+              mediaQuality={mediaQuality}
+            />
+          ) : screen === "products" ? (
+            <ProductsPage
+              onGoHome={handleGoHome}
+              onSelectProduct={handleSelectProduct}
+              onNavigateToShowcase={handleNavigateToShowcase}
+              onNavigateToContact={handleNavigateToContact}
+            />
+          ) : screen === "productDetail" ? (
+            <ProductDetailPage
+              productId={selectedProductId}
+              onGoHome={handleGoHome}
+              onNavigateToProducts={handleNavigateToProducts}
+              onNavigateToShowcase={handleNavigateToShowcase}
+              onNavigateToContact={handleNavigateToContact}
+              onViewShowcase={handleEnterExperience}
+            />
+          ) : screen === "showcase" ? (
+            <ShowcasePage
+              onGoHome={handleGoHome}
+              onNavigateToProducts={handleNavigateToProducts}
+              onNavigateToContact={handleNavigateToContact}
+              onEnter={handleEnterExperience}
+            />
+          ) : screen === "contact" ? (
+            <ContactPage
+              onGoHome={handleGoHome}
+              onNavigateToProducts={handleNavigateToProducts}
+              onNavigateToShowcase={handleNavigateToShowcase}
+            />
+          ) : (
+            <StoryHomePage
+              onEnter={handleEnterExperience}
+              onNavigateToProducts={handleNavigateToProducts}
+              onNavigateToShowcase={handleNavigateToShowcase}
+              onNavigateToContact={handleNavigateToContact}
+            />
+          )}
+        </StoryProvider>
+      )}
     </div>
   );
 }

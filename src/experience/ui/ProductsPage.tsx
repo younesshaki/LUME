@@ -1,110 +1,31 @@
-import { MouseEvent, useState } from "react";
+import { MouseEvent, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { mediaUrl } from "@/config/cdn";
-import { useUiSounds } from "../audio/useUiSounds";
+import {
+  PRODUCTS,
+  PRODUCT_CATEGORIES,
+  type Product,
+  type ProductFilterCategory,
+} from "../data/products";
+import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
 import "./ProductsPage.css";
 
-type Category = "all" | "drink" | "fragrance" | "fashion";
-type ProductStatus = "live" | "coming-soon";
-
-type Product = {
-  id: string;
-  brand: string;
-  name: string;
-  category: Exclude<Category, "all">;
-  status: ProductStatus;
-  imageSrc?: string;
-  partIndex?: number;
-  chapterIndex?: number;
-};
-
-const redBullImage = mediaUrl("blackredbullcycles.png");
 const lumeLogoImage = mediaUrl("LUMElogo.png");
-
-const PRODUCTS: Product[] = [
-  {
-    id: "red-bull",
-    brand: "Red Bull",
-    name: "Special Edition",
-    category: "drink",
-    status: "live",
-    imageSrc: redBullImage,
-    partIndex: 6,
-    chapterIndex: 0,
-  },
-  {
-    id: "starbucks",
-    brand: "Starbucks",
-    name: "Reserve Blend",
-    category: "drink",
-    status: "coming-soon",
-    imageSrc: mediaUrl("starbucksLUME.png"),
-  },
-  {
-    id: "moet",
-    brand: "Moët & Chandon",
-    name: "Blanc de Blancs",
-    category: "drink",
-    status: "coming-soon",
-    imageSrc: mediaUrl("products/moet.webp"),
-  },
-  {
-    id: "ysl-femme",
-    brand: "YSL",
-    name: "Libre — Femme",
-    category: "fragrance",
-    status: "coming-soon",
-    imageSrc: mediaUrl("YSLfemmeLUME.png"),
-  },
-  {
-    id: "ysl-homme",
-    brand: "YSL",
-    name: "Y — Homme",
-    category: "fragrance",
-    status: "coming-soon",
-    imageSrc: mediaUrl("YSLmenLUME.png"),
-  },
-  {
-    id: "hermes",
-    brand: "Hermès",
-    name: "Carré Soie",
-    category: "fashion",
-    status: "coming-soon",
-    imageSrc: mediaUrl("products/hermes.webp"),
-  },
-  {
-    id: "rolex",
-    brand: "Rolex",
-    name: "Daytona Edition",
-    category: "fashion",
-    status: "coming-soon",
-    imageSrc: mediaUrl("products/rolex.webp"),
-  },
-];
-
-const CATEGORIES: { id: Category; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "drink", label: "Drink" },
-  { id: "fragrance", label: "Fragrance" },
-  { id: "fashion", label: "Fashion" },
-];
 
 function ProductCard({
   product,
-  onEnter,
+  onSelectProduct,
 }: {
   product: Product;
-  onEnter: (partIndex: number, chapterIndex: number) => void;
+  onSelectProduct: (productId: string) => void;
 }) {
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
-  const isLive = product.status === "live";
   const imageSrc = imageLoadFailed ? undefined : product.imageSrc;
 
   const handleClick = () => {
-    if (!isLive || product.partIndex === undefined || product.chapterIndex === undefined) return;
-    playNavClick();
-    onEnter(product.partIndex, product.chapterIndex);
+    onSelectProduct(product.id);
   };
 
   const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
@@ -115,15 +36,15 @@ function ProductCard({
 
   return (
     <div
-      className={`productsPage__card${isLive ? " productsPage__card--live" : ""}`}
-      onClick={isLive ? handleClick : undefined}
-      onMouseEnter={isLive ? playHover : undefined}
+      className="productsPage__card productsPage__card--live"
+      onClick={handleClick}
+      onMouseEnter={() => play("product.card.hover")}
       onMouseMove={handleMouseMove}
-      role={isLive ? "button" : undefined}
-      tabIndex={isLive ? 0 : undefined}
-      onKeyDown={isLive ? (e) => {
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); }
-      } : undefined}
+      }}
     >
       <div className="productsPage__cardImage">
         {imageSrc ? (
@@ -146,11 +67,7 @@ function ProductCard({
       </div>
 
       <div className="productsPage__cardFooter">
-        {isLive ? (
-          <span className="productsPage__cardCta">View Experience</span>
-        ) : (
-          <span className="productsPage__cardSoon">Coming Soon</span>
-        )}
+        <span className="productsPage__cardCta">View Product</span>
       </div>
     </div>
   );
@@ -158,17 +75,54 @@ function ProductCard({
 
 type ProductsPageProps = {
   onGoHome: () => void;
-  onEnter: (partIndex: number, chapterIndex: number) => void;
+  onSelectProduct: (productId: string) => void;
+  onNavigateToShowcase: () => void;
   onNavigateToContact: () => void;
 };
 
-export default function ProductsPage({ onGoHome, onEnter, onNavigateToContact }: ProductsPageProps) {
-  const [activeCategory, setActiveCategory] = useState<Category>("all");
-  const { playHover, playNavClick } = useUiSounds();
+export default function ProductsPage({
+  onGoHome,
+  onSelectProduct,
+  onNavigateToShowcase,
+  onNavigateToContact,
+}: ProductsPageProps) {
+  const [activeCategory, setActiveCategory] = useState<ProductFilterCategory>("all");
+  const [touchedCategory, setTouchedCategory] = useState<ProductFilterCategory | null>(null);
+  const [previousCategory, setPreviousCategory] = useState<ProductFilterCategory>("all");
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { play } = useSound();
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const filtered = activeCategory === "all"
     ? PRODUCTS
     : PRODUCTS.filter((p) => p.category === activeCategory);
+
+  const getCategoryIndex = (category: ProductFilterCategory) =>
+    PRODUCT_CATEGORIES.findIndex((cat) => cat.id === category);
+
+  const handleCategoryClick = (category: ProductFilterCategory) => {
+    if (category === activeCategory) return;
+
+    play("product.filter.click");
+    setPreviousCategory(activeCategory);
+    setActiveCategory(category);
+    setTouchedCategory(category);
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      setTouchedCategory(null);
+    }, 300);
+  };
 
   return (
     <CinematicShell>
@@ -182,8 +136,8 @@ export default function ProductsPage({ onGoHome, onEnter, onNavigateToContact }:
             <button
               type="button"
               className="productsPage__navLink"
-              onMouseEnter={playHover}
-              onClick={() => { playNavClick(); onGoHome(); }}
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onGoHome}
             >
               Home
             </button>
@@ -191,8 +145,16 @@ export default function ProductsPage({ onGoHome, onEnter, onNavigateToContact }:
             <button
               type="button"
               className="productsPage__navLink"
-              onMouseEnter={playHover}
-              onClick={() => { playNavClick(); onNavigateToContact(); }}
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToShowcase}
+            >
+              Showcase
+            </button>
+            <button
+              type="button"
+              className="productsPage__navLink"
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToContact}
             >
               Contact
             </button>
@@ -211,24 +173,43 @@ export default function ProductsPage({ onGoHome, onEnter, onNavigateToContact }:
           </div>
 
           <div className="productsPage__filters" role="tablist" aria-label="Filter by category">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                role="tab"
-                aria-selected={activeCategory === cat.id}
-                className={`productsPage__filterBtn${activeCategory === cat.id ? " productsPage__filterBtn--active" : ""}`}
-                onMouseEnter={playHover}
-                onClick={() => { playNavClick(); setActiveCategory(cat.id); }}
-              >
-                {cat.label}
-              </button>
-            ))}
+            <div className="luxuryTabs">
+              <AnimatePresence initial={false}>
+                <motion.div
+                  key={activeCategory}
+                  className="luxuryTabs__active"
+                  initial={{ x: `${getCategoryIndex(previousCategory) * 100}%` }}
+                  animate={{ x: `${getCategoryIndex(activeCategory) * 100}%` }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  style={{ width: `calc((100% - (var(--luxuryTabs-active-x-inset) * 2)) / ${PRODUCT_CATEGORIES.length})` }}
+                />
+              </AnimatePresence>
+
+              {PRODUCT_CATEGORIES.map((cat) => {
+                const isActive = activeCategory === cat.id;
+                const isTouched = touchedCategory === cat.id;
+
+                return (
+                  <motion.button
+                    key={cat.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-pressed={isActive}
+                    className={`luxuryTabs__button${isActive ? " luxuryTabs__button--active" : ""}${isTouched ? " luxuryTabs__button--touched" : ""}`}
+                    onMouseEnter={() => play("navbar.tab.hover")}
+                    onClick={() => handleCategoryClick(cat.id)}
+                  >
+                    <span className="luxuryTabs__label">{cat.label}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="productsPage__grid">
             {filtered.map((product) => (
-              <ProductCard key={product.id} product={product} onEnter={onEnter} />
+              <ProductCard key={product.id} product={product} onSelectProduct={onSelectProduct} />
             ))}
           </div>
         </main>

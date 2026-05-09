@@ -1,5 +1,6 @@
 import { Check, Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useSound } from "../../lib/sound";
 import type { ShowcaseVideoQuality } from "../scenes/showcase/data/sceneAssets";
 import "./MediaQualitySettings.css";
 
@@ -33,6 +34,7 @@ export function MediaQualitySettings({
 }: MediaQualitySettingsProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const { play } = useSound();
 
   useEffect(() => {
     if (!visible) setOpen(false);
@@ -71,7 +73,11 @@ export function MediaQualitySettings({
         type="button"
         aria-label="Open video quality settings"
         aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        onMouseEnter={() => play("nav.hover")}
+        onClick={() => {
+          play("settings.open");
+          setOpen((value) => !value);
+        }}
       >
         <Settings aria-hidden="true" size={18} strokeWidth={2.2} />
       </button>
@@ -88,7 +94,9 @@ export function MediaQualitySettings({
                 type="button"
                 role="menuitemradio"
                 aria-checked={selected}
+                onMouseEnter={() => play("nav.hover")}
                 onClick={() => {
+                  play("settings.change");
                   onQualityChange(option.value);
                   setOpen(false);
                 }}

@@ -1,22 +1,52 @@
 .storyHome {
   --trace-progress: 0;
+  --story-home-bg-image: none;
   --lume-ink: #fff8ec;
   --lume-muted: rgba(255, 248, 236, 0.64);
   --lume-soft: rgba(255, 248, 236, 0.4);
   --lume-line: rgba(255, 248, 236, 0.12);
   --lume-gold: #d9b76a;
   --lume-red: #611923;
+  position: relative;
+  isolation: isolate;
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   color: var(--lume-ink);
+  background: #000;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
   scroll-behavior: smooth;
 }
 
+.storyHome__background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 100%;
+  height: min(118vh, 76rem);
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.56) 0%, rgba(0, 0, 0, 0.22) 38%, rgba(0, 0, 0, 0.08) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.04) 48%, #000 94%, #000 100%),
+    var(--story-home-bg-image);
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.storyHome__background::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: clamp(16rem, 34vh, 30rem);
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.78) 58%, #000 100%);
+}
+
 .storyHome main {
   position: relative;
+  z-index: 1;
 }
 
 .storyHome__tracingBeam {
@@ -372,6 +402,8 @@
 }
 
 .storyHome__footer {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;

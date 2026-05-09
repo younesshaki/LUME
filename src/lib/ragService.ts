@@ -55,26 +55,44 @@ async function embedQuery(query: string, signal?: AbortSignal): Promise<number[]
   return data.embedding;
 }
 
+type ScoredChunk = {
+  text: string;
+  category: string;
+  score: number;
+};
+
 async function retrieveContext(
   query: string,
   topK = 4,
   signal?: AbortSignal
-): Promise<string[]> {
+): Promise<ScoredChunk[]> {
   const queryEmbedding = await embedQuery(query, signal);
   const scored = CHUNKS.map((chunk) => ({
     text: chunk.text,
+    category: chunk.category,
     score: cosineSimilarity(queryEmbedding, chunk.embedding),
   }));
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, topK).map((s) => s.text);
+  return scored.slice(0, topK);
 }
+
+export type RagResult = {
+  prompt: string;
+  sourceCategories: string[];
+};
 
 export async function getSystemPromptWithContext(
   query: string,
   signal?: AbortSignal
-): Promise<string> {
+): Promise<RagResult> {
   const contextChunks = await retrieveContext(query, 7, signal);
-  if (contextChunks.length === 0) return BASE_SYSTEM_PROMPT;
-  const contextBlock = contextChunks.map((c, i) => `[${i + 1}] ${c}`).join("\n\n");
-  return `${BASE_SYSTEM_PROMPT}\n\n---\nRelevant context:\n${contextBlock}\n---`;
+  if (contextChunks.length === 0) {
+    return { prompt: BASE_SYSTEM_PROMPT, sourceCategories: [] };
+  }
+  const contextBlock = contextChunks.map((c, i) => `[${i + 1}] ${c.text}`).join("\n\n");
+  const sourceCategories = [...new Set(contextChunks.map((c) => c.category))];
+  return {
+    prompt: `${BASE_SYSTEM_PROMPT}\n\n---\nRelevant context:\n${contextBlock}\n---`,
+    sourceCategories,
+  };
 }

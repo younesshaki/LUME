@@ -1,17 +1,19 @@
-import { useUiSounds } from "../audio/useUiSounds";
+import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
 import "./ContactPage.css";
 
 type ContactPageProps = {
   onGoHome: () => void;
   onNavigateToProducts: () => void;
+  onNavigateToShowcase: () => void;
 };
 
 export default function ContactPage({
   onGoHome,
   onNavigateToProducts,
+  onNavigateToShowcase,
 }: ContactPageProps) {
-  const { playHover, playNavClick } = useUiSounds();
+  const { play } = useSound();
 
   return (
     <CinematicShell>
@@ -21,24 +23,26 @@ export default function ContactPage({
             <button
               type="button"
               className="contactPage__navLink"
-              onMouseEnter={playHover}
-              onClick={() => {
-                playNavClick();
-                onGoHome();
-              }}
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onGoHome}
             >
               Home
             </button>
             <button
               type="button"
               className="contactPage__navLink"
-              onMouseEnter={playHover}
-              onClick={() => {
-                playNavClick();
-                onNavigateToProducts();
-              }}
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToProducts}
             >
               Product
+            </button>
+            <button
+              type="button"
+              className="contactPage__navLink"
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToShowcase}
+            >
+              Showcase
             </button>
             <span className="contactPage__navActive">Contact</span>
           </nav>
