@@ -1,0 +1,98 @@
+{
+  "products": [
+    {
+      "id": "red-bull",
+      "brand": "Red Bull",
+      "name": "Special Edition",
+      "category": "drink",
+      "status": "live",
+      "imageKey": "blackredbullcycles.png",
+      "imageRequired": true,
+      "preferredImageKey": "products/red-bull.webp",
+      "description": "A black-and-gold energy object reframed as a cinematic luxury ritual.",
+      "detail": "The Red Bull Special Edition is the first LUME product study: sharper, darker, and staged around anticipation, material contrast, and a premium reveal.",
+      "showcase": {
+        "partIndex": 6,
+        "chapterIndex": 0,
+        "chapterId": "showcase-chapter-1",
+        "label": "View Showcase"
+      }
+    },
+    {
+      "id": "starbucks",
+      "brand": "Starbucks",
+      "name": "Reserve Blend",
+      "category": "drink",
+      "status": "coming-soon",
+      "imageKey": "starbucksLUME.png",
+      "imageRequired": true,
+      "preferredImageKey": "products/starbucks.webp",
+      "description": "A reserve coffee concept imagined for a slower, more private service ritual.",
+      "detail": "This LUME edition explores how a familiar coffee object could become part of a hotel-only ceremony through restrained packaging, dark surfaces, and gold detail.",
+      "showcasePreviewChapterId": "showcase-chapter-2"
+    },
+    {
+      "id": "moet",
+      "brand": "Moet & Chandon",
+      "name": "Blanc de Blancs",
+      "category": "drink",
+      "status": "coming-soon",
+      "imageRequired": false,
+      "preferredImageKey": "products/moet.webp",
+      "description": "A champagne object designed for quiet celebration rather than public display.",
+      "detail": "The Moet & Chandon direction frames the bottle as an invitation-only table object, built around minimal contrast and cinematic reflection."
+    },
+    {
+      "id": "ysl-femme",
+      "brand": "YSL",
+      "name": "Libre - Femme",
+      "category": "fragrance",
+      "status": "coming-soon",
+      "imageKey": "YSLfemmeLUME.png",
+      "imageRequired": true,
+      "preferredImageKey": "products/ysl-femme.webp",
+      "description": "A fragrance study focused on presence, shadow, and a more intimate reveal.",
+      "detail": "The YSL Libre Femme concept uses LUME's black-gold language to turn fragrance into a staged object of arrival, pause, and close inspection.",
+      "showcasePreviewChapterId": "showcase-chapter-3"
+    },
+    {
+      "id": "ysl-homme",
+      "brand": "YSL",
+      "name": "Y - Homme",
+      "category": "fragrance",
+      "status": "coming-soon",
+      "imageKey": "YSLmenLUME.png",
+      "imageRequired": true,
+      "preferredImageKey": "products/ysl-homme.webp",
+      "description": "A darker fragrance concept built around restraint and sharp material contrast.",
+      "detail": "The YSL Homme direction treats the bottle as a precise personal object, with emphasis on silhouette, tactility, and controlled light."
+    },
+    {
+      "id": "hermes",
+      "brand": "Hermes",
+      "name": "Carre Soie",
+      "category": "fashion",
+      "status": "coming-soon",
+      "imageRequired": false,
+      "preferredImageKey": "products/hermes.webp",
+      "description": "A silk object presented as part of LUME's private in-room product language.",
+      "detail": "The Hermes study imagines textile, packaging, and handling as one luxury gesture inside the LUME stay."
+    },
+    {
+      "id": "rolex",
+      "brand": "Rolex",
+      "name": "Daytona Edition",
+      "category": "fashion",
+      "status": "coming-soon",
+      "imageRequired": false,
+      "preferredImageKey": "products/rolex.webp",
+      "description": "A timepiece concept staged around rarity, precision, and controlled access.",
+      "detail": "The Rolex Daytona Edition is treated as an object seen by invitation, using LUME's cinematic visual system to emphasize detail and absence."
+    }
+  ],
+  "showcasePreviewProductIds": [
+    "red-bull",
+    "starbucks",
+    "ysl-femme"
+  ]
+}

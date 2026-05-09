@@ -1,12 +1,11 @@
 import type { PropsWithChildren } from "react";
-import { useCdnImage } from "@/config/cdn";
+import sharedBackgroundImage from "../assets/images/lume-homepage-background.png";
 
 type CinematicShellProps = PropsWithChildren<{
   className?: string;
 }>;
 
 export default function CinematicShell({ children, className }: CinematicShellProps) {
-  const sharedBackgroundImage = useCdnImage("showcase-entry.png");
   return (
     <div
       className={`cinematicShell${className ? ` ${className}` : ""}`}

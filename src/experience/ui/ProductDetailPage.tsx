@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { mediaUrl } from "@/config/cdn";
-import { getProductById } from "../data/products";
+import { getProductById } from "../products/catalog";
 import { useUiSounds } from "../audio/useUiSounds";
 import CinematicShell from "./CinematicShell";
 import "./ProductDetailPage.css";

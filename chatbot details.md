@@ -2,7 +2,7 @@
 
 ## Overview
 
-The LUME chatbot is an optional local AI chat widget that connects the React app to an Ollama model running on a Linux device on the local network. It now supports streaming responses, persistent local chat history, and a small RAG layer backed by local LUME knowledge chunks and embeddings.
+The LUME chatbot is an optional local AI chat widget that connects the React app to an Ollama model through the Vite dev proxy. It supports streaming responses, persistent local chat history, response actions, source-category labels, and a small RAG layer backed by local LUME knowledge chunks and embeddings.
 
 The current model target is:
 
@@ -10,19 +10,13 @@ The current model target is:
 llama3.1:8b
 ```
 
-The Ollama API is reachable from this Mac at:
-
-```txt
-http://192.168.11.118:11434/api/chat
-```
-
-In the app, the browser calls a local Vite proxy path instead:
+In the app, the browser calls a local Vite proxy path:
 
 ```txt
 /ollama/api/chat
 ```
 
-That proxy forwards requests to the Linux Ollama server during local development.
+That proxy forwards requests to `VITE_OLLAMA_HOST` during local development. The default is `http://127.0.0.1:11434`.
 
 ## Files
 
@@ -67,10 +61,14 @@ scripts/generateEmbeddings.ts
 
 ## How It Is Mounted
 
-The chatbot is imported in `src/App.tsx`:
+The chatbot is lazy-loaded in `src/App.tsx`:
 
 ```tsx
-import { OllamaChat } from "./components/chat/OllamaChat";
+const OllamaChat = lazy(() =>
+  import("./components/chat/OllamaChat").then((module) => ({
+    default: module.OllamaChat,
+  }))
+);
 ```
 
 It is rendered on every screen except the gate screen when local chat is enabled:
@@ -102,7 +100,7 @@ const OLLAMA_MODEL =
 The Vite dev server proxies `/ollama` to the Linux device:
 
 ```ts
-const ollamaHost = env.VITE_OLLAMA_HOST ?? "http://192.168.11.118:11434";
+const ollamaHost = env.VITE_OLLAMA_HOST ?? "http://127.0.0.1:11434";
 
 server: {
   proxy: {
@@ -124,7 +122,7 @@ So this browser request:
 becomes:
 
 ```txt
-http://192.168.11.118:11434/api/chat
+http://127.0.0.1:11434/api/chat
 ```
 
 ## Request Shape
@@ -184,6 +182,9 @@ When opened, it shows:
 - Close button.
 - Text input.
 - Send button.
+- Suggested starter prompts before the first user message.
+- Copy/helpful/not-helpful response actions.
+- Collapsible source-category labels for RAG-backed assistant messages.
 - Loading state.
 - Error state.
 - RAG retrieval state.
@@ -200,7 +201,7 @@ Optional environment variables:
 
 ```txt
 VITE_ENABLE_LOCAL_CHAT=true
-VITE_OLLAMA_HOST=http://192.168.11.118:11434
+VITE_OLLAMA_HOST=http://127.0.0.1:11434
 VITE_OLLAMA_CHAT_URL=/ollama/api/chat
 VITE_OLLAMA_MODEL=llama3.1:8b
 VITE_OLLAMA_EMBED_MODEL=nomic-embed-text
@@ -221,7 +222,7 @@ http://localhost:5173/ollama/api/chat
 Vite forwards that request to:
 
 ```txt
-http://192.168.11.118:11434/api/chat
+http://127.0.0.1:11434/api/chat
 ```
 
 This keeps the frontend request same-origin from the browser's point of view.
@@ -233,7 +234,7 @@ This keeps the frontend request same-origin from the browser's point of view.
 - Embeddings must be regenerated manually when knowledge chunks change.
 - No server-side rate limiting.
 - No Supabase-backed user-specific chat memory.
-- The model is only available when the Linux Ollama device is online and reachable on the network.
+- The model is only available when the configured Ollama host is online and reachable from the Vite dev server.
 - The current implementation is client-side and meant for local/dev use.
 
 ## RAG Maintenance
@@ -273,10 +274,10 @@ Likely future pieces:
 
 ## Verification Commands
 
-Direct Ollama test from the Mac:
+Direct Ollama test from the machine running Ollama:
 
 ```bash
-curl http://192.168.11.118:11434/api/chat \
+curl http://127.0.0.1:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{
     "model": "llama3.1:8b",

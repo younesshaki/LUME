@@ -16,7 +16,8 @@ You are a code navigation specialist for this React/Three.js narrative project. 
 - `src/experience/scenes/showcase/data.ts` - Showcase chapter configs, including placeholder future showcase chapters.
 
 **Component Categories:**
-- `src/experience/ui/` - App screens and persistent UI (`PreloadGate`, `StoryHomePage`, `ProductsPage`, `ContactPage`, `ChapterNav`, etc.).
+- `src/experience/ui/` - App screens and persistent UI (`PreloadGate`, `StoryHomePage`, `ProductsPage`, `ProductDetailPage`, `ShowcasePage`, `ContactPage`, `ChapterNav`, etc.).
+- `src/experience/products/` - Central product catalog and helpers used by product cards, showcase previews, and asset checks.
 - `src/experience/components/` - Major 3D/visual helpers such as `VideoSky`.
 - `src/components/ui/` - shadcn/Aceternity-style UI components.
 - `src/components/chat/` - Optional local Ollama chat widget.
@@ -24,11 +25,12 @@ You are a code navigation specialist for this React/Three.js narrative project. 
 - `src/experience/hooks/` and `src/hooks/` - Custom React/R3F hooks.
 
 **Key Files:**
-- `src/App.tsx` - Main app component
+- `src/App.tsx` - Main app component and lazy-loaded route switch
 - `src/experience/Experience.tsx` - Main 3D experience wrapper
 - `src/experience/SceneManager.tsx` - Routes active experience chapters/scenes
 - `src/experience/story/StoryProvider.tsx` - Story state management
 - `src/config/cdn.ts` - R2/Supabase media URL helpers
+- `scripts/check-r2-assets.mjs` - R2 asset verification from the product catalog
 - `src/lib/authService.ts` - Gate auth and username login/register flow
 - `src/lib/eventsService.ts` - Supabase event logging
 

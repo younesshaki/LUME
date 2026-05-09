@@ -15,6 +15,7 @@ import { ModelPreloader } from "./ModelPreloader";
 import { preloadAdjacentChapters } from "./sceneAssets";
 import { useLoadingController } from "./hooks/useLoadingController";
 import { SoundProvider } from "./soundContext";
+import { setUiSoundPreference } from "./audio/uiSoundPreferences";
 import { useSmoothScroll } from "./hooks/useSmoothScroll";
 import { BackgroundVideo as ShowcaseBackgroundVideo } from "./scenes/showcase/BackgroundVideo";
 import { ShowcaseLyricsDisplay } from "./scenes/showcase/ShowcaseLyricsDisplay";
@@ -426,6 +427,7 @@ export default function Experience({
     }
 
     void updatePreferences({ soundEnabled: nextSoundEnabled });
+    setUiSoundPreference(nextSoundEnabled);
   };
 
   return (

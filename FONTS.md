@@ -47,4 +47,5 @@ Montserrat includes additional `.otf` and `.ttf` weights/styles in `src/experien
 - Keep licenses/readme files beside the font files.
 - Define `@font-face` close to the CSS area that owns the font if the font is scoped to one feature.
 - Define shared experience or scene fonts in `src/experience/scenes/shared/sceneFonts.css`.
+- For production, convert large TTF/OTF assets to WOFF2 and subset them before upload. `Higher Jump.ttf` is the current largest font payload and should be the first conversion target.
 - Update this file whenever a font is added, removed, or assigned to new UI elements.

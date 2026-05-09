@@ -6,6 +6,7 @@ import {
   CardItem,
 } from "@/components/ui/3d-card";
 import { useUiSounds } from "../audio/useUiSounds";
+import { getShowcasePreviewForChapter } from "../products/catalog";
 import { useStory } from "../story/StoryProvider";
 import { getPartDisplayList } from "../story/selectors";
 import CinematicShell from "./CinematicShell";
@@ -26,11 +27,7 @@ const VISIBLE_CHAPTER_IDS = [
 ];
 
 const lumeLogoImage = mediaUrl("LUMElogo.png");
-const showcaseImages = [
-  { src: mediaUrl("blackredbullcycles.png"), alt: "Red Bull Special Edition LUME showcase preview" },
-  { src: mediaUrl("starbucksLUME.png"), alt: "Starbucks Reserve Blend LUME showcase preview" },
-  { src: mediaUrl("YSLfemmeLUME.png"), alt: "YSL Libre Femme LUME showcase preview" },
-];
+const fallbackShowcaseImage = mediaUrl("blackredbullcycles.png");
 
 function ShowcaseCard({
   title,
@@ -150,14 +147,17 @@ export default function ShowcasePage({
 
           <section className="showcasePage__cards" aria-label="LUME showcases">
             {showcaseChapters.map((chapter, index) => {
-              const preview = showcaseImages[index] ?? showcaseImages[0];
+              const preview = getShowcasePreviewForChapter(
+                chapter.definition.id,
+                index
+              );
 
               return (
                 <ShowcaseCard
                   key={chapter.definition.id}
                   title={chapter.definition.title}
-                  imageSrc={preview.src}
-                  imageAlt={preview.alt}
+                  imageSrc={preview.imageSrc ?? fallbackShowcaseImage}
+                  imageAlt={`${preview.brand} ${preview.name} LUME showcase preview`}
                   onSelect={() => onEnter(chapter.partIndex, chapter.chapterIndex)}
                 />
               );

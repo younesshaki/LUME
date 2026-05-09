@@ -117,8 +117,6 @@
   text-align: center;
   max-width: 680px;
   margin: 0 auto clamp(2.5rem, 5vw, 4rem);
-  opacity: 0;
-  animation: productsFadeUp 0.9s ease 0.1s forwards;
 }
 
 .productsPage__lamp {
@@ -170,8 +168,6 @@
   display: flex;
   justify-content: center;
   margin-bottom: clamp(2rem, 4vw, 3.5rem);
-  opacity: 0;
-  animation: productsFadeUp 0.9s ease 0.22s forwards;
 }
 
 .luxuryTabs {
@@ -259,8 +255,6 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.25rem;
-  opacity: 0;
-  animation: productsFadeUp 0.9s ease 0.34s forwards;
 }
 
 .productsPage__grid:hover .productsPage__card:not(:hover),
@@ -516,12 +510,6 @@
   color: var(--lume-soft);
   font-size: 0.82rem;
   letter-spacing: 0.06em;
-}
-
-/* ── Animation ── */
-@keyframes productsFadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Responsive ── */

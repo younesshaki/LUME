@@ -39,14 +39,45 @@ Ollama endpoint.
 npm run dev
 npm run typecheck
 npm run check:assets
+npm run check:assets:strict
+npm test
 npm run embed
 npm run build
 npm run preview
 ```
 
-`npm run check:assets` verifies the required Cloudflare R2 media keys used by
-the current product cards and Red Bull showcase. Optional future product assets
-are reported as warnings without failing the command.
+This project uses npm as the source of truth. Use `npm install --legacy-peer-deps`
+locally to match CI/Vercel dependency resolution.
+
+`npm run check:assets` verifies currently required Cloudflare R2 media keys used
+by the shell, uploaded product cards, and current Red Bull entry video. Optional
+future product/showcase assets are reported as warnings. `npm run
+check:assets:strict` treats the full launch media list as required and should
+pass before a public launch.
 
 `npm run embed` regenerates the local chatbot knowledge embeddings after edits
 to `src/lib/knowledge/chunks.ts`.
+
+## Product Catalog
+
+Product metadata lives in `src/experience/products/catalog.json` and is exposed
+through `src/experience/products/catalog.ts`. Product cards, product detail
+pages, homepage showcase previews, the showcase page, and R2 asset checks all
+read from that catalog.
+
+Current uploaded image keys:
+
+- `blackredbullcycles.png`
+- `starbucksLUME.png`
+- `YSLfemmeLUME.png`
+- `YSLmenLUME.png`
+
+The preferred future convention is `products/<product-id>.webp`; the catalog
+stores those preferred keys so the app can migrate cleanly after the R2 uploads
+exist.
+
+## Planning Docs
+
+- `codex max analysis.md` tracks the stabilization roadmap and implementation progress.
+- `docs/deployment-checklist.md` lists production launch checks.
+- `docs/new-showcase-template.md` defines the workflow for adding the next product showcase.

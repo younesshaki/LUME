@@ -18,8 +18,8 @@ git worktree add ../LUME-aceternity aceternity-updates
 
 | Directory | Branch | Start Command | URL |
 |---|---|---|---|
-| `~/Documents/LUME` | `main` | `npm run dev` | http://localhost:5173 |
-| `~/Documents/LUME-aceternity` | `aceternity-updates` | `npm run dev -- --port 5173` | http://localhost:5173 |
+| `~/Documents/LUME` | `codex-max` | `npm run dev` | http://localhost:5173 |
+| `~/Documents/LUME-chatbot-design` | `5-may` / feature worktree | `npm run dev -- --host 127.0.0.1 --port 5175` | http://localhost:5175 |
 
 Open a terminal in each directory and run its start command. Both share the same
 `.git` history — commits on either side are immediately visible to the other.

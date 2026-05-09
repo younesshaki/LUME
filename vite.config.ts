@@ -5,7 +5,7 @@ import tailwind from '@tailwindcss/vite';
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const ollamaHost = env.VITE_OLLAMA_HOST ?? 'http://192.168.11.118:11434';
+  const ollamaHost = env.VITE_OLLAMA_HOST ?? 'http://127.0.0.1:11434';
 
   return {
     plugins: [react(), glsl(), tailwind()],
@@ -22,6 +22,25 @@ export default defineConfig(({ mode }) => {
           target: ollamaHost,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/ollama/, ''),
+        },
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            animation: ["gsap", "motion"],
+            react: ["react", "react-dom"],
+            supabase: ["@supabase/supabase-js"],
+            three: [
+              "three",
+              "three-stdlib",
+              "@react-three/fiber",
+              "@react-three/drei",
+              "@react-three/postprocessing",
+              "postprocessing",
+            ],
+          },
         },
       },
     },

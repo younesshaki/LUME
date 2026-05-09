@@ -87,6 +87,7 @@ export default function AdminPage({ onExit }: AdminPageProps) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [events, setEvents] = useState<StoryEvent[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [eventTypeFilter, setEventTypeFilter] = useState("all");
   const [loading, setLoading] = useState(false);
 
   // Authorize: must be logged in AND have is_admin = true on profile.
@@ -183,11 +184,21 @@ export default function AdminPage({ onExit }: AdminPageProps) {
   }, [profiles]);
 
   const selectedEvents = useMemo(
-    () =>
-      selectedUserId
+    () => {
+      const userFiltered = selectedUserId
         ? events.filter((e) => e.user_id === selectedUserId)
-        : events,
-    [selectedUserId, events]
+        : events;
+
+      return eventTypeFilter === "all"
+        ? userFiltered
+        : userFiltered.filter((event) => event.event_type === eventTypeFilter);
+    },
+    [selectedUserId, eventTypeFilter, events]
+  );
+
+  const eventTypes = useMemo(
+    () => Array.from(new Set(events.map((event) => event.event_type))).sort(),
+    [events]
   );
 
   const stats = useMemo(() => {
@@ -197,6 +208,41 @@ export default function AdminPage({ onExit }: AdminPageProps) {
     const completions = events.filter((e) => e.event_type === "chapter_completed").length;
     return { totalProfiles: profiles.length, yes, no, completions };
   }, [events, profiles]);
+
+  const lastEvent = events[0] ?? null;
+
+  const handleExportCsv = () => {
+    const escape = (value: unknown) =>
+      `"${String(value ?? "").replaceAll("\"", "\"\"")}"`;
+    const rows = [
+      [
+        "id",
+        "created_at",
+        "username",
+        "event_type",
+        "scene_id",
+        "choice_id",
+        "description",
+      ],
+      ...selectedEvents.map((event) => [
+        event.id,
+        event.created_at,
+        event.username ?? "",
+        event.event_type,
+        event.scene_id ?? "",
+        event.choice_id ?? "",
+        describeEvent(event),
+      ]),
+    ];
+    const csv = rows.map((row) => row.map(escape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `lume-events-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (!authChecked) {
     return (
@@ -226,6 +272,9 @@ export default function AdminPage({ onExit }: AdminPageProps) {
           <p className="adminPage__statsLine">
             {stats.totalProfiles} viewers · {stats.yes} yes · {stats.no} no ·{" "}
             {stats.completions} completions
+          </p>
+          <p className="adminPage__healthLine">
+            Last event: {lastEvent ? `${fmtRelative(lastEvent.created_at)} (${lastEvent.event_type})` : "none yet"}
           </p>
         </div>
         <button type="button" className="adminPage__exitBtn" onClick={onExit}>
@@ -259,24 +308,28 @@ export default function AdminPage({ onExit }: AdminPageProps) {
               return (
                 <li
                   key={p.id}
-                  className={`adminPage__profileRow${
-                    selectedUserId === p.id ? " is-selected" : ""
-                  }${p.is_admin ? " is-admin" : ""}`}
-                  onClick={() => setSelectedUserId(p.id)}
                 >
-                  <div className="adminPage__profileName">
-                    {p.username}
-                    {p.is_admin && <span className="adminPage__badge">admin</span>}
-                  </div>
-                  <div className="adminPage__profileMeta">
-                    last seen {fmtRelative(p.last_seen_at)}
-                    {lastChoice && (
-                      <span className={`adminPage__choice adminPage__choice--${lastChoice.choice_id}`}>
-                        {lastChoice.choice_id?.toUpperCase()}
-                      </span>
-                    )}
-                    {completed && <span className="adminPage__doneFlag">✓ done</span>}
-                  </div>
+                  <button
+                    type="button"
+                    className={`adminPage__profileRow${
+                      selectedUserId === p.id ? " is-selected" : ""
+                    }${p.is_admin ? " is-admin" : ""}`}
+                    onClick={() => setSelectedUserId(p.id)}
+                  >
+                    <span className="adminPage__profileName">
+                      {p.username}
+                      {p.is_admin && <span className="adminPage__badge">admin</span>}
+                    </span>
+                    <span className="adminPage__profileMeta">
+                      last seen {fmtRelative(p.last_seen_at)}
+                      {lastChoice && (
+                        <span className={`adminPage__choice adminPage__choice--${lastChoice.choice_id}`}>
+                          {lastChoice.choice_id?.toUpperCase()}
+                        </span>
+                      )}
+                      {completed && <span className="adminPage__doneFlag">done</span>}
+                    </span>
+                  </button>
                 </li>
               );
             })}
@@ -290,7 +343,31 @@ export default function AdminPage({ onExit }: AdminPageProps) {
                 ? `Timeline · ${profileById.get(selectedUserId)?.username ?? "?"}`
                 : "All events (latest first)"}
             </h2>
-            <span className="adminPage__muted">{selectedEvents.length} events</span>
+            <div className="adminPage__timelineTools">
+              <label className="adminPage__filterLabel">
+                <span>Type</span>
+                <select
+                  value={eventTypeFilter}
+                  onChange={(event) => setEventTypeFilter(event.target.value)}
+                >
+                  <option value="all">All</option>
+                  {eventTypes.map((eventType) => (
+                    <option key={eventType} value={eventType}>
+                      {eventType}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="adminPage__exportBtn"
+                onClick={handleExportCsv}
+                disabled={selectedEvents.length === 0}
+              >
+                Export CSV
+              </button>
+              <span className="adminPage__muted">{selectedEvents.length} events</span>
+            </div>
           </div>
           <ul className="adminPage__events">
             {selectedEvents.map((e) => (

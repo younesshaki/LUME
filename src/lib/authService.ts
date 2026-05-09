@@ -17,7 +17,7 @@ export type AuthResult =
         | "invalid_username";
     };
 
-function sanitize(input: string): string | null {
+export function sanitizeUsername(input: string): string | null {
   const lower = input.trim().toLowerCase();
   if (!/^[a-z0-9_]{2,30}$/.test(lower)) return null;
   return lower;
@@ -60,7 +60,7 @@ export async function loginOrRegister(
   rawUsername: string,
   password: string
 ): Promise<AuthResult> {
-  const username = sanitize(rawUsername);
+  const username = sanitizeUsername(rawUsername);
   if (!username) return { success: false, error: "invalid_username" };
 
   if (!isSupabaseConfigured) {

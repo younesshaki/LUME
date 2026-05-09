@@ -20,6 +20,7 @@ body,
 body {
   margin: 0;
   font-family: var(--experience-font-family);
+  background: #000;
 }
 
 button,

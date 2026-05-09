@@ -61,6 +61,11 @@
   color: #888;
   font-size: 0.85rem;
 }
+.adminPage__healthLine {
+  margin: 0.2rem 0 0;
+  color: #6cf;
+  font-size: 0.78rem;
+}
 
 /* Body layout */
 .adminPage__body {
@@ -111,14 +116,22 @@
   gap: 0.4rem;
 }
 .adminPage__profileRow {
+  display: block;
+  width: 100%;
+  text-align: left;
   padding: 0.65rem 0.75rem;
   border-radius: 8px;
   cursor: pointer;
   transition: background 100ms;
   border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
 }
-.adminPage__profileRow:hover {
+.adminPage__profileRow:hover,
+.adminPage__profileRow:focus-visible {
   background: rgba(255, 255, 255, 0.05);
+  outline: none;
 }
 .adminPage__profileRow.is-selected {
   background: rgba(108, 200, 255, 0.1);
@@ -181,6 +194,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   margin-bottom: 1rem;
 }
 .adminPage__timelineHeader h2 {
@@ -191,6 +205,43 @@
 .adminPage__muted {
   color: #888;
   font-size: 0.8rem;
+}
+.adminPage__timelineTools {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.adminPage__filterLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #888;
+  font-size: 0.76rem;
+}
+.adminPage__filterLabel select,
+.adminPage__exportBtn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8e8ee;
+  font: inherit;
+  font-size: 0.76rem;
+}
+.adminPage__filterLabel select {
+  padding: 0.32rem 0.6rem;
+}
+.adminPage__exportBtn {
+  padding: 0.38rem 0.78rem;
+  cursor: pointer;
+}
+.adminPage__exportBtn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.adminPage__exportBtn:not(:disabled):hover,
+.adminPage__exportBtn:not(:disabled):focus-visible {
+  border-color: rgba(108, 200, 255, 0.42);
+  outline: none;
 }
 
 .adminPage__events {
@@ -249,5 +300,10 @@
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     max-height: 35vh;
+  }
+  .adminPage__timelineHeader,
+  .adminPage__timelineTools {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

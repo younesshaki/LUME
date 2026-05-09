@@ -9,6 +9,7 @@ import {
   CardItem,
 } from "@/components/ui/3d-card";
 import { mediaUrl } from "@/config/cdn";
+import { getShowcasePreviewForChapter } from "../products/catalog";
 import homepageBackgroundImage from "../assets/images/lume-homepage-background.png";
 import "./StoryHomePage.css";
 
@@ -26,15 +27,7 @@ const VISIBLE_CHAPTER_IDS = [
 ];
 
 const redBullCyclesImage = mediaUrl("blackredbullcycles.png");
-const starbucksImage = mediaUrl("starbucksLUME.png");
-const yslFemmeImage = mediaUrl("YSLfemmeLUME.png");
 const lumeLogoImage = mediaUrl("LUMElogo.png");
-
-const SHOWCASE_CARD_IMAGES = [
-  { src: redBullCyclesImage, alt: "Red Bull Special Edition LUME product preview" },
-  { src: starbucksImage, alt: "Starbucks Reserve Blend LUME product preview" },
-  { src: yslFemmeImage, alt: "YSL Libre Femme LUME product preview" },
-];
 
 const homepageBackgroundStyle = {
   "--story-home-bg-image": `url(${homepageBackgroundImage})`,
@@ -181,15 +174,18 @@ export default function StoryHomePage({
 
             <div className="storyHome__showcaseCards" aria-label="LUME showcases">
               {showcaseChapters.map((chapter, index) => {
-                const preview = SHOWCASE_CARD_IMAGES[index] ?? SHOWCASE_CARD_IMAGES[0];
+                const preview = getShowcasePreviewForChapter(
+                  chapter.definition.id,
+                  index
+                );
 
                 return (
                   <StoryOptionCard
                     key={chapter.definition.id}
                     title={chapter.definition.title}
                     actionLabel="Open"
-                    imageSrc={preview.src}
-                    imageAlt={preview.alt}
+                    imageSrc={preview.imageSrc ?? redBullCyclesImage}
+                    imageAlt={`${preview.brand} ${preview.name} LUME product preview`}
                     onSelect={() => onEnter(chapter.partIndex, chapter.chapterIndex)}
                   />
                 );
