@@ -9,6 +9,7 @@ function renderProductsPage() {
       <ProductsPage
         onGoHome={vi.fn()}
         onSelectProduct={vi.fn()}
+        onNavigateToVehicles={vi.fn()}
         onNavigateToShowcase={vi.fn()}
         onNavigateToContact={vi.fn()}
       />

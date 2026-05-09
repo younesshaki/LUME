@@ -25,6 +25,7 @@ const loadContactPage = () => import("./experience/ui/ContactPage");
 const loadExperience = () => import("./experience/Experience");
 const loadProductDetailPage = () => import("./experience/ui/ProductDetailPage");
 const loadProductsPage = () => import("./experience/ui/ProductsPage");
+const loadVehiclesPage = () => import("./experience/ui/VehiclesPage");
 const loadShowcasePage = () => import("./experience/ui/ShowcasePage");
 const loadShowcaseTitleCard = () => import("./experience/ui/ShowcaseTitleCard");
 const loadStoryHomePage = () => import("./experience/ui/StoryHomePage");
@@ -34,6 +35,7 @@ const ContactPage = lazy(loadContactPage);
 const Experience = lazy(loadExperience);
 const ProductDetailPage = lazy(loadProductDetailPage);
 const ProductsPage = lazy(loadProductsPage);
+const VehiclesPage = lazy(loadVehiclesPage);
 const ShowcasePage = lazy(loadShowcasePage);
 const ShowcaseTitleCard = lazy(loadShowcaseTitleCard);
 const StoryHomePage = lazy(loadStoryHomePage);
@@ -48,6 +50,7 @@ type AppScreen =
   | "home"
   | "products"
   | "productDetail"
+  | "vehicles"
   | "showcase"
   | "contact"
   | "titlecard"
@@ -124,6 +127,7 @@ export default function App() {
   useEffect(() => {
     void loadStoryHomePage();
     void loadProductsPage();
+    void loadVehiclesPage();
     void loadProductDetailPage();
     void loadShowcasePage();
     void loadContactPage();
@@ -203,6 +207,12 @@ export default function App() {
       return;
     }
 
+    if (screen === "vehicles") {
+      logNavigationAction("back", "vehicles", "home");
+      handleGoHome(false);
+      return;
+    }
+
     if (screen === "productDetail") {
       logNavigationAction("back", "productDetail", "products");
       navigateToScreen("products");
@@ -247,6 +257,11 @@ export default function App() {
     navigateToScreen("products");
   }, [navigateToScreen]);
 
+  const handleNavigateToVehicles = useCallback(() => {
+    playSound("nav.toVehicles");
+    navigateToScreen("vehicles");
+  }, [navigateToScreen]);
+
   const handleNavigateToShowcase = useCallback(() => {
     playSound("nav.toShowcase");
     navigateToScreen("showcase");
@@ -283,7 +298,7 @@ export default function App() {
         visible={!isShowcaseExperience}
         onQualityChange={handleMediaQualityChange}
       />
-      {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "productDetail" || screen === "showcase" || screen === "contact") && (
+      {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "productDetail" || screen === "vehicles" || screen === "showcase" || screen === "contact") && (
         <AppBackButton onClick={handleBack} />
       )}
       {screen !== "gate" && (
@@ -320,12 +335,21 @@ export default function App() {
                 onSelectProduct={handleSelectProduct}
                 onNavigateToShowcase={handleNavigateToShowcase}
                 onNavigateToContact={handleNavigateToContact}
+                onNavigateToVehicles={handleNavigateToVehicles}
+              />
+            ) : screen === "vehicles" ? (
+              <VehiclesPage
+                onGoHome={handleGoHome}
+                onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToShowcase={handleNavigateToShowcase}
+                onNavigateToContact={handleNavigateToContact}
               />
             ) : screen === "productDetail" ? (
               <ProductDetailPage
                 productId={selectedProductId}
                 onGoHome={handleGoHome}
                 onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToVehicles={handleNavigateToVehicles}
                 onNavigateToShowcase={handleNavigateToShowcase}
                 onNavigateToContact={handleNavigateToContact}
                 onViewShowcase={handleEnterExperience}
@@ -334,6 +358,7 @@ export default function App() {
               <ShowcasePage
                 onGoHome={handleGoHome}
                 onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToVehicles={handleNavigateToVehicles}
                 onNavigateToContact={handleNavigateToContact}
                 onEnter={handleEnterExperience}
               />
@@ -341,12 +366,14 @@ export default function App() {
               <ContactPage
                 onGoHome={handleGoHome}
                 onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToVehicles={handleNavigateToVehicles}
                 onNavigateToShowcase={handleNavigateToShowcase}
               />
             ) : (
               <StoryHomePage
                 onEnter={handleEnterExperience}
                 onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToVehicles={handleNavigateToVehicles}
                 onNavigateToShowcase={handleNavigateToShowcase}
                 onNavigateToContact={handleNavigateToContact}
               />

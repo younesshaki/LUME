@@ -16,6 +16,7 @@ import "./ShowcasePage.css";
 type ShowcasePageProps = {
   onGoHome: () => void;
   onNavigateToProducts: () => void;
+  onNavigateToVehicles: () => void;
   onNavigateToContact: () => void;
   onEnter: (partIndex: number, chapterIndex: number) => void;
 };
@@ -95,6 +96,7 @@ function ShowcaseCard({
 export default function ShowcasePage({
   onGoHome,
   onNavigateToProducts,
+  onNavigateToVehicles,
   onNavigateToContact,
   onEnter,
 }: ShowcasePageProps) {
@@ -127,6 +129,9 @@ export default function ShowcasePage({
             </button>
             <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToProducts}>
               Products
+            </button>
+            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToVehicles}>
+              Vehicles
             </button>
             <span>Showcase</span>
             <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToContact}>

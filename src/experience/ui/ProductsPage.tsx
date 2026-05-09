@@ -76,6 +76,7 @@ function ProductCard({
 type ProductsPageProps = {
   onGoHome: () => void;
   onSelectProduct: (productId: string) => void;
+  onNavigateToVehicles: () => void;
   onNavigateToShowcase: () => void;
   onNavigateToContact: () => void;
 };
@@ -83,6 +84,7 @@ type ProductsPageProps = {
 export default function ProductsPage({
   onGoHome,
   onSelectProduct,
+  onNavigateToVehicles,
   onNavigateToShowcase,
   onNavigateToContact,
 }: ProductsPageProps) {
@@ -142,6 +144,14 @@ export default function ProductsPage({
               Home
             </button>
             <span className="productsPage__navActive">Products</span>
+            <button
+              type="button"
+              className="productsPage__navLink"
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToVehicles}
+            >
+              Vehicles
+            </button>
             <button
               type="button"
               className="productsPage__navLink"

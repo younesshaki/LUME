@@ -9,6 +9,7 @@ type ProductDetailPageProps = {
   productId: string | null;
   onGoHome: () => void;
   onNavigateToProducts: () => void;
+  onNavigateToVehicles: () => void;
   onNavigateToShowcase: () => void;
   onNavigateToContact: () => void;
   onViewShowcase: (partIndex: number, chapterIndex: number) => void;
@@ -20,6 +21,7 @@ export default function ProductDetailPage({
   productId,
   onGoHome,
   onNavigateToProducts,
+  onNavigateToVehicles,
   onNavigateToShowcase,
   onNavigateToContact,
   onViewShowcase,
@@ -50,6 +52,9 @@ export default function ProductDetailPage({
             </button>
             <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToProducts}>
               Products
+            </button>
+            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToVehicles}>
+              Vehicles
             </button>
             <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToShowcase}>
               Showcase

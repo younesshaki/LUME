@@ -51,7 +51,8 @@ export const ACTION_REGISTRY = {
   // ─── Page navigation ────────────────────────────────────────────────
   "nav.toHome":     "page-transition",
   "nav.toProducts": "page-transition",
-  "nav.toShowcase": "showcase-confirmation",
+  "nav.toVehicles": "page-transition",
+  "nav.toShowcase": "page-transition",
   "nav.toContact":  "page-transition",
   "nav.back":       "click-soft",
   "nav.hover":      "hover",

@@ -5,12 +5,14 @@ import "./ContactPage.css";
 type ContactPageProps = {
   onGoHome: () => void;
   onNavigateToProducts: () => void;
+  onNavigateToVehicles: () => void;
   onNavigateToShowcase: () => void;
 };
 
 export default function ContactPage({
   onGoHome,
   onNavigateToProducts,
+  onNavigateToVehicles,
   onNavigateToShowcase,
 }: ContactPageProps) {
   const { play } = useSound();
@@ -35,6 +37,14 @@ export default function ContactPage({
               onClick={onNavigateToProducts}
             >
               Product
+            </button>
+            <button
+              type="button"
+              className="contactPage__navLink"
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToVehicles}
+            >
+              Vehicles
             </button>
             <button
               type="button"

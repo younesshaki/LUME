@@ -16,6 +16,7 @@ import "./StoryHomePage.css";
 type StoryHomePageProps = {
   onEnter: (partIndex: number, chapterIndex: number) => void;
   onNavigateToProducts?: () => void;
+  onNavigateToVehicles?: () => void;
   onNavigateToShowcase?: () => void;
   onNavigateToContact?: () => void;
 };
@@ -101,6 +102,7 @@ function StoryOptionCard({
 export default function StoryHomePage({
   onEnter,
   onNavigateToProducts,
+  onNavigateToVehicles,
   onNavigateToShowcase,
   onNavigateToContact,
 }: StoryHomePageProps) {
@@ -147,6 +149,13 @@ export default function StoryHomePage({
               >
                 Product
               </a>
+            <a
+              href="#vehicles"
+              onMouseEnter={() => play("nav.hover")}
+              onClick={onNavigateToVehicles ? (e) => { e.preventDefault(); onNavigateToVehicles(); } : undefined}
+            >
+              Vehicles
+            </a>
             <a
               href="#showcase"
               onMouseEnter={() => play("nav.hover")}
