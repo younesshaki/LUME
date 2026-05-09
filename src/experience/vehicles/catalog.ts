@@ -5,6 +5,7 @@ export type Vehicle = {
   make: string;
   model: string;
   trim: string;
+  price: number;
   mileage: number | null;
   bodyStyle: string;
   exteriorColor: string;
@@ -62,6 +63,50 @@ export const MILEAGE_OPTIONS = [
   { label: "Under 60,000 mi", value: 60000 },
   { label: "Under 100,000 mi", value: 100000 },
 ];
+
+const FALLBACK_IMAGES = [
+  "/vehicles/vehicle-type-1.webp",
+  "/vehicles/vehicle-type-2.webp",
+  "/vehicles/vehicle-type-3.webp",
+  "/vehicles/vehicle-type-4.webp",
+  "/vehicles/vehicle-type-5.webp",
+];
+
+const PRICE_TIERS: { makes: string[]; min: number; max: number }[] = [
+  { makes: ["Ferrari", "Lamborghini", "Rolls-Royce", "Maserati"], min: 180000, max: 650000 },
+  { makes: ["Porsche", "Mercedes-Benz", "BMW", "Audi", "Lexus", "Land Rover", "Jaguar", "Genesis", "Cadillac", "Lincoln"], min: 55000, max: 185000 },
+  { makes: ["Tesla", "Polestar", "Acura", "INFINITI", "Volvo", "Buick"], min: 32000, max: 85000 },
+];
+const PRICE_DEFAULT = { min: 18000, max: 58000 };
+
+function generatePrice(make: string, year: number, mileage: number | null, id: string): number {
+  const tier = PRICE_TIERS.find((t) => t.makes.includes(make)) ?? PRICE_DEFAULT;
+  const hash = Math.abs(hashString(id));
+  let price = tier.min + (hash % (tier.max - tier.min));
+
+  const age = 2026 - year;
+  if (age <= 1) price *= 1.18;
+  else if (age <= 3) price *= 1.06;
+  else if (age >= 10) price *= 0.68;
+  else if (age >= 6) price *= 0.84;
+
+  if (mileage !== null && mileage > 0) {
+    if (mileage > 60000) price *= 0.82;
+    else if (mileage > 25000) price *= 0.91;
+    else if (mileage < 5000) price *= 1.07;
+  }
+
+  return Math.round(price / 500) * 500;
+}
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
+}
 
 function normalizeDrivetrain(raw: string): string {
   const v = raw.trim().toUpperCase();
@@ -153,7 +198,13 @@ export async function loadVehicles(): Promise<Vehicle[]> {
       interiorColor: row["interiorColor"] !== "[PREMIUM]" ? row["interiorColor"] : "",
       drivetrain: row["drivetrain"] ? normalizeDrivetrain(row["drivetrain"]) : "",
       fuelType: row["fuelType"] ? normalizeFuelType(row["fuelType"]) : "",
-      imageSrc: row["images"] || "",
+      imageSrc: FALLBACK_IMAGES[Math.abs(hashString(row["_primaryKey"])) % FALLBACK_IMAGES.length],
+      price: generatePrice(
+        row["make"],
+        parseInt(row["year"]) || 2020,
+        row["mileage"] && row["mileage"] !== "[PREMIUM]" ? parseInt(row["mileage"]) : null,
+        row["_primaryKey"]
+      ),
       sellerCity: row["sellerCity"] || "",
       sellerState: row["sellerState"] || "",
     }));

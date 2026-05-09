@@ -538,11 +538,11 @@
 }
 
 .vehiclesPage__cardPrice {
-  color: rgba(255, 248, 236, 0.72);
-  font-size: 0.72rem;
+  color: var(--lume-gold);
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 18px rgba(217, 183, 106, 0.28);
 }
 
 .vehiclesPage__cardLocation {

@@ -189,6 +189,7 @@ function formatVehiclesBlock(
       `${v.year} ${v.make} ${v.model}`,
       v.trim || null,
       v.stockType,
+      `$${v.price.toLocaleString()}`,
       v.mileage !== null ? (v.mileage === 0 ? "0 mi (new)" : `${v.mileage.toLocaleString()} mi`) : null,
       v.bodyStyle || null,
       v.drivetrain || null,

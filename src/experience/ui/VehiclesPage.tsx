@@ -32,7 +32,6 @@ function formatMileage(miles: number | null): string {
 
 function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
   const { play } = useSound();
-  const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -48,11 +47,10 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
       role="article"
     >
       <div className="vehiclesPage__cardImage">
-        {vehicle.imageSrc && !imageLoadFailed ? (
+        {vehicle.imageSrc ? (
           <img
             src={vehicle.imageSrc}
             alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-            onError={() => setImageLoadFailed(true)}
           />
         ) : (
           <div className="vehiclesPage__cardImagePlaceholder">
@@ -85,7 +83,9 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
       </div>
 
       <div className="vehiclesPage__cardFooter">
-        <span className="vehiclesPage__cardPrice">Contact for Price</span>
+        <span className="vehiclesPage__cardPrice">
+          ${vehicle.price.toLocaleString()}
+        </span>
         {vehicle.sellerCity && (
           <span className="vehiclesPage__cardLocation">
             {vehicle.sellerCity}, {vehicle.sellerState}
