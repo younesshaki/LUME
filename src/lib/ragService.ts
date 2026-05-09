@@ -126,7 +126,9 @@ function extractVehicleFilters(query: string): VehicleQueryFilters {
 }
 
 // ─── Filter vehicles and return the most relevant matches ─────────────────────
-function matchVehicles(vehicles: Vehicle[], filters: VehicleQueryFilters): Vehicle[] {
+type MatchResult = { results: Vehicle[]; totalMatched: number };
+
+function matchVehicles(vehicles: Vehicle[], filters: VehicleQueryFilters): MatchResult {
   let results = vehicles;
 
   if (filters.make) {
@@ -155,23 +157,32 @@ function matchVehicles(vehicles: Vehicle[], filters: VehicleQueryFilters): Vehic
     results = results.filter((v) => v.year === filters.year);
   }
 
-  // Cap results — more context when filtered, summary when broad
+  const totalMatched = results.length;
   const cap = Object.keys(filters).length > 0 ? 30 : 15;
-  return results.slice(0, cap);
+  return { results: results.slice(0, cap), totalMatched };
 }
 
 // ─── Format vehicle list for injection into the system prompt ─────────────────
-function formatVehiclesBlock(matched: Vehicle[], total: number, filters: VehicleQueryFilters): string {
+function formatVehiclesBlock(
+  matched: Vehicle[],
+  totalMatched: number,
+  totalInventory: number,
+  filters: VehicleQueryFilters
+): string {
   const isFiltered = Object.keys(filters).length > 0;
-
   const filterSummary = isFiltered
     ? ` matching ${Object.entries(filters).map(([k, v]) => `${k}=${v}`).join(", ")}`
     : "";
+  const showingNote =
+    matched.length < totalMatched
+      ? `Showing first ${matched.length} of ${totalMatched} — use the TOTAL MATCHING count when answering "how many".`
+      : `All ${totalMatched} shown below.`;
 
   const header =
     `=== LUME VEHICLE INVENTORY ===\n` +
-    `Total vehicles in full inventory: ${total}\n` +
-    `Vehicles shown below${filterSummary}: ${matched.length}\n`;
+    `Total vehicles in full inventory: ${totalInventory}\n` +
+    `TOTAL MATCHING${filterSummary}: ${totalMatched}\n` +
+    `${showingNote}\n`;
 
   const lines = matched.map((v, i) => {
     const parts = [
@@ -262,9 +273,9 @@ export async function getSystemPromptWithContext(
   // Inject vehicle context when relevant
   if (vehicles && vehicles.length > 0 && isVehicleQuery(query)) {
     const filters = extractVehicleFilters(query);
-    const matched = matchVehicles(vehicles, filters);
+    const { results: matched, totalMatched } = matchVehicles(vehicles, filters);
     if (matched.length > 0) {
-      const vehicleBlock = formatVehiclesBlock(matched, vehicles.length, filters);
+      const vehicleBlock = formatVehiclesBlock(matched, totalMatched, vehicles.length, filters);
       contextBlock = contextBlock
         ? `${contextBlock}\n\n---\n${vehicleBlock}`
         : vehicleBlock;
