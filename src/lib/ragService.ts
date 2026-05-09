@@ -19,13 +19,14 @@ const OLLAMA_EMBED_URL =
 const EMBED_MODEL =
   (import.meta.env.VITE_OLLAMA_EMBED_MODEL as string | undefined) ?? "nomic-embed-text";
 
-const BASE_SYSTEM_PROMPT = `You are the LUME assistant. LUME is an invitation-only secret luxury hotel in Monaco with approximately 70 rooms. Access is granted based on positive societal impact, not wealth — one stay per year per invited guest.
+const BASE_SYSTEM_PROMPT = `You are the LUME assistant. LUME is an invitation-only secret luxury hotel in Monaco with approximately 70 rooms. Access is granted based on positive societal impact, not wealth — one stay per year per invited guest. LUME also curates an exclusive vehicle inventory of premium and exotic cars for its guests.
 
 CRITICAL RULES — follow these without exception:
 1. LUME is a luxury hotel in Monaco. It is NOT a personal care brand, NOT a deodorant brand, NOT a consumer goods company. Do not confuse it with any other brand named Lume or similar.
 2. Answer ONLY using the context provided below. Do not use any prior training knowledge about LUME or any other brand.
 3. If the answer is not found in the provided context, say: "I don't have that information — please visit lume.com or contact us directly."
 4. Never invent, guess, or extrapolate products, facts, or details that are not explicitly stated in the context.
+5. When the context includes a LUME VEHICLE INVENTORY section, answer vehicle questions directly and accurately from it. Count listed vehicles, describe them, and summarise filters. Do not say you lack information if the vehicles are listed in the context.
 
 Tone: concise, restrained, and confident — matching LUME's premium brand voice.`;
 
@@ -162,16 +163,22 @@ function matchVehicles(vehicles: Vehicle[], filters: VehicleQueryFilters): Vehic
 // ─── Format vehicle list for injection into the system prompt ─────────────────
 function formatVehiclesBlock(matched: Vehicle[], total: number, filters: VehicleQueryFilters): string {
   const isFiltered = Object.keys(filters).length > 0;
-  const header = isFiltered
-    ? `Matching vehicles (${matched.length} of ${total} total):`
-    : `Vehicle inventory sample (${matched.length} of ${total} total vehicles available):`;
+
+  const filterSummary = isFiltered
+    ? ` matching ${Object.entries(filters).map(([k, v]) => `${k}=${v}`).join(", ")}`
+    : "";
+
+  const header =
+    `=== LUME VEHICLE INVENTORY ===\n` +
+    `Total vehicles in full inventory: ${total}\n` +
+    `Vehicles shown below${filterSummary}: ${matched.length}\n`;
 
   const lines = matched.map((v, i) => {
     const parts = [
       `${v.year} ${v.make} ${v.model}`,
-      v.trim ? v.trim : null,
+      v.trim || null,
       v.stockType,
-      v.mileage !== null ? (v.mileage === 0 ? "New / 0 mi" : `${v.mileage.toLocaleString()} mi`) : null,
+      v.mileage !== null ? (v.mileage === 0 ? "0 mi (new)" : `${v.mileage.toLocaleString()} mi`) : null,
       v.bodyStyle || null,
       v.drivetrain || null,
       v.fuelType || null,
@@ -180,7 +187,7 @@ function formatVehiclesBlock(matched: Vehicle[], total: number, filters: Vehicle
     return `[${i + 1}] ${parts.join(" | ")}`;
   });
 
-  return `${header}\n${lines.join("\n")}`;
+  return `${header}\n${lines.join("\n")}\n==============================`;
 }
 
 // ─── Cosine similarity ────────────────────────────────────────────────────────
