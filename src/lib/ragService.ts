@@ -55,6 +55,8 @@ const VEHICLE_INTENT_KEYWORDS = [
   "convertible","hatchback","wagon","minivan","automobile","inventory",
   "stock","mileage","miles","drivetrain","awd","rwd","fwd","4wd","electric",
   "hybrid","diesel","gasoline","new car","used car","pre-owned","preowned",
+  "price","prices","pricing","cost","costs","expensive","cheapest","affordable",
+  "most expensive","least expensive","highest price","lowest price","budget",
 ];
 
 // ─── Detect whether the query is vehicle-related ─────────────────────────────
@@ -128,7 +130,7 @@ function extractVehicleFilters(query: string): VehicleQueryFilters {
 // ─── Filter vehicles and return the most relevant matches ─────────────────────
 type MatchResult = { results: Vehicle[]; totalMatched: number };
 
-function matchVehicles(vehicles: Vehicle[], filters: VehicleQueryFilters): MatchResult {
+function matchVehicles(vehicles: Vehicle[], filters: VehicleQueryFilters, query: string): MatchResult {
   let results = vehicles;
 
   if (filters.make) {
@@ -158,6 +160,15 @@ function matchVehicles(vehicles: Vehicle[], filters: VehicleQueryFilters): Match
   }
 
   const totalMatched = results.length;
+
+  // Sort by price when query asks about cost ranking
+  const q = query.toLowerCase();
+  if (/most expensive|highest price|priciest|most valuable/.test(q)) {
+    results = [...results].sort((a, b) => b.price - a.price);
+  } else if (/cheapest|least expensive|lowest price|most affordable|budget/.test(q)) {
+    results = [...results].sort((a, b) => a.price - b.price);
+  }
+
   const cap = Object.keys(filters).length > 0 ? 30 : 15;
   return { results: results.slice(0, cap), totalMatched };
 }
@@ -274,7 +285,7 @@ export async function getSystemPromptWithContext(
   // Inject vehicle context when relevant
   if (vehicles && vehicles.length > 0 && isVehicleQuery(query)) {
     const filters = extractVehicleFilters(query);
-    const { results: matched, totalMatched } = matchVehicles(vehicles, filters);
+    const { results: matched, totalMatched } = matchVehicles(vehicles, filters, query);
     if (matched.length > 0) {
       const vehicleBlock = formatVehiclesBlock(matched, totalMatched, vehicles.length, filters);
       contextBlock = contextBlock
