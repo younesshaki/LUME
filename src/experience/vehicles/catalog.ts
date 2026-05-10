@@ -1,4 +1,4 @@
-import { R2, fallbackMediaUrl } from "@/config/cdn";
+import { R2, mediaUrl, fallbackMediaUrl } from "@/config/cdn";
 
 const CSV_KEY = "vehicles-with-generated-images.csv";
 
@@ -122,13 +122,13 @@ export const MILEAGE_OPTIONS = [
 ];
 
 const FALLBACK_IMAGES = [
-  "/vehicles/vehicle-type-1.webp",
-  "/vehicles/vehicle-type-2.webp",
-  "/vehicles/vehicle-type-3.webp",
-  "/vehicles/vehicle-type-4.webp",
-  "/vehicles/vehicle-type-5.webp",
-  "/vehicles/vehicle-type-6.webp",
-  "/vehicles/vehicle-type-7.webp",
+  mediaUrl("vehicle%20images/vehicle-type-1.webp"),
+  mediaUrl("vehicle%20images/vehicle-type-2.webp"),
+  mediaUrl("vehicle%20images/vehicle-type-3.webp"),
+  mediaUrl("vehicle%20images/vehicle-type-4.webp"),
+  mediaUrl("vehicle%20images/vehicle-type-5.webp"),
+  mediaUrl("vehicle%20images/vehicle-type-6.webp"),
+  mediaUrl("vehicle%20images/vehicle-type-7.webp"),
 ];
 
 const PRICE_TIERS: { makes: string[]; min: number; max: number }[] = [
