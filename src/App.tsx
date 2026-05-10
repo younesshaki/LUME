@@ -25,6 +25,7 @@ const loadContactPage = () => import("./experience/ui/ContactPage");
 const loadExperience = () => import("./experience/Experience");
 const loadProductDetailPage = () => import("./experience/ui/ProductDetailPage");
 const loadProductsPage = () => import("./experience/ui/ProductsPage");
+const loadVehicleDetailPage = () => import("./experience/ui/VehicleDetailPage");
 const loadVehiclesPage = () => import("./experience/ui/VehiclesPage");
 const loadShowcasePage = () => import("./experience/ui/ShowcasePage");
 const loadShowcaseTitleCard = () => import("./experience/ui/ShowcaseTitleCard");
@@ -35,6 +36,7 @@ const ContactPage = lazy(loadContactPage);
 const Experience = lazy(loadExperience);
 const ProductDetailPage = lazy(loadProductDetailPage);
 const ProductsPage = lazy(loadProductsPage);
+const VehicleDetailPage = lazy(loadVehicleDetailPage);
 const VehiclesPage = lazy(loadVehiclesPage);
 const ShowcasePage = lazy(loadShowcasePage);
 const ShowcaseTitleCard = lazy(loadShowcaseTitleCard);
@@ -51,6 +53,7 @@ type AppScreen =
   | "products"
   | "productDetail"
   | "vehicles"
+  | "vehicleDetail"
   | "showcase"
   | "contact"
   | "titlecard"
@@ -103,9 +106,10 @@ function readInitialMediaQuality(): ShowcaseVideoQuality {
 export default function App() {
   const initialHash = typeof window !== "undefined" ? window.location.hash : "";
   const [screen, setScreen] = useState<AppScreen>(
-    initialHash === "#admin" ? "admin" : "gate"
+    initialHash === "#admin" ? "admin" : initialHash.startsWith("#vehicles") ? "vehicles" : "gate"
   );
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [entryPartIndex, setEntryPartIndex] = useState(0);
   const [entryChapterIndex, setEntryChapterIndex] = useState(0);
   const [showcaseChapterRevealed, setShowcaseChapterRevealed] = useState(false);
@@ -128,6 +132,7 @@ export default function App() {
     void loadStoryHomePage();
     void loadProductsPage();
     void loadVehiclesPage();
+    void loadVehicleDetailPage();
     void loadProductDetailPage();
     void loadShowcasePage();
     void loadContactPage();
@@ -140,6 +145,7 @@ export default function App() {
   useEffect(() => {
     const handler = () => {
       if (window.location.hash === "#admin") navigateToScreen("admin");
+      if (window.location.hash.startsWith("#vehicles")) navigateToScreen("vehicles");
     };
     window.addEventListener("hashchange", handler);
     return () => window.removeEventListener("hashchange", handler);
@@ -213,6 +219,12 @@ export default function App() {
       return;
     }
 
+    if (screen === "vehicleDetail") {
+      logNavigationAction("back", "vehicleDetail", "vehicles");
+      navigateToScreen("vehicles");
+      return;
+    }
+
     if (screen === "productDetail") {
       logNavigationAction("back", "productDetail", "products");
       navigateToScreen("products");
@@ -280,6 +292,13 @@ export default function App() {
     });
   }, []);
 
+  const handleSelectVehicle = useCallback((vehicleId: string) => {
+    startTransition(() => {
+      setSelectedVehicleId(vehicleId);
+      setScreen("vehicleDetail");
+    });
+  }, []);
+
   const handleMediaQualityChange = useCallback((quality: ShowcaseVideoQuality) => {
     setMediaQuality(quality);
     window.localStorage.setItem(MEDIA_QUALITY_STORAGE_KEY, quality);
@@ -298,7 +317,7 @@ export default function App() {
         visible={!isShowcaseExperience}
         onQualityChange={handleMediaQualityChange}
       />
-      {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "productDetail" || screen === "vehicles" || screen === "showcase" || screen === "contact") && (
+      {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "productDetail" || screen === "vehicles" || screen === "vehicleDetail" || screen === "showcase" || screen === "contact") && (
         <AppBackButton onClick={handleBack} />
       )}
       {screen !== "gate" && (
@@ -339,6 +358,16 @@ export default function App() {
               />
             ) : screen === "vehicles" ? (
               <VehiclesPage
+                onGoHome={handleGoHome}
+                onNavigateToProducts={handleNavigateToProducts}
+                onNavigateToShowcase={handleNavigateToShowcase}
+                onNavigateToContact={handleNavigateToContact}
+                onSelectVehicle={handleSelectVehicle}
+              />
+            ) : screen === "vehicleDetail" ? (
+              <VehicleDetailPage
+                vehicleId={selectedVehicleId}
+                onBackToVehicles={handleNavigateToVehicles}
                 onGoHome={handleGoHome}
                 onNavigateToProducts={handleNavigateToProducts}
                 onNavigateToShowcase={handleNavigateToShowcase}

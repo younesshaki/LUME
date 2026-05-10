@@ -1,5 +1,5 @@
 import embeddedChunks from "./knowledge/embeddings.json";
-import type { Vehicle } from "../experience/vehicles/catalog";
+import { formatVehiclePrice, type Vehicle } from "../experience/vehicles/catalog";
 
 type EmbeddedChunk = {
   id: string;
@@ -19,14 +19,14 @@ const OLLAMA_EMBED_URL =
 const EMBED_MODEL =
   (import.meta.env.VITE_OLLAMA_EMBED_MODEL as string | undefined) ?? "nomic-embed-text";
 
-const BASE_SYSTEM_PROMPT = `You are the LUME assistant. LUME is an invitation-only secret luxury hotel in Monaco with approximately 70 rooms. Access is granted based on positive societal impact, not wealth — one stay per year per invited guest. LUME also curates an exclusive vehicle inventory of premium and exotic cars for its guests.
+const BASE_SYSTEM_PROMPT = `You are the LUME assistant. LUME is an invitation-only secret luxury hotel in Monaco with approximately 70 rooms. Access is granted based on positive societal impact, not wealth — one stay per year per invited guest. LUME also includes a concept/demo vehicle marketplace for browsing new and used vehicles.
 
 CRITICAL RULES — follow these without exception:
 1. LUME is a luxury hotel in Monaco. It is NOT a personal care brand, NOT a deodorant brand, NOT a consumer goods company. Do not confuse it with any other brand named Lume or similar.
 2. Answer ONLY using the context provided below. Do not use any prior training knowledge about LUME or any other brand.
 3. If the answer is not found in the provided context, say: "I don't have that information — please visit lume.com or contact us directly."
 4. Never invent, guess, or extrapolate products, facts, or details that are not explicitly stated in the context.
-5. When the context includes a LUME VEHICLE INVENTORY section, answer vehicle questions directly and accurately from it. Count listed vehicles, describe them, and summarise filters. Do not say you lack information if the vehicles are listed in the context.
+5. When the context includes a LUME VEHICLE INVENTORY section, answer vehicle questions directly and accurately from it. Count listed vehicles, describe them, and summarise filters. Do not say you lack information if the vehicles are listed in the context. Vehicle prices and imagery are representative demo data until verified listing data is connected.
 
 Tone: concise, restrained, and confident — matching LUME's premium brand voice.`;
 
@@ -75,11 +75,66 @@ type VehicleQueryFilters = {
   stockType?: string;
   fuelType?: string;
   drivetrain?: string;
+  sellerState?: string;
+  sellerCity?: string;
   year?: number;
 };
 
+const US_STATE_NAMES: Record<string, string> = {
+  alabama: "AL",
+  alaska: "AK",
+  arizona: "AZ",
+  arkansas: "AR",
+  california: "CA",
+  colorado: "CO",
+  connecticut: "CT",
+  delaware: "DE",
+  florida: "FL",
+  georgia: "GA",
+  hawaii: "HI",
+  idaho: "ID",
+  illinois: "IL",
+  indiana: "IN",
+  iowa: "IA",
+  kansas: "KS",
+  kentucky: "KY",
+  louisiana: "LA",
+  maine: "ME",
+  maryland: "MD",
+  massachusetts: "MA",
+  michigan: "MI",
+  minnesota: "MN",
+  mississippi: "MS",
+  missouri: "MO",
+  montana: "MT",
+  nebraska: "NE",
+  nevada: "NV",
+  "new hampshire": "NH",
+  "new jersey": "NJ",
+  "new mexico": "NM",
+  "new york": "NY",
+  "north carolina": "NC",
+  "north dakota": "ND",
+  ohio: "OH",
+  oklahoma: "OK",
+  oregon: "OR",
+  pennsylvania: "PA",
+  "rhode island": "RI",
+  "south carolina": "SC",
+  "south dakota": "SD",
+  tennessee: "TN",
+  texas: "TX",
+  utah: "UT",
+  vermont: "VT",
+  virginia: "VA",
+  washington: "WA",
+  "west virginia": "WV",
+  wisconsin: "WI",
+  wyoming: "WY",
+};
+
 // ─── Extract structured filters from a natural-language query ────────────────
-function extractVehicleFilters(query: string): VehicleQueryFilters {
+function extractVehicleFilters(query: string, vehicles: Vehicle[] = []): VehicleQueryFilters {
   const q = query.toLowerCase();
   const filters: VehicleQueryFilters = {};
 
@@ -124,6 +179,33 @@ function extractVehicleFilters(query: string): VehicleQueryFilters {
   const yearMatch = q.match(/\b(20\d{2})\b/);
   if (yearMatch) filters.year = parseInt(yearMatch[1]);
 
+  // Location
+  const states = [...new Set(vehicles.map((v) => v.sellerState).filter(Boolean))];
+  for (const state of states) {
+    if (new RegExp(`\\b${state.toLowerCase()}\\b`).test(q)) {
+      filters.sellerState = state;
+      break;
+    }
+  }
+  if (!filters.sellerState) {
+    for (const [name, abbreviation] of Object.entries(US_STATE_NAMES)) {
+      if (q.includes(name)) {
+        filters.sellerState = abbreviation;
+        break;
+      }
+    }
+  }
+
+  const cities = [...new Set(vehicles.map((v) => v.sellerCity).filter(Boolean))]
+    .sort((a, b) => b.length - a.length);
+  for (const city of cities) {
+    const lowerCity = city.toLowerCase();
+    if (lowerCity.length >= 3 && q.includes(lowerCity)) {
+      filters.sellerCity = city;
+      break;
+    }
+  }
+
   return filters;
 }
 
@@ -154,6 +236,14 @@ function matchVehicles(vehicles: Vehicle[], filters: VehicleQueryFilters, query:
   }
   if (filters.drivetrain) {
     results = results.filter((v) => v.drivetrain === filters.drivetrain);
+  }
+  if (filters.sellerState) {
+    results = results.filter((v) => v.sellerState === filters.sellerState);
+  }
+  if (filters.sellerCity) {
+    results = results.filter(
+      (v) => v.sellerCity.toLowerCase() === filters.sellerCity!.toLowerCase()
+    );
   }
   if (filters.year) {
     results = results.filter((v) => v.year === filters.year);
@@ -200,7 +290,7 @@ function formatVehiclesBlock(
       `${v.year} ${v.make} ${v.model}`,
       v.trim || null,
       v.stockType,
-      `$${v.price.toLocaleString()}`,
+      formatVehiclePrice(v.price),
       v.mileage !== null ? (v.mileage === 0 ? "0 mi (new)" : `${v.mileage.toLocaleString()} mi`) : null,
       v.bodyStyle || null,
       v.drivetrain || null,
@@ -284,7 +374,7 @@ export async function getSystemPromptWithContext(
 
   // Inject vehicle context when relevant
   if (vehicles && vehicles.length > 0 && isVehicleQuery(query)) {
-    const filters = extractVehicleFilters(query);
+    const filters = extractVehicleFilters(query, vehicles);
     const { results: matched, totalMatched } = matchVehicles(vehicles, filters, query);
     if (matched.length > 0) {
       const vehicleBlock = formatVehiclesBlock(matched, totalMatched, vehicles.length, filters);

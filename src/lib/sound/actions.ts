@@ -37,6 +37,15 @@ export const ACTION_REGISTRY = {
   "product.detail.back": "page-transition",
   "product.detail.showcase": "page-transition",
 
+  // ─── Vehicles ───────────────────────────────────────────────────────
+  "vehicle.save.toggle": "approval-bell",
+  "vehicle.compare.toggle": "product-filter-blip",
+  "vehicle.filter.open": "click-soft",
+  "vehicle.filter.close": "click-soft",
+  "vehicle.inquiry.open": "click-sharp",
+  "vehicle.inquiry.submit": "submit-confirm",
+  "vehicle.search.clear": "click-soft",
+
   // ─── Chat ───────────────────────────────────────────────────────────
   "chat.open":       "click-sharp",
   "chat.close":      "click-soft",

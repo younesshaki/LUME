@@ -18,12 +18,15 @@ export type Vehicle = {
 };
 
 export type VehicleFilters = {
+  query: string;
   stockType: string;
   make: string;
   model: string;
   bodyStyle: string;
   fuelType: string;
   drivetrain: string;
+  sellerState: string;
+  sellerCity: string;
   yearMin: number;
   yearMax: number;
   mileageMax: number;
@@ -31,8 +34,27 @@ export type VehicleFilters = {
   priceMax: number;
 };
 
+export type VehicleSort =
+  | "recommended"
+  | "price_asc"
+  | "price_desc"
+  | "year_desc"
+  | "year_asc"
+  | "mileage_asc"
+  | "mileage_desc";
+
 export const YEAR_MIN = 2003;
 export const YEAR_MAX = 2027;
+
+export const VEHICLE_SORT_OPTIONS: { label: string; value: VehicleSort }[] = [
+  { label: "Recommended", value: "recommended" },
+  { label: "Price: Low to High", value: "price_asc" },
+  { label: "Price: High to Low", value: "price_desc" },
+  { label: "Newest Year", value: "year_desc" },
+  { label: "Oldest Year", value: "year_asc" },
+  { label: "Mileage: Low to High", value: "mileage_asc" },
+  { label: "Mileage: High to Low", value: "mileage_desc" },
+];
 
 export const PRICE_OPTIONS = [
   { label: "No min", value: 0 },
@@ -59,12 +81,15 @@ export const PRICE_MAX_OPTIONS = [
 ];
 
 export const DEFAULT_FILTERS: VehicleFilters = {
+  query: "",
   stockType: "",
   make: "",
   model: "",
   bodyStyle: "",
   fuelType: "",
   drivetrain: "",
+  sellerState: "",
+  sellerCity: "",
   yearMin: YEAR_MIN,
   yearMax: YEAR_MAX,
   mileageMax: 0,
@@ -98,6 +123,8 @@ const FALLBACK_IMAGES = [
   "/vehicles/vehicle-type-3.webp",
   "/vehicles/vehicle-type-4.webp",
   "/vehicles/vehicle-type-5.webp",
+  "/vehicles/vehicle-type-6.webp",
+  "/vehicles/vehicle-type-7.webp",
 ];
 
 const PRICE_TIERS: { makes: string[]; min: number; max: number }[] = [
@@ -248,32 +275,125 @@ export function getModelsForMake(vehicles: Vehicle[], make: string): string[] {
   return [...new Set(vehicles.filter((v) => v.make === make).map((v) => v.model))].sort();
 }
 
+export function getUniqueStates(vehicles: Vehicle[]): string[] {
+  return [...new Set(vehicles.map((v) => v.sellerState).filter(Boolean))].sort();
+}
+
+export function getCitiesForState(vehicles: Vehicle[], state: string): string[] {
+  return [
+    ...new Set(
+      vehicles
+        .filter((v) => !state || v.sellerState === state)
+        .map((v) => v.sellerCity)
+        .filter(Boolean)
+    ),
+  ].sort();
+}
+
+export function getVehicleById(vehicles: Vehicle[], id: string | null): Vehicle | undefined {
+  if (!id) return undefined;
+  return vehicles.find((vehicle) => vehicle.id === id);
+}
+
+export function formatVehiclePrice(price: number): string {
+  return `Est. $${price.toLocaleString()}`;
+}
+
 export function countActiveFilters(filters: VehicleFilters): number {
   let count = 0;
+  if (filters.query.trim()) count++;
   if (filters.stockType) count++;
   if (filters.make) count++;
   if (filters.model) count++;
   if (filters.bodyStyle) count++;
   if (filters.fuelType) count++;
   if (filters.drivetrain) count++;
+  if (filters.sellerState) count++;
+  if (filters.sellerCity) count++;
   if (filters.yearMin > YEAR_MIN || filters.yearMax < YEAR_MAX) count++;
   if (filters.mileageMax > 0) count++;
   if (filters.priceMin > 0 || filters.priceMax > 0) count++;
   return count;
 }
 
+function getSearchText(vehicle: Vehicle): string {
+  return [
+    vehicle.year,
+    vehicle.make,
+    vehicle.model,
+    vehicle.trim,
+    vehicle.stockType,
+    vehicle.bodyStyle,
+    vehicle.fuelType,
+    vehicle.drivetrain,
+    vehicle.exteriorColor,
+    vehicle.interiorColor,
+    vehicle.sellerCity,
+    vehicle.sellerState,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function getMileageSortValue(vehicle: Vehicle, direction: "asc" | "desc"): number {
+  if (vehicle.mileage !== null) return vehicle.mileage;
+  if (vehicle.stockType === "New") return 0;
+  return direction === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+}
+
 export function filterVehicles(vehicles: Vehicle[], filters: VehicleFilters): Vehicle[] {
+  const queryTokens = filters.query
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  const yearMin = Math.min(filters.yearMin, filters.yearMax);
+  const yearMax = Math.max(filters.yearMin, filters.yearMax);
+  const priceMin =
+    filters.priceMin > 0 && filters.priceMax > 0
+      ? Math.min(filters.priceMin, filters.priceMax)
+      : filters.priceMin;
+  const priceMax =
+    filters.priceMin > 0 && filters.priceMax > 0
+      ? Math.max(filters.priceMin, filters.priceMax)
+      : filters.priceMax;
+
   return vehicles.filter((v) => {
+    if (queryTokens.length > 0) {
+      const searchText = getSearchText(v);
+      if (!queryTokens.every((token) => searchText.includes(token))) return false;
+    }
     if (filters.stockType && v.stockType !== filters.stockType) return false;
     if (filters.make && v.make !== filters.make) return false;
     if (filters.model && v.model !== filters.model) return false;
     if (filters.bodyStyle && v.bodyStyle !== filters.bodyStyle) return false;
     if (filters.fuelType && v.fuelType !== filters.fuelType) return false;
     if (filters.drivetrain && v.drivetrain !== filters.drivetrain) return false;
-    if (v.year < filters.yearMin || v.year > filters.yearMax) return false;
+    if (filters.sellerState && v.sellerState !== filters.sellerState) return false;
+    if (filters.sellerCity && v.sellerCity !== filters.sellerCity) return false;
+    if (v.year < yearMin || v.year > yearMax) return false;
     if (filters.mileageMax > 0 && v.mileage !== null && v.mileage > filters.mileageMax) return false;
-    if (filters.priceMin > 0 && v.price < filters.priceMin) return false;
-    if (filters.priceMax > 0 && v.price > filters.priceMax) return false;
+    if (priceMin > 0 && v.price < priceMin) return false;
+    if (priceMax > 0 && v.price > priceMax) return false;
     return true;
+  });
+}
+
+export function sortVehicles(vehicles: Vehicle[], sort: VehicleSort): Vehicle[] {
+  if (sort === "recommended") return vehicles;
+
+  return [...vehicles].sort((a, b) => {
+    if (sort === "price_asc") return a.price - b.price;
+    if (sort === "price_desc") return b.price - a.price;
+    if (sort === "year_desc") return b.year - a.year;
+    if (sort === "year_asc") return a.year - b.year;
+    if (sort === "mileage_asc") {
+      return getMileageSortValue(a, "asc") - getMileageSortValue(b, "asc");
+    }
+    if (sort === "mileage_desc") {
+      return getMileageSortValue(b, "desc") - getMileageSortValue(a, "desc");
+    }
+    return 0;
   });
 }

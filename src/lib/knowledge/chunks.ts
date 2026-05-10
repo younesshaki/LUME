@@ -103,6 +103,6 @@ export const chunks: KnowledgeChunk[] = [
   {
     id: "vehicles-overview",
     category: "vehicles",
-    text: "LUME curates an exclusive vehicle inventory of premium and exotic cars available for guest use and exploration during a stay. The collection spans new and pre-owned vehicles from the world's most prestigious manufacturers including Ferrari, Lamborghini, Rolls-Royce, Porsche, Mercedes-Benz, BMW, Tesla, and many others. Vehicles include SUVs, sedans, coupes, convertibles, trucks, and more — covering all drivetrain types and fuel systems including electric and hybrid. You can ask about specific makes, models, body styles, or availability.",
+    text: "LUME includes a concept/demo vehicle marketplace for browsing new and used vehicles. The marketplace supports search, sorting, location filtering by state and city, detailed vehicle pages, saved vehicles, comparison for up to three vehicles, and a local demo inquiry flow. Prices and imagery are representative demo data until verified listing data is connected. Vehicles include SUVs, sedans, coupes, convertibles, trucks, and more, covering drivetrain and fuel types including electric, hybrid, diesel, and gasoline. You can ask about specific makes, models, body styles, locations, mileage, pricing estimates, saved/comparison capabilities, or how to request more information.",
   },
 ];
