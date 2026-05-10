@@ -1,3 +1,7 @@
+import { R2, fallbackMediaUrl } from "@/config/cdn";
+
+const CSV_KEY = "vehicles-with-generated-images.csv";
+
 export type Vehicle = {
   id: string;
   stockType: "New" | "Used" | string;
@@ -231,7 +235,17 @@ let cached: Vehicle[] | null = null;
 export async function loadVehicles(): Promise<Vehicle[]> {
   if (cached) return cached;
 
-  const res = await fetch("/vehicles/vehicles-with-generated-images.csv");
+  const primaryUrl = `${R2}/${CSV_KEY}`;
+  let res = await fetch(primaryUrl);
+  if (!res.ok) {
+    const fallbackUrl = fallbackMediaUrl(CSV_KEY);
+    if (fallbackUrl !== primaryUrl) {
+      res = await fetch(fallbackUrl);
+    }
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to load vehicles CSV (status ${res.status})`);
+  }
   const text = await res.text();
   const rows = parseCSV(text);
 
