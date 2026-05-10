@@ -1,4 +1,5 @@
 import "./App.scss";
+import { Analytics } from "@vercel/analytics/react";
 import {
   Suspense,
   lazy,
@@ -440,6 +441,7 @@ export default function App() {
           </StoryProvider>
         )}
       </Suspense>
+      <Analytics />
     </div>
   );
 }
