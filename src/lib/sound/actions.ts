@@ -35,7 +35,7 @@ export const ACTION_REGISTRY = {
   ],
   "product.filter.click": "product-filter-blip",
   "product.detail.back": "page-transition",
-  "product.detail.showcase": "showcase-confirmation",
+  "product.detail.showcase": "page-transition",
 
   // ─── Chat ───────────────────────────────────────────────────────────
   "chat.open":       "click-sharp",
@@ -68,10 +68,7 @@ export const ACTION_REGISTRY = {
 
   // ─── Showcase / cinematic ───────────────────────────────────────────
   "showcase.card.hover": "product-hover",
-  "showcase.card.open": [
-    "showcase-confirmation",
-    { sound: "ambient-shimmer", delay: 120, layer: true },
-  ],
+  "showcase.card.open": "ambient-shimmer",
   "showcase.title.play": "cinematic-logo-impact",
   "showcase.enter": [
     "showcase-enter",

@@ -66,7 +66,7 @@ export const SOUND_LIBRARY = {
 
   // ─── Product ────────────────────────────────────────────────────────
   "product-filter-blip": {
-    src: "/sounds/product/531512__cogfirestudios__positive-blip-effect.wav",
+    src: "/sounds/nav/807304__soundvariant__whoosh-1.wav",
     volume: 0.32,
     cooldownMs: 100,
   },
@@ -85,10 +85,6 @@ export const SOUND_LIBRARY = {
   "page-transition": {
     src: "/sounds/nav/807304__soundvariant__whoosh-1.wav",
     volume: 0.34,
-  },
-  "showcase-confirmation": {
-    src: "/sounds/nav/showcase-confirmation-alert-d1.wav",
-    volume: 0.55,
   },
 
   // ─── Showcase / cinematic ───────────────────────────────────────────
