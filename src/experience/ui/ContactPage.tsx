@@ -1,5 +1,5 @@
-import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./ContactPage.css";
 
 type ContactPageProps = {
@@ -15,50 +15,10 @@ export default function ContactPage({
   onNavigateToVehicles,
   onNavigateToShowcase,
 }: ContactPageProps) {
-  const { play } = useSound();
-
   return (
     <CinematicShell>
       <div className="contactPage">
-        <header className="contactPage__header">
-          <nav className="contactPage__nav" aria-label="Primary">
-            <button
-              type="button"
-              className="contactPage__navLink"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onGoHome}
-            >
-              Home
-            </button>
-            <button
-              type="button"
-              className="contactPage__navLink"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onNavigateToProducts}
-            >
-              Product
-            </button>
-            <button
-              type="button"
-              className="contactPage__navLink"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onNavigateToVehicles}
-            >
-              Vehicles
-            </button>
-            <button
-              type="button"
-              className="contactPage__navLink"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onNavigateToShowcase}
-            >
-              Showcase
-            </button>
-            <span className="contactPage__navActive">Contact</span>
-          </nav>
-        </header>
-
-        <main className="contactPage__main">
+        <main className="contactPage__main" style={{ paddingTop: "72px", paddingBottom: "160px" }}>
           <section className="contactPage__hero">
             <p className="contactPage__eyebrow">Access</p>
             <h1 className="contactPage__title">LUME is not found. It is entered by invitation.</h1>
@@ -106,6 +66,12 @@ export default function ContactPage({
             </p>
           </section>
         </main>
+        <SiteFooter onNavigate={(s) => {
+          if (s === "home") onGoHome();
+          else if (s === "products") onNavigateToProducts();
+          else if (s === "vehicles") onNavigateToVehicles();
+          else if (s === "showcase") onNavigateToShowcase();
+        }} />
       </div>
     </CinematicShell>
   );

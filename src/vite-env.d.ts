@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_STORAGE_URL?: string;
   readonly VITE_USE_BACKEND?: string;
   readonly VITE_ENABLE_LOCAL_CHAT?: string;
+  readonly VITE_ENABLE_GOOEY_NAV?: string;
   readonly VITE_OLLAMA_CHAT_URL?: string;
   readonly VITE_OLLAMA_HOST?: string;
   readonly VITE_OLLAMA_MODEL?: string;

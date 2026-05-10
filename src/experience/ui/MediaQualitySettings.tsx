@@ -8,6 +8,7 @@ type MediaQualitySettingsProps = {
   quality: ShowcaseVideoQuality;
   visible: boolean;
   onQualityChange: (quality: ShowcaseVideoQuality) => void;
+  belowHeader?: boolean;
 };
 
 const options: Array<{
@@ -31,6 +32,7 @@ export function MediaQualitySettings({
   quality,
   visible,
   onQualityChange,
+  belowHeader = false,
 }: MediaQualitySettingsProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -67,7 +69,7 @@ export function MediaQualitySettings({
   if (!visible) return null;
 
   return (
-    <div ref={rootRef} className="mediaQualitySettings">
+    <div ref={rootRef} className={`mediaQualitySettings${belowHeader ? " mediaQualitySettings--belowHeader" : ""}`}>
       <button
         className="mediaQualitySettings__trigger"
         type="button"

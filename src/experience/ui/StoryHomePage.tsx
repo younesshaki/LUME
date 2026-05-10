@@ -11,6 +11,7 @@ import {
 import { mediaUrl } from "@/config/cdn";
 import { getShowcasePreviewForChapter } from "../products/catalog";
 import homepageBackgroundImage from "../assets/images/lume-homepage-background.png";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./StoryHomePage.css";
 
 type StoryHomePageProps = {
@@ -28,7 +29,6 @@ const VISIBLE_CHAPTER_IDS = [
 ];
 
 const redBullCyclesImage = mediaUrl("blackredbullcycles.png");
-const lumeLogoImage = mediaUrl("LUMElogo.png");
 
 const homepageBackgroundStyle = {
   "--story-home-bg-image": `url(${homepageBackgroundImage})`,
@@ -137,43 +137,8 @@ export default function StoryHomePage({
         onScroll={handleScroll}
       >
         <div className="storyHome__background" aria-hidden="true" />
-        <div className="storyHome__floatingLogo" aria-hidden="true">
-          <img src={lumeLogoImage} alt="" />
-        </div>
-        <header className="storyHome__header">
-          <nav className="storyHome__nav" aria-label="Primary">
-            <a
-                href="#product"
-                onMouseEnter={() => play("nav.hover")}
-                onClick={onNavigateToProducts ? (e) => { e.preventDefault(); onNavigateToProducts(); } : undefined}
-              >
-                Product
-              </a>
-            <a
-              href="#vehicles"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onNavigateToVehicles ? (e) => { e.preventDefault(); onNavigateToVehicles(); } : undefined}
-            >
-              Vehicles
-            </a>
-            <a
-              href="#showcase"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onNavigateToShowcase ? (e) => { e.preventDefault(); onNavigateToShowcase(); } : undefined}
-            >
-              Showcase
-            </a>
-            <a
-              href="#contact"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onNavigateToContact ? (e) => { e.preventDefault(); onNavigateToContact(); } : undefined}
-            >
-              Contact
-            </a>
-          </nav>
-        </header>
 
-        <main id="top">
+        <main id="top" style={{ paddingTop: "72px", paddingBottom: "160px" }}>
           <div className="storyHome__tracingBeam" aria-hidden="true" />
           <section id="showcases" className="storyHome__hero">
             <div className="storyHome__heroCopy">
@@ -221,13 +186,13 @@ export default function StoryHomePage({
           </section>
         </main>
 
-        <footer id="contact" className="storyHome__footer">
-          <img className="storyHome__footerLogo" src={lumeLogoImage} alt="" />
-          <div>
-            <p>LUME</p>
-            <span>Premium concepts for regular products.</span>
-          </div>
-        </footer>
+        <SiteFooter onNavigate={(s) => {
+          if (s === "products") onNavigateToProducts?.();
+          else if (s === "vehicles") onNavigateToVehicles?.();
+          else if (s === "showcase") onNavigateToShowcase?.();
+          else if (s === "contact") onNavigateToContact?.();
+          else if (s === "home") pageRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+        }} />
       </div>
     </CinematicShell>
   );

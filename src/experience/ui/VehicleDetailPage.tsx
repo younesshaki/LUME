@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Check, GitCompare, Heart, Send, X } from "lucide-react";
-import { mediaUrl } from "@/config/cdn";
 import {
   formatVehiclePrice,
   getVehicleById,
@@ -9,9 +8,9 @@ import {
 } from "../vehicles/catalog";
 import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./VehicleDetailPage.css";
 
-const lumeLogoImage = mediaUrl("LUMElogo.png");
 const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
 
@@ -261,21 +260,7 @@ export default function VehicleDetailPage({
   return (
     <CinematicShell>
       <div className="vehicleDetail">
-        <div className="vehicleDetail__floatingLogo" aria-hidden="true">
-          <img src={lumeLogoImage} alt="" />
-        </div>
-
-        <header className="vehicleDetail__header">
-          <nav className="vehicleDetail__nav" aria-label="Primary">
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onGoHome}>Home</button>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToProducts}>Products</button>
-            <button type="button" className="vehicleDetail__navActive" onMouseEnter={() => play("nav.hover")} onClick={onBackToVehicles}>Vehicles</button>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToShowcase}>Showcase</button>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToContact}>Contact</button>
-          </nav>
-        </header>
-
-        <main className="vehicleDetail__main">
+        <main className="vehicleDetail__main" style={{ paddingTop: "72px", paddingBottom: "160px" }}>
           {loadError ? (
             <div className="vehicleDetail__state">Unable to load vehicle details. Please refresh to try again.</div>
           ) : loading ? (
@@ -363,6 +348,13 @@ export default function VehicleDetailPage({
             </>
           )}
         </main>
+        <SiteFooter onNavigate={(s) => {
+          if (s === "home") onGoHome();
+          else if (s === "products") onNavigateToProducts();
+          else if (s === "vehicles") onBackToVehicles();
+          else if (s === "showcase") onNavigateToShowcase();
+          else if (s === "contact") onNavigateToContact();
+        }} />
       </div>
     </CinematicShell>
   );

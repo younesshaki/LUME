@@ -54,3 +54,13 @@
     font-size: 0.7rem;
   }
 }
+
+.appBackButton--belowHeader {
+  top: max(80px, calc(env(safe-area-inset-top) + 80px));
+}
+
+@media (max-width: 640px) {
+  .appBackButton--belowHeader {
+    top: max(74px, calc(env(safe-area-inset-top) + 74px));
+  }
+}

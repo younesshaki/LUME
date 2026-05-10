@@ -1,0 +1,37 @@
+.siteDock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 2147482975;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.siteDock__container {
+  pointer-events: auto;
+}
+
+.siteDock__panel {
+  pointer-events: auto;
+}
+
+.siteDock__item {
+  background-color: #272727;
+  border-color: #e9c31b27;
+  color: #efede6;
+}
+
+.siteDock__item--active {
+  border-color: rgba(236, 212, 146, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.22),
+    0 12px 28px rgba(0, 0, 0, 0.34);
+}
+
+@media (max-width: 767px) {
+  .siteDock {
+    display: none;
+  }
+}

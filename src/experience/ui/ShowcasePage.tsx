@@ -10,6 +10,7 @@ import { getShowcasePreviewForChapter } from "../products/catalog";
 import { useStory } from "../story/StoryProvider";
 import { getPartDisplayList } from "../story/selectors";
 import CinematicShell from "./CinematicShell";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./StoryHomePage.css";
 import "./ShowcasePage.css";
 
@@ -27,7 +28,6 @@ const VISIBLE_CHAPTER_IDS = [
   "showcase-chapter-3",
 ];
 
-const lumeLogoImage = mediaUrl("LUMElogo.png");
 const fallbackShowcaseImage = mediaUrl("blackredbullcycles.png");
 
 function ShowcaseCard({
@@ -118,29 +118,7 @@ export default function ShowcasePage({
   return (
     <CinematicShell>
       <div className="showcasePage">
-        <div className="showcasePage__floatingLogo" aria-hidden="true">
-          <img src={lumeLogoImage} alt="" />
-        </div>
-
-        <header className="showcasePage__header">
-          <nav className="showcasePage__nav" aria-label="Primary">
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onGoHome}>
-              Home
-            </button>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToProducts}>
-              Products
-            </button>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToVehicles}>
-              Vehicles
-            </button>
-            <span>Showcase</span>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToContact}>
-              Contact
-            </button>
-          </nav>
-        </header>
-
-        <main className="showcasePage__main">
+        <main className="showcasePage__main" style={{ paddingTop: "72px", paddingBottom: "160px" }}>
           <section className="showcasePage__hero">
             <p className="showcasePage__eyebrow">Cinematic Entries</p>
             <h1>Showcase</h1>
@@ -169,6 +147,12 @@ export default function ShowcasePage({
             })}
           </section>
         </main>
+        <SiteFooter onNavigate={(s) => {
+          if (s === "home") onGoHome();
+          else if (s === "products") onNavigateToProducts();
+          else if (s === "vehicles") onNavigateToVehicles();
+          else if (s === "contact") onNavigateToContact();
+        }} />
       </div>
     </CinematicShell>
   );

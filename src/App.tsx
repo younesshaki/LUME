@@ -14,6 +14,9 @@ import PreloadGate from "./experience/ui/PreloadGate";
 import PhoneExperienceNotice from "./experience/ui/PhoneExperienceNotice";
 import { MediaQualitySettings } from "./experience/ui/MediaQualitySettings";
 import { AppBackButton } from "./experience/ui/AppBackButton";
+import { SiteHeader } from "./components/layout/SiteHeader";
+import { BottomDock } from "./components/layout/BottomDock";
+import type { SiteScreen } from "./components/layout/siteNavigation";
 import type { ShowcaseVideoQuality } from "./experience/scenes/showcase/data/sceneAssets";
 import { isShowcaseChapterId } from "./experience/scenes/showcase/data";
 import { getChapterDefinition } from "./experience/story/manifest";
@@ -310,15 +313,42 @@ export default function App() {
       getChapterDefinition(entryPartIndex + 1, entryChapterIndex + 1)?.id
     );
 
+  type LayoutScreen = SiteScreen | "productDetail" | "vehicleDetail";
+  const LAYOUT_SCREENS: AppScreen[] = ["home", "products", "productDetail", "showcase", "contact", "vehicles", "vehicleDetail"];
+  const showSiteHeader = LAYOUT_SCREENS.includes(screen);
+  const layoutCurrentScreen =
+    screen === "productDetail" ? "products" :
+    screen === "vehicleDetail" ? "vehicles" :
+    screen as SiteScreen;
+
+  const handleSiteNavigate = useCallback((nextScreen: LayoutScreen) => {
+    switch (nextScreen) {
+      case "home":          handleGoHome(); break;
+      case "products":      handleNavigateToProducts(); break;
+      case "showcase":      handleNavigateToShowcase(); break;
+      case "contact":       handleNavigateToContact(); break;
+      case "vehicles":      handleNavigateToVehicles(); break;
+      case "productDetail": navigateToScreen("productDetail"); break;
+      case "vehicleDetail": navigateToScreen("vehicleDetail"); break;
+    }
+  }, [handleGoHome, handleNavigateToProducts, handleNavigateToShowcase, handleNavigateToContact, handleNavigateToVehicles, navigateToScreen]);
+
   return (
     <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>
       <MediaQualitySettings
         quality={mediaQuality}
         visible={!isShowcaseExperience}
         onQualityChange={handleMediaQualityChange}
+        belowHeader={showSiteHeader}
       />
+      {showSiteHeader && (
+        <SiteHeader currentScreen={layoutCurrentScreen} onNavigate={handleSiteNavigate} />
+      )}
+      {showSiteHeader && (
+        <BottomDock currentScreen={layoutCurrentScreen} onNavigate={handleSiteNavigate} />
+      )}
       {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "productDetail" || screen === "vehicles" || screen === "vehicleDetail" || screen === "showcase" || screen === "contact") && (
-        <AppBackButton onClick={handleBack} />
+        <AppBackButton onClick={handleBack} belowHeader={showSiteHeader} />
       )}
       {screen !== "gate" && (
         <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />

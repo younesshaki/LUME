@@ -123,6 +123,16 @@
   background: #ffe57e;
 }
 
+.mediaQualitySettings--belowHeader {
+  top: max(80px, calc(env(safe-area-inset-top) + 80px));
+}
+
+@media (max-width: 640px) {
+  .mediaQualitySettings--belowHeader {
+    top: max(74px, calc(env(safe-area-inset-top) + 74px));
+  }
+}
+
 @media (max-width: 640px) {
   .mediaQualitySettings {
     top: max(14px, env(safe-area-inset-top));

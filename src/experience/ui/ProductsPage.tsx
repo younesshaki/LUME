@@ -1,6 +1,5 @@
 import { MouseEvent, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { mediaUrl } from "@/config/cdn";
 import {
   PRODUCTS,
   PRODUCT_CATEGORIES,
@@ -9,9 +8,9 @@ import {
 } from "../products/catalog";
 import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./ProductsPage.css";
 
-const lumeLogoImage = mediaUrl("LUMElogo.png");
 
 function ProductCard({
   product,
@@ -129,49 +128,7 @@ export default function ProductsPage({
   return (
     <CinematicShell>
       <div className="productsPage">
-        <div className="productsPage__floatingLogo" aria-hidden="true">
-          <img src={lumeLogoImage} alt="" />
-        </div>
-
-        <header className="productsPage__header">
-          <nav className="productsPage__nav" aria-label="Primary">
-            <button
-              type="button"
-              className="productsPage__navLink"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onGoHome}
-            >
-              Home
-            </button>
-            <span className="productsPage__navActive">Products</span>
-            <button
-              type="button"
-              className="productsPage__navLink"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onNavigateToVehicles}
-            >
-              Vehicles
-            </button>
-            <button
-              type="button"
-              className="productsPage__navLink"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onNavigateToShowcase}
-            >
-              Showcase
-            </button>
-            <button
-              type="button"
-              className="productsPage__navLink"
-              onMouseEnter={() => play("nav.hover")}
-              onClick={onNavigateToContact}
-            >
-              Contact
-            </button>
-          </nav>
-        </header>
-
-        <main className="productsPage__main">
+        <main className="productsPage__main" style={{ paddingTop: "72px", paddingBottom: "160px" }}>
           <div className="productsPage__hero">
             <div className="productsPage__lamp" aria-hidden="true" />
             <p className="productsPage__eyebrow">Exclusive Editions</p>
@@ -224,13 +181,12 @@ export default function ProductsPage({
           </div>
         </main>
 
-        <footer id="contact" className="productsPage__footer">
-          <img className="productsPage__footerLogo" src={lumeLogoImage} alt="" />
-          <div>
-            <p>LUME</p>
-            <span>Monaco — By invitation only.</span>
-          </div>
-        </footer>
+        <SiteFooter onNavigate={(s) => {
+          if (s === "home") onGoHome();
+          else if (s === "vehicles") onNavigateToVehicles();
+          else if (s === "showcase") onNavigateToShowcase();
+          else if (s === "contact") onNavigateToContact();
+        }} />
       </div>
     </CinematicShell>
   );

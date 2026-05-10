@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { mediaUrl } from "@/config/cdn";
 import { getProductById } from "../products/catalog";
 import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./ProductDetailPage.css";
 
 type ProductDetailPageProps = {
@@ -15,7 +15,6 @@ type ProductDetailPageProps = {
   onViewShowcase: (partIndex: number, chapterIndex: number) => void;
 };
 
-const lumeLogoImage = mediaUrl("LUMElogo.png");
 
 export default function ProductDetailPage({
   productId,
@@ -41,31 +40,7 @@ export default function ProductDetailPage({
   return (
     <CinematicShell>
       <div className="productDetail">
-        <div className="productDetail__floatingLogo" aria-hidden="true">
-          <img src={lumeLogoImage} alt="" />
-        </div>
-
-        <header className="productDetail__header">
-          <nav className="productDetail__nav" aria-label="Primary">
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onGoHome}>
-              Home
-            </button>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToProducts}>
-              Products
-            </button>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToVehicles}>
-              Vehicles
-            </button>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToShowcase}>
-              Showcase
-            </button>
-            <button type="button" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToContact}>
-              Contact
-            </button>
-          </nav>
-        </header>
-
-        <main className="productDetail__main">
+        <main className="productDetail__main" style={{ paddingTop: "72px", paddingBottom: "160px" }}>
           {!product ? (
             <section className="productDetail__missing">
               <p className="productDetail__eyebrow">Product</p>
@@ -121,6 +96,13 @@ export default function ProductDetailPage({
             </section>
           )}
         </main>
+        <SiteFooter onNavigate={(s) => {
+          if (s === "home") onGoHome();
+          else if (s === "products") onNavigateToProducts();
+          else if (s === "vehicles") onNavigateToVehicles();
+          else if (s === "showcase") onNavigateToShowcase();
+          else if (s === "contact") onNavigateToContact();
+        }} />
       </div>
     </CinematicShell>
   );

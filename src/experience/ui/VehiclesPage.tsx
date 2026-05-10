@@ -10,7 +10,6 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { mediaUrl } from "@/config/cdn";
 import {
   BODY_STYLES,
   DEFAULT_FILTERS,
@@ -42,9 +41,9 @@ import {
 } from "../vehicles/urlState";
 import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./VehiclesPage.css";
 
-const lumeLogoImage = mediaUrl("LUMElogo.png");
 const PAGE_SIZE = 24;
 const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
@@ -903,29 +902,7 @@ export default function VehiclesPage({
   return (
     <CinematicShell>
       <div className="vehiclesPage">
-        <div className="vehiclesPage__floatingLogo" aria-hidden="true">
-          <img src={lumeLogoImage} alt="" />
-        </div>
-
-        <header className="vehiclesPage__header">
-          <nav className="vehiclesPage__nav" aria-label="Primary">
-            <button type="button" className="vehiclesPage__navLink" onMouseEnter={() => play("nav.hover")} onClick={onGoHome}>
-              Home
-            </button>
-            <button type="button" className="vehiclesPage__navLink" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToProducts}>
-              Products
-            </button>
-            <span className="vehiclesPage__navActive">Vehicles</span>
-            <button type="button" className="vehiclesPage__navLink" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToShowcase}>
-              Showcase
-            </button>
-            <button type="button" className="vehiclesPage__navLink" onMouseEnter={() => play("nav.hover")} onClick={onNavigateToContact}>
-              Contact
-            </button>
-          </nav>
-        </header>
-
-        <main className="vehiclesPage__main">
+        <main className="vehiclesPage__main" style={{ paddingTop: "72px", paddingBottom: "160px" }}>
           <div className="vehiclesPage__hero">
             <div className="vehiclesPage__lamp" aria-hidden="true" />
             <p className="vehiclesPage__eyebrow">Marketplace Concept</p>
@@ -1008,13 +985,12 @@ export default function VehiclesPage({
           )}
         </main>
 
-        <footer className="vehiclesPage__footer">
-          <img className="vehiclesPage__footerLogo" src={lumeLogoImage} alt="" />
-          <div>
-            <p>LUME</p>
-            <span>Marketplace concept demo.</span>
-          </div>
-        </footer>
+        <SiteFooter onNavigate={(s) => {
+          if (s === "home") onGoHome();
+          else if (s === "products") onNavigateToProducts();
+          else if (s === "showcase") onNavigateToShowcase();
+          else if (s === "contact") onNavigateToContact();
+        }} />
 
         <AdvancedFilters
           open={filtersOpen}
