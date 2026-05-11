@@ -14,7 +14,8 @@
 
 .detailModelViewer__stripes {
   z-index: 0;
-  color: rgba(201, 168, 76, 0.08);
+  color: rgba(201, 168, 76, 0.35);
+  stroke-width: 1.5;
 }
 
 .detailModelViewer__velocityContainer {
