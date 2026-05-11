@@ -280,7 +280,7 @@ export default function VehicleDetailPage({
 
               <section className="vehicleDetail__layout">
                 <div className="vehicleDetail__media">
-                  <img src={vehicle.imageSrc} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} />
+                  <img src={vehicle.specialImageSrc ?? vehicle.imageSrc} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} />
                   <span className={`vehicleDetail__badge vehicleDetail__badge--${vehicle.stockType.toLowerCase()}`}>
                     {vehicle.stockType}
                   </span>
