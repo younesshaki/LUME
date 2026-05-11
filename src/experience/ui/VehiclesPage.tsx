@@ -194,7 +194,7 @@ function VehicleCard({
       <div className="vehiclesPage__cardImage">
         {vehicle.imageSrc ? (
           <img
-            src={vehicle.imageSrc}
+            src={vehicle.specialImageSrc ?? vehicle.imageSrc}
             alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
           />
         ) : (
@@ -202,7 +202,12 @@ function VehicleCard({
             <span>{vehicle.make}</span>
           </div>
         )}
-        <span className={`vehiclesPage__badge vehiclesPage__badge--${vehicle.stockType.toLowerCase()}`}>
+        {vehicle.isSpecial && (
+          <span className="vehiclesPage__badge vehiclesPage__badge--special">
+            Special
+          </span>
+        )}
+        <span className={`vehiclesPage__badge vehiclesPage__badge--${vehicle.stockType.toLowerCase()} ${vehicle.isSpecial ? "vehiclesPage__badge--stockOffset" : ""}`}>
           {vehicle.stockType}
         </span>
       </div>

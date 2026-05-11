@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { getProductById } from "../products/catalog";
+import { hasDetailModel3D } from "@/components/three/modelTypes";
 import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import "./ProductDetailPage.css";
+
+const DetailModelViewer = lazy(() => import("@/components/three/DetailModelViewer"));
 
 type ProductDetailPageProps = {
   productId: string | null;
@@ -52,7 +55,15 @@ export default function ProductDetailPage({
           ) : (
             <section className="productDetail__hero">
               <div className="productDetail__media">
-                {imageSrc ? (
+                {hasDetailModel3D(product) ? (
+                  <Suspense fallback={imageSrc ? <img src={imageSrc} alt={`${product.brand} ${product.name}`} /> : <div className="productDetail__placeholder">{product.brand}</div>}>
+                    <DetailModelViewer
+                      model={product.model3d}
+                      fallbackImageSrc={imageSrc}
+                      title={`${product.brand} ${product.name}`}
+                    />
+                  </Suspense>
+                ) : imageSrc ? (
                   <img
                     src={imageSrc}
                     alt={`${product.brand} ${product.name}`}

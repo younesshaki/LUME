@@ -6,6 +6,7 @@ import {
   type Product,
   type ProductFilterCategory,
 } from "../products/catalog";
+import { hasDetailModel3D } from "@/components/three/modelTypes";
 import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -56,6 +57,11 @@ function ProductCard({
           <div className="productsPage__cardImagePlaceholder">
             <span>{product.brand}</span>
           </div>
+        )}
+        {hasDetailModel3D(product) && (
+          <span className="productsPage__modelTag">
+            {product.model3d.tagLabel ?? "3D"}
+          </span>
         )}
       </div>
 
