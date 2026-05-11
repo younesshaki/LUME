@@ -22,14 +22,13 @@ export default function ModelAsset({ model, onReady, onTarget }: ModelAssetProps
     const center = new Vector3();
     box.getCenter(center);
 
-    // Orbit target biased toward the top — where the can is above the splash
-    const targetY = center.y + (box.max.y - center.y) * 0.5;
+    const targetY = center.y;
     const target: [number, number, number] = [center.x, targetY, center.z];
 
     // Camera distance based on the longest bounding box dimension
     const size = box.getSize(new Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 0.6;
+    const distance = maxDim * 1.7;
     const cameraPosition: [number, number, number] = [center.x, targetY, center.z + distance];
 
     onTarget?.({ target, cameraPosition });
