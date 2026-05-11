@@ -131,8 +131,8 @@ export const SPECIAL_IMAGES = [
 // Static registry — replace the data source with a Supabase query when backend is ready.
 // Key: vehicle _primaryKey from CSV. Value: which SPECIAL_IMAGES index (0-based).
 export const SPECIALS_REGISTRY: Record<string, { imageIndex: 0 | 1 }> = {
-  "969c6fce-524c-4409-8b0d-6e0aa330d0d5": { imageIndex: 0 }, // BMW 740 740i
-  "33b2ff3b-287c-46ad-b051-6aae9ee04f12": { imageIndex: 1 }, // Porsche Cayenne 2019
+  "969c6fce-524c-4409-8b0d-6e0aa330d0d5": { imageIndex: 1 }, // BMW 740 740i
+  "33b2ff3b-287c-46ad-b051-6aae9ee04f12": { imageIndex: 0 }, // Porsche Cayenne 2019
 };
 
 const FALLBACK_IMAGES = [
