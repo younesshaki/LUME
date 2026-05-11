@@ -48,6 +48,7 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
   const [targetInfo, setTargetInfo] = useState<ModelTargetInfo>(DEFAULT_TARGET_INFO);
+  const [cursorInCanvas, setCursorInCanvas] = useState(false);
 
   const handleReady = useCallback(() => setReady(true), []);
   const handleTarget = useCallback((info: ModelTargetInfo) => setTargetInfo(info), []);
@@ -63,7 +64,10 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
   return (
     <div className={`detailModelViewer ${className ?? ""}`}>
       {model.backdropText && (
-        <div className="detailModelViewer__backdrop">
+        <div
+          className="detailModelViewer__backdrop"
+          style={{ opacity: cursorInCanvas ? 0 : 1, transition: "opacity 0.6s ease" }}
+        >
           <StripedPattern
             className="detailModelViewer__stripes"
             direction="right"
@@ -98,6 +102,8 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
       <div
         className="detailModelViewer__canvas"
         style={{ opacity: ready ? 1 : 0, transition: "opacity 0.25s ease" }}
+        onMouseEnter={() => setCursorInCanvas(true)}
+        onMouseLeave={() => setCursorInCanvas(false)}
       >
         <Canvas
           camera={{ position: [0, 0, 5], fov: 45 }}

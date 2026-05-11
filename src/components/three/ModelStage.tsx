@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { Stage, OrbitControls } from "@react-three/drei";
-import { Vector3, PointLight } from "three";
+import { Vector3, PointLight, Raycaster, Vector2 } from "three";
 import type { ModelLighting } from "./modelTypes";
 import type { ModelTargetInfo } from "./ModelAsset";
 
@@ -19,9 +19,11 @@ function CameraRig({ info }: { info: ModelTargetInfo }) {
 
 function CursorLight() {
   const lightRef = useRef<PointLight>(null);
-  const { camera, size } = useThree();
+  const { camera, scene, size } = useThree();
   const mouse = useRef({ x: 0, y: 0, inside: false });
-  const worldPos = useRef(new Vector3());
+  const raycaster = useRef(new Raycaster());
+  const pointer = useRef(new Vector2());
+  const hitPos = useRef(new Vector3());
 
   useEffect(() => {
     const canvas = document.querySelector(".detailModelViewer__canvas canvas") as HTMLCanvasElement | null;
@@ -46,15 +48,27 @@ function CursorLight() {
   useFrame(() => {
     if (!lightRef.current) return;
 
-    const targetIntensity = mouse.current.inside ? 3.5 : 0;
+    const targetIntensity = mouse.current.inside ? 5000 : 0;
     lightRef.current.intensity += (targetIntensity - lightRef.current.intensity) * 0.08;
 
     if (mouse.current.inside) {
-      worldPos.current.set(mouse.current.x, mouse.current.y, 0.5);
-      worldPos.current.unproject(camera);
-      const dir = worldPos.current.sub(camera.position).normalize();
-      const dist = 2.5;
-      lightRef.current.position.copy(camera.position).addScaledVector(dir, dist);
+      pointer.current.set(mouse.current.x, mouse.current.y);
+      raycaster.current.setFromCamera(pointer.current, camera);
+
+      const intersects = raycaster.current.intersectObjects(scene.children, true);
+      if (intersects.length > 0) {
+        // Place light at the hit surface, offset slightly toward the camera
+        hitPos.current.copy(intersects[0].point);
+        const toCamera = new Vector3().subVectors(camera.position, hitPos.current).normalize();
+        lightRef.current.position.copy(hitPos.current).addScaledVector(toCamera, 0.4);
+      } else {
+        // No hit — project to a fixed depth in front of the camera
+        const dir = new Vector3(mouse.current.x, mouse.current.y, 0.5)
+          .unproject(camera)
+          .sub(camera.position)
+          .normalize();
+        lightRef.current.position.copy(camera.position).addScaledVector(dir, 2.5);
+      }
     }
   });
 
@@ -62,8 +76,8 @@ function CursorLight() {
     <pointLight
       ref={lightRef}
       intensity={0}
-      color="#fff8ec"
-      distance={6}
+      color="#ffa200"
+      distance={100}
       decay={2}
     />
   );
