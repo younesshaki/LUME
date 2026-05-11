@@ -19,6 +19,8 @@ export type Vehicle = {
   imageSrc: string;
   sellerCity: string;
   sellerState: string;
+  isSpecial: boolean;
+  specialImageSrc?: string;
 };
 
 export type VehicleFilters = {
@@ -120,6 +122,18 @@ export const MILEAGE_OPTIONS = [
   { label: "Under 60,000 mi", value: 60000 },
   { label: "Under 100,000 mi", value: 100000 },
 ];
+
+export const SPECIAL_IMAGES = [
+  mediaUrl("vehicle%20images/vehicle-special-1.webp"), // BMW 740i
+  mediaUrl("vehicle%20images/vehicle-special-2.webp"), // Porsche Cayenne
+];
+
+// Static registry — replace the data source with a Supabase query when backend is ready.
+// Key: vehicle _primaryKey from CSV. Value: which SPECIAL_IMAGES index (0-based).
+export const SPECIALS_REGISTRY: Record<string, { imageIndex: 0 | 1 }> = {
+  "969c6fce-524c-4409-8b0d-6e0aa330d0d5": { imageIndex: 0 }, // BMW 740 740i
+  "33b2ff3b-287c-46ad-b051-6aae9ee04f12": { imageIndex: 1 }, // Porsche Cayenne 2019
+};
 
 const FALLBACK_IMAGES = [
   mediaUrl("vehicle%20images/vehicle-type-1.webp"),
@@ -268,6 +282,10 @@ export async function loadVehicles(): Promise<Vehicle[]> {
       drivetrain: row["drivetrain"] ? normalizeDrivetrain(row["drivetrain"]) : "",
       fuelType: row["fuelType"] ? normalizeFuelType(row["fuelType"]) : "",
       imageSrc: FALLBACK_IMAGES[Math.abs(hashString(row["_primaryKey"])) % FALLBACK_IMAGES.length],
+      isSpecial: row["_primaryKey"] in SPECIALS_REGISTRY,
+      specialImageSrc: SPECIALS_REGISTRY[row["_primaryKey"]]
+        ? SPECIAL_IMAGES[SPECIALS_REGISTRY[row["_primaryKey"]].imageIndex]
+        : undefined,
       price: generatePrice(
         row["make"],
         parseInt(row["year"]) || 2020,
@@ -395,19 +413,20 @@ export function filterVehicles(vehicles: Vehicle[], filters: VehicleFilters): Ve
 }
 
 export function sortVehicles(vehicles: Vehicle[], sort: VehicleSort): Vehicle[] {
-  if (sort === "recommended") return vehicles;
+  const specials = vehicles.filter(v => v.isSpecial);
+  const regular  = vehicles.filter(v => !v.isSpecial);
 
-  return [...vehicles].sort((a, b) => {
-    if (sort === "price_asc") return a.price - b.price;
-    if (sort === "price_desc") return b.price - a.price;
-    if (sort === "year_desc") return b.year - a.year;
-    if (sort === "year_asc") return a.year - b.year;
-    if (sort === "mileage_asc") {
-      return getMileageSortValue(a, "asc") - getMileageSortValue(b, "asc");
-    }
-    if (sort === "mileage_desc") {
-      return getMileageSortValue(b, "desc") - getMileageSortValue(a, "desc");
-    }
+  if (sort === "recommended") return [...specials, ...regular];
+
+  const compareFn = (a: Vehicle, b: Vehicle): number => {
+    if (sort === "price_asc")    return a.price - b.price;
+    if (sort === "price_desc")   return b.price - a.price;
+    if (sort === "year_desc")    return b.year - a.year;
+    if (sort === "year_asc")     return a.year - b.year;
+    if (sort === "mileage_asc")  return getMileageSortValue(a, "asc")  - getMileageSortValue(b, "asc");
+    if (sort === "mileage_desc") return getMileageSortValue(b, "desc") - getMileageSortValue(a, "desc");
     return 0;
-  });
+  };
+
+  return [...[...specials].sort(compareFn), ...[...regular].sort(compareFn)];
 }

@@ -33,6 +33,7 @@ const vehicles: Vehicle[] = [
     imageSrc: "/vehicles/vehicle-type-1.webp",
     sellerCity: "Los Angeles",
     sellerState: "CA",
+    isSpecial: false,
   },
   {
     id: "ford-fl",
@@ -51,6 +52,7 @@ const vehicles: Vehicle[] = [
     imageSrc: "/vehicles/vehicle-type-2.webp",
     sellerCity: "Miami",
     sellerState: "FL",
+    isSpecial: false,
   },
   {
     id: "toyota-ca",
@@ -69,6 +71,7 @@ const vehicles: Vehicle[] = [
     imageSrc: "/vehicles/vehicle-type-3.webp",
     sellerCity: "San Diego",
     sellerState: "CA",
+    isSpecial: false,
   },
 ];
 
