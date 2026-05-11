@@ -1,7 +1,7 @@
 .detailModelViewer {
   position: absolute;
   inset: 0;
-  background: #000;
+  background: #ffffff;
 }
 
 .detailModelViewer__backdrop {
@@ -10,6 +10,11 @@
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+}
+
+.detailModelViewer__stripes {
+  z-index: 0;
+  color: rgba(201, 168, 76, 0.08);
 }
 
 .detailModelViewer__velocityContainer {
@@ -25,9 +30,9 @@
 }
 
 .detailModelViewer__velocityText {
-  color: rgba(255, 255, 255, 0.09);
+  color: rgb(255, 162, 0);
   font-family: var(--experience-font-family, serif);
-  font-size: 0.65rem;
+  font-size: 2.65rem;
   font-weight: 400;
   letter-spacing: 0.08em;
   white-space: nowrap;

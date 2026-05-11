@@ -4,6 +4,7 @@ import {
   ScrollVelocityContainer,
   ScrollVelocityRow,
 } from "@/components/ui/scroll-based-velocity";
+import { StripedPattern } from "@/components/magicui/striped-pattern";
 import type { DetailModel3D } from "./modelTypes";
 import ModelStage from "./ModelStage";
 import ModelAsset, { type ModelTargetInfo } from "./ModelAsset";
@@ -63,11 +64,17 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
     <div className={`detailModelViewer ${className ?? ""}`}>
       {model.backdropText && (
         <div className="detailModelViewer__backdrop">
+          <StripedPattern
+            className="detailModelViewer__stripes"
+            direction="right"
+            width={18}
+            height={18}
+          />
           <ScrollVelocityContainer className="detailModelViewer__velocityContainer">
             {Array.from({ length: 10 }, (_, i) => (
               <ScrollVelocityRow
                 key={i}
-                baseVelocity={12}
+                baseVelocity={0.1}
                 direction={i % 2 === 0 ? 1 : -1}
                 className="detailModelViewer__velocityRow"
               >
