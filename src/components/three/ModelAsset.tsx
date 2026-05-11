@@ -29,7 +29,7 @@ export default function ModelAsset({ model, onReady, onTarget }: ModelAssetProps
     // Camera distance based on the longest bounding box dimension
     const size = box.getSize(new Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 1.8;
+    const distance = maxDim * 0.6;
     const cameraPosition: [number, number, number] = [center.x, targetY, center.z + distance];
 
     onTarget?.({ target, cameraPosition });
