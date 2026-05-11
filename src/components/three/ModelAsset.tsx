@@ -3,10 +3,15 @@ import { useGLTF } from "@react-three/drei";
 import { Box3, Vector3 } from "three";
 import type { DetailModel3D } from "./modelTypes";
 
+export type ModelTargetInfo = {
+  target: [number, number, number];
+  cameraPosition: [number, number, number];
+};
+
 type ModelAssetProps = {
   model: DetailModel3D;
   onReady?: () => void;
-  onTarget?: (target: [number, number, number]) => void;
+  onTarget?: (info: ModelTargetInfo) => void;
 };
 
 export default function ModelAsset({ model, onReady, onTarget }: ModelAssetProps) {
@@ -15,14 +20,19 @@ export default function ModelAsset({ model, onReady, onTarget }: ModelAssetProps
   useEffect(() => {
     const box = new Box3().setFromObject(scene);
     const center = new Vector3();
-    const max = new Vector3();
     box.getCenter(center);
-    box.getSize(max);
 
-    // Bias the target toward the upper portion of the bounding box —
-    // the main subject (can) sits above the splash which extends below.
+    // Orbit target biased toward the top — where the can is above the splash
     const targetY = center.y + (box.max.y - center.y) * 0.5;
-    onTarget?.([center.x, targetY, center.z]);
+    const target: [number, number, number] = [center.x, targetY, center.z];
+
+    // Camera distance based on the longest bounding box dimension
+    const size = box.getSize(new Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const distance = maxDim * 1.8;
+    const cameraPosition: [number, number, number] = [center.x, targetY, center.z + distance];
+
+    onTarget?.({ target, cameraPosition });
     onReady?.();
 
     return () => {

@@ -2,7 +2,7 @@ import { Suspense, useCallback, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { DetailModel3D } from "./modelTypes";
 import ModelStage from "./ModelStage";
-import ModelAsset from "./ModelAsset";
+import ModelAsset, { type ModelTargetInfo } from "./ModelAsset";
 import "./DetailModelViewer.css";
 
 type DetailModelViewerProps = {
@@ -10,6 +10,11 @@ type DetailModelViewerProps = {
   fallbackImageSrc?: string;
   title: string;
   className?: string;
+};
+
+const DEFAULT_TARGET_INFO: ModelTargetInfo = {
+  target: [0, 0, 0],
+  cameraPosition: [0, 0, 5],
 };
 
 function ModelError({ fallbackImageSrc, title }: { fallbackImageSrc?: string; title: string }) {
@@ -21,14 +26,14 @@ function ModelError({ fallbackImageSrc, title }: { fallbackImageSrc?: string; ti
 
 type CanvasContentProps = {
   model: DetailModel3D;
-  cameraTarget: [number, number, number];
+  targetInfo: ModelTargetInfo;
   onReady: () => void;
-  onTarget: (target: [number, number, number]) => void;
+  onTarget: (info: ModelTargetInfo) => void;
 };
 
-function CanvasContent({ model, cameraTarget, onReady, onTarget }: CanvasContentProps) {
+function CanvasContent({ model, targetInfo, onReady, onTarget }: CanvasContentProps) {
   return (
-    <ModelStage lighting={model.lighting} autoRotate={model.autoRotate} cameraTarget={cameraTarget}>
+    <ModelStage lighting={model.lighting} autoRotate={model.autoRotate} targetInfo={targetInfo}>
       <ModelAsset model={model} onReady={onReady} onTarget={onTarget} />
     </ModelStage>
   );
@@ -37,10 +42,10 @@ function CanvasContent({ model, cameraTarget, onReady, onTarget }: CanvasContent
 export default function DetailModelViewer({ model, fallbackImageSrc, title, className }: DetailModelViewerProps) {
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
-  const [cameraTarget, setCameraTarget] = useState<[number, number, number]>([0, 0, 0]);
+  const [targetInfo, setTargetInfo] = useState<ModelTargetInfo>(DEFAULT_TARGET_INFO);
 
   const handleReady = useCallback(() => setReady(true), []);
-  const handleTarget = useCallback((t: [number, number, number]) => setCameraTarget(t), []);
+  const handleTarget = useCallback((info: ModelTargetInfo) => setTargetInfo(info), []);
 
   if (failed) {
     return (
@@ -72,7 +77,7 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
           <Suspense fallback={null}>
             <CanvasContent
               model={model}
-              cameraTarget={cameraTarget}
+              targetInfo={targetInfo}
               onReady={handleReady}
               onTarget={handleTarget}
             />
