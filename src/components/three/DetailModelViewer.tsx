@@ -57,6 +57,12 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
 
   return (
     <div className={`detailModelViewer ${className ?? ""}`}>
+      <div className="detailModelViewer__backdrop">
+        {model.backdropText && (
+          <p className="detailModelViewer__backdropText">{model.backdropText}</p>
+        )}
+      </div>
+
       {!ready && fallbackImageSrc && (
         <img
           src={fallbackImageSrc}

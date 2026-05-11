@@ -17,6 +17,7 @@ type RawProduct3DEntry = {
   camera?: { position: [number, number, number]; fov?: number };
   lighting?: "studio" | "soft" | "dramatic";
   autoRotate?: boolean;
+  backdropText?: string;
 };
 
 type RawProduct = {
