@@ -1,4 +1,4 @@
-import { OrbitControls, Environment } from "@react-three/drei";
+import { OrbitControls, Environment, Bounds, Center } from "@react-three/drei";
 import type { ModelLighting } from "./modelTypes";
 
 type ModelStageProps = {
@@ -29,7 +29,11 @@ export default function ModelStage({ lighting = "studio", autoRotate = true, chi
         maxPolarAngle={Math.PI / 1.6}
         makeDefault
       />
-      {children}
+      <Bounds fit clip observe margin={1.2}>
+        <Center>
+          {children}
+        </Center>
+      </Bounds>
     </>
   );
 }

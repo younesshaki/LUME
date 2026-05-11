@@ -3,10 +3,31 @@
   inset: 0;
 }
 
-.detailModelViewer canvas {
+.detailModelViewer__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.detailModelViewer__canvas canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
+}
+
+.detailModelViewer__poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* poster fades out once canvas is ready via opacity transition on __canvas */
+.detailModelViewer__canvas[style*="opacity: 1"] ~ .detailModelViewer__poster {
+  opacity: 0;
 }
 
 .detailModelViewer__fallback {
@@ -44,4 +65,5 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   pointer-events: none;
+  z-index: 2;
 }
