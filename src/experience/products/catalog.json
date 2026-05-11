@@ -16,6 +16,21 @@
         "chapterIndex": 0,
         "chapterId": "showcase-chapter-1",
         "label": "View Showcase"
+      },
+      "model3d": {
+        "enabled": true,
+        "modelKey": "vehicle%20images/3D%20assets/blackredbullforlume.optimized.glb",
+        "tagLabel": "3D",
+        "alt": "3D model of the LUME Red Bull Special Edition",
+        "scale": 1,
+        "position": [0, -0.2, 0],
+        "rotation": [0, 0, 0],
+        "camera": {
+          "position": [0, 0.4, 4],
+          "fov": 38
+        },
+        "lighting": "studio",
+        "autoRotate": true
       }
     },
     {

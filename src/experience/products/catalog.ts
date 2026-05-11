@@ -1,9 +1,23 @@
 import { mediaUrl } from "@/config/cdn";
+import { type DetailModel3D } from "@/components/three/modelTypes";
 import rawCatalog from "./catalog.json";
 
 export type ProductCategory = "drink" | "fragrance" | "fashion";
 export type ProductFilterCategory = "all" | ProductCategory;
 export type ProductStatus = "live" | "coming-soon";
+
+type RawProduct3DEntry = {
+  enabled: true;
+  modelKey: string;
+  alt: string;
+  tagLabel?: string;
+  scale?: number;
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  camera?: { position: [number, number, number]; fov?: number };
+  lighting?: "studio" | "soft" | "dramatic";
+  autoRotate?: boolean;
+};
 
 type RawProduct = {
   id: string;
@@ -23,10 +37,12 @@ type RawProduct = {
     label: string;
   };
   showcasePreviewChapterId?: string;
+  model3d?: RawProduct3DEntry;
 };
 
 export type Product = RawProduct & {
   imageSrc?: string;
+  model3d?: DetailModel3D;
 };
 
 const catalog = rawCatalog as {
@@ -37,6 +53,9 @@ const catalog = rawCatalog as {
 export const PRODUCTS: Product[] = catalog.products.map((product) => ({
   ...product,
   imageSrc: product.imageKey ? mediaUrl(product.imageKey) : undefined,
+  model3d: product.model3d
+    ? { ...product.model3d, modelSrc: mediaUrl(product.model3d.modelKey) }
+    : undefined,
 }));
 
 export const PRODUCT_CATEGORIES: { id: ProductFilterCategory; label: string }[] = [

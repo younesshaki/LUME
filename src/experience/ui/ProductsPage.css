@@ -568,3 +568,20 @@
     flex-direction: column;
   }
 }
+
+.productsPage__modelTag {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  padding: 0.18em 0.55em;
+  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(201, 168, 76, 0.25), rgba(233, 195, 27, 0.2));
+  border: 1px solid rgba(217, 183, 106, 0.7);
+  color: var(--lume-gold, #C9A84C);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 2;
+}
