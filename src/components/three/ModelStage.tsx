@@ -4,6 +4,7 @@ import type { ModelLighting } from "./modelTypes";
 type ModelStageProps = {
   lighting?: ModelLighting;
   autoRotate?: boolean;
+  cameraTarget?: [number, number, number];
   children: React.ReactNode;
 };
 
@@ -13,7 +14,8 @@ const PRESET_MAP: Record<ModelLighting, "rembrandt" | "portrait" | "soft"> = {
   dramatic: "rembrandt",
 };
 
-export default function ModelStage({ lighting = "studio", autoRotate = true, children }: ModelStageProps) {
+export default function ModelStage({ lighting = "studio", autoRotate = true, cameraTarget, children }: ModelStageProps) {
+  const target = cameraTarget ?? [0, 0, 0];
   return (
     <>
       <Stage
@@ -21,11 +23,12 @@ export default function ModelStage({ lighting = "studio", autoRotate = true, chi
         shadows={false}
         environment="studio"
         intensity={0.6}
-        adjustCamera={1}
+        adjustCamera={0.15}
       >
         {children}
       </Stage>
       <OrbitControls
+        target={target}
         enableZoom={false}
         enablePan={false}
         autoRotate={autoRotate}

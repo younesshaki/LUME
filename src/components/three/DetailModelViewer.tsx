@@ -26,7 +26,7 @@ type CanvasContentProps = {
 
 function CanvasContent({ model, onReady }: CanvasContentProps) {
   return (
-    <ModelStage lighting={model.lighting} autoRotate={model.autoRotate}>
+    <ModelStage lighting={model.lighting} autoRotate={model.autoRotate} cameraTarget={model.cameraTarget}>
       <ModelAsset model={model} onReady={onReady} />
     </ModelStage>
   );
