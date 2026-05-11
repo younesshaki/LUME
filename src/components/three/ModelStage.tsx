@@ -1,4 +1,4 @@
-import { OrbitControls, Environment, Bounds, Center } from "@react-three/drei";
+import { Stage, OrbitControls } from "@react-three/drei";
 import type { ModelLighting } from "./modelTypes";
 
 type ModelStageProps = {
@@ -7,19 +7,24 @@ type ModelStageProps = {
   children: React.ReactNode;
 };
 
-const PRESET_MAP: Record<ModelLighting, "studio" | "apartment" | "dawn"> = {
-  studio: "studio",
-  soft: "apartment",
-  dramatic: "dawn",
+const PRESET_MAP: Record<ModelLighting, "rembrandt" | "portrait" | "soft"> = {
+  studio: "rembrandt",
+  soft: "portrait",
+  dramatic: "rembrandt",
 };
 
 export default function ModelStage({ lighting = "studio", autoRotate = true, children }: ModelStageProps) {
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[4, 6, 4]} intensity={1.2} castShadow />
-      <directionalLight position={[-4, 2, -4]} intensity={0.4} />
-      <Environment preset={PRESET_MAP[lighting]} />
+      <Stage
+        preset={PRESET_MAP[lighting]}
+        shadows={false}
+        environment="studio"
+        intensity={0.6}
+        adjustCamera={1}
+      >
+        {children}
+      </Stage>
       <OrbitControls
         enableZoom={false}
         enablePan={false}
@@ -29,11 +34,6 @@ export default function ModelStage({ lighting = "studio", autoRotate = true, chi
         maxPolarAngle={Math.PI / 1.6}
         makeDefault
       />
-      <Bounds fit clip observe margin={1.2}>
-        <Center>
-          {children}
-        </Center>
-      </Bounds>
     </>
   );
 }
