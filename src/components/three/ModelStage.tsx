@@ -47,7 +47,8 @@ function CursorLight() {
   const mouse = useRef({ x: 0, y: 0, inside: false });
   const raycaster = useRef(new Raycaster());
   const pointer = useRef(new Vector2());
-  const hitPos = useRef(new Vector3());
+  const targetPos = useRef(new Vector3());
+  const currentPos = useRef(new Vector3());
 
   useEffect(() => {
     const canvas = document.querySelector(".detailModelViewer__canvas canvas") as HTMLCanvasElement | null;
@@ -81,16 +82,21 @@ function CursorLight() {
 
       const intersects = raycaster.current.intersectObjects(scene.children, true);
       if (intersects.length > 0) {
-        hitPos.current.copy(intersects[0].point);
-        const toCamera = new Vector3().subVectors(camera.position, hitPos.current).normalize();
-        lightRef.current.position.copy(hitPos.current).addScaledVector(toCamera, 0.4);
+        // Surface hit — place target just above the hit point toward the camera
+        const toCamera = new Vector3().subVectors(camera.position, intersects[0].point).normalize();
+        targetPos.current.copy(intersects[0].point).addScaledVector(toCamera, 0.4);
       } else {
+        // No hit — place target at a fixed depth along the cursor ray
         const dir = new Vector3(mouse.current.x, mouse.current.y, 0.5)
           .unproject(camera)
           .sub(camera.position)
           .normalize();
-        lightRef.current.position.copy(camera.position).addScaledVector(dir, 2.5);
+        targetPos.current.copy(camera.position).addScaledVector(dir, 2.5);
       }
+
+      // Lerp current position toward target every frame — no abrupt jumps
+      currentPos.current.lerp(targetPos.current, 0.12);
+      lightRef.current.position.copy(currentPos.current);
     }
   });
 
