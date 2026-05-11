@@ -72,7 +72,7 @@ function CursorLight() {
   useFrame(() => {
     if (!lightRef.current) return;
 
-    const targetIntensity = mouse.current.inside ? 5000 : 0;
+    const targetIntensity = mouse.current.inside ? 2250 : 0;
     lightRef.current.intensity += (targetIntensity - lightRef.current.intensity) * 0.08;
 
     if (mouse.current.inside) {
@@ -99,7 +99,7 @@ function CursorLight() {
       ref={lightRef}
       intensity={0}
       color="#ffa200"
-      distance={50}
+      distance={0}
       decay={2}
     />
   );
