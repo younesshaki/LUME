@@ -14,7 +14,6 @@ export type DetailModel3D = {
   };
   lighting?: ModelLighting;
   autoRotate?: boolean;
-  cameraTarget?: [number, number, number];
 };
 
 export function hasDetailModel3D(item: { model3d?: DetailModel3D | null }): item is { model3d: DetailModel3D } {

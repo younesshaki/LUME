@@ -21,13 +21,15 @@ function ModelError({ fallbackImageSrc, title }: { fallbackImageSrc?: string; ti
 
 type CanvasContentProps = {
   model: DetailModel3D;
+  cameraTarget: [number, number, number];
   onReady: () => void;
+  onTarget: (target: [number, number, number]) => void;
 };
 
-function CanvasContent({ model, onReady }: CanvasContentProps) {
+function CanvasContent({ model, cameraTarget, onReady, onTarget }: CanvasContentProps) {
   return (
-    <ModelStage lighting={model.lighting} autoRotate={model.autoRotate} cameraTarget={model.cameraTarget}>
-      <ModelAsset model={model} onReady={onReady} />
+    <ModelStage lighting={model.lighting} autoRotate={model.autoRotate} cameraTarget={cameraTarget}>
+      <ModelAsset model={model} onReady={onReady} onTarget={onTarget} />
     </ModelStage>
   );
 }
@@ -35,8 +37,10 @@ function CanvasContent({ model, onReady }: CanvasContentProps) {
 export default function DetailModelViewer({ model, fallbackImageSrc, title, className }: DetailModelViewerProps) {
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState<[number, number, number]>([0, 0, 0]);
 
   const handleReady = useCallback(() => setReady(true), []);
+  const handleTarget = useCallback((t: [number, number, number]) => setCameraTarget(t), []);
 
   if (failed) {
     return (
@@ -66,7 +70,12 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
           onError={() => setFailed(true)}
         >
           <Suspense fallback={null}>
-            <CanvasContent model={model} onReady={handleReady} />
+            <CanvasContent
+              model={model}
+              cameraTarget={cameraTarget}
+              onReady={handleReady}
+              onTarget={handleTarget}
+            />
           </Suspense>
         </Canvas>
       </div>

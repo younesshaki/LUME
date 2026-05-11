@@ -30,8 +30,7 @@
           "fov": 38
         },
         "lighting": "studio",
-        "autoRotate": true,
-        "cameraTarget": [0, 1.2, 0]
+        "autoRotate": true
       }
     },
     {

@@ -15,7 +15,7 @@ const PRESET_MAP: Record<ModelLighting, "rembrandt" | "portrait" | "soft"> = {
 };
 
 export default function ModelStage({ lighting = "studio", autoRotate = true, cameraTarget, children }: ModelStageProps) {
-  const target = cameraTarget ?? [0, 0, 0];
+  const target = cameraTarget ?? [0, 1.2, 0];
   return (
     <>
       <Stage
@@ -23,7 +23,7 @@ export default function ModelStage({ lighting = "studio", autoRotate = true, cam
         shadows={false}
         environment="studio"
         intensity={0.6}
-        adjustCamera={0.15}
+        adjustCamera={0.2}
       >
         {children}
       </Stage>
@@ -31,7 +31,7 @@ export default function ModelStage({ lighting = "studio", autoRotate = true, cam
         target={target}
         enableZoom={false}
         enablePan={false}
-        autoRotate={autoRotate}
+        autoRotate={false}
         autoRotateSpeed={1.4}
         minPolarAngle={Math.PI / 4}
         maxPolarAngle={Math.PI / 1.6}
