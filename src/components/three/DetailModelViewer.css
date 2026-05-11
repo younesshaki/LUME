@@ -10,24 +10,28 @@
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.detailModelViewer__backdropText {
+.detailModelViewer__velocityContainer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 160%;
-  transform: rotate(-45deg);
-  color: rgba(255, 248, 236, 0.055);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.detailModelViewer__velocityRow {
+  padding: 0.15rem 0;
+}
+
+.detailModelViewer__velocityText {
+  color: rgba(255, 255, 255, 0.09);
   font-family: var(--experience-font-family, serif);
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   font-weight: 400;
-  line-height: 2.2;
-  letter-spacing: 0.06em;
-  text-align: center;
-  margin: 0;
-  word-break: break-word;
-  white-space: normal;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  padding-right: 1.5rem;
 }
 
 .detailModelViewer__canvas {

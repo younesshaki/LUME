@@ -1,5 +1,9 @@
 import { Suspense, useCallback, useState } from "react";
 import { Canvas } from "@react-three/fiber";
+import {
+  ScrollVelocityContainer,
+  ScrollVelocityRow,
+} from "@/components/ui/scroll-based-velocity";
 import type { DetailModel3D } from "./modelTypes";
 import ModelStage from "./ModelStage";
 import ModelAsset, { type ModelTargetInfo } from "./ModelAsset";
@@ -57,11 +61,24 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
 
   return (
     <div className={`detailModelViewer ${className ?? ""}`}>
-      <div className="detailModelViewer__backdrop">
-        {model.backdropText && (
-          <p className="detailModelViewer__backdropText">{model.backdropText}</p>
-        )}
-      </div>
+      {model.backdropText && (
+        <div className="detailModelViewer__backdrop">
+          <ScrollVelocityContainer className="detailModelViewer__velocityContainer">
+            {Array.from({ length: 10 }, (_, i) => (
+              <ScrollVelocityRow
+                key={i}
+                baseVelocity={12}
+                direction={i % 2 === 0 ? 1 : -1}
+                className="detailModelViewer__velocityRow"
+              >
+                <span className="detailModelViewer__velocityText">
+                  {model.backdropText}&nbsp;&nbsp;—&nbsp;&nbsp;
+                </span>
+              </ScrollVelocityRow>
+            ))}
+          </ScrollVelocityContainer>
+        </div>
+      )}
 
       {!ready && fallbackImageSrc && (
         <img
