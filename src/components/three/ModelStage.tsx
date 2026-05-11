@@ -17,6 +17,30 @@ function CameraRig({ info }: { info: ModelTargetInfo }) {
   return null;
 }
 
+function CameraZoom({ cursorInCanvas, targetInfo }: { cursorInCanvas: boolean; targetInfo: ModelTargetInfo }) {
+  const { camera } = useThree();
+  const baseDistance = useRef<number | null>(null);
+  const target = useRef(new Vector3(...targetInfo.target));
+
+  useFrame(() => {
+    // Capture base distance once after CameraRig has positioned the camera
+    if (baseDistance.current === null) {
+      baseDistance.current = camera.position.distanceTo(target.current);
+    }
+
+    const base = baseDistance.current;
+    const goalDistance = cursorInCanvas ? base * 0.75 : base;
+    const currentDistance = camera.position.distanceTo(target.current);
+    const t = 0.05;
+    const newDistance = currentDistance + (goalDistance - currentDistance) * t;
+
+    const dir = camera.position.clone().sub(target.current).normalize();
+    camera.position.copy(target.current).addScaledVector(dir, newDistance);
+  });
+
+  return null;
+}
+
 function CursorLight() {
   const lightRef = useRef<PointLight>(null);
   const { camera, scene, size } = useThree();
@@ -57,12 +81,10 @@ function CursorLight() {
 
       const intersects = raycaster.current.intersectObjects(scene.children, true);
       if (intersects.length > 0) {
-        // Place light at the hit surface, offset slightly toward the camera
         hitPos.current.copy(intersects[0].point);
         const toCamera = new Vector3().subVectors(camera.position, hitPos.current).normalize();
         lightRef.current.position.copy(hitPos.current).addScaledVector(toCamera, 0.4);
       } else {
-        // No hit — project to a fixed depth in front of the camera
         const dir = new Vector3(mouse.current.x, mouse.current.y, 0.5)
           .unproject(camera)
           .sub(camera.position)
@@ -77,7 +99,7 @@ function CursorLight() {
       ref={lightRef}
       intensity={0}
       color="#ffa200"
-      distance={100}
+      distance={50}
       decay={2}
     />
   );
@@ -87,6 +109,7 @@ type ModelStageProps = {
   lighting?: ModelLighting;
   autoRotate?: boolean;
   targetInfo: ModelTargetInfo;
+  cursorInCanvas?: boolean;
   children: React.ReactNode;
 };
 
@@ -96,7 +119,7 @@ const PRESET_MAP: Record<ModelLighting, "rembrandt" | "portrait" | "soft"> = {
   dramatic: "rembrandt",
 };
 
-export default function ModelStage({ lighting = "studio", autoRotate = true, targetInfo, children }: ModelStageProps) {
+export default function ModelStage({ lighting = "studio", autoRotate = true, targetInfo, cursorInCanvas = false, children }: ModelStageProps) {
   return (
     <>
       <Stage
@@ -109,6 +132,7 @@ export default function ModelStage({ lighting = "studio", autoRotate = true, tar
         {children}
       </Stage>
       <CameraRig info={targetInfo} />
+      <CameraZoom cursorInCanvas={cursorInCanvas} targetInfo={targetInfo} />
       <CursorLight />
       <OrbitControls
         target={targetInfo.target}

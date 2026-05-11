@@ -32,13 +32,14 @@ function ModelError({ fallbackImageSrc, title }: { fallbackImageSrc?: string; ti
 type CanvasContentProps = {
   model: DetailModel3D;
   targetInfo: ModelTargetInfo;
+  cursorInCanvas: boolean;
   onReady: () => void;
   onTarget: (info: ModelTargetInfo) => void;
 };
 
-function CanvasContent({ model, targetInfo, onReady, onTarget }: CanvasContentProps) {
+function CanvasContent({ model, targetInfo, cursorInCanvas, onReady, onTarget }: CanvasContentProps) {
   return (
-    <ModelStage lighting={model.lighting} autoRotate={model.autoRotate} targetInfo={targetInfo}>
+    <ModelStage lighting={model.lighting} autoRotate={model.autoRotate} targetInfo={targetInfo} cursorInCanvas={cursorInCanvas}>
       <ModelAsset model={model} onReady={onReady} onTarget={onTarget} />
     </ModelStage>
   );
@@ -114,6 +115,7 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
             <CanvasContent
               model={model}
               targetInfo={targetInfo}
+              cursorInCanvas={cursorInCanvas}
               onReady={handleReady}
               onTarget={handleTarget}
             />
