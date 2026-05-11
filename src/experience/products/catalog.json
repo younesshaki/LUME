@@ -19,7 +19,7 @@
       },
       "model3d": {
         "enabled": true,
-        "modelKey": "vehicle%20images/3D%20assets/blackredbull6.glb",
+        "modelKey": "vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
         "tagLabel": "3D",
         "alt": "3D model of the LUME Red Bull Special Edition",
         "scale": 1,
