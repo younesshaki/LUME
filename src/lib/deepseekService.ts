@@ -5,11 +5,7 @@
 
 const DEEPSEEK_API_URL =
   (import.meta.env.VITE_DEEPSEEK_API_URL as string | undefined) ??
-  "/deepseek-api/v1/chat/completions";
-
-const DEEPSEEK_API_KEY =
-  (import.meta.env.VITE_DEEPSEEK_API_KEY as string | undefined) ??
-  "sk-fef5919abdbd4b36a8752b1cdeb62e3d";
+  (import.meta.env.DEV ? "/deepseek-api/v1/chat/completions" : "/api/deepseek-proxy");
 
 export type DeepseekMessage = {
   role: "user" | "assistant" | "system";
@@ -35,15 +31,10 @@ export async function* streamDeepseekChat(
   messages: DeepseekMessage[],
   signal?: AbortSignal
 ): AsyncGenerator<string, void, unknown> {
-  if (!DEEPSEEK_API_KEY) {
-    throw new Error("Missing VITE_DEEPSEEK_API_KEY environment variable. Set it in .env to use Deepseek.");
-  }
-
   const response = await fetch(DEEPSEEK_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
       model: "deepseek-chat",
