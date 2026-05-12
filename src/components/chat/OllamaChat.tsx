@@ -489,8 +489,8 @@ export function OllamaChat() {
                 type="submit"
                 aria-label="Send message"
                 title="Send message"
-                disabled={!input.trim() || isActive || !vehiclesLoaded}
-                onMouseEnter={!input.trim() || isActive || !vehiclesLoaded ? undefined : chatSounds.hover}
+                disabled={!input.trim() || isActive}
+                onMouseEnter={!input.trim() || isActive ? undefined : chatSounds.hover}
               >
                 {isActive ? (
                   <Loader2 className="ollamaChat__spinner" size={18} aria-hidden="true" />
