@@ -22,7 +22,17 @@ const VEHICLE_INTENT_KEYWORDS = [
   "range rover",
   "do you have",
   "available",
+  "how many",
+  "count",
 ];
+const MAKE_ALIASES: Record<string, string> = {
+  benz: "Mercedes-Benz",
+  mercedes: "Mercedes-Benz",
+  lambo: "Lamborghini",
+  lambos: "Lamborghini",
+  vw: "Volkswagen",
+  chevy: "Chevrolet",
+};
 
 type ChatMessage = {
   role: "user" | "assistant" | "system";
@@ -53,6 +63,10 @@ type Vehicle = {
   sellerCity: string;
   sellerState: string;
   stockType: string | null;
+};
+
+type VehicleQueryFilters = {
+  make?: string;
 };
 
 type VercelRequest = {
@@ -104,6 +118,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!lastUser) {
     return json(req, res, { error: "no user message found" }, 400);
   }
+  const recentUserText = cleanMessages
+    .filter((m) => m.role === "user")
+    .slice(-3)
+    .map((m) => m.content)
+    .join(" ");
 
   const supabaseUrl =
     process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
@@ -134,9 +153,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let matchedVehicles;
     let totalMatched: number | undefined;
     let totalInventory: number | undefined;
-    let filters;
+    let filters: VehicleQueryFilters | undefined;
 
-    if (isVehicleQuery(lastUser.content)) {
+    const { data: makeRows, error: makeErr } = await supabase
+      .from("vehicles")
+      .select("make")
+      .eq("tenant_id", tenant.tenantId);
+    if (makeErr) throw new Error(`vehicle make query failed: ${makeErr.message}`);
+
+    const knownMakes = uniqueStrings((makeRows ?? []).map((row: { make?: string }) => row.make));
+    const directFilters = extractVehicleFilters(lastUser.content, knownMakes);
+    const contextualFilters = directFilters.make
+      ? directFilters
+      : extractVehicleFilters(recentUserText, knownMakes);
+    const shouldUseVehicleInventory =
+      isVehicleQuery(lastUser.content) ||
+      isVehicleFollowUp(lastUser.content) ||
+      Boolean(contextualFilters.make);
+
+    if (shouldUseVehicleInventory) {
       const { data: vehicleRows, error: vehicleErr } = await supabase
         .from("vehicles")
         .select("*")
@@ -144,7 +179,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (vehicleErr) throw new Error(`vehicles query failed: ${vehicleErr.message}`);
 
       const vehicles = (vehicleRows ?? []).map(rowToVehicle);
-      filters = extractVehicleFilters(lastUser.content, vehicles);
+      filters = contextualFilters;
       const match = matchVehicles(vehicles, filters, lastUser.content);
       matchedVehicles = match.results;
       totalMatched = match.totalMatched;
@@ -323,21 +358,31 @@ function isVehicleQuery(queryText: string): boolean {
   return VEHICLE_INTENT_KEYWORDS.some((keyword) => query.includes(keyword));
 }
 
-function extractVehicleFilters(queryText: string, vehicles: Vehicle[]) {
-  const query = queryText.toLowerCase();
-  const makes = [...new Set(vehicles.map((vehicle) => vehicle.make).filter(Boolean))].sort(
-    (a, b) => b.length - a.length
-  );
+function isVehicleFollowUp(queryText: string): boolean {
+  return /\b(how many|count|they|those|them|ones|what about)\b/i.test(queryText);
+}
 
-  const make = makes.find((candidate) => {
-    const lower = candidate.toLowerCase();
-    return query.includes(lower) || query.includes(`${lower}s`);
-  });
+function extractVehicleFilters(queryText: string, makes: string[]): VehicleQueryFilters {
+  const queryWords = normalizedWords(queryText).flatMap((word) => [
+    word,
+    singularize(word),
+  ]);
+  const queryWordSet = new Set(queryWords);
+
+  for (const word of queryWords) {
+    const alias = MAKE_ALIASES[word];
+    if (alias && makes.includes(alias)) return { make: alias };
+  }
+
+  const make = makes
+    .slice()
+    .sort((a, b) => b.length - a.length)
+    .find((candidate) => matchesMake(queryWordSet, candidate));
 
   return make ? { make } : {};
 }
 
-function matchVehicles(vehicles: Vehicle[], filters: { make?: string }, queryText: string) {
+function matchVehicles(vehicles: Vehicle[], filters: VehicleQueryFilters, queryText: string) {
   let results = vehicles;
 
   if (filters.make) {
@@ -387,6 +432,7 @@ function assembleSystemPrompt({
   const prompt = [
     "You are the LUME assistant. Answer only using the supplied context and inventory. Be concise, useful, and specific.",
     "If the user asks about available vehicles, use the VEHICLE INVENTORY section and mention real matching vehicles.",
+    "For count questions, answer with the exact TOTAL MATCHING value from VEHICLE INVENTORY. Do not count only the shown sample rows.",
     "If the answer is not in the supplied context, say that you do not have that information.",
     contextBlock ? `Relevant context:\n${contextBlock}` : "",
     vehicleBlock,
@@ -457,6 +503,33 @@ function normalizedWords(text: string): string[] {
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
     .filter(Boolean);
+}
+
+function uniqueStrings(values: Array<string | null | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function singularize(word: string): string {
+  if (word.endsWith("ies") && word.length > 4) return `${word.slice(0, -3)}y`;
+  if (word.endsWith("s") && word.length > 3) return word.slice(0, -1);
+  return word;
+}
+
+function matchesMake(queryWordSet: Set<string>, make: string): boolean {
+  const makeWords = normalizedWords(make).flatMap((word) => [word, singularize(word)]);
+  const compactMake = makeWords.join("");
+
+  if (queryWordSet.has(compactMake) || queryWordSet.has(singularize(compactMake))) {
+    return true;
+  }
+
+  return makeWords.some((makeWord) => {
+    if (queryWordSet.has(makeWord)) return true;
+    return [...queryWordSet].some((queryWord) => {
+      if (queryWord.length < 4 || makeWord.length < 4) return false;
+      return levenshteinDistance(queryWord, makeWord) <= 1;
+    });
+  });
 }
 
 function levenshteinDistance(a: string, b: string): number {
