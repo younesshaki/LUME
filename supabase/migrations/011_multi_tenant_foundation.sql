@@ -236,6 +236,46 @@ create policy "rag_chunks_select_public_active" on public.rag_chunks
     )
   );
 
+-- ─── Tenant-scoped vector search ───────────────────────────────────────────
+-- Returns the top-k chunks most similar to the query embedding, scoped to a
+-- single tenant. SECURITY DEFINER so anon callers (public site) can use it,
+-- but the tenant_id filter is enforced inside the function — callers cannot
+-- read other tenants' chunks.
+create or replace function public.match_rag_chunks_for_tenant(
+  p_tenant_id uuid,
+  p_query_embedding vector(768),
+  p_match_count integer default 7
+)
+returns table (
+  id uuid,
+  document_id uuid,
+  text text,
+  category text,
+  similarity float
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    rc.id,
+    rc.document_id,
+    rc.text,
+    rc.category,
+    1 - (rc.embedding <=> p_query_embedding) as similarity
+  from public.rag_chunks rc
+  join public.tenants t on t.id = rc.tenant_id
+  where rc.tenant_id = p_tenant_id
+    and t.status = 'active'
+    and rc.embedding is not null
+  order by rc.embedding <=> p_query_embedding
+  limit p_match_count;
+$$;
+
+grant execute on function public.match_rag_chunks_for_tenant(uuid, vector, integer)
+  to anon, authenticated, service_role;
+
 -- ─── Tenant lookup by slug (anon-friendly) ─────────────────────────────────
 -- The public site needs to resolve {tenant-slug} → tenant_id without auth.
 -- We expose a SECURITY DEFINER function that returns only id+slug+name+status,
