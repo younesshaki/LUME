@@ -840,6 +840,229 @@ Each phase is still independently shippable. Phase 5 is the largest because it l
 
 ---
 
+---
+
+## Implementation Addendum (Read Before Coding)
+
+This section captures concrete details from the existing codebase that an implementer needs to know. Without these, any implementer will either duplicate existing functionality or break it.
+
+### A. Existing `vercel.json` Already Has The SPA Rewrite
+
+**Do not overwrite the file.** It already contains the rewrite block, plus a headers block for security and caching that must be preserved.
+
+Current state (already in repo):
+```json
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+```
+
+If an `/api/*` rewrite is ever added (e.g. for Vercel Functions), it must be inserted **before** the catch-all SPA rule.
+
+**Phase 10 is therefore a verification step, not a creation step.** No edit needed unless API routes are introduced.
+
+---
+
+### B. Existing Auth Must Be Reused, Not Replaced
+
+`src/lib/authService.ts` already exists and already integrates with Supabase Auth. Its surface:
+
+```ts
+sanitizeUsername(input: string): string | null
+checkExistingSession(): Promise<AuthUser | null>
+loginOrRegister(username, password, accessPassword): Promise<AuthResult>
+// AuthResult includes `isNew: boolean` — auto-creates account on first login
+```
+
+It already:
+- Uses `supabase.auth` for session management
+- Reads/writes a `profiles` table for username mapping
+- Has a `LOCAL_AUTH_KEY` localStorage fallback when Supabase is not configured (preview mode)
+
+**Implementation rules:**
+- The new `AuthProvider` is a **thin React Context wrapper** around the existing `authService` functions — not a rewrite.
+- `RequireAuth` calls `checkExistingSession()` once on mount and subscribes to `supabase.auth.onAuthStateChange` for live updates.
+- Do not introduce a new `signIn` path. Reuse `loginOrRegister`.
+- Do not introduce a new auth table. The `profiles` table is the source of truth.
+- The new `/admin/login` route renders a form that calls `loginOrRegister`. It can reuse `PlaceholdersAndVanishInput` for visual consistency.
+
+### C. The Gate Already Contains Auth
+
+`src/experience/ui/PreloadGate.tsx` is **not just a preload screen** — it is also where users currently log in via username/password. It has three phases: `checking`, `auth`, `ready`.
+
+This means the "gate as session overlay" decision has a subtlety: **the gate currently gates both preload completion AND authentication**. The current behavior is:
+1. Open site → gate shows
+2. If session exists → skip auth, go to `ready`
+3. If not → show username/password form
+4. Submit credentials → if valid, go to `ready`
+5. User clicks "Start" → app proceeds
+
+**For this migration, do not change the gate's auth behavior.** The public site stays gated by the existing auth/preload flow. The new `/admin/login` is a *separate* entry point with the same backing auth — admins log in via either route and the session is shared.
+
+A future cleanup can decouple "preload" from "auth," but it is **out of scope for this migration**.
+
+---
+
+### D. First User Creation
+
+`loginOrRegister` auto-creates a user on first attempt with valid credentials (the `isNew: true` flag in `AuthResult`). **No signup route is needed.** The first admin user is created by visiting `/admin/login` and entering chosen credentials — the access password (`VITE_ACCESS_PASSWORD`) gates registration.
+
+For early development, set `VITE_ACCESS_PASSWORD` in `.env.local` and the Vercel project env to a value only the team knows.
+
+---
+
+### E. Tenant Column Is Deferred
+
+The plan keeps multi-tenancy out of scope for the routing migration. **Do not add a `tenant_id` column to `profiles` or anywhere else yet.** When the second customer arrives, a separate migration will introduce tenancy.
+
+Acceptable assumption during implementation: **single-tenant**. All routes, all data, all assets belong to one tenant. The `NavigationProvider`, `RequireAuth`, and `AdminShell` are tenant-agnostic by design and will not need to be rewritten when tenancy lands.
+
+---
+
+### F. Environment Variables (Already Present)
+
+The following must exist in `.env.local` and in Vercel project settings — both confirmed present:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_ACCESS_PASSWORD` (used by `PreloadGate` and will be reused by `/admin/login`)
+
+No new env vars are required for the routing migration.
+
+---
+
+### G. Concrete Code Snippets
+
+#### G1. Gate As Overlay (Not A Route)
+
+The gate is rendered as a fullscreen overlay above `<Outlet />`, controlled by session state — not by the router:
+
+```tsx
+// src/app-shell/PublicShell.tsx
+export function PublicShell() {
+  const { gatePassed, setGatePassed } = useGate();
+
+  return (
+    <>
+      <Outlet />
+      {!gatePassed && (
+        <PreloadGate onStart={() => setGatePassed(true)} />
+      )}
+    </>
+  );
+}
+```
+
+`useGate` is a tiny hook that holds the flag in React state with a `sessionStorage` shadow:
+
+```tsx
+export function useGate() {
+  const [gatePassed, set] = useState(() =>
+    sessionStorage.getItem("lume.gate-passed") === "1"
+  );
+  const setGatePassed = (v: boolean) => {
+    sessionStorage.setItem("lume.gate-passed", v ? "1" : "0");
+    set(v);
+  };
+  return { gatePassed, setGatePassed };
+}
+```
+
+This preserves the gate's current behavior end-to-end. Direct URL visits (`/products/red-bull`) still get gated on first session, then bypass on subsequent visits.
+
+#### G2. Where `logStoryEvent` Fires In `NavigationProvider`
+
+`logStoryEvent({ type: "navigation_action", ... })` already exists and is called from `App.tsx`. Move that call into the `navigateTo` function in `NavigationProvider`:
+
+```tsx
+const previousPathRef = useRef<string>(location.pathname);
+const enteredAtRef = useRef<number>(Date.now());
+
+const navigateTo = useCallback((target: NavigateOptions, meta?: NavigateMeta) => {
+  if (meta?.sound) play(meta.sound);
+
+  const fromPath = previousPathRef.current;
+  const toPath = resolvePath(target);
+  const durationMs = Math.max(0, Date.now() - enteredAtRef.current);
+
+  void logStoryEvent({
+    type: "navigation_action",
+    payload: {
+      action: meta?.source === "bot" ? "bot_navigate" : "navigate",
+      fromScreen: fromPath,
+      toScreen: toPath,
+      durationMs,
+      occurredAt: new Date().toISOString(),
+    },
+  });
+
+  previousPathRef.current = toPath;
+  enteredAtRef.current = Date.now();
+
+  navigate(toPath);
+}, [navigate, location.pathname]);
+```
+
+This preserves the analytics surface byte-for-byte and adds the `bot_navigate` distinction the vision requires.
+
+#### G3. `vercel.json` Merge Note
+
+Already covered in section A. **Do not create or overwrite `vercel.json`.** It is already correct.
+
+---
+
+### H. Minimum Test Coverage
+
+The migration must add at least these tests. Each is small and high-value:
+
+```ts
+// tests/navigationAdapter.test.ts
+test("navigateTo productDetail builds /products/:productId", () => {
+  const path = resolvePath({ route: "productDetail", productId: "red-bull" });
+  expect(path).toBe("/products/red-bull");
+});
+
+test("navigateTo experience encodes part and chapter as search params", () => {
+  const path = resolvePath({ route: "experience", partIndex: 0, chapterIndex: 2 });
+  expect(path).toBe("/showcase/experience?part=0&chapter=2");
+});
+
+// tests/routeConfig.test.ts
+test("every AppRouteId has a ROUTE_CONFIG entry", () => {
+  const ids: AppRouteId[] = [/* ... full list ... */];
+  for (const id of ids) expect(ROUTE_CONFIG[id]).toBeDefined();
+});
+
+// tests/RequireAuth.test.tsx
+test("RequireAuth redirects unauthenticated users to /admin/login", async () => {
+  // render <RequireAuth><div>secret</div></RequireAuth> with no session
+  // assert <Navigate to="/admin/login" /> rendered
+});
+```
+
+This is the floor, not the ceiling. Page-level component tests can come later — these three protect the routing primitives that everything else depends on.
+
+---
+
+### I. Dual-Mode (Experience vs Normal) — Layout Variant, Not Route
+
+The vision adds a future "experience mode vs normal mode" toggle — heavy cinematic experience vs lightweight browsing.
+
+**Decision: this is a user preference, not a route.**
+
+- URLs stay identical across modes (a shared link works for both)
+- The mode is persisted in `localStorage` under `lume.viewing-mode.v1` with values `"experience" | "normal"`
+- Layout components read the mode and adjust their variant: heavy 3D viewer vs static image, scroll-velocity backdrop vs plain background, animated transitions vs instant, etc.
+- The mode plugs into the existing `DockVariant` / `LayoutVariant` system — no new routing concept is needed
+
+**Implementation hook:** add a `ViewingMode` context alongside `NavigationProvider` in Phase 7 (layout context). The context exposes `{ mode, setMode }` and is read by any component that has a heavy/lite split. Pages do not need to be aware of mode — only the components that actually differ.
+
+**Out of scope for this migration:** building the actual lite variants of components. That is a follow-up workstream. The migration only needs to put the context in place so those follow-ups have a clean home.
+
+---
+
 ## Final Recommendation
 
 Treat routing as the foundation of the entire product going forward, not as a public-site improvement.
