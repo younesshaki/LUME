@@ -32,18 +32,18 @@ You have two options:
 
 **Option A: Use environment variable (recommended, cleaner)**
 ```bash
-export DEEPSEEK_API_KEY=sk-fef5919abdbd4b36a8752b1cdeb62e3d
+export DEEPSEEK_API_KEY=<DEEPSEEK_API_KEY>
 ```
 
 Add this to your `~/.zshrc` so it persists:
 ```bash
-echo 'export DEEPSEEK_API_KEY="sk-fef5919abdbd4b36a8752b1cdeb62e3d"' >> ~/.zshrc
+echo 'export DEEPSEEK_API_KEY="<DEEPSEEK_API_KEY>"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
 **Option B: Pass it on the command line**
 ```bash
-aider --api-key deepseek=sk-fef5919abdbd4b36a8752b1cdeb62e3d --model deepseek/deepseek-chat
+aider --api-key deepseek=<DEEPSEEK_API_KEY> --model deepseek/deepseek-chat
 ```
 
 ### 2. Start Aider
@@ -336,7 +336,7 @@ echo $DEEPSEEK_API_KEY
 
 Should print your key. If empty:
 ```bash
-export DEEPSEEK_API_KEY=sk-fef5919abdbd4b36a8752b1cdeb62e3d
+export DEEPSEEK_API_KEY=<DEEPSEEK_API_KEY>
 ```
 
 ### "Too many tokens"
@@ -390,6 +390,6 @@ If a single message costs more than $0.01, you probably added too many files.
 
 - **Aider docs**: https://aider.chat/
 - **Deepseek docs**: https://platform.deepseek.com/
-- **Your API key**: Already set (sk-fef5919abdbd4b36a8752b1cdeb62e3d)
+- **Your API key**: Already set (<DEEPSEEK_API_KEY>)
 
 Good luck!

@@ -7,4 +7,4 @@ models:
     provider: openai
     model: deepseek-chat
     apiBase: https://api.deepseek.com/v1
-    apiKey: sk-fef5919abdbd4b36a8752b1cdeb62e3d
+    apiKey: <DEEPSEEK_API_KEY>
