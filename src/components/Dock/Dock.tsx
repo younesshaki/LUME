@@ -59,7 +59,10 @@ function DockItem({
         width: size,
         height: size
       }}
-      onHoverStart={() => isHovered.set(1)}
+      onHoverStart={() => {
+        isHovered.set(1);
+        dockSounds.itemHover();
+      }}
       onHoverEnd={() => isHovered.set(0)}
       onFocus={() => isHovered.set(1)}
       onBlur={() => isHovered.set(0)}

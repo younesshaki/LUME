@@ -1,7 +1,21 @@
 import embeddedChunks from "./knowledge/embeddings.json";
 import { formatVehiclePrice, type Vehicle } from "../experience/vehicles/catalog";
-import { levenshteinDistance, isFuzzyMatch, getMaxDistance } from "../utils/fuzzyMatch";
-import { MAKE_ALIASES as FUZZY_MAKE_ALIASES } from "../config/vehicleAliases";
+import {
+  levenshteinDistance,
+  isFuzzyMatch,
+  fuzzyLookup,
+  correctQuery,
+  type Correction,
+} from "./fuzzyMatch";
+import {
+  ALL_MAKES,
+  MAKE_ALIASES,
+  BODY_STYLE_ALIASES,
+  FUEL_TYPE_ALIASES,
+  DRIVETRAIN_ALIASES,
+  ALL_KNOWN_VEHICLE_TERMS,
+  REVERSE_MAPS,
+} from "./vehicleTerms";
 
 type EmbeddedChunk = {
   id: string;
@@ -28,79 +42,18 @@ CRITICAL RULES — follow these without exception:
 
 Tone: concise, restrained, and confident — matching LUME's premium brand voice.`;
 
-// ─── Make alias map for normalisation ────────────────────────────────────────
-const MAKE_ALIASES: Record<string, string> = {
-  "mercedes": "Mercedes-Benz",
-  "mercedes benz": "Mercedes-Benz",
-  "vw": "Volkswagen",
-  "rolls royce": "Rolls-Royce",
-  "landrover": "Land Rover",
-  "chevy": "Chevrolet",
-  "infiniti": "INFINITI",
-  "lambo": "Lamborghini",
-  "lamborghini": "Lamborghini",
+// ─── Query Preprocessing: Correct typos before extraction ──────────────────────
+/**
+ * Preprocess a query to correct common typos in vehicle terms.
+ * Centralizes correction logic so downstream code can rely on exact matching.
+ */
+type PreprocessResult = {
+  corrected: string;
+  corrections: Correction[];
 };
 
-const ALL_MAKES = [
-  "acura","audi","bmw","buick","cadillac","chevrolet","chevy","chrysler","dodge",
-  "ferrari","ford","gmc","genesis","honda","hummer","hyundai","infiniti","jaguar",
-  "jeep","kia","lamborghini","land rover","landrover","lexus","lincoln","mini",
-  "maserati","mazda","mercedes-benz","mercedes benz","mercedes","mitsubishi",
-  "nissan","polestar","porsche","ram","rolls-royce","rolls royce","subaru",
-  "tesla","toyota","volkswagen","vw","volvo",
-];
-
-// ─── Build reverse fuzzy alias map for efficient lookup ───────────────────────
-function buildFuzzyMakeMap(): Map<string, string> {
-  const map = new Map<string, string>();
-  // Map lowercase aliases to their canonical forms (as stored in MAKE_ALIASES)
-  for (const [alias, canonical] of Object.entries(MAKE_ALIASES)) {
-    map.set(alias.toLowerCase(), canonical);
-  }
-  // Also map canonical forms from fuzzy config
-  for (const [canonical, aliases] of Object.entries(FUZZY_MAKE_ALIASES)) {
-    for (const alias of aliases) {
-      if (!map.has(alias.toLowerCase())) {
-        map.set(alias.toLowerCase(), canonical);
-      }
-    }
-  }
-  return map;
-}
-
-const fuzzyMakeMap = buildFuzzyMakeMap();
-const fuzzyCanonicalMakes = Array.from(new Set(Object.keys(FUZZY_MAKE_ALIASES)));
-
-/**
- * Fuzzy-match a raw make query to a canonical make name.
- * 1. First tries exact alias match
- * 2. Falls back to Levenshtein distance matching
- */
-function fuzzyLookupMake(query: string): string | null {
-  const trimmed = query.trim().toLowerCase();
-  if (!trimmed) return null;
-
-  // Direct alias match?
-  if (fuzzyMakeMap.has(trimmed)) {
-    return fuzzyMakeMap.get(trimmed)!;
-  }
-
-  // Fuzzy match against canonical makes
-  let bestDistance = Infinity;
-  let bestMatch: string | null = null;
-
-  for (const canonical of fuzzyCanonicalMakes) {
-    const maxDist = getMaxDistance(canonical);
-    if (maxDist === 0 && trimmed !== canonical) continue;
-
-    const dist = levenshteinDistance(trimmed, canonical);
-    if (dist <= maxDist && dist < bestDistance) {
-      bestDistance = dist;
-      bestMatch = canonical;
-    }
-  }
-
-  return bestMatch;
+function preprocessQuery(query: string): PreprocessResult {
+  return correctQuery(query, ALL_KNOWN_VEHICLE_TERMS);
 }
 
 const VEHICLE_INTENT_KEYWORDS = [
@@ -187,65 +140,46 @@ const US_STATE_NAMES: Record<string, string> = {
 };
 
 // ─── Extract structured filters from a natural-language query ────────────────
+/**
+ * Extract vehicle query filters (make, body style, fuel, drivetrain, etc.) from a query.
+ * Uses fuzzy matching for typo tolerance via the vehicleTerms dictionaries.
+ */
 function extractVehicleFilters(query: string, vehicles: Vehicle[] = []): VehicleQueryFilters {
-  const q = query.toLowerCase();
+  // Preprocess: correct typos
+  const { corrected } = preprocessQuery(query);
+  const q = corrected.toLowerCase();
   const filters: VehicleQueryFilters = {};
 
-  // Make (now with fuzzy matching for typo tolerance)
-  let foundMake: string | null = null;
-
-  // First try exact matches from ALL_MAKES
-  for (const alias of ALL_MAKES) {
-    if (q.includes(alias)) {
-      const canonical =
-        MAKE_ALIASES[alias] ??
-        alias.replace(/(^|\s)\w/g, (c) => c.toUpperCase());
-      foundMake = canonical;
-      break;
-    }
+  // Make — use fuzzyLookup for robust matching
+  const make = fuzzyLookup(q, MAKE_ALIASES);
+  if (make) {
+    filters.make = make.charAt(0).toUpperCase() + make.slice(1);
   }
 
-  // If no exact match, try fuzzy matching
-  if (!foundMake) {
-    const tokens = q.split(/\s+/).filter(t => t.length > 2);
-    for (const token of tokens) {
-      const fuzzyCanonical = fuzzyLookupMake(token);
-      if (fuzzyCanonical) {
-        foundMake = fuzzyCanonical;
-        break;
-      }
-    }
+  // Body style — use fuzzyLookup
+  const bodyStyle = fuzzyLookup(q, BODY_STYLE_ALIASES);
+  if (bodyStyle) {
+    filters.bodyStyle = bodyStyle.charAt(0).toUpperCase() + bodyStyle.slice(1);
   }
 
-  if (foundMake) {
-    filters.make = foundMake;
-  }
-
-  // Body style
-  if (/\bsuv\b/.test(q)) filters.bodyStyle = "SUV";
-  else if (/\bsedan\b/.test(q)) filters.bodyStyle = "Sedan";
-  else if (/\bcoupe\b/.test(q)) filters.bodyStyle = "Coupe";
-  else if (/\btruck\b/.test(q)) filters.bodyStyle = "Truck";
-  else if (/\bconvertible\b/.test(q)) filters.bodyStyle = "Convertible";
-  else if (/\bhatchback\b/.test(q)) filters.bodyStyle = "Hatchback";
-  else if (/\bwagon\b/.test(q)) filters.bodyStyle = "Wagon";
-  else if (/\bminivan\b|\bvan\b/.test(q)) filters.bodyStyle = "Minivan";
-
-  // Stock type
+  // Stock type (not in fuzzyTerms, using original regex)
   if (/\bnew\b/.test(q)) filters.stockType = "New";
   else if (/\bused\b|\bpre-?owned\b/.test(q)) filters.stockType = "Used";
 
-  // Fuel type
-  if (/\belectric\b|\b\bev\b/.test(q)) filters.fuelType = "Electric";
-  else if (/\bplug.?in\b/.test(q)) filters.fuelType = "Plug-In Hybrid";
-  else if (/\bhybrid\b/.test(q)) filters.fuelType = "Hybrid";
-  else if (/\bdiesel\b/.test(q)) filters.fuelType = "Diesel";
+  // Fuel type — use fuzzyLookup
+  const fuelType = fuzzyLookup(q, FUEL_TYPE_ALIASES);
+  if (fuelType) {
+    filters.fuelType =
+      fuelType === "plug-in hybrid"
+        ? "Plug-In Hybrid"
+        : fuelType.charAt(0).toUpperCase() + fuelType.slice(1);
+  }
 
-  // Drivetrain
-  if (/\bawd\b|\ball.?wheel\b/.test(q)) filters.drivetrain = "AWD";
-  else if (/\b4wd\b|\bfour.?wheel\b/.test(q)) filters.drivetrain = "4WD";
-  else if (/\bfwd\b|\bfront.?wheel\b/.test(q)) filters.drivetrain = "FWD";
-  else if (/\brwd\b|\brear.?wheel\b/.test(q)) filters.drivetrain = "RWD";
+  // Drivetrain — use fuzzyLookup
+  const drivetrain = fuzzyLookup(q, DRIVETRAIN_ALIASES);
+  if (drivetrain) {
+    filters.drivetrain = drivetrain.toUpperCase();
+  }
 
   // Year (e.g. "2023 BMW")
   const yearMatch = q.match(/\b(20\d{2})\b/);
@@ -382,17 +316,45 @@ type ScoredChunk = {
   score: number;
 };
 
+/**
+ * Score a knowledge chunk based on keyword matching.
+ * First pass: exact word match.
+ * Second pass: fuzzy word match (lower weight).
+ */
 function scoreChunkByKeywords(chunk: EmbeddedChunk, query: string): number {
   const q = query.toLowerCase();
   const text = chunk.text.toLowerCase();
   let score = 0;
 
   const words = q.split(/\s+/).filter((w) => w.length > 2);
+
+  // Pass 1: Exact match
   for (const word of words) {
-    if (text.includes(word)) score += 1;
+    if (text.includes(word)) {
+      score += 1;
+    }
+  }
+
+  // Pass 2: Fuzzy match (for improved recall on typos)
+  // Only if exact match didn't already score
+  for (const word of words) {
+    if (!text.includes(word)) {
+      // Check if this word fuzzy-matches any word in the chunk text
+      if (fuzzyWordInText(word, text)) {
+        score += 0.7; // Reduce weight for fuzzy matches
+      }
+    }
   }
 
   return score;
+}
+
+/**
+ * Helper: check if a query word fuzzy-matches any word in the chunk text.
+ */
+function fuzzyWordInText(word: string, text: string): boolean {
+  const textWords = text.split(/\s+/);
+  return textWords.some((tw) => tw.length > 2 && isFuzzyMatch(word, tw));
 }
 
 function retrieveContext(
