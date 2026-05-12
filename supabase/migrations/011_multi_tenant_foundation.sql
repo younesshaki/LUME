@@ -296,6 +296,7 @@ grant execute on function public.tenant_by_slug(text) to anon, authenticated;
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at = now();
