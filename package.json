@@ -3,14 +3,21 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
+    "dev:admin": "npm run dev --workspace=@lume/admin",
     "typecheck": "tsc --noEmit",
+    "typecheck:all": "npm run typecheck && npm run typecheck --workspaces --if-present",
     "check:assets": "node scripts/check-r2-assets.mjs",
     "check:assets:strict": "node scripts/check-r2-assets.mjs --strict",
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "tsc && vite build",
+    "build:admin": "npm run build --workspace=@lume/admin",
     "preview": "vite preview",
     "embed": "tsx scripts/generateEmbeddings.ts"
   },

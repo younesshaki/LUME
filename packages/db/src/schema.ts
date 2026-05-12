@@ -1,0 +1,126 @@
+/**
+ * Hand-written shape that mirrors `supabase/migrations/011_multi_tenant_foundation.sql`.
+ *
+ * Replace with `supabase gen types typescript` output when the schema stabilizes —
+ * for now this is the source of truth the application code compiles against.
+ */
+export type Database = {
+  public: {
+    Tables: {
+      tenants: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          status: "active" | "suspended" | "trial";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          status?: "active" | "suspended" | "trial";
+        };
+        Update: Partial<Database["public"]["Tables"]["tenants"]["Insert"]>;
+      };
+      tenant_members: {
+        Row: {
+          tenant_id: string;
+          user_id: string;
+          role: "owner" | "admin" | "editor" | "viewer";
+          created_at: string;
+        };
+        Insert: {
+          tenant_id: string;
+          user_id: string;
+          role?: "owner" | "admin" | "editor" | "viewer";
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_members"]["Insert"]>;
+      };
+      vehicles: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          external_id: string | null;
+          stock_type: string | null;
+          year: number;
+          make: string;
+          model: string;
+          trim: string;
+          price: number;
+          mileage: number | null;
+          body_style: string;
+          exterior_color: string;
+          interior_color: string;
+          drivetrain: string;
+          fuel_type: string;
+          image_src: string;
+          seller_city: string;
+          seller_state: string;
+          is_special: boolean;
+          special_image_src: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["vehicles"]["Row"],
+          "id" | "created_at" | "updated_at"
+        > & { id?: string };
+        Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
+      };
+      rag_documents: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          title: string;
+          category: string;
+          source: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["rag_documents"]["Row"],
+          "id" | "created_at" | "updated_at"
+        > & { id?: string };
+        Update: Partial<Database["public"]["Tables"]["rag_documents"]["Insert"]>;
+      };
+      rag_chunks: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          document_id: string;
+          external_id: string | null;
+          text: string;
+          category: string;
+          embedding: number[] | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["rag_chunks"]["Row"],
+          "id" | "created_at"
+        > & { id?: string };
+        Update: Partial<Database["public"]["Tables"]["rag_chunks"]["Insert"]>;
+      };
+    };
+    Functions: {
+      tenant_by_slug: {
+        Args: { p_slug: string };
+        Returns: {
+          id: string;
+          slug: string;
+          name: string;
+          status: "active" | "suspended" | "trial";
+        }[];
+      };
+      tenant_ids_for_current_user: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
+      user_has_tenant_role: {
+        Args: { p_tenant_id: string; p_roles: string[] };
+        Returns: boolean;
+      };
+    };
+  };
+};
