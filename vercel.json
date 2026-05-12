@@ -43,12 +43,8 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://admin.lume.app/api/$1"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ]
 }
