@@ -8,9 +8,11 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.VITE_DEEPSEEK_API_KEY;
+  const apiKey = process.env.VITE_DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'Missing VITE_DEEPSEEK_API_KEY' });
+    return res.status(500).json({
+      error: 'Missing DEEPSEEK_API_KEY environment variable on Vercel. Add it to Project Settings → Environment Variables.',
+    });
   }
 
   try {
