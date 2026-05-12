@@ -143,7 +143,7 @@ export default function Dock({
 }: DockProps) {
   const mouseX = useMotionValue(Infinity);
   const isHovered = useMotionValue(0);
-  const { shouldAdapt, setDock } = useDockState();
+  const { shouldAdapt, shouldHide, setDock } = useDockState();
 
   useDockAdaptation(shouldAdapt, (adapted) => setDock({ adapted }));
 
@@ -170,7 +170,7 @@ export default function Dock({
         mouseX.set(Infinity);
         setDock({ hovered: false });
       }}
-      className={`dock-panel ${shouldAdapt ? "dock-panel--adapted" : ""} ${className}`.trim()}
+      className={`dock-panel ${shouldAdapt ? "dock-panel--adapted" : ""} ${shouldHide ? "dock-panel--hidden" : ""} ${className}`.trim()}
         style={{ height: panelHeight }}
         role="toolbar"
         aria-label="Application dock"

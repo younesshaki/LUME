@@ -3,6 +3,7 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { getSystemPromptWithContext } from "@/lib/ragService";
+import { streamDeepseekChat, type DeepseekMessage } from "@/lib/deepseekService";
 import { loadVehicles, type Vehicle } from "@/experience/vehicles/catalog";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
@@ -10,13 +11,7 @@ import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { messageVariants, panelVariants, toggleVariants } from "./OllamaChat.animations";
 import { chatSounds } from "./OllamaChat.sounds";
 import { useOllamaChatStateBridge } from "./OllamaChat.state";
-import type { ChatMessage, ChatRole, OllamaApiMessage, OllamaStreamChunk } from "./OllamaChat.types";
-
-const OLLAMA_CHAT_URL =
-  (import.meta.env.VITE_OLLAMA_CHAT_URL as string | undefined) ?? "/ollama/api/chat";
-
-const OLLAMA_MODEL =
-  (import.meta.env.VITE_OLLAMA_MODEL as string | undefined) ?? "llama3.1:8b";
+import type { ChatMessage, ChatRole, OllamaApiMessage } from "./OllamaChat.types";
 
 const STORAGE_KEY = "lume-chat-v1";
 
@@ -79,6 +74,7 @@ export function OllamaChat() {
   const [ratings, setRatings] = useState<Record<string, "up" | "down" | null>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
+  const [vehiclesLoaded, setVehiclesLoaded] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
@@ -110,7 +106,10 @@ export function OllamaChat() {
 
   // load vehicle inventory once for RAG context
   useEffect(() => {
-    loadVehicles().then((v) => { vehiclesRef.current = v; });
+    loadVehicles().then((v) => {
+      vehiclesRef.current = v;
+      setVehiclesLoaded(true);
+    });
   }, []);
 
   // persist chat (skip during active stream to avoid partial messages)
@@ -150,7 +149,7 @@ export function OllamaChat() {
   const sendMessage = async (overrideText?: string) => {
     const text = overrideText ?? input;
     const trimmedInput = text.trim();
-    if (!trimmedInput || isSending || isRetrieving) return;
+    if (!trimmedInput || isSending || isRetrieving || !vehiclesLoaded) return;
 
     const userMessage = createMessage("user", trimmedInput);
     const nextApiMessages: OllamaApiMessage[] = [
@@ -182,7 +181,7 @@ export function OllamaChat() {
       setIsRetrieving(false);
     }
 
-    // Phase B: Streaming Ollama chat
+    // Phase B: Streaming Deepseek chat
     setIsSending(true);
     const assistantMessageId = createMessage("assistant", "").id;
     streamingMessageIdRef.current = assistantMessageId;
@@ -193,62 +192,19 @@ export function OllamaChat() {
     chatSounds.receive();
 
     try {
-      const response = await fetch(OLLAMA_CHAT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: OLLAMA_MODEL,
-          stream: true,
-          messages: [{ role: "system", content: systemPrompt }, ...nextApiMessages],
-        }),
-        signal: abortController.signal,
-      });
+      const deepseekMessages: DeepseekMessage[] = [
+        { role: "system", content: systemPrompt },
+        ...nextApiMessages,
+      ];
 
-      if (!response.ok) throw new Error(`Ollama returned ${response.status} ${response.statusText}`);
-      if (!response.body) throw new Error("No response body from Ollama.");
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      outer: while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
-          let chunk: OllamaStreamChunk;
-          try { chunk = JSON.parse(trimmed) as OllamaStreamChunk; } catch { continue; }
-          if (chunk.error) throw new Error(chunk.error);
-          const token = chunk.message?.content ?? "";
-          if (token) {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMessageId ? { ...m, content: m.content + token } : m
-              )
-            );
-          }
-          if (chunk.done) break outer;
+      for await (const token of streamDeepseekChat(deepseekMessages, abortController.signal)) {
+        if (token) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessageId ? { ...m, content: m.content + token } : m
+            )
+          );
         }
-      }
-
-      if (buffer.trim()) {
-        try {
-          const chunk = JSON.parse(buffer.trim()) as OllamaStreamChunk;
-          if (chunk.error) throw new Error(chunk.error);
-          const token = chunk.message?.content ?? "";
-          if (token) {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMessageId ? { ...m, content: m.content + token } : m
-              )
-            );
-          }
-        } catch { /* ignore */ }
       }
 
       setMessages((prev) =>
@@ -262,7 +218,7 @@ export function OllamaChat() {
         return;
       }
       setMessages((prev) => prev.filter((m) => m.id !== assistantMessageId));
-      const message = caughtError instanceof Error ? caughtError.message : "Unable to reach Ollama.";
+      const message = caughtError instanceof Error ? caughtError.message : "Unable to reach Deepseek API.";
       setError(message);
     } finally {
       if (abortControllerRef.current === abortController) abortControllerRef.current = null;
@@ -342,7 +298,7 @@ export function OllamaChat() {
             <header className="ollamaChat__header">
               <div className="ollamaChat__title">
                 <strong>LUME</strong>
-                <span>{OLLAMA_MODEL}</span>
+                <span>Assistant</span>
               </div>
               <div className="ollamaChat__headerActions">
                 <button
@@ -536,8 +492,8 @@ export function OllamaChat() {
                 type="submit"
                 aria-label="Send message"
                 title="Send message"
-                disabled={!input.trim() || isActive}
-                onMouseEnter={!input.trim() || isActive ? undefined : chatSounds.hover}
+                disabled={!input.trim() || isActive || !vehiclesLoaded}
+                onMouseEnter={!input.trim() || isActive || !vehiclesLoaded ? undefined : chatSounds.hover}
               >
                 {isActive ? (
                   <Loader2 className="ollamaChat__spinner" size={18} aria-hidden="true" />
