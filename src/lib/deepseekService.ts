@@ -31,10 +31,18 @@ export async function* streamDeepseekChat(
   messages: DeepseekMessage[],
   signal?: AbortSignal
 ): AsyncGenerator<string, void, unknown> {
+  const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "Missing VITE_DEEPSEEK_API_KEY environment variable. Add it to .env.local"
+    );
+  }
+
   const response = await fetch(DEEPSEEK_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: "deepseek-chat",
