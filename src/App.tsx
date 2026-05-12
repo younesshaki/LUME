@@ -9,18 +9,19 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { OutsideShowcaseMusic } from "./experience/audio/OutsideShowcaseMusic";
 import { StoryProvider } from "./experience/story/StoryProvider";
 import PreloadGate from "./experience/ui/PreloadGate";
 import PhoneExperienceNotice from "./experience/ui/PhoneExperienceNotice";
 import { MediaQualitySettings } from "./experience/ui/MediaQualitySettings";
-import { AppBackButton } from "./experience/ui/AppBackButton";
 import { SiteHeader } from "./components/layout/SiteHeader";
 import { BottomDock } from "./components/layout/BottomDock";
 import type { SiteScreen } from "./components/layout/siteNavigation";
 import type { ShowcaseVideoQuality } from "./experience/scenes/showcase/data/sceneAssets";
 import { isShowcaseChapterId } from "./experience/scenes/showcase/data";
 import { getChapterDefinition } from "./experience/story/manifest";
+import { matchRoutePath, screenToPath, type ScreenPathParams } from "./app-shell/routePaths";
 import { logStoryEvent } from "./lib/eventsService";
 import { play as playSound } from "./lib/sound";
 
@@ -64,6 +65,13 @@ type AppScreen =
   | "experience"
   | "admin";
 
+type RouteScreenState = {
+  screen: AppScreen;
+  productId: string | null;
+  vehicleId: string | null;
+  partIndex: number;
+  chapterIndex: number;
+};
 
 const MEDIA_QUALITY_STORAGE_KEY = "nomad.media-quality.v1";
 const LOCAL_CHAT_ENABLED = import.meta.env.VITE_ENABLE_LOCAL_CHAT === "true";
@@ -107,26 +115,158 @@ function readInitialMediaQuality(): ShowcaseVideoQuality {
     : getRecommendedMediaQuality();
 }
 
+function readRouteScreenState(
+  pathname: string,
+  search: string,
+  hash: string
+): RouteScreenState {
+  // Backward compatibility for old links while we migrate away from hash URLs.
+  if (hash === "#admin") {
+    return createRouteScreenState("admin");
+  }
+
+  if (hash.startsWith("#vehicles")) {
+    return createRouteScreenState("vehicles");
+  }
+
+  const routeMatch = matchRoutePath(pathname);
+  const searchParams = new URLSearchParams(search);
+
+  // This converts the browser URL into the old screen state that App.tsx still
+  // renders with. Later, these screens can become real <Route> elements.
+  switch (routeMatch?.routeId) {
+    case "home":
+      return createRouteScreenState("home");
+    case "products":
+      return createRouteScreenState("products");
+    case "productDetail":
+      return createRouteScreenState("productDetail", {
+        productId: routeMatch.params.productId ?? null,
+      });
+    case "vehicles":
+      return createRouteScreenState("vehicles");
+    case "vehicleDetail":
+      return createRouteScreenState("vehicleDetail", {
+        vehicleId: routeMatch.params.vehicleId ?? null,
+      });
+    case "showcase":
+      return createRouteScreenState("showcase");
+    case "showcaseIntro":
+      return createRouteScreenState("titlecard");
+    case "showcaseExperience":
+      return createRouteScreenState("experience", {
+        partIndex: readNumberParam(searchParams, "part", 0),
+        chapterIndex: readNumberParam(searchParams, "chapter", 0),
+      });
+    case "contact":
+      return createRouteScreenState("contact");
+    case "admin":
+    case "adminLogin":
+    case "adminDashboard":
+      return createRouteScreenState("admin");
+    case "gate":
+    default:
+      return createRouteScreenState("gate");
+  }
+}
+
+function createRouteScreenState(
+  screen: AppScreen,
+  overrides: Partial<RouteScreenState> = {}
+): RouteScreenState {
+  // Defaults keep every route state complete, so callers only provide the
+  // fields that matter for that specific route.
+  return {
+    screen,
+    productId: null,
+    vehicleId: null,
+    partIndex: 0,
+    chapterIndex: 0,
+    ...overrides,
+  };
+}
+
+function readNumberParam(
+  searchParams: URLSearchParams,
+  key: string,
+  fallback: number
+): number {
+  const value = searchParams.get(key);
+
+  if (value === null) {
+    return fallback;
+  }
+
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) ? parsedValue : fallback;
+}
+
 export default function App() {
+  // React Router gives us the current URL and the function used to change it.
+  const location = useLocation();
+  const navigate = useNavigate();
   const initialHash = typeof window !== "undefined" ? window.location.hash : "";
-  const [screen, setScreen] = useState<AppScreen>(
-    initialHash === "#admin" ? "admin" : initialHash.startsWith("#vehicles") ? "vehicles" : "gate"
+  const initialRouteState = readRouteScreenState(
+    location.pathname,
+    location.search,
+    initialHash
   );
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
-  const [entryPartIndex, setEntryPartIndex] = useState(0);
-  const [entryChapterIndex, setEntryChapterIndex] = useState(0);
+  const [screen, setScreen] = useState<AppScreen>(initialRouteState.screen);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    initialRouteState.productId
+  );
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(
+    initialRouteState.vehicleId
+  );
+  const [entryPartIndex, setEntryPartIndex] = useState(initialRouteState.partIndex);
+  const [entryChapterIndex, setEntryChapterIndex] = useState(
+    initialRouteState.chapterIndex
+  );
   const [showcaseChapterRevealed, setShowcaseChapterRevealed] = useState(false);
   const [mediaQuality, setMediaQuality] = useState<ShowcaseVideoQuality>(
     readInitialMediaQuality
   );
   const screenEnteredAtRef = useRef(Date.now());
 
-  const navigateToScreen = useCallback((nextScreen: AppScreen) => {
+  const navigateToScreen = useCallback((nextScreen: AppScreen, params: ScreenPathParams = {}) => {
+    let nextPath: string | null = null;
+
+    try {
+      // Convert the old screen navigation into a real browser path.
+      nextPath = screenToPath(nextScreen, params);
+    } catch {
+      // Some legacy calls do not have enough params yet. In that case we still
+      // update the old state, but skip changing the URL.
+      nextPath = null;
+    }
+
     startTransition(() => {
       setScreen(nextScreen);
     });
-  }, []);
+
+    if (nextPath && `${location.pathname}${location.search}` !== nextPath) {
+      // This is what makes browser back/forward and direct links possible.
+      navigate(nextPath);
+    }
+  }, [location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    const routeState = readRouteScreenState(
+      location.pathname,
+      location.search,
+      typeof window !== "undefined" ? window.location.hash : ""
+    );
+
+    // When the user presses browser back/forward, the URL changes first.
+    // This effect then updates the old App.tsx screen state to match it.
+    startTransition(() => {
+      setScreen(routeState.screen);
+      setSelectedProductId(routeState.productId);
+      setSelectedVehicleId(routeState.vehicleId);
+      setEntryPartIndex(routeState.partIndex);
+      setEntryChapterIndex(routeState.chapterIndex);
+    });
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     screenEnteredAtRef.current = Date.now();
@@ -148,12 +288,14 @@ export default function App() {
   // React to hash changes (e.g., user manually types #admin to enter, or removes it to exit)
   useEffect(() => {
     const handler = () => {
-      if (window.location.hash === "#admin") navigateToScreen("admin");
-      if (window.location.hash.startsWith("#vehicles")) navigateToScreen("vehicles");
+      if (window.location.hash === "#admin") navigate("/admin", { replace: true });
+      if (window.location.hash.startsWith("#vehicles")) {
+        navigate("/vehicles", { replace: true });
+      }
     };
     window.addEventListener("hashchange", handler);
     return () => window.removeEventListener("hashchange", handler);
-  }, [navigateToScreen]);
+  }, [navigate]);
 
   const handleGoHome = useCallback((playNavSound = true) => {
     if (playNavSound) {
@@ -190,62 +332,6 @@ export default function App() {
     [entryChapterIndex, entryPartIndex]
   );
 
-  const handleBack = useCallback(() => {
-    playSound("nav.back");
-
-    if (screen === "titlecard") {
-      logNavigationAction("back", "titlecard", "home");
-      handleGoHome(false);
-      return;
-    }
-
-    if (screen === "experience") {
-      logNavigationAction("back", "experience", "home");
-      handleGoHome(false);
-      return;
-    }
-
-    if (screen === "admin") {
-      logNavigationAction("back", "admin", "home");
-      handleGoHome(false);
-      return;
-    }
-
-    if (screen === "products") {
-      logNavigationAction("back", "products", "home");
-      handleGoHome(false);
-      return;
-    }
-
-    if (screen === "vehicles") {
-      logNavigationAction("back", "vehicles", "home");
-      handleGoHome(false);
-      return;
-    }
-
-    if (screen === "vehicleDetail") {
-      logNavigationAction("back", "vehicleDetail", "vehicles");
-      navigateToScreen("vehicles");
-      return;
-    }
-
-    if (screen === "productDetail") {
-      logNavigationAction("back", "productDetail", "products");
-      navigateToScreen("products");
-      return;
-    }
-
-    if (screen === "showcase") {
-      logNavigationAction("back", "showcase", "home");
-      handleGoHome(false);
-      return;
-    }
-
-    if (screen === "contact") {
-      logNavigationAction("back", "contact", "home");
-      handleGoHome(false);
-    }
-  }, [handleGoHome, logNavigationAction, navigateToScreen, screen]);
 
   const handleEnterExperience = useCallback(
     (partIndex: number, chapterIndex: number) => {
@@ -254,10 +340,10 @@ export default function App() {
       setEntryChapterIndex(chapterIndex);
       const chapterDefinition = getChapterDefinition(partIndex + 1, chapterIndex + 1);
       if (isShowcaseChapterId(chapterDefinition?.id)) {
-        navigateToScreen("titlecard");
+        navigateToScreen("titlecard", { partIndex, chapterIndex });
         return;
       }
-      navigateToScreen("experience");
+      navigateToScreen("experience", { partIndex, chapterIndex });
     },
     [navigateToScreen]
   );
@@ -265,8 +351,8 @@ export default function App() {
   const handleStartExperience = useCallback(() => {
     playSound("showcase.enter");
     setShowcaseChapterRevealed(false);
-    navigateToScreen("experience");
-  }, [navigateToScreen]);
+    navigateToScreen("experience", { partIndex: entryPartIndex, chapterIndex: entryChapterIndex });
+  }, [entryChapterIndex, entryPartIndex, navigateToScreen]);
 
   const handleNavigateToProducts = useCallback(() => {
     playSound("nav.toProducts");
@@ -292,16 +378,16 @@ export default function App() {
     playSound("product.card.click");
     startTransition(() => {
       setSelectedProductId(productId);
-      setScreen("productDetail");
+      navigateToScreen("productDetail", { productId });
     });
-  }, []);
+  }, [navigateToScreen]);
 
   const handleSelectVehicle = useCallback((vehicleId: string) => {
     startTransition(() => {
       setSelectedVehicleId(vehicleId);
-      setScreen("vehicleDetail");
+      navigateToScreen("vehicleDetail", { vehicleId });
     });
-  }, []);
+  }, [navigateToScreen]);
 
   const handleMediaQualityChange = useCallback((quality: ShowcaseVideoQuality) => {
     setMediaQuality(quality);
@@ -348,9 +434,7 @@ export default function App() {
       {showSiteHeader && (
         <BottomDock currentScreen={layoutCurrentScreen} onNavigate={handleSiteNavigate} />
       )}
-      {(screen === "titlecard" || screen === "experience" || screen === "admin" || screen === "products" || screen === "productDetail" || screen === "vehicles" || screen === "vehicleDetail" || screen === "showcase" || screen === "contact") && (
-        <AppBackButton onClick={handleBack} belowHeader={showSiteHeader} />
-      )}
+
       {screen !== "gate" && (
         <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
       )}
