@@ -28,6 +28,7 @@ import { getChapterDefinition } from "./experience/story/manifest";
 import { ROUTE_PATHS } from "./app-shell/routePaths";
 import { useCurrentRoute } from "./app-shell/useCurrentRoute";
 import { useNavigation } from "./app-shell/NavigationProvider";
+import { useUIStore } from "./lib/ui-state";
 
 const loadAdminRouter = () => import("./admin/AdminRouter");
 const loadContactPage = () => import("./experience/ui/ContactPage");
@@ -185,6 +186,7 @@ export default function App() {
   const location = useLocation();
   const { navigateTo } = useNavigation();
   const { routeId, config: currentRouteConfig } = useCurrentRoute();
+  const setActiveRoute = useUIStore((state) => state.setActiveRoute);
   const { partIndex: currentPartIndex, chapterIndex: currentChapterIndex } =
     readShowcaseEntryState(location.search);
   const [gatePassed, setGatePassed] = useState(readInitialGatePassed);
@@ -205,6 +207,10 @@ export default function App() {
     void loadAdminRouter();
     void loadExperience();
   }, []);
+
+  useEffect(() => {
+    setActiveRoute(routeId);
+  }, [routeId, setActiveRoute]);
 
   const handleGoHome = useCallback((playNavSound = true) => {
     setShowcaseChapterRevealed(false);

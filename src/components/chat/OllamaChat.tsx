@@ -4,30 +4,13 @@ import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { getSystemPromptWithContext } from "@/lib/ragService";
 import { loadVehicles, type Vehicle } from "@/experience/vehicles/catalog";
-import { useSound } from "@/lib/sound";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
-
-type ChatRole = "user" | "assistant";
-
-type ChatMessage = {
-  id: string;
-  role: ChatRole;
-  content: string;
-  sourceCategories?: string[];
-};
-
-type OllamaApiMessage = {
-  role: ChatRole;
-  content: string;
-};
-
-type OllamaStreamChunk = {
-  message?: { content?: string };
-  done?: boolean;
-  error?: string;
-};
+import { messageVariants, panelVariants, toggleVariants } from "./OllamaChat.animations";
+import { chatSounds } from "./OllamaChat.sounds";
+import { useOllamaChatStateBridge } from "./OllamaChat.state";
+import type { ChatMessage, ChatRole, OllamaApiMessage, OllamaStreamChunk } from "./OllamaChat.types";
 
 const OLLAMA_CHAT_URL =
   (import.meta.env.VITE_OLLAMA_CHAT_URL as string | undefined) ?? "/ollama/api/chat";
@@ -85,23 +68,6 @@ function loadStoredMessages(): ChatMessage[] {
   }
 }
 
-const panelVariants = {
-  hidden: { opacity: 0, scale: 0.94, y: 12 },
-  visible: { opacity: 1, scale: 1, y: 0 },
-  exit: { opacity: 0, scale: 0.94, y: 12 },
-};
-
-const toggleVariants = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: { opacity: 1, scale: 1 },
-  exit: { opacity: 0, scale: 0.9 },
-};
-
-const messageVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0 },
-};
-
 export function OllamaChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -110,7 +76,6 @@ export function OllamaChat() {
   const [isRetrieving, setIsRetrieving] = useState(false);
   const [retrievalKey, setRetrievalKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const { play } = useSound();
   const [ratings, setRatings] = useState<Record<string, "up" | "down" | null>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
@@ -128,6 +93,9 @@ export function OllamaChat() {
   );
 
   const hasUserMessages = messages.some((m) => m.role === "user");
+  const isActive = isSending || isRetrieving;
+
+  useOllamaChatStateBridge(isOpen, isActive);
 
   // auto-scroll
   useEffect(() => {
@@ -176,7 +144,7 @@ export function OllamaChat() {
     setCopiedId(null);
     setOpenSources({});
     localStorage.removeItem(STORAGE_KEY);
-    play("chat.reset");
+    chatSounds.reset();
   };
 
   const sendMessage = async (overrideText?: string) => {
@@ -193,7 +161,7 @@ export function OllamaChat() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setError(null);
-    play("chat.send");
+    chatSounds.send();
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -222,7 +190,7 @@ export function OllamaChat() {
       ...prev,
       { id: assistantMessageId, role: "assistant" as const, content: "", sourceCategories },
     ]);
-    play("chat.receive");
+    chatSounds.receive();
 
     try {
       const response = await fetch(OLLAMA_CHAT_URL, {
@@ -315,29 +283,27 @@ export function OllamaChat() {
   };
 
   const handleSuggestion = (suggestion: string) => {
-    play("chat.suggestion");
+    chatSounds.suggestion();
     void sendMessage(suggestion);
   };
 
   const handleCopy = (id: string, content: string) => {
     void navigator.clipboard.writeText(content).then(() => {
       setCopiedId(id);
-      play("chat.copy");
+      chatSounds.copy();
       setTimeout(() => setCopiedId((prev) => (prev === id ? null : prev)), 1800);
     });
   };
 
   const handleRate = (id: string, rating: "up" | "down") => {
     setRatings((prev) => ({ ...prev, [id]: prev[id] === rating ? null : rating }));
-    play("chat.rate");
+    chatSounds.rate();
   };
 
   const toggleSources = (id: string) => {
-    play("chat.sources.toggle");
+    chatSounds.toggleSources();
     setOpenSources((prev) => ({ ...prev, [id]: !prev[id] }));
   };
-
-  const isActive = isSending || isRetrieving;
 
   return (
     <div className="ollamaChat">
@@ -354,8 +320,8 @@ export function OllamaChat() {
             animate="visible"
             exit="exit"
             transition={{ duration: 0.15 }}
-            onMouseEnter={() => play("nav.hover")}
-            onClick={() => { play("chat.open"); setIsOpen(true); }}
+            onMouseEnter={chatSounds.hover}
+            onClick={() => { chatSounds.open(); setIsOpen(true); }}
           >
             <MessageCircle size={23} aria-hidden="true" />
           </motion.button>
@@ -384,7 +350,7 @@ export function OllamaChat() {
                   type="button"
                   aria-label="Reset chat"
                   title="Reset chat"
-                  onMouseEnter={() => play("nav.hover")}
+                  onMouseEnter={chatSounds.hover}
                   onClick={resetChat}
                 >
                   <RotateCcw size={17} aria-hidden="true" />
@@ -394,8 +360,8 @@ export function OllamaChat() {
                   type="button"
                   aria-label="Close chat"
                   title="Close chat"
-                  onMouseEnter={() => play("nav.hover")}
-                  onClick={() => { play("chat.close"); setIsOpen(false); }}
+                  onMouseEnter={chatSounds.hover}
+                  onClick={() => { chatSounds.close(); setIsOpen(false); }}
                 >
                   <X size={18} aria-hidden="true" />
                 </button>
@@ -444,7 +410,7 @@ export function OllamaChat() {
                       <button
                         className="ollamaChat__sourcesTrigger"
                         type="button"
-                        onMouseEnter={() => play("nav.hover")}
+                        onMouseEnter={chatSounds.hover}
                         onClick={() => toggleSources(message.id)}
                         aria-expanded={!!openSources[message.id]}
                       >
@@ -478,7 +444,7 @@ export function OllamaChat() {
                         type="button"
                         aria-label="Copy message"
                         title="Copy"
-                        onMouseEnter={() => play("nav.hover")}
+                        onMouseEnter={chatSounds.hover}
                         onClick={() => handleCopy(message.id, message.content)}
                       >
                         {copiedId === message.id ? (
@@ -492,7 +458,7 @@ export function OllamaChat() {
                         type="button"
                         aria-label="Rate response helpful"
                         title="Helpful"
-                        onMouseEnter={() => play("nav.hover")}
+                        onMouseEnter={chatSounds.hover}
                         onClick={() => handleRate(message.id, "up")}
                       >
                         <ThumbsUp size={13} aria-hidden="true" />
@@ -502,7 +468,7 @@ export function OllamaChat() {
                         type="button"
                         aria-label="Rate response unhelpful"
                         title="Not helpful"
-                        onMouseEnter={() => play("nav.hover")}
+                        onMouseEnter={chatSounds.hover}
                         onClick={() => handleRate(message.id, "down")}
                       >
                         <ThumbsDown size={13} aria-hidden="true" />
@@ -545,7 +511,7 @@ export function OllamaChat() {
                     key={s}
                     className="ollamaChat__suggestion"
                     type="button"
-                    onMouseEnter={() => play("nav.hover")}
+                    onMouseEnter={chatSounds.hover}
                     onClick={() => handleSuggestion(s)}
                   >
                     {s}
@@ -571,7 +537,7 @@ export function OllamaChat() {
                 aria-label="Send message"
                 title="Send message"
                 disabled={!input.trim() || isActive}
-                onMouseEnter={!input.trim() || isActive ? undefined : () => play("nav.hover")}
+                onMouseEnter={!input.trim() || isActive ? undefined : chatSounds.hover}
               >
                 {isActive ? (
                   <Loader2 className="ollamaChat__spinner" size={18} aria-hidden="true" />
