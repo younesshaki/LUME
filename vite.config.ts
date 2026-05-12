@@ -6,6 +6,7 @@ import tailwind from '@tailwindcss/vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const ollamaHost = env.VITE_OLLAMA_HOST ?? 'http://127.0.0.1:11434';
+  const adminApiHost = env.VITE_ADMIN_API_HOST ?? 'http://127.0.0.1:3000';
 
   return {
     plugins: [react(), glsl(), tailwind()],
@@ -18,6 +19,10 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       proxy: {
+        '/api': {
+          target: adminApiHost,
+          changeOrigin: true,
+        },
         '/ollama': {
           target: ollamaHost,
           changeOrigin: true,

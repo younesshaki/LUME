@@ -44,7 +44,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "destination": "https://admin.lume.app/api/$1"
     },
     {
       "source": "/(.*)",

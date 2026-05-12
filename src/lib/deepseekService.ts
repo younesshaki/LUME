@@ -1,67 +1,66 @@
 /**
- * Deepseek API chat inference service with streaming support.
- * Replaces Ollama for faster, more reliable responses.
+ * Chat client. Talks to the tenant-scoped /api/chat route on the admin app —
+ * the server builds the system prompt from the tenant's RAG corpus and
+ * vehicle inventory and streams Deepseek's response back as SSE.
+ *
+ * The browser never sees the system prompt, the RAG chunks, or the Deepseek
+ * API key. It only sends user/assistant turns and consumes deltas.
  */
+const CHAT_ENDPOINT = "/api/chat";
 
-const DEEPSEEK_API_URL =
-  (import.meta.env.VITE_DEEPSEEK_API_URL as string | undefined) ??
-  (import.meta.env.DEV ? "/deepseek-api/v1/chat/completions" : "/api/deepseek-proxy");
+/** Slug of the tenant whose RAG/vehicles should be used. Set from env so the
+ * same Vite bundle can be served per-tenant once subdomain routing flips on
+ * — for now this is a single-tenant deployment. */
+const TENANT_SLUG = (import.meta.env.VITE_LUME_TENANT as string | undefined) ?? "default";
 
 export type DeepseekMessage = {
   role: "user" | "assistant" | "system";
   content: string;
 };
 
-export type DeepseekStreamChunk = {
-  choices?: Array<{
-    delta?: {
-      content?: string;
-    };
-    finish_reason?: string | null;
-  }>;
+type ChatMetaEvent = { type: "meta"; sourceCategories: string[] };
+type ChatErrorEvent = { type: "error"; message: string };
+
+export type ChatStreamYield =
+  | { kind: "meta"; sourceCategories: string[] }
+  | { kind: "delta"; text: string };
+
+type DeepseekStreamChunk = {
+  choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
   error?: string;
 };
 
 /**
- * Stream a chat completion from Deepseek.
- * Yields partial content strings as they arrive.
- * Throws on network errors or API errors.
+ * Stream a chat turn from /api/chat. Yields meta first (source categories)
+ * then a sequence of text deltas. Drops any system messages — the server
+ * supplies the system prompt.
  */
-export async function* streamDeepseekChat(
+export async function* streamChat(
   messages: DeepseekMessage[],
   signal?: AbortSignal
-): AsyncGenerator<string, void, unknown> {
-  const response = await fetch(DEEPSEEK_API_URL, {
+): AsyncGenerator<ChatStreamYield, void, unknown> {
+  const sanitized = messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({ role: m.role, content: m.content }));
+
+  const response = await fetch(CHAT_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-Lume-Tenant": TENANT_SLUG,
     },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      messages,
-      stream: true,
-    }),
+    body: JSON.stringify({ messages: sanitized, stream: true }),
     signal,
   });
 
   if (!response.ok) {
-    let errorBody = "";
-    try {
-      errorBody = await response.text();
-    } catch {
-      // ignore
-    }
-    throw new Error(
-      `Deepseek API error: ${response.status} ${response.statusText}${
-        errorBody ? ` - ${errorBody}` : ""
-      }`
-    );
+    let body = "";
+    try { body = await response.text(); } catch { /* ignore */ }
+    throw new Error(`Chat API ${response.status}: ${body || response.statusText}`);
   }
 
   const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error("Deepseek API response body is not readable");
-  }
+  if (!reader) throw new Error("Chat API response body is not readable");
 
   const decoder = new TextDecoder();
   let buffer = "";
@@ -70,50 +69,37 @@ export async function* streamDeepseekChat(
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
+
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
-        if (trimmed === "data: [DONE]") {
-          return;
-        }
-        if (trimmed.startsWith("data: ")) {
-          const jsonStr = trimmed.slice(6);
-          try {
-            const chunk: DeepseekStreamChunk = JSON.parse(jsonStr);
-            if (chunk.error) {
-              throw new Error(`Deepseek API error: ${chunk.error}`);
-            }
-            const content = chunk.choices?.[0]?.delta?.content;
-            if (content) {
-              yield content;
-            }
-          } catch (parseErr) {
-            console.warn("[deepseek] Failed to parse chunk:", jsonStr, parseErr);
-          }
-        }
-      }
-    }
+        if (trimmed === "data: [DONE]") return;
+        if (!trimmed.startsWith("data: ")) continue;
 
-    buffer += decoder.decode();
-    const trimmed = buffer.trim();
-    if (trimmed && trimmed.startsWith("data: ")) {
-      const jsonStr = trimmed.slice(6);
-      try {
-        const chunk: DeepseekStreamChunk = JSON.parse(jsonStr);
-        if (chunk.error) {
-          throw new Error(`Deepseek API error: ${chunk.error}`);
+        const jsonStr = trimmed.slice(6);
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(jsonStr);
+        } catch {
+          continue;
         }
+
+        if (isMetaEvent(parsed)) {
+          yield { kind: "meta", sourceCategories: parsed.sourceCategories };
+          continue;
+        }
+        if (isErrorEvent(parsed)) {
+          throw new Error(parsed.message);
+        }
+
+        const chunk = parsed as DeepseekStreamChunk;
+        if (chunk.error) throw new Error(`Chat error: ${chunk.error}`);
         const content = chunk.choices?.[0]?.delta?.content;
-        if (content) {
-          yield content;
-        }
-      } catch (parseErr) {
-        console.warn("[deepseek] Failed to parse final chunk:", jsonStr, parseErr);
+        if (content) yield { kind: "delta", text: content };
       }
     }
   } finally {
@@ -121,17 +107,20 @@ export async function* streamDeepseekChat(
   }
 }
 
-/**
- * Non-streaming convenience function.
- * Returns the full response content as a string.
- */
-export async function deepseekChat(
-  messages: DeepseekMessage[],
-  signal?: AbortSignal
-): Promise<string> {
-  let fullContent = "";
-  for await (const chunk of streamDeepseekChat(messages, signal)) {
-    fullContent += chunk;
-  }
-  return fullContent;
+function isMetaEvent(v: unknown): v is ChatMetaEvent {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    (v as { type?: string }).type === "meta" &&
+    Array.isArray((v as ChatMetaEvent).sourceCategories)
+  );
+}
+
+function isErrorEvent(v: unknown): v is ChatErrorEvent {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    (v as { type?: string }).type === "error" &&
+    typeof (v as ChatErrorEvent).message === "string"
+  );
 }

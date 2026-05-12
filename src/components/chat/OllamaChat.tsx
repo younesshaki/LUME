@@ -2,9 +2,7 @@ import "./OllamaChat.css";
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
-import { getSystemPromptWithContext } from "@/lib/ragService";
-import { streamDeepseekChat, type DeepseekMessage } from "@/lib/deepseekService";
-import { loadVehicles, type Vehicle } from "@/experience/vehicles/catalog";
+import { streamChat, type DeepseekMessage } from "@/lib/deepseekService";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
@@ -74,11 +72,9 @@ export function OllamaChat() {
   const [ratings, setRatings] = useState<Record<string, "up" | "down" | null>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
-  const [vehiclesLoaded, setVehiclesLoaded] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
-  const vehiclesRef = useRef<Vehicle[]>([]);
 
   const apiMessages = useMemo<OllamaApiMessage[]>(
     () =>
@@ -102,14 +98,6 @@ export function OllamaChat() {
   // cleanup on unmount
   useEffect(() => {
     return () => abortControllerRef.current?.abort();
-  }, []);
-
-  // load vehicle inventory once for RAG context
-  useEffect(() => {
-    loadVehicles().then((v) => {
-      vehiclesRef.current = v;
-      setVehiclesLoaded(true);
-    });
   }, []);
 
   // persist chat (skip during active stream to avoid partial messages)
@@ -149,7 +137,7 @@ export function OllamaChat() {
   const sendMessage = async (overrideText?: string) => {
     const text = overrideText ?? input;
     const trimmedInput = text.trim();
-    if (!trimmedInput || isSending || isRetrieving || !vehiclesLoaded) return;
+    if (!trimmedInput || isSending || isRetrieving) return;
 
     const userMessage = createMessage("user", trimmedInput);
     const nextApiMessages: OllamaApiMessage[] = [
@@ -165,51 +153,59 @@ export function OllamaChat() {
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
-    // Phase A: RAG retrieval
+    // The server handles RAG retrieval and prompt assembly. We show
+    // `isRetrieving` until the first chunk arrives (meta or content).
     setRetrievalKey((k) => k + 1);
     setIsRetrieving(true);
-    let systemPrompt: string;
-    let sourceCategories: string[] = [];
-    try {
-      const result = await getSystemPromptWithContext(trimmedInput, abortController.signal, vehiclesRef.current);
-      systemPrompt = result.prompt;
-      sourceCategories = result.sourceCategories;
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      systemPrompt = "You are the LUME assistant. Be concise and helpful.";
-    } finally {
-      setIsRetrieving(false);
-    }
 
-    // Phase B: Streaming Deepseek chat
-    setIsSending(true);
     const assistantMessageId = createMessage("assistant", "").id;
     streamingMessageIdRef.current = assistantMessageId;
-    setMessages((prev) => [
-      ...prev,
-      { id: assistantMessageId, role: "assistant" as const, content: "", sourceCategories },
-    ]);
-    chatSounds.receive();
+    let sourceCategories: string[] = [];
+    let assistantInserted = false;
 
     try {
-      const deepseekMessages: DeepseekMessage[] = [
-        { role: "system", content: systemPrompt },
-        ...nextApiMessages,
-      ];
+      const messages: DeepseekMessage[] = nextApiMessages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
-      for await (const token of streamDeepseekChat(deepseekMessages, abortController.signal)) {
-        if (token) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMessageId ? { ...m, content: m.content + token } : m
-            )
-          );
+      for await (const event of streamChat(messages, abortController.signal)) {
+        if (event.kind === "meta") {
+          sourceCategories = event.sourceCategories;
+          continue;
+        }
+        if (event.kind === "delta") {
+          if (!assistantInserted) {
+            setIsRetrieving(false);
+            setIsSending(true);
+            chatSounds.receive();
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: assistantMessageId,
+                role: "assistant" as const,
+                content: event.text,
+                sourceCategories,
+              },
+            ]);
+            assistantInserted = true;
+          } else {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMessageId
+                  ? { ...m, content: m.content + event.text, sourceCategories }
+                  : m
+              )
+            );
+          }
         }
       }
 
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantMessageId ? { ...m, content: m.content.trim() } : m
+          m.id === assistantMessageId
+            ? { ...m, content: m.content.trim(), sourceCategories }
+            : m
         )
       );
     } catch (caughtError) {
@@ -218,11 +214,12 @@ export function OllamaChat() {
         return;
       }
       setMessages((prev) => prev.filter((m) => m.id !== assistantMessageId));
-      const message = caughtError instanceof Error ? caughtError.message : "Unable to reach Deepseek API.";
+      const message = caughtError instanceof Error ? caughtError.message : "Unable to reach chat API.";
       setError(message);
     } finally {
       if (abortControllerRef.current === abortController) abortControllerRef.current = null;
       streamingMessageIdRef.current = null;
+      setIsRetrieving(false);
       setIsSending(false);
     }
   };
@@ -492,8 +489,8 @@ export function OllamaChat() {
                 type="submit"
                 aria-label="Send message"
                 title="Send message"
-                disabled={!input.trim() || isActive || !vehiclesLoaded}
-                onMouseEnter={!input.trim() || isActive || !vehiclesLoaded ? undefined : chatSounds.hover}
+                disabled={!input.trim() || isActive}
+                onMouseEnter={!input.trim() || isActive ? undefined : chatSounds.hover}
               >
                 {isActive ? (
                   <Loader2 className="ollamaChat__spinner" size={18} aria-hidden="true" />

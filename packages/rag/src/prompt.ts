@@ -1,0 +1,109 @@
+/**
+ * System prompt assembly. Tenant-aware — each tenant supplies its own base
+ * persona; this module injects retrieved context and vehicle inventory.
+ *
+ * IMPORTANT: This runs server-side only. The assembled prompt MUST NOT be
+ * returned to the client — only the model's streamed output and the list of
+ * source categories should ever leave the server.
+ */
+import type { RetrievedChunk, Vehicle } from "@lume/types";
+import type { VehicleQueryFilters } from "./vehicleFilters";
+
+const DEFAULT_BASE_PROMPT = `You are an AI assistant. Answer ONLY using the context provided below. If the answer is not in the context, say: "I don't have that information."`;
+
+export type SystemPromptOptions = {
+  /** Tenant-specific persona / brand voice. Falls back to a neutral default. */
+  basePrompt?: string;
+  /** Top-k chunks retrieved by similarity search. */
+  contextChunks: RetrievedChunk[];
+  /** Vehicles matching the query, ranked. Pass [] when the query isn't vehicle-related. */
+  matchedVehicles?: Vehicle[];
+  /** Total count of vehicles matching filters BEFORE truncation — used for "how many" answers. */
+  totalMatched?: number;
+  /** Total inventory size for context. */
+  totalInventory?: number;
+  /** Filters that were applied, for transparency in the prompt. */
+  filters?: VehicleQueryFilters;
+};
+
+export type AssembledPrompt = {
+  prompt: string;
+  sourceCategories: string[];
+};
+
+function formatVehiclePrice(price: number): string {
+  return `Est. $${price.toLocaleString()}`;
+}
+
+function formatVehiclesBlock(
+  matched: Vehicle[],
+  totalMatched: number,
+  totalInventory: number,
+  filters: VehicleQueryFilters
+): string {
+  const isFiltered = Object.keys(filters).length > 0;
+  const filterSummary = isFiltered
+    ? ` matching ${Object.entries(filters).map(([k, v]) => `${k}=${v}`).join(", ")}`
+    : "";
+  const showingNote =
+    matched.length < totalMatched
+      ? `Showing first ${matched.length} of ${totalMatched} — use the TOTAL MATCHING count when answering "how many".`
+      : `All ${totalMatched} shown below.`;
+
+  const header =
+    `=== VEHICLE INVENTORY ===\n` +
+    `Total vehicles in full inventory: ${totalInventory}\n` +
+    `TOTAL MATCHING${filterSummary}: ${totalMatched}\n` +
+    `${showingNote}\n`;
+
+  const lines = matched.map((v, i) => {
+    const parts = [
+      `${v.year} ${v.make} ${v.model}`,
+      v.trim || null,
+      v.stockType,
+      formatVehiclePrice(v.price),
+      v.mileage !== null
+        ? v.mileage === 0 ? "0 mi (new)" : `${v.mileage.toLocaleString()} mi`
+        : null,
+      v.bodyStyle || null,
+      v.drivetrain || null,
+      v.fuelType || null,
+      v.sellerCity ? `${v.sellerCity}, ${v.sellerState}` : null,
+    ].filter(Boolean);
+    return `[${i + 1}] ${parts.join(" | ")}`;
+  });
+
+  return `${header}\n${lines.join("\n")}\n==============================`;
+}
+
+export function assembleSystemPrompt(opts: SystemPromptOptions): AssembledPrompt {
+  const base = opts.basePrompt?.trim() || DEFAULT_BASE_PROMPT;
+  const sourceCategories: string[] = [
+    ...new Set(opts.contextChunks.map((c) => c.category)),
+  ];
+
+  let contextBlock =
+    opts.contextChunks.length > 0
+      ? opts.contextChunks.map((c, i) => `[${i + 1}] ${c.text}`).join("\n\n")
+      : "";
+
+  if (opts.matchedVehicles && opts.matchedVehicles.length > 0) {
+    const vehicleBlock = formatVehiclesBlock(
+      opts.matchedVehicles,
+      opts.totalMatched ?? opts.matchedVehicles.length,
+      opts.totalInventory ?? opts.matchedVehicles.length,
+      opts.filters ?? {}
+    );
+    contextBlock = contextBlock ? `${contextBlock}\n\n---\n${vehicleBlock}` : vehicleBlock;
+    sourceCategories.push("vehicles");
+  }
+
+  if (!contextBlock) {
+    return { prompt: base, sourceCategories: [] };
+  }
+
+  return {
+    prompt: `${base}\n\n---\nRelevant context:\n${contextBlock}\n---`,
+    sourceCategories,
+  };
+}
