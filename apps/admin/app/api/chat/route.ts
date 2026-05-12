@@ -17,8 +17,8 @@ import {
   extractVehicleFilters,
   isVehicleQuery,
   matchVehicles,
+  retrieveByKeywords,
 } from "@lume/rag";
-import { createOllamaEmbedder, retrieveContext } from "@lume/rag/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 
@@ -70,19 +70,25 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "Unknown or inactive tenant" }, 404, request);
   }
 
-  // Build the tenant-scoped system prompt.
+  // Build the tenant-scoped system prompt. Keyword + fuzzy retrieval over
+  // this tenant's chunks — no embedder needed. When the corpus outgrows
+  // in-memory scoring (~thousands of chunks), swap retrieveByKeywords()
+  // for retrieveContext() from @lume/rag/server + an embedder.
   const supabase = createServiceClient();
-  const embed = createOllamaEmbedder();
 
   let assembled;
   try {
-    const contextChunks = await retrieveContext({
-      client: supabase,
-      tenantId: tenant.tenantId,
-      query: lastUser.content,
-      embed,
-      topK: 7,
-    });
+    const { data: chunkRows, error: chunkErr } = await supabase
+      .from("rag_chunks")
+      .select("text, category")
+      .eq("tenant_id", tenant.tenantId);
+    if (chunkErr) throw new Error(`rag_chunks query failed: ${chunkErr.message}`);
+
+    const contextChunks = retrieveByKeywords(
+      chunkRows ?? [],
+      lastUser.content,
+      7
+    );
 
     let matchedVehicles;
     let totalMatched: number | undefined;
