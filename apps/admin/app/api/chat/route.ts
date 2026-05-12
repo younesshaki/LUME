@@ -14,12 +14,11 @@ import { createServiceClient } from "@lume/db/server";
 import { rowToVehicle } from "@lume/db";
 import {
   assembleSystemPrompt,
-  createOllamaEmbedder,
   extractVehicleFilters,
   isVehicleQuery,
   matchVehicles,
-  retrieveContext,
-} from "@lume/rag/server";
+} from "@lume/rag";
+import { createOllamaEmbedder, retrieveContext } from "@lume/rag/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 
