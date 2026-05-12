@@ -1,5 +1,7 @@
 import embeddedChunks from "./knowledge/embeddings.json";
 import { formatVehiclePrice, type Vehicle } from "../experience/vehicles/catalog";
+import { levenshteinDistance, isFuzzyMatch, getMaxDistance } from "../utils/fuzzyMatch";
+import { MAKE_ALIASES as FUZZY_MAKE_ALIASES } from "../config/vehicleAliases";
 
 type EmbeddedChunk = {
   id: string;
@@ -47,6 +49,59 @@ const ALL_MAKES = [
   "nissan","polestar","porsche","ram","rolls-royce","rolls royce","subaru",
   "tesla","toyota","volkswagen","vw","volvo",
 ];
+
+// ─── Build reverse fuzzy alias map for efficient lookup ───────────────────────
+function buildFuzzyMakeMap(): Map<string, string> {
+  const map = new Map<string, string>();
+  // Map lowercase aliases to their canonical forms (as stored in MAKE_ALIASES)
+  for (const [alias, canonical] of Object.entries(MAKE_ALIASES)) {
+    map.set(alias.toLowerCase(), canonical);
+  }
+  // Also map canonical forms from fuzzy config
+  for (const [canonical, aliases] of Object.entries(FUZZY_MAKE_ALIASES)) {
+    for (const alias of aliases) {
+      if (!map.has(alias.toLowerCase())) {
+        map.set(alias.toLowerCase(), canonical);
+      }
+    }
+  }
+  return map;
+}
+
+const fuzzyMakeMap = buildFuzzyMakeMap();
+const fuzzyCanonicalMakes = Array.from(new Set(Object.keys(FUZZY_MAKE_ALIASES)));
+
+/**
+ * Fuzzy-match a raw make query to a canonical make name.
+ * 1. First tries exact alias match
+ * 2. Falls back to Levenshtein distance matching
+ */
+function fuzzyLookupMake(query: string): string | null {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  // Direct alias match?
+  if (fuzzyMakeMap.has(trimmed)) {
+    return fuzzyMakeMap.get(trimmed)!;
+  }
+
+  // Fuzzy match against canonical makes
+  let bestDistance = Infinity;
+  let bestMatch: string | null = null;
+
+  for (const canonical of fuzzyCanonicalMakes) {
+    const maxDist = getMaxDistance(canonical);
+    if (maxDist === 0 && trimmed !== canonical) continue;
+
+    const dist = levenshteinDistance(trimmed, canonical);
+    if (dist <= maxDist && dist < bestDistance) {
+      bestDistance = dist;
+      bestMatch = canonical;
+    }
+  }
+
+  return bestMatch;
+}
 
 const VEHICLE_INTENT_KEYWORDS = [
   "car","cars","vehicle","vehicles","truck","trucks","suv","sedan","coupe",
@@ -136,15 +191,34 @@ function extractVehicleFilters(query: string, vehicles: Vehicle[] = []): Vehicle
   const q = query.toLowerCase();
   const filters: VehicleQueryFilters = {};
 
-  // Make
+  // Make (now with fuzzy matching for typo tolerance)
+  let foundMake: string | null = null;
+
+  // First try exact matches from ALL_MAKES
   for (const alias of ALL_MAKES) {
     if (q.includes(alias)) {
       const canonical =
         MAKE_ALIASES[alias] ??
         alias.replace(/(^|\s)\w/g, (c) => c.toUpperCase());
-      filters.make = canonical;
+      foundMake = canonical;
       break;
     }
+  }
+
+  // If no exact match, try fuzzy matching
+  if (!foundMake) {
+    const tokens = q.split(/\s+/).filter(t => t.length > 2);
+    for (const token of tokens) {
+      const fuzzyCanonical = fuzzyLookupMake(token);
+      if (fuzzyCanonical) {
+        foundMake = fuzzyCanonical;
+        break;
+      }
+    }
+  }
+
+  if (foundMake) {
+    filters.make = foundMake;
   }
 
   // Body style
