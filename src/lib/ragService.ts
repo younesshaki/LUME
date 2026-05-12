@@ -150,35 +150,64 @@ function extractVehicleFilters(query: string, vehicles: Vehicle[] = []): Vehicle
   const q = corrected.toLowerCase();
   const filters: VehicleQueryFilters = {};
 
-  // Make — use fuzzyLookup for robust matching
-  const make = fuzzyLookup(q, MAKE_ALIASES);
-  if (make) {
-    filters.make = make.charAt(0).toUpperCase() + make.slice(1);
+  // Split query into tokens for targeted matching
+  const tokens = q.split(/\s+/);
+
+  // Make — fuzzy match each token against makes
+  for (const token of tokens) {
+    if (token.length > 2) {
+      const make = fuzzyLookup(token, MAKE_ALIASES);
+      if (make) {
+        filters.make = make.charAt(0).toUpperCase() + make.slice(1);
+        break;
+      }
+    }
   }
 
-  // Body style — use fuzzyLookup
-  const bodyStyle = fuzzyLookup(q, BODY_STYLE_ALIASES);
-  if (bodyStyle) {
-    filters.bodyStyle = bodyStyle.charAt(0).toUpperCase() + bodyStyle.slice(1);
+  // Body style — fuzzy match tokens against body styles
+  if (!filters.bodyStyle) {
+    for (const token of tokens) {
+      if (token.length > 2) {
+        const bodyStyle = fuzzyLookup(token, BODY_STYLE_ALIASES);
+        if (bodyStyle) {
+          filters.bodyStyle = bodyStyle.charAt(0).toUpperCase() + bodyStyle.slice(1);
+          break;
+        }
+      }
+    }
   }
 
-  // Stock type (not in fuzzyTerms, using original regex)
+  // Stock type (regex check)
   if (/\bnew\b/.test(q)) filters.stockType = "New";
   else if (/\bused\b|\bpre-?owned\b/.test(q)) filters.stockType = "Used";
 
-  // Fuel type — use fuzzyLookup
-  const fuelType = fuzzyLookup(q, FUEL_TYPE_ALIASES);
-  if (fuelType) {
-    filters.fuelType =
-      fuelType === "plug-in hybrid"
-        ? "Plug-In Hybrid"
-        : fuelType.charAt(0).toUpperCase() + fuelType.slice(1);
+  // Fuel type — fuzzy match tokens
+  if (!filters.fuelType) {
+    for (const token of tokens) {
+      if (token.length > 2) {
+        const fuelType = fuzzyLookup(token, FUEL_TYPE_ALIASES);
+        if (fuelType) {
+          filters.fuelType =
+            fuelType === "plug-in hybrid"
+              ? "Plug-In Hybrid"
+              : fuelType.charAt(0).toUpperCase() + fuelType.slice(1);
+          break;
+        }
+      }
+    }
   }
 
-  // Drivetrain — use fuzzyLookup
-  const drivetrain = fuzzyLookup(q, DRIVETRAIN_ALIASES);
-  if (drivetrain) {
-    filters.drivetrain = drivetrain.toUpperCase();
+  // Drivetrain — fuzzy match tokens
+  if (!filters.drivetrain) {
+    for (const token of tokens) {
+      if (token.length > 1) {
+        const drivetrain = fuzzyLookup(token, DRIVETRAIN_ALIASES);
+        if (drivetrain) {
+          filters.drivetrain = drivetrain.toUpperCase();
+          break;
+        }
+      }
+    }
   }
 
   // Year (e.g. "2023 BMW")
