@@ -1,5 +1,5 @@
 import { mediaUrl } from "@/config/cdn";
-import { type DetailModel3D } from "@/components/three/modelTypes";
+import { type DetailModel3D } from "./model3d";
 import rawCatalog from "./catalog.json";
 
 export type ProductCategory = "drink" | "fragrance" | "fashion";

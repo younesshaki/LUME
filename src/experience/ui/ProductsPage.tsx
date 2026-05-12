@@ -6,7 +6,7 @@ import {
   type Product,
   type ProductFilterCategory,
 } from "../products/catalog";
-import { hasDetailModel3D } from "@/components/three/modelTypes";
+import { hasDetailModel3D } from "../products/model3d";
 import { useSound } from "../../lib/sound";
 import CinematicShell from "./CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";

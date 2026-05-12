@@ -25,24 +25,5 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            animation: ["gsap", "motion"],
-            react: ["react", "react-dom"],
-            supabase: ["@supabase/supabase-js"],
-            three: [
-              "three",
-              "three-stdlib",
-              "@react-three/fiber",
-              "@react-three/drei",
-              "@react-three/postprocessing",
-              "postprocessing",
-            ],
-          },
-        },
-      },
-    },
   };
 })
