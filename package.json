@@ -36,6 +36,7 @@
     "r3f-perf": "^7.2.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.3",
     "sass": "^1.77.2",
     "shadcn": "^4.4.0",
     "simplex-noise": "^4.0.3",
