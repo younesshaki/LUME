@@ -19,7 +19,8 @@
     "build": "tsc && vite build",
     "build:admin": "npm run build --workspace=@lume/admin",
     "preview": "vite preview",
-    "embed": "tsx scripts/generateEmbeddings.ts"
+    "embed": "tsx scripts/generateEmbeddings.ts",
+    "seed:default-tenant": "tsx scripts/seed-default-tenant.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
