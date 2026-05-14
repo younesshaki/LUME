@@ -5,20 +5,29 @@ import VehicleForm from "../VehicleForm";
 type PageProps = { params: Promise<{ tenant: string; id: string }> };
 
 export default async function EditVehiclePage({ params }: PageProps) {
-  const { tenant, id } = await params;
+  const { tenant: slug, id } = await params;
   const supabase = await createSupabaseServerClient();
+
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!tenant) notFound();
 
   const { data: vehicle } = await supabase
     .from("vehicles")
     .select("*")
     .eq("id", id)
+    .eq("tenant_id", tenant.id)
     .maybeSingle();
 
   if (!vehicle) notFound();
 
   return (
     <VehicleForm
-      tenantSlug={tenant}
+      tenantId={tenant.id}
       vehicleId={vehicle.id}
       initial={{
         year: vehicle.year,
