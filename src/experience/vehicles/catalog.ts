@@ -145,6 +145,13 @@ const FALLBACK_IMAGES = [
   mediaUrl("vehicle%20images/vehicle-type-7.webp"),
 ];
 
+/** Vehicles that have GPT-generated images instead of fallback placeholders. */
+const GENERATED_IMAGES: Record<string, string> = {
+  "b27cf3bf-0776-483d-ad1b-49d31d2d2292": "/vehicles/b27cf3bf-generated.webp", // 2014 GMC Sierra 1500
+  "f614b808-800c-4359-a29f-68653000f728": "/vehicles/f614b808-generated.webp", // 2014 Toyota Tacoma
+  "bbcb36a6-bec7-4b61-a120-913ccb35005d": "/vehicles/bbcb36a6-generated.webp", // 2020 Toyota Highlander
+};
+
 const PRICE_TIERS: { makes: string[]; min: number; max: number }[] = [
   { makes: ["Ferrari", "Lamborghini", "Rolls-Royce", "Maserati"], min: 180000, max: 650000 },
   { makes: ["Porsche", "Mercedes-Benz", "BMW", "Audi", "Lexus", "Land Rover", "Jaguar", "Genesis", "Cadillac", "Lincoln"], min: 55000, max: 185000 },
@@ -281,7 +288,7 @@ export async function loadVehicles(): Promise<Vehicle[]> {
       interiorColor: row["interiorColor"] !== "[PREMIUM]" ? row["interiorColor"] : "",
       drivetrain: row["drivetrain"] ? normalizeDrivetrain(row["drivetrain"]) : "",
       fuelType: row["fuelType"] ? normalizeFuelType(row["fuelType"]) : "",
-      imageSrc: FALLBACK_IMAGES[Math.abs(hashString(row["_primaryKey"])) % FALLBACK_IMAGES.length],
+      imageSrc: GENERATED_IMAGES[row["_primaryKey"]] || FALLBACK_IMAGES[Math.abs(hashString(row["_primaryKey"])) % FALLBACK_IMAGES.length],
       isSpecial: row["_primaryKey"] in SPECIALS_REGISTRY,
       specialImageSrc: SPECIALS_REGISTRY[row["_primaryKey"]]
         ? SPECIAL_IMAGES[SPECIALS_REGISTRY[row["_primaryKey"]].imageIndex]
