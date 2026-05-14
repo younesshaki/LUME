@@ -36,17 +36,18 @@ const EMPTY: FormState = {
 };
 
 export default function VehicleForm({
-  tenantSlug,
+  tenantId,
   vehicleId,
   initial,
 }: {
-  tenantSlug: string;
+  tenantId: string;
   vehicleId?: string;
   initial?: FormState;
 }) {
   const router = useRouter();
   const [data, setData] = useState<FormState>(initial ?? EMPTY);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isNew = !vehicleId;
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
@@ -55,78 +56,72 @@ export default function VehicleForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+
+    // Basic validation
+    if (!data.make.trim()) { setError("Make is required"); return; }
+    if (!data.model.trim()) { setError("Model is required"); return; }
+    if (data.year < 1900 || data.year > 2030) { setError("Invalid year"); return; }
+    if (data.price <= 0) { setError("Price must be greater than 0"); return; }
+
     setSaving(true);
-    const supabase = createSupabaseBrowserClient() as any;
+    const supabase = createSupabaseBrowserClient();
+
+    const payload = {
+      tenant_id: tenantId,
+      external_id: null,
+      stock_type: data.stock_type,
+      year: data.year,
+      make: data.make,
+      model: data.model,
+      trim: data.trim,
+      price: data.price,
+      mileage: data.mileage ?? null,
+      body_style: data.body_style,
+      exterior_color: data.exterior_color,
+      interior_color: data.interior_color,
+      drivetrain: data.drivetrain,
+      fuel_type: data.fuel_type,
+      image_src: "",
+      seller_city: data.seller_city,
+      seller_state: data.seller_state,
+      is_special: false,
+      special_image_src: null,
+    } satisfies Record<string, unknown>;
 
     if (isNew) {
-      const { data: tenant } = await supabase
-        .from("tenants")
-        .select("id")
-        .eq("slug", tenantSlug)
-        .single();
-      if (!tenant) { alert("Tenant not found"); setSaving(false); return; }
-
-      const { error } = await supabase.from("vehicles").insert({
-        tenant_id: tenant.id,
-        external_id: null,
-        stock_type: data.stock_type,
-        year: data.year,
-        make: data.make,
-        model: data.model,
-        trim: data.trim,
-        price: data.price,
-        mileage: data.mileage,
-        body_style: data.body_style,
-        exterior_color: data.exterior_color,
-        interior_color: data.interior_color,
-        drivetrain: data.drivetrain,
-        fuel_type: data.fuel_type,
-        image_src: "",
-        seller_city: data.seller_city,
-        seller_state: data.seller_state,
-        is_special: false,
-        special_image_src: null,
-      });
-      if (error) { alert("Error: " + error.message); setSaving(false); return; }
+      const { error } = await (supabase.from("vehicles") as any).insert(payload);
+      if (error) { setError(error.message); setSaving(false); return; }
     } else {
-      const { error } = await supabase
-        .from("vehicles")
-        .update({
-          stock_type: data.stock_type,
-          year: data.year,
-          make: data.make,
-          model: data.model,
-          trim: data.trim,
-          price: data.price,
-          mileage: data.mileage,
-          body_style: data.body_style,
-          exterior_color: data.exterior_color,
-          interior_color: data.interior_color,
-          drivetrain: data.drivetrain,
-          fuel_type: data.fuel_type,
-          seller_city: data.seller_city,
-          seller_state: data.seller_state,
-        })
-        .eq("id", vehicleId!);
-      if (error) { alert("Error: " + error.message); setSaving(false); return; }
+      const { error } = await (supabase.from("vehicles") as any)
+        .update(payload)
+        .eq("id", vehicleId)
+        .eq("tenant_id", tenantId);
+      if (error) { setError(error.message); setSaving(false); return; }
     }
 
-    router.push(`/admin/${tenantSlug}/vehicles`);
-    router.refresh();
+    router.push(`/admin/${tenantId}/vehicles`);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-8">
+    <form onSubmit={handleSubmit} className="max-w-2xl space-y-8" noValidate>
       <header>
         <h1 className="text-2xl font-semibold">{isNew ? "Add Vehicle" : "Edit Vehicle"}</h1>
       </header>
+
+      {error && (
+        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-400" role="alert">
+          {error}
+        </div>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-sm font-medium text-neutral-500 uppercase tracking-wide">Stock Info</h2>
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Year</span>
+            <span className="text-xs font-medium text-neutral-500">Year *</span>
             <input type="number" value={data.year} onChange={(e) => set("year", +e.target.value)}
+              required min={1900} max={2030}
               className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
@@ -137,13 +132,13 @@ export default function VehicleForm({
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Make</span>
-            <input value={data.make} onChange={(e) => set("make", e.target.value)}
+            <span className="text-xs font-medium text-neutral-500">Make *</span>
+            <input value={data.make} onChange={(e) => set("make", e.target.value)} required
               className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Model</span>
-            <input value={data.model} onChange={(e) => set("model", e.target.value)}
+            <span className="text-xs font-medium text-neutral-500">Model *</span>
+            <input value={data.model} onChange={(e) => set("model", e.target.value)} required
               className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
@@ -152,8 +147,9 @@ export default function VehicleForm({
               className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Price ($)</span>
+            <span className="text-xs font-medium text-neutral-500">Price ($) *</span>
             <input type="number" value={data.price} onChange={(e) => set("price", +e.target.value)}
+              required min={1}
               className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">

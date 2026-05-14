@@ -5,22 +5,27 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useState } from "react";
 
 export default function DeleteButton({
-  tenantSlug,
+  tenantId,
   vehicleId,
 }: {
-  tenantSlug: string;
+  tenantId: string;
   vehicleId: string;
 }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete() {
     if (!confirm("Delete this vehicle permanently?")) return;
     setDeleting(true);
     const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.from("vehicles").delete().eq("id", vehicleId);
+    const { error } = await supabase
+      .from("vehicles")
+      .delete()
+      .eq("id", vehicleId)
+      .eq("tenant_id", tenantId);
     if (error) {
-      alert("Failed to delete: " + error.message);
+      setError(error.message);
       setDeleting(false);
       return;
     }
@@ -28,12 +33,16 @@ export default function DeleteButton({
   }
 
   return (
-    <button
-      onClick={handleDelete}
-      disabled={deleting}
-      className="text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
-    >
-      {deleting ? "..." : "Delete"}
-    </button>
+    <div className="flex items-center gap-1">
+      <button
+        onClick={handleDelete}
+        disabled={deleting}
+        aria-label="Delete vehicle"
+        className="text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+      >
+        {deleting ? "Deleting…" : "Delete"}
+      </button>
+      {error && <span className="text-xs text-red-500">{error}</span>}
+    </div>
   );
 }
