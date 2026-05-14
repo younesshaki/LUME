@@ -45,14 +45,21 @@ export default async function AdminLayout({
             const tenant = Array.isArray(m.tenants) ? m.tenants[0] : m.tenants;
             if (!tenant) return null;
             return (
-              <Link
-                key={tenant.id}
-                href={`/admin/${tenant.slug}`}
-                className="block rounded-md px-2 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-900"
-              >
-                {tenant.name}
-                <span className="ml-2 text-xs text-neutral-500">{m.role}</span>
-              </Link>
+              <div key={tenant.id} className="space-y-0.5">
+                <Link
+                  href={`/admin/${tenant.slug}`}
+                  className="block rounded-md px-2 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                >
+                  {tenant.name}
+                  <span className="ml-2 text-xs text-neutral-500">{m.role}</span>
+                </Link>
+                <Link
+                  href={`/admin/${tenant.slug}/vehicles`}
+                  className="block rounded-md px-2 py-1 pl-6 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                >
+                  Vehicles
+                </Link>
+              </div>
             );
           })}
         </nav>
