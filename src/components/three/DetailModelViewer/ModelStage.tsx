@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
-import { Stage, OrbitControls } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { Vector3, PointLight, Raycaster, Vector2 } from "three";
 import type { ModelLighting } from "./modelTypes";
 import type { ModelTargetInfo } from "./ModelAsset";
@@ -119,24 +119,36 @@ type ModelStageProps = {
   children: React.ReactNode;
 };
 
-const PRESET_MAP: Record<ModelLighting, "rembrandt" | "portrait" | "soft"> = {
-  studio: "rembrandt",
-  soft: "portrait",
-  dramatic: "rembrandt",
+const LIGHTING: Record<
+  ModelLighting,
+  {
+    ambient: number;
+    key: number;
+    fill: number;
+    rim: number;
+  }
+> = {
+  studio: { ambient: 1.1, key: 3.2, fill: 1.1, rim: 2.4 },
+  soft: { ambient: 1.45, key: 2.1, fill: 1.55, rim: 1.2 },
+  dramatic: { ambient: 0.72, key: 4.2, fill: 0.55, rim: 3.4 },
 };
 
 export default function ModelStage({ lighting = "studio", autoRotate = true, targetInfo, cursorInCanvas = false, children }: ModelStageProps) {
+  const lights = LIGHTING[lighting];
+
   return (
     <>
-      <Stage
-        preset={PRESET_MAP[lighting]}
-        shadows={false}
-        environment="studio"
-        intensity={0.6}
-        adjustCamera={false}
-      >
-        {children}
-      </Stage>
+      <ambientLight intensity={lights.ambient} />
+      <directionalLight position={[3, 4, 5]} intensity={lights.key} color="#fff3df" />
+      <directionalLight position={[-4, 2, 2]} intensity={lights.fill} color="#d8e4ff" />
+      <spotLight
+        position={[0, 5, -4]}
+        angle={0.55}
+        penumbra={0.72}
+        intensity={lights.rim}
+        color="#f5b04d"
+      />
+      {children}
       <CameraRig info={targetInfo} />
       <CameraZoom cursorInCanvas={cursorInCanvas} targetInfo={targetInfo} />
       <CursorLight />

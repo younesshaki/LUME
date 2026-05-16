@@ -1,0 +1,68 @@
+/* Standard mode — same cinematic dark aesthetic, heavy effects disabled for performance */
+
+/* ── Decorative lamp glows: CPU-intensive radial gradients, skip in standard mode ── */
+[data-mode="standard"] .vehiclesPage__lamp,
+[data-mode="standard"] .productsPage__lamp,
+[data-mode="standard"] .storyHome__lamp {
+  display: none;
+}
+
+/* ── Tracing beam parallax: scroll-driven animation, skip in standard mode ── */
+[data-mode="standard"] .storyHome__tracingBeam {
+  display: none;
+}
+
+/* ── Flat showcase/story cards (standard mode — no CSS 3D perspective tilt) ── */
+.storyHome__flatCard {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 248, 236, 0.05);
+  border: 1px solid rgba(255, 248, 236, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.storyHome__flatCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(217, 183, 106, 0.4);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+}
+
+.storyHome__flatCard:focus-visible {
+  outline: 2px solid rgba(217, 183, 106, 0.7);
+  outline-offset: 2px;
+  transform: translateY(-4px);
+}
+
+.storyHome__flatCardImage {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+}
+
+.storyHome__flatCardBody {
+  padding: 1rem 1.25rem 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.storyHome__flatCardTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff8ec;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.storyHome__flatCardAction {
+  font-size: 0.78rem;
+  color: #d9b76a;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

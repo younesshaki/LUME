@@ -1,4 +1,11 @@
-import { lazy, Suspense, useState } from "react";
+import {
+  Component,
+  lazy,
+  Suspense,
+  useState,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import { getProductById } from "@/experience/products/catalog";
 import { hasDetailModel3D } from "@/experience/products/model3d";
 import { useSound } from "@/lib/sound";
@@ -20,6 +27,62 @@ type ProductDetailPageProps = {
   onViewShowcase: (partIndex: number, chapterIndex: number) => void;
 };
 
+type ModelViewerErrorBoundaryProps = {
+  children: ReactNode;
+  fallback: ReactNode;
+  resetKey: string;
+};
+
+type ModelViewerErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class ModelViewerErrorBoundary extends Component<
+  ModelViewerErrorBoundaryProps,
+  ModelViewerErrorBoundaryState
+> {
+  state: ModelViewerErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): ModelViewerErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidUpdate(previousProps: ModelViewerErrorBoundaryProps) {
+    if (previousProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn("Unable to render product 3D model", error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+
+    return this.props.children;
+  }
+}
+
+function ProductMediaFallback({
+  imageSrc,
+  title,
+  brand,
+  onImageError,
+}: {
+  imageSrc?: string;
+  title: string;
+  brand: string;
+  onImageError: () => void;
+}) {
+  if (imageSrc) {
+    return <img src={imageSrc} alt={title} onError={onImageError} />;
+  }
+
+  return <div className="productDetail__placeholder">{brand}</div>;
+}
 
 export default function ProductDetailPage({
   productId,
@@ -32,10 +95,18 @@ export default function ProductDetailPage({
 }: ProductDetailPageProps) {
   const { play } = useSound();
   const { mode } = useDualMode();
-  const isLight = mode === "light";
+  const isStandard = mode === "standard";
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const product = getProductById(productId);
   const imageSrc = product && !imageLoadFailed ? product.imageSrc : undefined;
+  const mediaFallback = product ? (
+    <ProductMediaFallback
+      imageSrc={imageSrc}
+      title={`${product.brand} ${product.name}`}
+      brand={product.brand}
+      onImageError={() => setImageLoadFailed(true)}
+    />
+  ) : null;
 
   const handleShowcaseClick = () => {
     if (!product?.showcase) return;
@@ -59,14 +130,19 @@ export default function ProductDetailPage({
           ) : (
             <section className="productDetail__hero">
               <div className="productDetail__media">
-                {hasDetailModel3D(product) && !isLight ? (
-                  <Suspense fallback={imageSrc ? <img src={imageSrc} alt={`${product.brand} ${product.name}`} /> : <div className="productDetail__placeholder">{product.brand}</div>}>
-                    <DetailModelViewer
-                      model={product.model3d}
-                      fallbackImageSrc={imageSrc}
-                      title={`${product.brand} ${product.name}`}
-                    />
-                  </Suspense>
+                {hasDetailModel3D(product) && !isStandard ? (
+                  <ModelViewerErrorBoundary
+                    fallback={mediaFallback}
+                    resetKey={product.model3d.modelSrc}
+                  >
+                    <Suspense fallback={mediaFallback}>
+                      <DetailModelViewer
+                        model={product.model3d}
+                        fallbackImageSrc={imageSrc}
+                        title={`${product.brand} ${product.name}`}
+                      />
+                    </Suspense>
+                  </ModelViewerErrorBoundary>
                 ) : imageSrc ? (
                   <img
                     src={imageSrc}

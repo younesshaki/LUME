@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 
-export type DualMode = "experience" | "light";
+export type DualMode = "experience" | "standard";
 
 type DualModeContextValue = {
   mode: DualMode;
@@ -15,6 +15,7 @@ type DualModeContextValue = {
 };
 
 const STORAGE_KEY = "lume.dualMode";
+// Experience keeps the full cinematic/3D presentation enabled by default.
 const DEFAULT_MODE: DualMode = "experience";
 
 const DualModeContext = createContext<DualModeContextValue | null>(null);
@@ -26,7 +27,7 @@ function readStoredMode(): DualMode {
 
   try {
     const storedMode = window.localStorage.getItem(STORAGE_KEY);
-    return storedMode === "light" || storedMode === "experience"
+    return storedMode === "standard" || storedMode === "experience"
       ? storedMode
       : DEFAULT_MODE;
   } catch {
@@ -39,7 +40,7 @@ export function DualModeProvider({ children }: { children: ReactNode }) {
 
   const toggleMode = useCallback(() => {
     setMode((currentMode) => {
-      const nextMode = currentMode === "experience" ? "light" : "experience";
+      const nextMode = currentMode === "experience" ? "standard" : "experience";
       try {
         window.localStorage.setItem(STORAGE_KEY, nextMode);
       } catch {

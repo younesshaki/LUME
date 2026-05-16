@@ -32,6 +32,48 @@ const VISIBLE_CHAPTER_IDS = [
 
 const fallbackShowcaseImage = mediaUrl("blackredbullcycles.png");
 
+function FlatShowcaseCard({
+  title,
+  imageSrc,
+  imageAlt,
+  onSelect,
+}: {
+  title: string;
+  imageSrc: string;
+  imageAlt: string;
+  onSelect: () => void;
+}) {
+  const { play } = useSound();
+
+  const handleSelect = () => {
+    play(showcasePageSoundActions.cardOpen);
+    onSelect();
+  };
+
+  return (
+    <div
+      className="storyHome__flatCard"
+      onClick={handleSelect}
+      onMouseEnter={() => play(showcasePageSoundActions.cardHover)}
+      onFocus={() => play(showcasePageSoundActions.cardHover)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleSelect();
+        }
+      }}
+    >
+      <img className="storyHome__flatCardImage" src={imageSrc} alt={imageAlt} />
+      <div className="storyHome__flatCardBody">
+        <p className="storyHome__flatCardTitle">{title}</p>
+        <span className="storyHome__flatCardAction">Open</span>
+      </div>
+    </div>
+  );
+}
+
 function ShowcaseCard({
   title,
   imageSrc,
@@ -104,6 +146,8 @@ export default function ShowcasePage({
 }: ShowcasePageProps) {
   const { isReady, state } = useStory();
   const { play } = useSound();
+  const { mode } = useDualMode();
+  const isStandard = mode === "standard";
 
   const showcaseChapters = useMemo(() => {
     if (!isReady) return [];
@@ -137,7 +181,15 @@ export default function ShowcasePage({
                 index
               );
 
-              return (
+              return isStandard ? (
+                <FlatShowcaseCard
+                  key={chapter.definition.id}
+                  title={chapter.definition.title}
+                  imageSrc={preview.imageSrc ?? fallbackShowcaseImage}
+                  imageAlt={`${preview.brand} ${preview.name} LUME showcase preview`}
+                  onSelect={() => onEnter(chapter.partIndex, chapter.chapterIndex)}
+                />
+              ) : (
                 <ShowcaseCard
                   key={chapter.definition.id}
                   title={chapter.definition.title}

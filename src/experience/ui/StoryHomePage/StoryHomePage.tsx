@@ -155,7 +155,7 @@ export default function StoryHomePage({
   const { isReady, state } = useStory();
   const { play } = useSound();
   const { mode } = useDualMode();
-  const isLight = mode === "light";
+  const isStandard = mode === "standard";
   const pageRef = useRef<HTMLDivElement | null>(null);
 
   const showcaseChapters = useMemo(() => {
@@ -205,7 +205,7 @@ export default function StoryHomePage({
                   index
                 );
 
-                return isLight ? (
+                return isStandard ? (
                   <FlatStoryOptionCard
                     key={chapter.definition.id}
                     title={chapter.definition.title}

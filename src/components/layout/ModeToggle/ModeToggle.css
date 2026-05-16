@@ -82,14 +82,14 @@
   transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.modeToggle--light .modeToggle__thumb {
+.modeToggle--standard .modeToggle__thumb {
   transform: translateX(1.38rem);
   background: linear-gradient(135deg, #f5f0df, #aeb8c9);
 }
 
 .modeToggle--experience .modeToggle__icon--experience,
-.modeToggle--light .modeToggle__icon--light {
-  color: #111111;
+.modeToggle--standard .modeToggle__icon--standard {
+  color: #0d0d0d;
 }
 
 .modeToggle__label {
