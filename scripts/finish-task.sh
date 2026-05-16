@@ -21,6 +21,28 @@ SHARED_LOG="/Users/younesshaki/Documents/first/agents/shared-log.md"
 # ---------------------------------------------------------------------------
 # 1. Commit
 # ---------------------------------------------------------------------------
+
+# Safety guard: check for nothing to commit
+GIT_STATUS=$(git status --porcelain)
+
+if [[ -z "$GIT_STATUS" ]]; then
+  echo "Nothing to commit — working tree is clean."
+  exit 0
+fi
+
+# Safety guard: warn about untracked files and ask for confirmation
+UNTRACKED=$(echo "$GIT_STATUS" | grep '^??' || true)
+if [[ -n "$UNTRACKED" ]]; then
+  echo "WARNING: The following untracked files will be staged:"
+  echo "$UNTRACKED" | sed 's/^?? /  /'
+  printf "Proceed and stage all files? [y/N] "
+  read -r CONFIRM < /dev/tty
+  if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+    echo "Aborted."
+    exit 1
+  fi
+fi
+
 echo "==> Staging all changes..."
 git add -A
 
@@ -44,7 +66,7 @@ echo "$DIFF_STAT"
 # 3. Claude review
 # ---------------------------------------------------------------------------
 echo "==> Running Claude review..."
-REVIEW=$(echo "$DIFF" | claude --print "Review this git diff concisely (2-4 sentences): what changed, any concerns?" 2>/dev/null || echo "(Claude review unavailable)")
+REVIEW=$(echo "$DIFF" | claude -p "Review this git diff concisely (2-4 sentences): what changed, any concerns?" 2>/dev/null || echo "(Claude review unavailable)")
 
 echo "--- Review ---"
 echo "$REVIEW"
