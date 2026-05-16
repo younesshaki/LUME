@@ -8,6 +8,7 @@ import { StripedPattern } from "@/components/magicui/striped-pattern";
 import type { DetailModel3D } from "./modelTypes";
 import ModelStage from "./ModelStage";
 import ModelAsset, { type ModelTargetInfo } from "./ModelAsset";
+import CanvasErrorBoundary from "@/experience/CanvasErrorBoundary";
 import { BACKDROP_FADE_STYLE, CANVAS_FADE_STYLE } from "./DetailModelViewer.animations";
 import { useDetailModelViewerState } from "./DetailModelViewer.state";
 import type { DetailModelViewerProps } from "./DetailModelViewer.types";
@@ -103,21 +104,23 @@ export default function DetailModelViewer({ model, fallbackImageSrc, title, clas
         onMouseEnter={() => setCursorInCanvas(true)}
         onMouseLeave={() => setCursorInCanvas(false)}
       >
-        <Canvas
-          camera={{ position: [0, 0, 5], fov: 45 }}
-          gl={{ antialias: true, alpha: true }}
-          onError={() => setFailed(true)}
-        >
-          <Suspense fallback={null}>
-            <CanvasContent
-              model={model}
-              targetInfo={targetInfo}
-              cursorInCanvas={cursorInCanvas}
-              onReady={handleReady}
-              onTarget={handleTarget}
-            />
-          </Suspense>
-        </Canvas>
+        <CanvasErrorBoundary fallback={<ModelError fallbackImageSrc={fallbackImageSrc} title={title} />}>
+          <Canvas
+            camera={{ position: [0, 0, 5], fov: 45 }}
+            gl={{ antialias: true, alpha: true }}
+            onError={() => setFailed(true)}
+          >
+            <Suspense fallback={null}>
+              <CanvasContent
+                model={model}
+                targetInfo={targetInfo}
+                cursorInCanvas={cursorInCanvas}
+                onReady={handleReady}
+                onTarget={handleTarget}
+              />
+            </Suspense>
+          </Canvas>
+        </CanvasErrorBoundary>
       </div>
 
       {model.tagLabel && (

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
-import { Stage, OrbitControls } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { Vector3, PointLight, Raycaster, Vector2 } from "three";
 import type { ModelLighting } from "./modelTypes";
 import type { ModelTargetInfo } from "./ModelAsset";
@@ -119,24 +119,52 @@ type ModelStageProps = {
   children: React.ReactNode;
 };
 
-const PRESET_MAP: Record<ModelLighting, "rembrandt" | "portrait" | "soft"> = {
-  studio: "rembrandt",
-  soft: "portrait",
-  dramatic: "rembrandt",
+const LIGHTING_PRESETS: Record<
+  ModelLighting,
+  {
+    ambient: number;
+    key: number;
+    fill: number;
+    rim: number;
+    point: number;
+  }
+> = {
+  // IBL (Stage/Environment) provided ~1.5–2x ambient contribution — compensate with higher values
+  studio:   { ambient: 1.6, key: 3.8, fill: 1.8, rim: 2.4, point: 2.0 },
+  soft:     { ambient: 1.8, key: 2.6, fill: 2.0, rim: 1.4, point: 1.2 },
+  dramatic: { ambient: 0.8, key: 4.8, fill: 0.6, rim: 4.0, point: 2.8 },
 };
 
 export default function ModelStage({ lighting = "studio", autoRotate = true, targetInfo, cursorInCanvas = false, children }: ModelStageProps) {
+  const preset = LIGHTING_PRESETS[lighting];
+
   return (
     <>
-      <Stage
-        preset={PRESET_MAP[lighting]}
-        shadows={false}
-        environment="studio"
-        intensity={0.6}
-        adjustCamera={false}
-      >
+      <ambientLight intensity={preset.ambient} />
+      <hemisphereLight
+        args={["#fff4d7", "#120806", preset.fill]}
+        position={[0, 4, 0]}
+      />
+      <directionalLight
+        color="#fff1cf"
+        intensity={preset.key}
+        position={[3.5, 5, 4]}
+      />
+      <directionalLight
+        color="#ff9b2f"
+        intensity={preset.rim}
+        position={[-4, 2.5, -3]}
+      />
+      <pointLight
+        color="#f4c86a"
+        intensity={preset.point}
+        position={[0, 1.6, 3]}
+        distance={8}
+        decay={2}
+      />
+      <group>
         {children}
-      </Stage>
+      </group>
       <CameraRig info={targetInfo} />
       <CameraZoom cursorInCanvas={cursorInCanvas} targetInfo={targetInfo} />
       <CursorLight />
