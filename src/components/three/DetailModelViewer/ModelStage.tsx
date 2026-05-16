@@ -115,7 +115,7 @@ function SceneSetup() {
   const { gl } = useThree();
   useEffect(() => {
     gl.toneMapping = ACESFilmicToneMapping;
-    gl.toneMappingExposure = 1.6;
+    gl.toneMappingExposure = 20.6;
   }, [gl]);
   return null;
 }
