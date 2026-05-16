@@ -17,12 +17,12 @@ fi
 FULL_MSG="${JIRA_ISSUE}: ${COMMIT_MSG}"
 JIRA_BASE="https://hakicsi89.atlassian.net/rest/api/3"
 SHARED_LOG="/Users/younesshaki/Documents/first/agents/shared-log.md"
+REVIEW_LOCK="/tmp/claude-review.lock"
 
 # ---------------------------------------------------------------------------
 # 1. Commit
 # ---------------------------------------------------------------------------
 
-# Safety guard: check for nothing to commit
 GIT_STATUS=$(git status --porcelain)
 
 if [[ -z "$GIT_STATUS" ]]; then
@@ -30,7 +30,6 @@ if [[ -z "$GIT_STATUS" ]]; then
   exit 0
 fi
 
-# Safety guard: warn about untracked files and ask for confirmation
 UNTRACKED=$(echo "$GIT_STATUS" | grep '^??' || true)
 if [[ -n "$UNTRACKED" ]]; then
   echo "WARNING: The following untracked files will be staged:"
@@ -63,32 +62,55 @@ DIFF_STAT=$(git diff --stat HEAD~1 HEAD 2>/dev/null || git show --stat HEAD | ta
 echo "$DIFF_STAT"
 
 # ---------------------------------------------------------------------------
-# 3. Claude review
+# 3. Claude review — with lock to serialise concurrent agents
 # ---------------------------------------------------------------------------
+
+# Wait for any existing lock, then acquire it
+LOCK_WAIT=0
+while [[ -f "$REVIEW_LOCK" ]]; do
+  if (( LOCK_WAIT >= 60 )); then
+    echo "WARNING: Review lock held for 60s — proceeding anyway."
+    break
+  fi
+  echo "    Review lock held by another agent — waiting (${LOCK_WAIT}s)..."
+  sleep 2
+  (( LOCK_WAIT += 2 ))
+done
+
+# Create lock; remove it on exit (normal, error, or CTRL-C)
+echo $$ > "$REVIEW_LOCK"
+trap 'rm -f "$REVIEW_LOCK"' EXIT
+
 echo "==> Running Claude review..."
-REVIEW=$(echo "$DIFF" | claude -p "Review this git diff concisely (2-4 sentences): what changed, any concerns?" 2>/dev/null || echo "(Claude review unavailable)")
+# Cap review size to prevent token burn on large diffs
+DIFF_LINES=$(echo "$DIFF" | wc -l | tr -d ' ')
+if (( DIFF_LINES > 500 )); then
+  REVIEW=$(echo "$DIFF" | claude -p "Review this git diff concisely (2-4 sentences): what changed, any concerns? Be brief — this is a large diff." --max-tokens 500 2>/dev/null || echo "(Claude review unavailable)")
+else
+  REVIEW=$(echo "$DIFF" | claude -p "Review this git diff concisely (2-4 sentences): what changed, any concerns?" 2>/dev/null || echo "(Claude review unavailable)")
+fi
+
+# Release lock immediately after review
+rm -f "$REVIEW_LOCK"
+trap - EXIT
 
 echo "--- Review ---"
 echo "$REVIEW"
 echo "--------------"
 
 # ---------------------------------------------------------------------------
-# 4 & 5. JIRA comment
+# 4 & 5. JIRA comment + status transition
 # ---------------------------------------------------------------------------
 if [[ -z "${JIRA_EMAIL:-}" || -z "${JIRA_TOKEN:-}" ]]; then
   echo "WARNING: JIRA_EMAIL or JIRA_TOKEN not set — skipping JIRA steps."
 else
-  COMMENT_BODY="*Commit:* ${FULL_MSG}
+  # Read AI Agent field for attribution
+  AGENT_VALUE=$(curl -s -u "${JIRA_EMAIL}:${JIRA_TOKEN}" \
+    "https://hakicsi89.atlassian.net/rest/api/3/issue/${JIRA_ISSUE}?fields=customfield_10104" \
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['fields']['customfield_10104'].get('value','unknown'))" 2>/dev/null || echo "unknown")
 
-*Diff summary:*
-{noformat}
-${DIFF_STAT}
-{noformat}
+  COMMENT_BODY="*Agent:* ${AGENT_VALUE}\n\n*Commit:* ${FULL_MSG}\n\n*Diff summary:*\n{noformat}\n${DIFF_STAT}\n{noformat}\n\n*Code review:*\n${REVIEW}"
 
-*Code review:*
-${REVIEW}"
-
-  # Escape for JSON
   COMMENT_JSON=$(jq -n --arg body "$COMMENT_BODY" '{
     body: {
       version: 1,
@@ -109,21 +131,45 @@ ${REVIEW}"
     "${JIRA_BASE}/issue/${JIRA_ISSUE}/comment"
 
   # ---------------------------------------------------------------------------
-  # 6. Transition to "In Review"
+  # 6. Ask whether Claude approved, then pick the right transition
   # ---------------------------------------------------------------------------
+  printf "Did Claude approve this change? [y/N] "
+  read -r APPROVED < /dev/tty
+
   echo "==> Fetching transitions for ${JIRA_ISSUE}..."
   TRANSITIONS=$(curl -s \
     -u "${JIRA_EMAIL}:${JIRA_TOKEN}" \
     -H "Content-Type: application/json" \
     "${JIRA_BASE}/issue/${JIRA_ISSUE}/transitions")
 
-  TRANSITION_ID=$(echo "$TRANSITIONS" | jq -r '.transitions[] | select(.name | test("In Review"; "i")) | .id' | head -n1)
+  if [[ "$APPROVED" == "y" || "$APPROVED" == "Y" ]]; then
+    # Approved → look for a status whose name contains "claude" (case-insensitive)
+    TRANSITION_ID=$(echo "$TRANSITIONS" | jq -r '.transitions[] | select(.name | test("claude"; "i")) | .id' | head -n1)
+    TRANSITION_LABEL="Claude"
+    FALLBACK_LABEL="In Review"
+    FALLBACK_ID=$(echo "$TRANSITIONS" | jq -r '.transitions[] | select(.name | test("In Review"; "i")) | .id' | head -n1)
+  else
+    # Not approved → move back to In Progress
+    TRANSITION_ID=$(echo "$TRANSITIONS" | jq -r '.transitions[] | select(.name | test("In Progress"; "i")) | .id' | head -n1)
+    TRANSITION_LABEL="In Progress"
+    FALLBACK_LABEL=""
+    FALLBACK_ID=""
+  fi
 
   if [[ -z "$TRANSITION_ID" ]]; then
-    echo "WARNING: 'In Review' transition not found. Available transitions:"
-    echo "$TRANSITIONS" | jq -r '.transitions[].name'
-  else
-    echo "==> Transitioning ${JIRA_ISSUE} → In Review (id: ${TRANSITION_ID})..."
+    # Try the fallback if we have one
+    if [[ -n "${FALLBACK_ID:-}" ]]; then
+      echo "WARNING: '${TRANSITION_LABEL}' transition not found — falling back to '${FALLBACK_LABEL}'."
+      TRANSITION_ID="$FALLBACK_ID"
+      TRANSITION_LABEL="$FALLBACK_LABEL"
+    else
+      echo "WARNING: '${TRANSITION_LABEL}' transition not found. Available transitions:"
+      echo "$TRANSITIONS" | jq -r '.transitions[].name'
+    fi
+  fi
+
+  if [[ -n "$TRANSITION_ID" ]]; then
+    echo "==> Transitioning ${JIRA_ISSUE} → ${TRANSITION_LABEL} (id: ${TRANSITION_ID})..."
     curl -s -o /dev/null -w "    HTTP %{http_code}\n" \
       -X POST \
       -u "${JIRA_EMAIL}:${JIRA_TOKEN}" \
