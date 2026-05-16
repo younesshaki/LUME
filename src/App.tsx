@@ -22,6 +22,7 @@ import PhoneExperienceNotice from "./experience/ui/PhoneExperienceNotice";
 import { MediaQualitySettings } from "./experience/ui/MediaQualitySettings";
 import { SiteHeader } from "./components/layout/SiteHeader";
 import { BottomDock } from "./components/layout/BottomDock";
+import { ModeToggle } from "./components/layout/ModeToggle";
 import type { ShowcaseVideoQuality } from "./experience/scenes/showcase/data/sceneAssets";
 import { isShowcaseChapterId } from "./experience/scenes/showcase/data";
 import { getChapterDefinition } from "./experience/story/manifest";
@@ -330,6 +331,7 @@ export default function App() {
       {showSiteDock && (
         <BottomDock />
       )}
+      <ModeToggle className={showSiteHeader ? "modeToggle--belowHeader" : ""} />
       {!showGateOverlay && (
         <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
       )}

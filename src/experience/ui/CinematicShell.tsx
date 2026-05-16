@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from "react";
+import { useDualMode } from "@/lib/DualModeContext";
 import sharedBackgroundImage from "../assets/images/lume-homepage-background.png";
 
 type CinematicShellProps = PropsWithChildren<{
@@ -6,13 +7,17 @@ type CinematicShellProps = PropsWithChildren<{
 }>;
 
 export default function CinematicShell({ children, className }: CinematicShellProps) {
+  const { mode } = useDualMode();
+  const isLight = mode === "light";
+
   return (
     <div
+      data-mode={mode}
       className={`cinematicShell${className ? ` ${className}` : ""}`}
       style={{
         position: "fixed",
         inset: 0,
-        background: "#000",
+        background: isLight ? "#faf9f7" : "#000",
         overflow: "hidden",
       }}
     >
@@ -25,19 +30,21 @@ export default function CinematicShell({ children, className }: CinematicShellPr
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
           backgroundSize: "cover",
+          opacity: isLight ? 0 : 1,
+          pointerEvents: "none",
         }}
       />
-      {/* Dark overlay for readability */}
       <div
         className="cinematicShell__overlay"
         style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.85) 100%)",
+          background: isLight
+            ? "transparent"
+            : "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.85) 100%)",
           zIndex: 1,
         }}
       />
-      {/* Content layer */}
       <div
         className="cinematicShell__content"
         style={{

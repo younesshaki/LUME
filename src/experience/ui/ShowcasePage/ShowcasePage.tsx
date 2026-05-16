@@ -6,6 +6,7 @@ import {
   CardItem,
 } from "@/components/ui/3d-card";
 import { useSound } from "@/lib/sound";
+import { useDualMode } from "@/lib/DualModeContext";
 import { getShowcasePreviewForChapter } from "@/experience/products/catalog";
 import { useStory } from "@/experience/story/StoryProvider";
 import { getPartDisplayList } from "@/experience/story/selectors";

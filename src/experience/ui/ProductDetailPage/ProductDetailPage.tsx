@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from "react";
 import { getProductById } from "@/experience/products/catalog";
 import { hasDetailModel3D } from "@/experience/products/model3d";
 import { useSound } from "@/lib/sound";
+import { useDualMode } from "@/lib/DualModeContext";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { productDetailSoundActions } from "./ProductDetailPage.sounds";
@@ -30,6 +31,8 @@ export default function ProductDetailPage({
   onViewShowcase,
 }: ProductDetailPageProps) {
   const { play } = useSound();
+  const { mode } = useDualMode();
+  const isLight = mode === "light";
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const product = getProductById(productId);
   const imageSrc = product && !imageLoadFailed ? product.imageSrc : undefined;
@@ -56,7 +59,7 @@ export default function ProductDetailPage({
           ) : (
             <section className="productDetail__hero">
               <div className="productDetail__media">
-                {hasDetailModel3D(product) ? (
+                {hasDetailModel3D(product) && !isLight ? (
                   <Suspense fallback={imageSrc ? <img src={imageSrc} alt={`${product.brand} ${product.name}`} /> : <div className="productDetail__placeholder">{product.brand}</div>}>
                     <DetailModelViewer
                       model={product.model3d}

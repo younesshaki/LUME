@@ -4,7 +4,7 @@ const R2_BASE = import.meta.env.VITE_R2_PUBLIC_BASE_URL as string | undefined;
 if (!R2_BASE) {
   throw new Error("VITE_R2_PUBLIC_BASE_URL is required");
 }
-export const R2 = R2_BASE;
+export const R2 = import.meta.env.DEV ? "/r2" : R2_BASE;
 export const SUPABASE_CDN =
   (import.meta.env.VITE_SUPABASE_STORAGE_URL as string | undefined) ?? "";
 

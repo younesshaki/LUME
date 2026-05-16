@@ -1,0 +1,115 @@
+/* Light mode overrides — applied when CinematicShell has data-mode="light" */
+
+/* ── Color token overrides for all pages ── */
+[data-mode="light"] .vehiclesPage,
+[data-mode="light"] .productsPage,
+[data-mode="light"] .productDetail,
+[data-mode="light"] .vehicleDetail,
+[data-mode="light"] .showcasePage,
+[data-mode="light"] .contactPage,
+[data-mode="light"] .storyHome {
+  --lume-ink: #1a1208;
+  --lume-muted: rgba(26, 18, 8, 0.6);
+  --lume-soft: rgba(26, 18, 8, 0.35);
+  --lume-line: rgba(26, 18, 8, 0.14);
+  --lume-gold: #7a5c16;
+  color: #1a1208;
+  transition: color 0.3s ease;
+}
+
+[data-mode="light"] .vehiclesPage {
+  --lume-panel: rgba(248, 246, 241, 0.95);
+  --lume-panel-solid: #f0ede7;
+}
+
+/* ── StoryHome: drop cinematic background in light mode ── */
+[data-mode="light"] .storyHome {
+  background: transparent;
+}
+
+[data-mode="light"] .storyHome__background {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+[data-mode="light"] .storyHome__tracingBeam {
+  display: none;
+}
+
+/* ── Decorative lamp glow: invisible on light bg ── */
+[data-mode="light"] .vehiclesPage__lamp,
+[data-mode="light"] .productsPage__lamp,
+[data-mode="light"] .storyHome__lamp {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* ── Flat showcase/story cards (light mode alternative to 3D tilt) ── */
+.storyHome__flatCard {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid rgba(26, 18, 8, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  outline: none;
+}
+
+.storyHome__flatCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.13);
+}
+
+.storyHome__flatCard:focus-visible {
+  outline: 2px solid #7a5c16;
+  outline-offset: 2px;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.13);
+}
+
+.storyHome__flatCardImage {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+}
+
+.storyHome__flatCardBody {
+  padding: 1rem 1.25rem 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.storyHome__flatCardTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a1208;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.storyHome__flatCardAction {
+  font-size: 0.78rem;
+  color: #7a5c16;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Transition on CinematicShell visual layers ── */
+.cinematicShell {
+  transition: background 0.3s ease;
+}
+
+.cinematicShell__image {
+  transition: opacity 0.3s ease;
+}
+
+.cinematicShell__overlay {
+  transition: background 0.3s ease;
+}
