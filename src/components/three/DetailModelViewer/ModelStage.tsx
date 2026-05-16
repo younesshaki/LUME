@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { Vector3, PointLight, Raycaster, Vector2 } from "three";
+import { Vector3, PointLight, Raycaster, Vector2, ACESFilmicToneMapping } from "three";
 import type { ModelLighting } from "./modelTypes";
 import type { ModelTargetInfo } from "./ModelAsset";
 
@@ -111,6 +111,15 @@ function CursorLight() {
   );
 }
 
+function SceneSetup() {
+  const { gl } = useThree();
+  useEffect(() => {
+    gl.toneMapping = ACESFilmicToneMapping;
+    gl.toneMappingExposure = 1.6;
+  }, [gl]);
+  return null;
+}
+
 type ModelStageProps = {
   lighting?: ModelLighting;
   autoRotate?: boolean;
@@ -129,10 +138,10 @@ const LIGHTING_PRESETS: Record<
     point: number;
   }
 > = {
-  // IBL (Stage/Environment) provided ~1.5–2x ambient contribution — compensate with higher values
-  studio:   { ambient: 1.6, key: 3.8, fill: 1.8, rim: 2.4, point: 2.0 },
-  soft:     { ambient: 1.8, key: 2.6, fill: 2.0, rim: 1.4, point: 1.2 },
-  dramatic: { ambient: 0.8, key: 4.8, fill: 0.6, rim: 4.0, point: 2.8 },
+  // ACESFilmicToneMapping + no IBL: needs higher raw intensities than Stage+HDR setup
+  studio:   { ambient: 3.5, key: 6.0, fill: 3.0, rim: 3.5, point: 5.0 },
+  soft:     { ambient: 4.0, key: 4.0, fill: 3.5, rim: 2.0, point: 3.0 },
+  dramatic: { ambient: 1.5, key: 8.0, fill: 1.0, rim: 6.0, point: 4.0 },
 };
 
 export default function ModelStage({ lighting = "studio", autoRotate = true, targetInfo, cursorInCanvas = false, children }: ModelStageProps) {
@@ -140,28 +149,19 @@ export default function ModelStage({ lighting = "studio", autoRotate = true, tar
 
   return (
     <>
+      <SceneSetup />
       <ambientLight intensity={preset.ambient} />
-      <hemisphereLight
-        args={["#fff4d7", "#120806", preset.fill]}
-        position={[0, 4, 0]}
-      />
-      <directionalLight
-        color="#fff1cf"
-        intensity={preset.key}
-        position={[3.5, 5, 4]}
-      />
-      <directionalLight
-        color="#ff9b2f"
-        intensity={preset.rim}
-        position={[-4, 2.5, -3]}
-      />
-      <pointLight
-        color="#f4c86a"
-        intensity={preset.point}
-        position={[0, 1.6, 3]}
-        distance={8}
-        decay={2}
-      />
+      <hemisphereLight args={["#fff8e7", "#1a0800", preset.fill]} position={[0, 6, 0]} />
+      {/* Key — front right top */}
+      <directionalLight color="#fff5e0" intensity={preset.key} position={[3.5, 5, 4]} castShadow={false} />
+      {/* Rim — back left */}
+      <directionalLight color="#ff9b2f" intensity={preset.rim} position={[-4, 2.5, -3]} />
+      {/* Fill — front left, balances key */}
+      <directionalLight color="#c8d8ff" intensity={preset.fill * 0.6} position={[-3, 3, 4]} />
+      {/* Under fill — prevents fully black underside */}
+      <directionalLight color="#fff0cc" intensity={preset.ambient * 0.4} position={[0, -3, 2]} />
+      {/* Front point — close warmth */}
+      <pointLight color="#ffe0a0" intensity={preset.point} position={[0, 1.6, 3]} distance={10} decay={2} />
       <group>
         {children}
       </group>
