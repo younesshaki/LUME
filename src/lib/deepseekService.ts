@@ -6,6 +6,8 @@
  * The browser never sees the system prompt, the RAG chunks, or the Deepseek
  * API key. It only sends user/assistant turns and consumes deltas.
  */
+import type { BotAction } from "@lume/types";
+
 const CHAT_ENDPOINT = "/api/chat";
 
 /** Slug of the tenant whose RAG/vehicles should be used. Set from env so the
@@ -19,11 +21,13 @@ export type DeepseekMessage = {
 };
 
 type ChatMetaEvent = { type: "meta"; sourceCategories: string[] };
+type ChatActionEvent = { type: "action"; action: BotAction };
 type ChatErrorEvent = { type: "error"; message: string };
 
 export type ChatStreamYield =
   | { kind: "meta"; sourceCategories: string[] }
-  | { kind: "delta"; text: string };
+  | { kind: "delta"; text: string }
+  | { kind: "action"; action: BotAction };
 
 type DeepseekStreamChunk = {
   choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
@@ -92,6 +96,10 @@ export async function* streamChat(
           yield { kind: "meta", sourceCategories: parsed.sourceCategories };
           continue;
         }
+        if (isActionEvent(parsed)) {
+          yield { kind: "action", action: parsed.action };
+          continue;
+        }
         if (isErrorEvent(parsed)) {
           throw new Error(parsed.message);
         }
@@ -123,4 +131,51 @@ function isErrorEvent(v: unknown): v is ChatErrorEvent {
     (v as { type?: string }).type === "error" &&
     typeof (v as ChatErrorEvent).message === "string"
   );
+}
+
+function isActionEvent(v: unknown): v is ChatActionEvent {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    (v as { type?: string }).type === "action" &&
+    isBotAction((v as { action?: unknown }).action)
+  );
+}
+
+function isBotAction(value: unknown): value is BotAction {
+  if (!isRecord(value) || typeof value.type !== "string") {
+    return false;
+  }
+
+  switch (value.type) {
+    case "filter_inventory":
+      return (
+        isOptionalString(value.make) &&
+        isOptionalNumber(value.priceMin) &&
+        isOptionalNumber(value.priceMax) &&
+        isOptionalString(value.bodyStyle)
+      );
+    case "navigate":
+      return typeof value.route === "string";
+    case "highlight-vehicle":
+      return typeof value.vehicleId === "string";
+    case "open-lead-form":
+      return value.prefill === undefined || isRecord(value.prefill);
+    case "scroll-to":
+      return typeof value.sectionId === "string";
+    default:
+      return false;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function isOptionalNumber(value: unknown): boolean {
+  return value === undefined || typeof value === "number";
 }
