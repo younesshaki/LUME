@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from "react";
+import { useDualMode } from "@/lib/DualModeContext";
 import sharedBackgroundImage from "../assets/images/lume-homepage-background.png";
 
 type CinematicShellProps = PropsWithChildren<{
@@ -6,8 +7,11 @@ type CinematicShellProps = PropsWithChildren<{
 }>;
 
 export default function CinematicShell({ children, className }: CinematicShellProps) {
+  const { mode } = useDualMode();
+
   return (
     <div
+      data-mode={mode}
       className={`cinematicShell${className ? ` ${className}` : ""}`}
       style={{
         position: "fixed",

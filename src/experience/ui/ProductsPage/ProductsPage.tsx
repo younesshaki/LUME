@@ -1,5 +1,6 @@
 import { MouseEvent, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useDualMode } from "@/lib/DualModeContext";
 import {
   PRODUCTS,
   PRODUCT_CATEGORIES,
@@ -99,6 +100,8 @@ export default function ProductsPage({
   const [previousCategory, setPreviousCategory] = useState<ProductFilterCategory>("all");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { play } = useSound();
+  const { mode } = useDualMode();
+  const isStandard = mode === "standard";
 
   useEffect(() => {
     return () => {
@@ -154,7 +157,7 @@ export default function ProductsPage({
                   className="luxuryTabs__active"
                   initial={{ x: `${getCategoryIndex(previousCategory) * 100}%` }}
                   animate={{ x: `${getCategoryIndex(activeCategory) * 100}%` }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  transition={isStandard ? { duration: 0.2, ease: "easeInOut" } : { type: "spring", stiffness: 300, damping: 30 }}
                   style={{ width: `calc((100% - (var(--luxuryTabs-active-x-inset) * 2)) / ${PRODUCT_CATEGORIES.length})` }}
                 />
               </AnimatePresence>

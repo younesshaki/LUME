@@ -1,5 +1,6 @@
 import { MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
+import { useDualMode } from "@/lib/DualModeContext";
 import {
   Check,
   ChevronLeft,
@@ -778,6 +779,8 @@ export default function VehiclesPage({
   onSelectVehicle,
 }: VehiclesPageProps) {
   const { play } = useSound();
+  const { mode } = useDualMode();
+  const isStandard = mode === "standard";
   const initialState = useMemo(() => readVehicleUrlState(), []);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -970,9 +973,9 @@ export default function VehiclesPage({
                   <motion.div
                     className="vehiclesPage__grid"
                     key={`${safePage}-${JSON.stringify(filters)}-${sort}`}
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={{ opacity: 0, y: isStandard ? 0 : 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: isStandard ? 0.18 : 0.3 }}
                   >
                     {paginated.map((vehicle) => {
                       const compared = compareVehicleIds.includes(vehicle.id);

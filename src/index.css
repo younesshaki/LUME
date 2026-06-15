@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./experience/scenes/shared/sceneFonts.css";
+@import "./lib/standardMode.css";
 
 @font-face {
   font-family: "Mileast";
