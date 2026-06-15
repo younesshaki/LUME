@@ -1,11 +1,8 @@
 import type { TenantId } from "./tenant";
 
-export type BotActionTarget = "vehicle" | "products" | "contact";
-
 export type BotNavigationAction = {
   type: "navigate";
-  target: BotActionTarget;
-  vehicleId?: string;
+  route: string;
 };
 
 export type BotInventoryFilterAction = {
@@ -16,6 +13,28 @@ export type BotInventoryFilterAction = {
   priceMax?: number;
   bodyStyle?: string;
 };
+
+export type BotHighlightVehicleAction = {
+  type: "highlight-vehicle";
+  vehicleId: string;
+};
+
+export type BotOpenLeadFormAction = {
+  type: "open-lead-form";
+  prefill?: Record<string, unknown>;
+};
+
+export type BotScrollToAction = {
+  type: "scroll-to";
+  sectionId: string;
+};
+
+export type BotAction =
+  | BotInventoryFilterAction
+  | BotNavigationAction
+  | BotHighlightVehicleAction
+  | BotOpenLeadFormAction
+  | BotScrollToAction;
 
 /** At least one of email or phone is required. */
 export type BotLeadContact = {
@@ -55,13 +74,6 @@ export type BotScheduleTestDriveAction = {
   preferredTime?: string;
   message?: string;
 };
-
-export type BotAction =
-  | BotNavigationAction
-  | BotInventoryFilterAction
-  | BotCaptureLeadAction
-  | BotScheduleAppointmentAction
-  | BotScheduleTestDriveAction;
 
 export type BotActionStatus = "success" | "failure";
 

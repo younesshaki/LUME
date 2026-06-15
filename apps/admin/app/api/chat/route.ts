@@ -9,7 +9,7 @@
  * `messages` with role: "system" is dropped. The tenant is resolved from the
  * X-Lume-Tenant header (or ?tenant= or subdomain — see lib/tenant.ts).
  */
-import type { ChatMessage, ChatRequest } from "@lume/types";
+import type { BotAction, ChatMessage, ChatRequest } from "@lume/types";
 import { createServiceClient } from "@lume/db/server";
 import { rowToVehicle } from "@lume/db";
 import {
@@ -27,6 +27,15 @@ export const dynamic = "force-dynamic";
 
 const MAX_MESSAGES = 30;
 const MAX_USER_CONTENT_LENGTH = 4_000;
+const BOT_ACTION_SYSTEM_PROMPT = `
+Structured actions:
+When an action would help the user, you may emit exactly one JSON object on its own line. Keep normal helpful text streaming as usual. The JSON line must match one of these shapes:
+{"type":"filter_inventory","make":"string","priceMin":0,"priceMax":0,"bodyStyle":"string"}
+{"type":"navigate","route":"string"}
+{"type":"highlight-vehicle","vehicleId":"string"}
+{"type":"open-lead-form","prefill":{}}
+{"type":"scroll-to","sectionId":"string"}
+Only include fields that are useful. Do not wrap action JSON in markdown.`;
 
 export async function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeadersFor(request) });
@@ -142,7 +151,7 @@ export async function POST(request: Request): Promise<Response> {
       model: "deepseek-chat",
       stream: body.stream ?? true,
       messages: [
-        { role: "system", content: assembled.prompt },
+        { role: "system", content: `${assembled.prompt}\n\n${BOT_ACTION_SYSTEM_PROMPT}` },
         ...cleanMessages,
       ],
     }),
@@ -180,14 +189,73 @@ export async function POST(request: Request): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
       controller.enqueue(encoder.encode(meta));
       const reader = upstream.body!.getReader();
+      let sseLineBuffer = "";
+      let actionLineBuffer = "";
+      let pendingActions: BotAction[] = [];
+
+      const flushActionEvents = () => {
+        for (const action of pendingActions) {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ type: "action", action })}\n\n`
+            )
+          );
+        }
+        pendingActions = [];
+      };
+
+      const processSseLine = (line: string) => {
+        const trimmed = line.trim();
+
+        if (trimmed === "data: [DONE]") {
+          const finalAction = parseBotActionLine(actionLineBuffer);
+          if (finalAction) pendingActions.push(finalAction);
+          actionLineBuffer = "";
+          flushActionEvents();
+        }
+
+        controller.enqueue(encoder.encode(`${line}\n`));
+
+        if (!trimmed) {
+          flushActionEvents();
+          return;
+        }
+
+        const textDelta = extractDeepseekTextDelta(line);
+        if (!textDelta) return;
+
+        actionLineBuffer += textDelta;
+        const actionLines = actionLineBuffer.split(/\r?\n/);
+        actionLineBuffer = actionLines.pop() ?? "";
+
+        for (const actionLine of actionLines) {
+          const action = parseBotActionLine(actionLine);
+          if (action) pendingActions.push(action);
+        }
+      };
+
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          controller.enqueue(value);
+          sseLineBuffer += decoder.decode(value, { stream: true });
+
+          const sseLines = sseLineBuffer.split("\n");
+          sseLineBuffer = sseLines.pop() ?? "";
+
+          for (const sseLine of sseLines) {
+            processSseLine(sseLine);
+          }
         }
+        if (sseLineBuffer) {
+          processSseLine(sseLineBuffer);
+        }
+        const finalAction = parseBotActionLine(actionLineBuffer);
+        if (finalAction) pendingActions.push(finalAction);
+        flushActionEvents();
       } catch (err) {
         const message = err instanceof Error ? err.message : "stream failure";
         controller.enqueue(
@@ -213,4 +281,74 @@ function json(payload: unknown, status: number, request?: Request): Response {
       ...(request ? corsHeadersFor(request) : {}),
     },
   });
+}
+
+type DeepseekStreamChunk = {
+  choices?: Array<{ delta?: { content?: string } }>;
+};
+
+function extractDeepseekTextDelta(line: string): string | undefined {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("data: ") || trimmed === "data: [DONE]") {
+    return undefined;
+  }
+
+  try {
+    const chunk = JSON.parse(trimmed.slice(6)) as DeepseekStreamChunk;
+    return chunk.choices?.[0]?.delta?.content;
+  } catch {
+    return undefined;
+  }
+}
+
+function parseBotActionLine(line: string): BotAction | undefined {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    return isBotAction(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isBotAction(value: unknown): value is BotAction {
+  if (!isRecord(value) || typeof value.type !== "string") {
+    return false;
+  }
+
+  switch (value.type) {
+    case "filter_inventory":
+      return (
+        isOptionalString(value.make) &&
+        isOptionalNumber(value.priceMin) &&
+        isOptionalNumber(value.priceMax) &&
+        isOptionalString(value.bodyStyle)
+      );
+    case "navigate":
+      return typeof value.route === "string";
+    case "highlight-vehicle":
+      return typeof value.vehicleId === "string";
+    case "open-lead-form":
+      return value.prefill === undefined || isRecord(value.prefill);
+    case "scroll-to":
+      return typeof value.sectionId === "string";
+    default:
+      return false;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function isOptionalNumber(value: unknown): boolean {
+  return value === undefined || typeof value === "number";
 }
