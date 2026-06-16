@@ -3,6 +3,7 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { streamChat, type DeepseekMessage } from "@/lib/deepseekService";
+import { botActionBus } from "@/lib/botActionBus";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
@@ -172,6 +173,12 @@ export function OllamaChat() {
       for await (const event of streamChat(messages, abortController.signal)) {
         if (event.kind === "meta") {
           sourceCategories = event.sourceCategories;
+          continue;
+        }
+        if (event.kind === "action") {
+          // Hand the action to the bus; subscribed UI (router, inventory,
+          // highlight overlay, lead form) reacts. Chat stays decoupled.
+          botActionBus.publish(event.action);
           continue;
         }
         if (event.kind === "delta") {
