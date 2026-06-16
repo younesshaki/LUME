@@ -1,19 +1,22 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SoundProvider } from "@/lib/sound";
+import { DualModeProvider } from "@/lib/DualModeContext";
 import ProductsPage from "./ProductsPage";
 
 function renderProductsPage() {
   return render(
-    <SoundProvider>
-      <ProductsPage
-        onGoHome={vi.fn()}
-        onSelectProduct={vi.fn()}
-        onNavigateToVehicles={vi.fn()}
-        onNavigateToShowcase={vi.fn()}
-        onNavigateToContact={vi.fn()}
-      />
-    </SoundProvider>
+    <DualModeProvider>
+      <SoundProvider>
+        <ProductsPage
+          onGoHome={vi.fn()}
+          onSelectProduct={vi.fn()}
+          onNavigateToVehicles={vi.fn()}
+          onNavigateToShowcase={vi.fn()}
+          onNavigateToContact={vi.fn()}
+        />
+      </SoundProvider>
+    </DualModeProvider>
   );
 }
 
