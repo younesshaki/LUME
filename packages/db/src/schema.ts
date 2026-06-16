@@ -107,6 +107,70 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["rag_chunks"]["Insert"]>;
         Relationships: [];
       };
+      leads: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          source: "chat" | "contact-form" | "test-drive" | "csv-import" | "api";
+          status: "new" | "contacted" | "qualified" | "won" | "lost";
+          assigned_to: string | null;
+          first_name: string;
+          last_name: string;
+          email: string | null;
+          phone: string | null;
+          message: string | null;
+          vehicle_id: string | null;
+          utm_source: string | null;
+          utm_medium: string | null;
+          utm_campaign: string | null;
+          referrer: string | null;
+          ip_addr: string | null;
+          user_agent: string | null;
+          lost_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["leads"]["Row"],
+          "id" | "created_at" | "updated_at"
+        > & { id?: string };
+        Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
+        Relationships: [];
+      };
+      lead_activities: {
+        Row: {
+          id: string;
+          lead_id: string;
+          tenant_id: string;
+          actor_user_id: string | null;
+          type: "note" | "call" | "email" | "status_change" | "assignment";
+          body: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["lead_activities"]["Row"],
+          "id" | "created_at"
+        > & { id?: string };
+        Update: Partial<Database["public"]["Tables"]["lead_activities"]["Insert"]>;
+        Relationships: [];
+      };
+      price_history: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          vehicle_id: string;
+          old_price: number | null;
+          new_price: number;
+          changed_by: string | null;
+          changed_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["price_history"]["Row"],
+          "id" | "changed_at"
+        > & { id?: string };
+        Update: Partial<Database["public"]["Tables"]["price_history"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
