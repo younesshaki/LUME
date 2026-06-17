@@ -10,7 +10,7 @@ export default async function EditVehiclePage({ params }: PageProps) {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id")
+    .select("id, slug")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -28,6 +28,7 @@ export default async function EditVehiclePage({ params }: PageProps) {
   return (
     <VehicleForm
       tenantId={tenant.id}
+      tenantSlug={tenant.slug}
       vehicleId={vehicle.id}
       initial={{
         year: vehicle.year,

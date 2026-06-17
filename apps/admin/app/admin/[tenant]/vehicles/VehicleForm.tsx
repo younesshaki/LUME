@@ -37,10 +37,12 @@ const EMPTY: FormState = {
 
 export default function VehicleForm({
   tenantId,
+  tenantSlug,
   vehicleId,
   initial,
 }: {
   tenantId: string;
+  tenantSlug: string;
   vehicleId?: string;
   initial?: FormState;
 }) {
@@ -100,7 +102,8 @@ export default function VehicleForm({
       if (error) { setError(error.message); setSaving(false); return; }
     }
 
-    router.push(`/admin/${tenantId}/vehicles`);
+    router.push(`/admin/${tenantSlug}/vehicles`);
+    router.refresh();
   }
 
   return (
