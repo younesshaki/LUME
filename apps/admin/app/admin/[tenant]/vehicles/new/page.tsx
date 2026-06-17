@@ -16,5 +16,5 @@ export default async function NewVehiclePage({ params }: PageProps) {
 
   if (!tenant) notFound();
 
-  return <VehicleForm tenantId={tenant.id} />;
+  return <VehicleForm tenantId={tenant.id} tenantSlug={tenant.slug} />;
 }
