@@ -62,12 +62,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const supabaseUrl =
     process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
+  // Public read: use the ANON key so RLS (vehicles_select_public_active +
+  // tenant_is_active) is the isolation backstop. The .eq("tenant_id") below is
+  // defense-in-depth, not the only guard — never use the service-role key here.
+  const anonKey =
+    process.env.SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    process.env.VITE_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) {
     return json(req, res, { error: "Supabase server env not configured" }, 500);
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  const supabase = createClient(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
