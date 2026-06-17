@@ -1,6 +1,10 @@
 import { R2, mediaUrl, fallbackMediaUrl } from "@/config/cdn";
 
 const CSV_KEY = "vehicles-with-generated-images.csv";
+const VEHICLES_API_PATH = "/api/vehicles";
+const API_PAGE_SIZE = 200;
+const TENANT_SLUG = (import.meta.env.VITE_LUME_TENANT as string | undefined) ?? "default";
+const ADMIN_API_HOST = (import.meta.env.VITE_ADMIN_API_HOST as string | undefined)?.replace(/\/$/, "");
 
 export type Vehicle = {
   id: string;
@@ -21,6 +25,12 @@ export type Vehicle = {
   sellerState: string;
   isSpecial: boolean;
   specialImageSrc?: string;
+};
+
+type VehicleApiResponse = {
+  vehicles?: Array<Vehicle & { tenantId?: string; externalId?: string }>;
+  totalCount?: number;
+  hasMore?: boolean;
 };
 
 export type VehicleFilters = {
@@ -256,6 +266,97 @@ let cached: Vehicle[] | null = null;
 export async function loadVehicles(): Promise<Vehicle[]> {
   if (cached) return cached;
 
+  try {
+    const apiVehicles = await loadVehiclesFromApi();
+    if (apiVehicles.length > 0) {
+      cached = apiVehicles;
+      return cached;
+    }
+  } catch (error) {
+    console.warn("Falling back to CSV vehicle catalog after API load failed", error);
+  }
+
+  cached = await loadVehiclesFromCsv();
+  return cached;
+}
+
+async function loadVehiclesFromApi(): Promise<Vehicle[]> {
+  const vehicles: Vehicle[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const url = createVehiclesApiUrl(offset);
+    const res = await fetch(url, {
+      headers: {
+        "X-Lume-Tenant": TENANT_SLUG,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Vehicle API ${res.status}: ${res.statusText}`);
+    }
+
+    const payload = (await res.json()) as VehicleApiResponse;
+    const pageVehicles = Array.isArray(payload.vehicles)
+      ? payload.vehicles.map(normalizeApiVehicle).filter((vehicle): vehicle is Vehicle => Boolean(vehicle))
+      : [];
+
+    vehicles.push(...pageVehicles);
+    hasMore = Boolean(payload.hasMore);
+    offset += pageVehicles.length || API_PAGE_SIZE;
+  }
+
+  return vehicles;
+}
+
+function createVehiclesApiUrl(offset: number): string {
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "http://localhost";
+  const url = new URL(`${ADMIN_API_HOST ?? ""}${VEHICLES_API_PATH}`, origin);
+  url.searchParams.set("tenant", TENANT_SLUG);
+  url.searchParams.set("limit", String(API_PAGE_SIZE));
+  url.searchParams.set("offset", String(offset));
+  return ADMIN_API_HOST ? url.toString() : `${url.pathname}${url.search}`;
+}
+
+function normalizeApiVehicle(vehicle: Vehicle & { tenantId?: string; externalId?: string }): Vehicle | null {
+  if (!vehicle.id || !vehicle.make || !vehicle.year) return null;
+
+  const imageKey = vehicle.externalId || vehicle.id;
+  const fallbackImage = fallbackVehicleImage(imageKey);
+  const isSpecial = Boolean(vehicle.isSpecial || SPECIALS_REGISTRY[imageKey]);
+  const specialImageSrc =
+    vehicle.specialImageSrc ||
+    (SPECIALS_REGISTRY[imageKey]
+      ? SPECIAL_IMAGES[SPECIALS_REGISTRY[imageKey].imageIndex]
+      : undefined);
+
+  return {
+    id: vehicle.id,
+    stockType: vehicle.stockType || "",
+    year: Number(vehicle.year) || 0,
+    make: vehicle.make,
+    model: vehicle.model || "",
+    trim: vehicle.trim || "",
+    price: Number(vehicle.price) || 0,
+    mileage: vehicle.mileage ?? null,
+    bodyStyle: vehicle.bodyStyle || "",
+    exteriorColor: vehicle.exteriorColor || "",
+    interiorColor: vehicle.interiorColor || "",
+    drivetrain: vehicle.drivetrain ? normalizeDrivetrain(vehicle.drivetrain) : "",
+    fuelType: vehicle.fuelType ? normalizeFuelType(vehicle.fuelType) : "",
+    imageSrc: vehicle.imageSrc || GENERATED_IMAGES[imageKey] || fallbackImage,
+    sellerCity: vehicle.sellerCity || "",
+    sellerState: vehicle.sellerState || "",
+    isSpecial,
+    specialImageSrc,
+  };
+}
+
+async function loadVehiclesFromCsv(): Promise<Vehicle[]> {
   const primaryUrl = `${R2}/${CSV_KEY}`;
   let res = await fetch(primaryUrl);
   if (!res.ok) {
@@ -270,7 +371,7 @@ export async function loadVehicles(): Promise<Vehicle[]> {
   const text = await res.text();
   const rows = parseCSV(text);
 
-  cached = rows
+  return rows
     .filter((row) => row["make"] && row["year"])
     .map((row) => ({
       id: row["_primaryKey"] || row["listingId"],
@@ -288,7 +389,7 @@ export async function loadVehicles(): Promise<Vehicle[]> {
       interiorColor: row["interiorColor"] !== "[PREMIUM]" ? row["interiorColor"] : "",
       drivetrain: row["drivetrain"] ? normalizeDrivetrain(row["drivetrain"]) : "",
       fuelType: row["fuelType"] ? normalizeFuelType(row["fuelType"]) : "",
-      imageSrc: GENERATED_IMAGES[row["_primaryKey"]] || FALLBACK_IMAGES[Math.abs(hashString(row["_primaryKey"])) % FALLBACK_IMAGES.length],
+      imageSrc: GENERATED_IMAGES[row["_primaryKey"]] || fallbackVehicleImage(row["_primaryKey"]),
       isSpecial: row["_primaryKey"] in SPECIALS_REGISTRY,
       specialImageSrc: SPECIALS_REGISTRY[row["_primaryKey"]]
         ? SPECIAL_IMAGES[SPECIALS_REGISTRY[row["_primaryKey"]].imageIndex]
@@ -302,8 +403,10 @@ export async function loadVehicles(): Promise<Vehicle[]> {
       sellerCity: row["sellerCity"] || "",
       sellerState: row["sellerState"] || "",
     }));
+}
 
-  return cached;
+function fallbackVehicleImage(id: string): string {
+  return FALLBACK_IMAGES[Math.abs(hashString(id)) % FALLBACK_IMAGES.length];
 }
 
 export function getUniqueMakes(vehicles: Vehicle[]): string[] {

@@ -23,6 +23,7 @@ export function rowToVehicle(row: VehicleRow): Vehicle {
   return {
     id: row.id,
     tenantId: row.tenant_id,
+    externalId: row.external_id ?? undefined,
     stockType: row.stock_type ?? "",
     year: row.year,
     make: row.make,
