@@ -11,6 +11,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@lume/blocks": "*",
     "@lume/db": "*",
     "@lume/rag": "*",
     "@lume/types": "*",

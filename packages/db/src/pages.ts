@@ -124,6 +124,18 @@ export async function fetchPublishedPage(
   };
 }
 
+// ─── Admin list ─────────────────────────────────────────────────────────────
+export async function listPages(client: DbClient, tenantId: string): Promise<Page[]> {
+  const { data, error } = await client
+    .from("pages")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("nav_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(`listPages failed: ${error.message}`);
+  return (data ?? []).map(rowToPage);
+}
+
 // ─── Draft read (admin) ──────────────────────────────────────────────────────
 export async function fetchDraftPage(
   client: DbClient,

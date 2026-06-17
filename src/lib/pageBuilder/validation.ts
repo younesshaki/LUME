@@ -11,7 +11,7 @@
  */
 import type { PageBlock, PageBlocksDocument } from "@lume/types";
 import { isPageBlock, isPageBlocksDocument } from "@lume/db";
-import { getBlockDescriptor } from "./blockTypes";
+import { getBlockDescriptor, validateBlock as validateSharedBlock } from "@lume/blocks";
 
 export { isPageBlock, isPageBlocksDocument };
 
@@ -28,7 +28,7 @@ export function validateBlock(block: unknown): BlockValidation {
   if (!descriptor) {
     return { ok: false, errors: [`unknown block type "${block.type}"`] };
   }
-  return descriptor.validate(block.props);
+  return validateSharedBlock(block);
 }
 
 export type DocumentValidation = {
