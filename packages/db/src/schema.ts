@@ -171,6 +171,46 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["price_history"]["Insert"]>;
         Relationships: [];
       };
+      pages: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          slug: string;
+          title: string;
+          nav_order: number;
+          is_reserved: boolean;
+          seo_meta: Record<string, unknown>;
+          draft_revision_id: string | null;
+          published_revision_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["pages"]["Row"],
+          "id" | "created_at" | "updated_at"
+        > & { id?: string };
+        Update: Partial<Database["public"]["Tables"]["pages"]["Insert"]> & {
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      page_revisions: {
+        Row: {
+          id: string;
+          page_id: string;
+          tenant_id: string;
+          kind: "draft" | "published" | "autosave";
+          blocks: { version: number; blocks: Array<{ id: string; type: string; props: Record<string, unknown> }> };
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["page_revisions"]["Row"],
+          "id" | "created_at"
+        > & { id?: string };
+        Update: Partial<Database["public"]["Tables"]["page_revisions"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -203,6 +243,17 @@ export type Database = {
           text: string;
           category: string;
           similarity: number;
+        }[];
+      };
+      get_published_page: {
+        Args: { p_tenant_id: string; p_slug: string };
+        Returns: {
+          id: string;
+          slug: string;
+          title: string;
+          seo_meta: Record<string, unknown>;
+          blocks: { version: number; blocks: Array<{ id: string; type: string; props: Record<string, unknown> }> };
+          published_revision_id: string | null;
         }[];
       };
     };
