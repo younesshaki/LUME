@@ -1,6 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { rowToVehicle } from "@lume/db";
-import type { VehicleListResponse } from "@lume/types";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -17,6 +15,35 @@ type VercelResponse = {
   setHeader: (name: string, value: string) => void;
   json: (payload: unknown) => void;
   end: () => void;
+};
+
+type Vehicle = {
+  id: string;
+  tenantId: string;
+  externalId?: string;
+  stockType: string;
+  year: number;
+  make: string;
+  model: string;
+  trim: string;
+  price: number;
+  mileage: number | null;
+  bodyStyle: string;
+  exteriorColor: string;
+  interiorColor: string;
+  drivetrain: string;
+  fuelType: string;
+  imageSrc: string;
+  sellerCity: string;
+  sellerState: string;
+  isSpecial: boolean;
+  specialImageSrc?: string;
+};
+
+type VehicleListResponse = {
+  vehicles: Vehicle[];
+  totalCount: number;
+  hasMore: boolean;
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -200,4 +227,29 @@ function query(req: VercelRequest, name: string): string | undefined {
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(Math.max(n, min), max);
+}
+
+function rowToVehicle(row: any): Vehicle {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    externalId: row.external_id ?? undefined,
+    stockType: row.stock_type ?? "",
+    year: row.year,
+    make: row.make,
+    model: row.model,
+    trim: row.trim,
+    price: row.price,
+    mileage: row.mileage,
+    bodyStyle: row.body_style,
+    exteriorColor: row.exterior_color,
+    interiorColor: row.interior_color,
+    drivetrain: row.drivetrain,
+    fuelType: row.fuel_type,
+    imageSrc: row.image_src,
+    sellerCity: row.seller_city,
+    sellerState: row.seller_state,
+    isSpecial: row.is_special,
+    specialImageSrc: row.special_image_src ?? undefined,
+  };
 }
