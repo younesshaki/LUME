@@ -5,6 +5,7 @@ export type StockType = "New" | "Used";
 export type Vehicle = {
   id: string;
   tenantId: TenantId;
+  externalId?: string;
   stockType: StockType | string;
   year: number;
   make: string;

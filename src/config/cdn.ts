@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 
-const R2_BASE = import.meta.env.VITE_R2_PUBLIC_BASE_URL as string | undefined;
+const R2_BASE =
+  (import.meta.env.VITE_R2_PUBLIC_BASE_URL as string | undefined) ??
+  (import.meta.env.VITEST ? "https://cdn.test/lume" : undefined);
 if (!R2_BASE) {
   throw new Error("VITE_R2_PUBLIC_BASE_URL is required");
 }
-export const R2 = import.meta.env.DEV ? "/r2" : R2_BASE;
+export const R2 = import.meta.env.DEV && !import.meta.env.VITEST ? "/r2" : R2_BASE;
 export const SUPABASE_CDN =
   (import.meta.env.VITE_SUPABASE_STORAGE_URL as string | undefined) ?? "";
 
