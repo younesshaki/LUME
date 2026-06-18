@@ -2,6 +2,20 @@
 @import "./experience/scenes/shared/sceneFonts.css";
 @import "./lib/standardMode.css";
 
+:root {
+  --theme-lume-ink: #fff8ec;
+  --theme-lume-muted: rgba(255, 248, 236, 0.64);
+  --theme-lume-soft: rgba(255, 248, 236, 0.42);
+  --theme-lume-line: rgba(255, 248, 236, 0.12);
+  --theme-lume-gold: #d9b76a;
+  --theme-lume-background: #000;
+  --theme-lume-panel: rgba(8, 8, 9, 0.82);
+  --lume-cinematic-intensity: 1;
+  --lume-dock-item-bg: #272727;
+  --lume-dock-item-color: #efede6;
+  --lume-dock-item-border: #e9c31b27;
+}
+
 @font-face {
   font-family: "Mileast";
   src: url("./experience/assets/fonts/mileast/Mileast.otf") format("opentype");
@@ -21,7 +35,7 @@ body,
 body {
   margin: 0;
   font-family: var(--experience-font-family);
-  background: #000;
+  background: var(--theme-lume-background, #000);
 }
 
 button,

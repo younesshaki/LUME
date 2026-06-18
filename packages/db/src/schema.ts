@@ -13,6 +13,7 @@ export type Database = {
           slug: string;
           name: string;
           status: "active" | "suspended" | "trial";
+          theme: Record<string, unknown>;
           created_at: string;
           updated_at: string;
         };
@@ -21,6 +22,7 @@ export type Database = {
           slug: string;
           name: string;
           status?: "active" | "suspended" | "trial";
+          theme?: Record<string, unknown>;
         };
         Update: Partial<Database["public"]["Tables"]["tenants"]["Insert"]>;
         Relationships: [];
@@ -255,6 +257,12 @@ export type Database = {
           seo_meta: Record<string, unknown>;
           blocks: { version: number; blocks: Array<{ id: string; type: string; props: Record<string, unknown> }> };
           published_revision_id: string | null;
+        }[];
+      };
+      get_tenant_theme: {
+        Args: { p_slug: string };
+        Returns: {
+          theme: Record<string, unknown>;
         }[];
       };
     };

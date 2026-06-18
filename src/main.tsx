@@ -8,22 +8,25 @@ import { AuthProvider } from './app-shell/AuthProvider'
 import { NavigationProvider } from './app-shell/NavigationProvider'
 import { DualModeProvider } from './lib/DualModeContext'
 import { SoundProvider } from './lib/sound'
+import { TenantThemeProvider } from './lib/TenantThemeProvider'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <DualModeProvider>
-      <SoundProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            {/* BrowserRouter owns the URL; NavigationProvider exposes our typed app navigation API. */}
-            <NavigationProvider>
-              <App />
-            </NavigationProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </SoundProvider>
-    </DualModeProvider>
+    <TenantThemeProvider>
+      <DualModeProvider>
+        <SoundProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              {/* BrowserRouter owns the URL; NavigationProvider exposes our typed app navigation API. */}
+              <NavigationProvider>
+                <App />
+              </NavigationProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </SoundProvider>
+      </DualModeProvider>
+    </TenantThemeProvider>
     <SpeedInsights />
     <Analytics />
   </React.StrictMode>,

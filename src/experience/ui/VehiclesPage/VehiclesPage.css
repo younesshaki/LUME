@@ -15,13 +15,13 @@
 }
 
 .vehiclesPage {
-  --lume-ink: #fff8ec;
-  --lume-muted: rgba(255, 248, 236, 0.64);
-  --lume-soft: rgba(255, 248, 236, 0.42);
-  --lume-line: rgba(255, 248, 236, 0.12);
-  --lume-panel: rgba(8, 8, 9, 0.82);
+  --lume-ink: var(--theme-lume-ink, #fff8ec);
+  --lume-muted: var(--theme-lume-muted, rgba(255, 248, 236, 0.64));
+  --lume-soft: var(--theme-lume-soft, rgba(255, 248, 236, 0.42));
+  --lume-line: var(--theme-lume-line, rgba(255, 248, 236, 0.12));
+  --lume-panel: var(--theme-lume-panel, rgba(8, 8, 9, 0.82));
   --lume-panel-solid: #101011;
-  --lume-gold: #d9b76a;
+  --lume-gold: var(--theme-lume-gold, #d9b76a);
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;

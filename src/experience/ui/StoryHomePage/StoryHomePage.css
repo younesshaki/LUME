@@ -1,11 +1,11 @@
 .storyHome {
   --trace-progress: 0;
   --story-home-bg-image: none;
-  --lume-ink: #fff8ec;
-  --lume-muted: rgba(255, 248, 236, 0.64);
-  --lume-soft: rgba(255, 248, 236, 0.4);
-  --lume-line: rgba(255, 248, 236, 0.12);
-  --lume-gold: #d9b76a;
+  --lume-ink: var(--theme-lume-ink, #fff8ec);
+  --lume-muted: var(--theme-lume-muted, rgba(255, 248, 236, 0.64));
+  --lume-soft: var(--theme-lume-soft, rgba(255, 248, 236, 0.4));
+  --lume-line: var(--theme-lume-line, rgba(255, 248, 236, 0.12));
+  --lume-gold: var(--theme-lume-gold, #d9b76a);
   --lume-red: #611923;
   position: relative;
   isolation: isolate;
@@ -13,7 +13,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   color: var(--lume-ink);
-  background: #000;
+  background: var(--theme-lume-background, #000);
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
   scroll-behavior: smooth;
