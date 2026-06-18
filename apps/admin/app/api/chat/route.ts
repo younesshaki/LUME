@@ -34,6 +34,7 @@ When an action would help the user, you may emit exactly one JSON object on its 
 {"type":"navigate","route":"string"}
 {"type":"highlight-vehicle","vehicleId":"string"}
 {"type":"open-lead-form","prefill":{}}
+{"type":"capture_lead","contact":{"email":"string","phone":"string","firstName":"string","lastName":"string","message":"string"},"vehicleId":"string"}
 {"type":"scroll-to","sectionId":"string"}
 Only include fields that are useful. Do not wrap action JSON in markdown.`;
 
@@ -334,6 +335,8 @@ function isBotAction(value: unknown): value is BotAction {
       return typeof value.vehicleId === "string";
     case "open-lead-form":
       return value.prefill === undefined || isRecord(value.prefill);
+    case "capture_lead":
+      return isLeadContact(value.contact) && isOptionalString(value.vehicleId);
     case "scroll-to":
       return typeof value.sectionId === "string";
     default:
@@ -351,4 +354,16 @@ function isOptionalString(value: unknown): boolean {
 
 function isOptionalNumber(value: unknown): boolean {
   return value === undefined || typeof value === "number";
+}
+
+function isLeadContact(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    isOptionalString(value.firstName) &&
+    isOptionalString(value.lastName) &&
+    isOptionalString(value.message) &&
+    (typeof value.email === "string" || typeof value.phone === "string") &&
+    isOptionalString(value.email) &&
+    isOptionalString(value.phone)
+  );
 }

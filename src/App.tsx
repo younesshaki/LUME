@@ -30,6 +30,7 @@ import { ROUTE_PATHS } from "./app-shell/routePaths";
 import { useCurrentRoute } from "./app-shell/useCurrentRoute";
 import { useNavigation } from "./app-shell/NavigationProvider";
 import { useUIStore } from "./lib/ui-state";
+import { LeadCaptureBridge } from "./lib/LeadCaptureBridge";
 
 if (import.meta.env.VITE_PAGE_RENDERER === "true") {
   void import("./lib/pageBuilder/registerBlocks").then(({ registerBlocks }) => {
@@ -373,6 +374,7 @@ export default function App() {
           <OllamaChat />
         </Suspense>
       )}
+      <LeadCaptureBridge />
       <Suspense fallback={null}>
         {/* Phase 3: pages now render from real URLs instead of the old screen ternary. */}
         <Routes>

@@ -34,7 +34,8 @@ export type BotAction =
   | BotNavigationAction
   | BotHighlightVehicleAction
   | BotOpenLeadFormAction
-  | BotScrollToAction;
+  | BotScrollToAction
+  | BotCaptureLeadAction;
 
 /** At least one of email or phone is required. */
 export type BotLeadContact = {

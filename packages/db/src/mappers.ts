@@ -2,12 +2,13 @@
  * Map between snake_case DB rows and the camelCase domain types in @lume/types.
  * Centralized here so consumers don't reinvent this everywhere.
  */
-import type { RagChunk, Tenant, Vehicle } from "@lume/types";
+import type { Lead, RagChunk, Tenant, Vehicle } from "@lume/types";
 import type { Database } from "./schema";
 
 type TenantRow = Database["public"]["Tables"]["tenants"]["Row"];
 type VehicleRow = Database["public"]["Tables"]["vehicles"]["Row"];
 type RagChunkRow = Database["public"]["Tables"]["rag_chunks"]["Row"];
+type LeadRow = Database["public"]["Tables"]["leads"]["Row"];
 
 export function rowToTenant(row: TenantRow): Tenant {
   return {
@@ -52,5 +53,30 @@ export function rowToRagChunk(row: RagChunkRow): RagChunk {
     text: row.text,
     category: row.category,
     embedding: row.embedding ?? undefined,
+  };
+}
+
+export function rowToLead(row: LeadRow): Lead {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    source: row.source,
+    status: row.status,
+    assignedTo: row.assigned_to,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    email: row.email,
+    phone: row.phone,
+    message: row.message,
+    vehicleId: row.vehicle_id,
+    utmSource: row.utm_source,
+    utmMedium: row.utm_medium,
+    utmCampaign: row.utm_campaign,
+    referrer: row.referrer,
+    ipAddr: row.ip_addr,
+    userAgent: row.user_agent,
+    lostReason: row.lost_reason,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
