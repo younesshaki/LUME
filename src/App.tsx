@@ -31,6 +31,12 @@ import { useCurrentRoute } from "./app-shell/useCurrentRoute";
 import { useNavigation } from "./app-shell/NavigationProvider";
 import { useUIStore } from "./lib/ui-state";
 
+if (import.meta.env.VITE_PAGE_RENDERER === "true") {
+  void import("./lib/pageBuilder/registerBlocks").then(({ registerBlocks }) => {
+    registerBlocks();
+  });
+}
+
 const loadAdminRouter = () => import("./admin/AdminRouter");
 const loadContactPage = () => import("./experience/ui/ContactPage");
 const loadExperience = () => import("./experience/Experience");
