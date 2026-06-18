@@ -377,6 +377,16 @@ export async function publishDraft(
   return revisionId;
 }
 
+/** Remove the public revision pointer without deleting revision history or draft content. */
+export async function unpublishPage(client: DbClient, pageId: string): Promise<void> {
+  const { error } = await client
+    .from("pages")
+    .update({ published_revision_id: null })
+    .eq("id", pageId);
+  if (error) throw new Error(`unpublishPage failed: ${error.message}`);
+  await touchPage(client, pageId);
+}
+
 // ─── Rollback ────────────────────────────────────────────────────────────────
 /** Restore a past revision's blocks as the current draft (SCRUM-187). */
 export async function restoreRevision(

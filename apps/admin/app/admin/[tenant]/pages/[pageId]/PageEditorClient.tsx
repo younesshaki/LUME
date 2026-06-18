@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { publishDraft, restoreRevision, updateDraftBlocks } from "@lume/db";
+import { publishDraft, restoreRevision, unpublishPage, updateDraftBlocks } from "@lume/db";
 import type { PageBlock, PageBlocksDocument, PageRevision } from "@lume/types";
 import type { BlockField, EditorBlockDescriptor } from "@lume/blocks";
 import { validatePageBlocksDocument } from "@lume/blocks";
@@ -22,6 +22,12 @@ type SaveState =
   | { type: "saving"; message: string }
   | { type: "success"; message: string }
   | { type: "error"; message: string };
+
+type PublicationStatus = {
+  tone: "neutral" | "success" | "warning";
+  label: string;
+  detail: string;
+};
 
 type PageEditorClientProps = {
   tenantId: string;
@@ -61,6 +67,10 @@ export default function PageEditorClient({
   );
   const selectedBlock = blocks.find((block) => block.id === selectedBlockId) ?? null;
   const selectedDescriptor = selectedBlock ? descriptorsByType.get(selectedBlock.type) : null;
+  const currentDraftDocument = currentDocument(blocks, initialBlocks.version);
+  const publishedRevision =
+    initialRevisions.find((revision) => revision.id === page.publishedRevisionId) ?? null;
+  const publicationStatus = describePublicationStatus(currentDraftDocument, publishedRevision);
   const previewRevision =
     initialRevisions.find((revision) => revision.id === previewRevisionId) ??
     initialRevisions[0] ??
@@ -155,6 +165,20 @@ export default function PageEditorClient({
     }
   }
 
+  async function unpublish() {
+    if (!page.publishedRevisionId) return;
+
+    setState({ type: "saving", message: "Unpublishing page..." });
+    try {
+      const supabase = createPageServiceClient();
+      await unpublishPage(supabase, page.id);
+      setState({ type: "success", message: "Page unpublished. Draft content is still saved." });
+      router.refresh();
+    } catch (error) {
+      setState({ type: "error", message: errorMessage(error, "Unable to unpublish page.") });
+    }
+  }
+
   async function restoreRevisionToDraft(revision: PageRevision) {
     setState({ type: "saving", message: "Restoring revision..." });
     try {
@@ -195,6 +219,7 @@ export default function PageEditorClient({
           <p className="text-sm text-neutral-500">
             Tenant <code>{tenantSlug}</code> - Page <code>/{page.slug}</code>
           </p>
+          <PublicationStatusBadge status={publicationStatus} />
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -212,6 +237,14 @@ export default function PageEditorClient({
             className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
           >
             Publish
+          </button>
+          <button
+            type="button"
+            onClick={unpublish}
+            disabled={state.type === "saving" || !page.publishedRevisionId}
+            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:hover:bg-red-950/30"
+          >
+            Unpublish
           </button>
         </div>
       </header>
@@ -361,6 +394,22 @@ export default function PageEditorClient({
           />
         </aside>
       </div>
+    </div>
+  );
+}
+
+function PublicationStatusBadge({ status }: { status: PublicationStatus }) {
+  const toneClass =
+    status.tone === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+      : status.tone === "warning"
+        ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
+        : "border-neutral-200 bg-neutral-50 text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300";
+
+  return (
+    <div className={`mt-3 inline-flex flex-col rounded-lg border px-3 py-2 text-xs ${toneClass}`}>
+      <span className="font-medium">{status.label}</span>
+      <span>{status.detail}</span>
     </div>
   );
 }
@@ -740,6 +789,34 @@ function currentDocument(blocks: PageBlock[], version: number): PageBlocksDocume
   return { version: version || 1, blocks };
 }
 
+function describePublicationStatus(
+  draft: PageBlocksDocument,
+  publishedRevision: PageRevision | null
+): PublicationStatus {
+  if (!publishedRevision) {
+    return {
+      tone: "neutral",
+      label: "Unpublished",
+      detail: `${draft.blocks.length} draft block${draft.blocks.length === 1 ? "" : "s"}; no published revision.`,
+    };
+  }
+
+  const matchesPublished = stableStringify(draft) === stableStringify(publishedRevision.blocks);
+  if (matchesPublished) {
+    return {
+      tone: "success",
+      label: "Published matches draft",
+      detail: `${draft.blocks.length} block${draft.blocks.length === 1 ? "" : "s"} live.`,
+    };
+  }
+
+  return {
+    tone: "warning",
+    label: "Draft differs from published",
+    detail: `Draft has ${draft.blocks.length}; published has ${publishedRevision.blocks.blocks.length}.`,
+  };
+}
+
 function fieldValue(
   descriptor: EditorBlockDescriptor,
   block: PageBlock,
@@ -775,6 +852,21 @@ function formatDateTime(value: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function stableStringify(value: unknown): string {
+  return JSON.stringify(sortJson(value));
+}
+
+function sortJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortJson);
+  if (!value || typeof value !== "object") return value;
+  return Object.keys(value)
+    .sort()
+    .reduce<Record<string, unknown>>((result, key) => {
+      result[key] = sortJson((value as Record<string, unknown>)[key]);
+      return result;
+    }, {});
 }
 
 function createPageServiceClient(): Parameters<typeof updateDraftBlocks>[0] {
