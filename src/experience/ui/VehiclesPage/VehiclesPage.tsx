@@ -35,6 +35,11 @@ import {
   readVehicleUrlState,
   writeVehicleUrlState,
 } from "@/experience/vehicles/urlState";
+import {
+  consumePendingInventoryFilter,
+  vehicleFiltersFromBotAction,
+} from "@/lib/botActionConsumers";
+import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -787,7 +792,12 @@ export default function VehiclesPage({
   const { play } = useSound();
   const { mode } = useDualMode();
   const isStandard = mode === "standard";
-  const initialState = useMemo(() => readVehicleUrlState(), []);
+  const initialState = useMemo(() => {
+    const pendingFilters = consumePendingInventoryFilter();
+    return pendingFilters
+      ? { filters: pendingFilters, sort: "recommended" as const, page: 1 }
+      : readVehicleUrlState();
+  }, []);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleLookup, setVehicleLookup] = useState<Record<string, Vehicle>>({});
   const [totalCount, setTotalCount] = useState(0);
@@ -905,6 +915,15 @@ export default function VehiclesPage({
     restoredScrollRef.current = true;
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  useBotAction("filter_inventory", (action) => {
+    setFilters(vehicleFiltersFromBotAction(action));
+    setSort("recommended");
+    setPage(1);
+    setFiltersOpen(false);
+    restoredScrollRef.current = true;
+    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
   const toggleSaved = (vehicleId: string) => {
     setSavedVehicleIds((ids) =>

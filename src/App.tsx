@@ -31,6 +31,12 @@ import { useCurrentRoute } from "./app-shell/useCurrentRoute";
 import { useNavigation } from "./app-shell/NavigationProvider";
 import { useUIStore } from "./lib/ui-state";
 import { LeadCaptureBridge } from "./lib/LeadCaptureBridge";
+import { useBotAction } from "./lib/useBotAction";
+import {
+  resolveBotNavigationRoute,
+  storePendingInventoryFilter,
+  storePendingLeadFormPrefill,
+} from "./lib/botActionConsumers";
 
 if (import.meta.env.VITE_PAGE_RENDERER === "true") {
   void import("./lib/pageBuilder/registerBlocks").then(({ registerBlocks }) => {
@@ -340,6 +346,41 @@ export default function App() {
     setMediaQuality(quality);
     window.localStorage.setItem(MEDIA_QUALITY_STORAGE_KEY, quality);
   }, []);
+
+  useBotAction("navigate", (action) => {
+    const target = resolveBotNavigationRoute(action.route);
+    if (!target) {
+      console.warn(`[bot] Unsupported navigation route: ${action.route}`);
+      return;
+    }
+    setShowcaseChapterRevealed(false);
+    navigateTo(target, {
+      source: "bot",
+      analytics: { action: "bot_navigate" },
+    });
+  });
+
+  useBotAction("filter_inventory", (action) => {
+    if (location.pathname !== ROUTE_PATHS.vehicles) {
+      storePendingInventoryFilter(action);
+    }
+    setShowcaseChapterRevealed(false);
+    navigateTo(
+      { route: "vehicles" },
+      { source: "bot", analytics: { action: "bot_filter_inventory" } }
+    );
+  });
+
+  useBotAction("open-lead-form", (action) => {
+    if (location.pathname !== ROUTE_PATHS.contact) {
+      storePendingLeadFormPrefill(action);
+    }
+    setShowcaseChapterRevealed(false);
+    navigateTo(
+      { route: "contact" },
+      { source: "bot", analytics: { action: "bot_open_lead_form" } }
+    );
+  });
 
   const isShowcaseExperience =
     routeId === "showcaseExperience" &&

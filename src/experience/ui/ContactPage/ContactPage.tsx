@@ -1,8 +1,22 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import {
+  consumePendingLeadFormPrefill,
+  leadFormPrefillFromAction,
+  mergeLeadFormPrefill,
+} from "@/lib/botActionConsumers";
+import { useBotAction } from "@/lib/useBotAction";
 import { submitLead } from "@/lib/leads";
 import "./ContactPage.css";
+
+type ContactFormState = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  message: string;
+};
 
 type ContactPageProps = {
   onGoHome: () => void;
@@ -17,19 +31,38 @@ export default function ContactPage({
   onNavigateToVehicles,
   onNavigateToShowcase,
 }: ContactPageProps) {
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
+  const formSectionRef = useRef<HTMLElement | null>(null);
+  const firstNameInputRef = useRef<HTMLInputElement | null>(null);
+  const [initialBotPrefill] = useState(() => consumePendingLeadFormPrefill());
+  const [form, setForm] = useState<ContactFormState>(() =>
+    mergeLeadFormPrefill(createEmptyContactForm(), initialBotPrefill)
+  );
+  const [focusRequestCount, setFocusRequestCount] = useState(() =>
+    initialBotPrefill ? 1 : 0
+  );
   const [status, setStatus] = useState<
     { type: "idle"; message: string } |
     { type: "submitting"; message: string } |
     { type: "success"; message: string } |
     { type: "error"; message: string }
   >({ type: "idle", message: "" });
+
+  useBotAction("open-lead-form", (action) => {
+    setForm((current) =>
+      mergeLeadFormPrefill(current, leadFormPrefillFromAction(action))
+    );
+    setStatus({ type: "idle", message: "" });
+    setFocusRequestCount((count) => count + 1);
+  });
+
+  useEffect(() => {
+    if (focusRequestCount === 0) return;
+    const frameId = window.requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      firstNameInputRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [focusRequestCount]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,7 +77,7 @@ export default function ContactPage({
         ...form,
         source: "contact-form",
       });
-      setForm({ firstName: "", lastName: "", email: "", phone: "", message: "" });
+      setForm(createEmptyContactForm());
       setStatus({
         type: "success",
         message: "Request received. The LUME team will review it discreetly.",
@@ -108,7 +141,11 @@ export default function ContactPage({
             </p>
           </section>
 
-          <section className="contactPage__formSection" aria-label="Invitation request">
+          <section
+            ref={formSectionRef}
+            className="contactPage__formSection"
+            aria-label="Invitation request"
+          >
             <div>
               <p className="contactPage__eyebrowSmall">Request consideration</p>
               <h2>Begin the private review.</h2>
@@ -118,6 +155,7 @@ export default function ContactPage({
                 <label>
                   <span>First name</span>
                   <input
+                    ref={firstNameInputRef}
                     value={form.firstName}
                     onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
                     autoComplete="given-name"
@@ -185,4 +223,14 @@ export default function ContactPage({
       </div>
     </CinematicShell>
   );
+}
+
+function createEmptyContactForm(): ContactFormState {
+  return {
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    message: "",
+  };
 }

@@ -23,6 +23,11 @@ import {
   type VehicleFilters,
   type VehicleSort,
 } from "@/experience/vehicles/catalog";
+import {
+  consumePendingInventoryFilter,
+  vehicleFiltersFromBotAction,
+} from "@/lib/botActionConsumers";
+import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import { vehiclePageSoundActions } from "@/experience/ui/VehiclesPage/VehiclesPage.sounds";
 import type { BlockComponentProps } from "../registry";
@@ -269,7 +274,9 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [filters, setFilters] = useState<VehicleFilters>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<VehicleFilters>(
+    () => consumePendingInventoryFilter() ?? DEFAULT_FILTERS
+  );
   const [sort, setSort] = useState<VehicleSort>("recommended");
   const [page, setPage] = useState(1);
   const [savedVehicleIds, setSavedVehicleIds] = useState<string[]>(() =>
@@ -321,6 +328,13 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
     setFilters((prev) => ({ ...prev, ...patch }));
     setPage(1);
   };
+
+  useBotAction("filter_inventory", (action) => {
+    setFilters(vehicleFiltersFromBotAction(action));
+    setSort("recommended");
+    setPage(1);
+    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
   const handleViewDetails = (vehicleId: string) => {
     if (onSelectVehicle) {
