@@ -9,7 +9,7 @@ export function FeatureBand({ block }: BlockComponentProps) {
   const body = stringProp(block, "body");
   const mediaKey = stringProp(block, "mediaKey");
   const mediaAlt = stringProp(block, "mediaAlt", heading);
-  const imageSrc = mediaKey ? mediaUrl(mediaKey) : "";
+  const imageSrc = mediaKey ? resolveMediaSource(mediaKey) : "";
 
   return (
     <section className="storyHome__featureBand">
@@ -25,4 +25,9 @@ export function FeatureBand({ block }: BlockComponentProps) {
       </div>
     </section>
   );
+}
+
+function resolveMediaSource(value: string): string {
+  if (/^(https?:)?\/\//.test(value) || value.startsWith("/")) return value;
+  return mediaUrl(value);
 }

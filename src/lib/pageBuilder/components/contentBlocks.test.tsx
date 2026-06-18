@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { PageBlock } from "@lume/types";
 import { Hero } from "./Hero";
+import { FeatureBand } from "./FeatureBand";
 import { RichText } from "./RichText";
 import { StatementList } from "./StatementList";
 import { PageBuilderRenderProvider } from "../renderContext";
@@ -56,5 +57,27 @@ describe("page-builder content blocks", () => {
     expect(screen.getByText("First statement.")).toBeInTheDocument();
     expect(screen.getByText("Second statement.")).toBeInTheDocument();
     expect(screen.getByText("Closing copy.")).toBeInTheDocument();
+  });
+
+  it("renders feature-band media from absolute tenant asset URLs", () => {
+    render(
+      <PageBuilderRenderProvider value={{ pageSlug: "home" }}>
+        <FeatureBand
+          mode="standard"
+          block={block("feature-band", {
+            kicker: "Media",
+            heading: "Tenant asset",
+            body: "Uses Supabase storage.",
+            mediaKey: "https://storage.example.com/default/hero.webp",
+            mediaAlt: "Tenant hero asset",
+          })}
+        />
+      </PageBuilderRenderProvider>
+    );
+
+    expect(screen.getByAltText("Tenant hero asset")).toHaveAttribute(
+      "src",
+      "https://storage.example.com/default/hero.webp"
+    );
   });
 });

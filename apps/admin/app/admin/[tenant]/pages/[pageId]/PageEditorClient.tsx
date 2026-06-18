@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@lume/db";
 import { useRouter } from "next/navigation";
 import { publishDraft, restoreRevision, unpublishPage, updateDraftBlocks } from "@lume/db";
 import type { PageBlock, PageBlocksDocument, PageRevision } from "@lume/types";
 import type { BlockField, EditorBlockDescriptor } from "@lume/blocks";
 import { validatePageBlocksDocument } from "@lume/blocks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { listTenantMediaAssets, type TenantAsset } from "@/lib/assets";
 import { DraftPreviewPanel } from "./DraftPreviewPanel";
 
 type EditorPage = {
@@ -381,6 +384,7 @@ export default function PageEditorClient({
               {selectedDescriptor.fields.map((field) => (
                 <FieldControl
                   key={field.name}
+                  tenantId={tenantId}
                   field={field}
                   value={fieldValue(selectedDescriptor, selectedBlock, field)}
                   errors={fieldErrors(blockErrors[selectedBlock.id] ?? [], field.name)}
@@ -559,11 +563,13 @@ function RevisionPreview({
 }
 
 function FieldControl({
+  tenantId,
   field,
   value,
   errors,
   onChange,
 }: {
+  tenantId: string;
   field: BlockField;
   value: unknown;
   errors: string[];
@@ -632,12 +638,79 @@ function FieldControl({
         />
       )}
       {field.helpText && <span className="mt-1 block text-xs text-neutral-500">{field.helpText}</span>}
+      {isMediaField(field) && (
+        <AssetPickerField tenantId={tenantId} value={String(value ?? "")} onSelect={onChange} />
+      )}
       {errors.length > 0 && (
         <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-red-600">
           {errors.map((error) => (
             <li key={error}>{error}</li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function AssetPickerField({
+  tenantId,
+  value,
+  onSelect,
+}: {
+  tenantId: string;
+  value: string;
+  onSelect: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [assets, setAssets] = useState<TenantAsset[]>([]);
+  const [status, setStatus] = useState("");
+
+  async function loadAssets() {
+    setOpen((current) => !current);
+    if (assets.length > 0) return;
+    setStatus("Loading assets...");
+    try {
+      const result = await listTenantMediaAssets(createStorageClient(), tenantId);
+      setAssets(result);
+      setStatus("");
+    } catch (error) {
+      setStatus(errorMessage(error, "Unable to load assets."));
+    }
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={loadAssets}
+        className="rounded border border-neutral-200 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900"
+      >
+        Choose asset
+      </button>
+      {value && <p className="mt-1 truncate text-[11px] text-neutral-500">Selected: {value}</p>}
+      {open && (
+        <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-neutral-200 p-2 dark:border-neutral-800">
+          {status && <p className="p-2 text-xs text-neutral-500">{status}</p>}
+          {!status && assets.length === 0 && (
+            <p className="p-2 text-xs text-neutral-500">No uploaded media assets.</p>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            {assets.map((asset) => (
+              <button
+                key={asset.objectKey}
+                type="button"
+                onClick={() => {
+                  onSelect(asset.url);
+                  setOpen(false);
+                }}
+                className="overflow-hidden rounded border border-neutral-200 text-left text-xs hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+              >
+                <img src={asset.url} alt="" className="aspect-video w-full object-cover" />
+                <span className="block truncate px-2 py-1">{asset.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -792,6 +865,10 @@ function toggleStringListItem(items: string[], value: string, checked: boolean):
   return items.filter((item) => item !== value);
 }
 
+function isMediaField(field: BlockField): boolean {
+  return field.name === "mediaUrl" || field.name === "mediaKey" || field.name === "backgroundImageKey";
+}
+
 function currentDocument(blocks: PageBlock[], version: number): PageBlocksDocument {
   return { version: version || 1, blocks };
 }
@@ -878,4 +955,8 @@ function sortJson(value: unknown): unknown {
 
 function createPageServiceClient(): Parameters<typeof updateDraftBlocks>[0] {
   return createSupabaseBrowserClient() as unknown as Parameters<typeof updateDraftBlocks>[0];
+}
+
+function createStorageClient(): SupabaseClient<Database> {
+  return createSupabaseBrowserClient() as unknown as SupabaseClient<Database>;
 }
