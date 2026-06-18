@@ -8,6 +8,7 @@ import type { PageBlock, PageBlocksDocument, PageRevision } from "@lume/types";
 import type { BlockField, EditorBlockDescriptor } from "@lume/blocks";
 import { validatePageBlocksDocument } from "@lume/blocks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { DraftPreviewPanel } from "./DraftPreviewPanel";
 
 type EditorPage = {
   id: string;
@@ -359,6 +360,12 @@ export default function PageEditorClient({
               );
             })}
           </div>
+          <DraftPreviewPanel
+            pageSlug={page.slug}
+            pageTitle={page.title}
+            blocks={blocks}
+            blockDescriptors={blockDescriptors}
+          />
         </main>
 
         <aside className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
