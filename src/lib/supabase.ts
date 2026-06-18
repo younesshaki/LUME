@@ -10,6 +10,10 @@ if (!isSupabaseConfigured) {
   );
 }
 
+/**
+ * Public browser Supabase client. This must only ever use the anon key; public
+ * reads rely on RLS/RPC boundaries and never on service-role credentials.
+ */
 export const supabase = createClient(
   isSupabaseConfigured ? supabaseUrl : "http://127.0.0.1:54321",
   isSupabaseConfigured ? supabaseAnonKey : "local-preview-anon-key"

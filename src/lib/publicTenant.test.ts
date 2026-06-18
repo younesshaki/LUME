@@ -1,0 +1,50 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { clearTenantIdCacheForTests, resolveTenantId } from "./publicTenant";
+
+type FakeTenantRow = {
+  id: string;
+  slug: string;
+  name: string;
+  status: "active" | "suspended" | "trial";
+};
+
+function fakeClient(rows: FakeTenantRow[], error: unknown = null) {
+  return {
+    rpc: vi.fn().mockResolvedValue({ data: rows, error }),
+  };
+}
+
+describe("resolveTenantId", () => {
+  afterEach(() => {
+    clearTenantIdCacheForTests();
+  });
+
+  it("resolves and caches active tenant ids by normalized slug", async () => {
+    const client = fakeClient([
+      { id: "tenant-1", slug: "default", name: "Default", status: "active" },
+    ]);
+
+    await expect(resolveTenantId(" DEFAULT ", client)).resolves.toBe("tenant-1");
+    await expect(resolveTenantId("default", client)).resolves.toBe("tenant-1");
+
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(client.rpc).toHaveBeenCalledWith("tenant_by_slug", { p_slug: "default" });
+  });
+
+  it("returns null for inactive tenants", async () => {
+    const client = fakeClient([
+      { id: "tenant-1", slug: "default", name: "Default", status: "suspended" },
+    ]);
+
+    await expect(resolveTenantId("default", client)).resolves.toBeNull();
+  });
+
+  it("returns null and does not cache failed lookups", async () => {
+    const client = fakeClient([], { message: "network unavailable" });
+
+    await expect(resolveTenantId("default", client)).resolves.toBeNull();
+    await expect(resolveTenantId("default", client)).resolves.toBeNull();
+
+    expect(client.rpc).toHaveBeenCalledTimes(2);
+  });
+});
