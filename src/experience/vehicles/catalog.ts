@@ -31,6 +31,22 @@ type VehicleApiResponse = {
   vehicles?: Array<Vehicle & { tenantId?: string; externalId?: string }>;
   totalCount?: number;
   hasMore?: boolean;
+  facets?: VehicleFacets;
+};
+
+export type VehicleFacets = {
+  makes: string[];
+  models: string[];
+  states: string[];
+  cities: string[];
+};
+
+export type VehicleResults = {
+  vehicles: Vehicle[];
+  totalCount: number;
+  hasMore: boolean;
+  facets: VehicleFacets;
+  source: "api" | "fallback";
 };
 
 export type VehicleFilters = {
@@ -280,13 +296,43 @@ export async function loadVehicles(): Promise<Vehicle[]> {
   return cached;
 }
 
+export async function loadVehicleResults(
+  filters: VehicleFilters,
+  sort: VehicleSort,
+  page: number,
+  pageSize: number
+): Promise<VehicleResults> {
+  try {
+    return await loadVehicleResultsFromApi(filters, sort, page, pageSize);
+  } catch (error) {
+    console.warn("Falling back to local vehicle filtering after API query failed", error);
+  }
+
+  const vehicles = await loadVehicles();
+  const filtered = filterVehicles(vehicles, filters);
+  const sorted = sortVehicles(filtered, sort);
+  const offset = (Math.max(1, page) - 1) * pageSize;
+  const pageVehicles = sorted.slice(offset, offset + pageSize);
+  return {
+    vehicles: pageVehicles,
+    totalCount: sorted.length,
+    hasMore: offset + pageVehicles.length < sorted.length,
+    facets: vehicleFacetsFromVehicles(vehicles, filters),
+    source: "fallback",
+  };
+}
+
 async function loadVehiclesFromApi(): Promise<Vehicle[]> {
   const vehicles: Vehicle[] = [];
   let offset = 0;
   let hasMore = true;
 
   while (hasMore) {
-    const url = createVehiclesApiUrl(offset);
+    const params = new URLSearchParams();
+    params.set("tenant", TENANT_SLUG);
+    params.set("limit", String(API_PAGE_SIZE));
+    params.set("offset", String(offset));
+    const url = createVehiclesApiUrl(params);
     const res = await fetch(url, {
       headers: {
         "X-Lume-Tenant": TENANT_SLUG,
@@ -310,16 +356,90 @@ async function loadVehiclesFromApi(): Promise<Vehicle[]> {
   return vehicles;
 }
 
-function createVehiclesApiUrl(offset: number): string {
+async function loadVehicleResultsFromApi(
+  filters: VehicleFilters,
+  sort: VehicleSort,
+  page: number,
+  pageSize: number
+): Promise<VehicleResults> {
+  const offset = (Math.max(1, page) - 1) * pageSize;
+  const params = vehicleFiltersToApiSearchParams(filters, sort, offset, pageSize);
+  const res = await fetch(createVehiclesApiUrl(params), {
+    headers: {
+      "X-Lume-Tenant": TENANT_SLUG,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Vehicle API ${res.status}: ${res.statusText}`);
+  }
+
+  const payload = (await res.json()) as VehicleApiResponse;
+  const vehicles = Array.isArray(payload.vehicles)
+    ? payload.vehicles.map(normalizeApiVehicle).filter((vehicle): vehicle is Vehicle => Boolean(vehicle))
+    : [];
+
+  return {
+    vehicles,
+    totalCount: payload.totalCount ?? vehicles.length,
+    hasMore: Boolean(payload.hasMore),
+    facets: normalizeVehicleFacets(payload.facets),
+    source: "api",
+  };
+}
+
+export function vehicleFiltersToApiSearchParams(
+  filters: VehicleFilters,
+  sort: VehicleSort,
+  offset: number,
+  limit: number
+): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set("tenant", TENANT_SLUG);
+  params.set("limit", String(limit));
+  params.set("offset", String(Math.max(0, offset)));
+  params.set("sort", sort);
+
+  const query = filters.query.trim();
+  if (query) params.set("q", query);
+  for (const [key, value] of [
+    ["stockType", filters.stockType],
+    ["make", filters.make],
+    ["model", filters.model],
+    ["bodyStyle", filters.bodyStyle],
+    ["fuelType", filters.fuelType],
+    ["drivetrain", filters.drivetrain],
+    ["sellerState", filters.sellerState],
+    ["sellerCity", filters.sellerCity],
+  ] as const) {
+    if (value) params.set(key, value);
+  }
+
+  params.set("yearMin", String(Math.min(filters.yearMin, filters.yearMax)));
+  params.set("yearMax", String(Math.max(filters.yearMin, filters.yearMax)));
+  if (filters.mileageMax > 0) params.set("mileageMax", String(filters.mileageMax));
+  if (filters.priceMin > 0) params.set("priceMin", String(filters.priceMin));
+  if (filters.priceMax > 0) params.set("priceMax", String(filters.priceMax));
+  return params;
+}
+
+function createVehiclesApiUrl(params: URLSearchParams): string {
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : "http://localhost";
   const url = new URL(`${ADMIN_API_HOST ?? ""}${VEHICLES_API_PATH}`, origin);
-  url.searchParams.set("tenant", TENANT_SLUG);
-  url.searchParams.set("limit", String(API_PAGE_SIZE));
-  url.searchParams.set("offset", String(offset));
+  params.forEach((value, key) => url.searchParams.set(key, value));
   return ADMIN_API_HOST ? url.toString() : `${url.pathname}${url.search}`;
+}
+
+function normalizeVehicleFacets(facets: VehicleFacets | undefined): VehicleFacets {
+  return {
+    makes: Array.isArray(facets?.makes) ? facets.makes.filter(Boolean).sort() : [],
+    models: Array.isArray(facets?.models) ? facets.models.filter(Boolean).sort() : [],
+    states: Array.isArray(facets?.states) ? facets.states.filter(Boolean).sort() : [],
+    cities: Array.isArray(facets?.cities) ? facets.cities.filter(Boolean).sort() : [],
+  };
 }
 
 function normalizeApiVehicle(vehicle: Vehicle & { tenantId?: string; externalId?: string }): Vehicle | null {
@@ -430,6 +550,18 @@ export function getCitiesForState(vehicles: Vehicle[], state: string): string[] 
         .filter(Boolean)
     ),
   ].sort();
+}
+
+export function vehicleFacetsFromVehicles(
+  vehicles: Vehicle[],
+  filters: Pick<VehicleFilters, "make" | "sellerState">
+): VehicleFacets {
+  return {
+    makes: getUniqueMakes(vehicles),
+    models: filters.make ? getModelsForMake(vehicles, filters.make) : [],
+    states: getUniqueStates(vehicles),
+    cities: getCitiesForState(vehicles, filters.sellerState),
+  };
 }
 
 export function getVehicleById(vehicles: Vehicle[], id: string | null): Vehicle | undefined {

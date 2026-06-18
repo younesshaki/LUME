@@ -64,12 +64,13 @@ export type Database = {
           seller_state: string;
           is_special: boolean;
           special_image_src: string | null;
+          search_vector: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["vehicles"]["Row"],
-          "id" | "created_at" | "updated_at"
+          "id" | "search_vector" | "created_at" | "updated_at"
         > & { id?: string };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
         Relationships: [];

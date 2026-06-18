@@ -23,15 +23,10 @@ import {
   YEAR_MAX,
   YEAR_MIN,
   countActiveFilters,
-  filterVehicles,
   formatVehiclePrice,
-  getCitiesForState,
-  getModelsForMake,
-  getUniqueMakes,
-  getUniqueStates,
-  loadVehicles,
-  sortVehicles,
+  loadVehicleResults,
   type Vehicle,
+  type VehicleFacets,
   type VehicleFilters,
   type VehicleSort,
 } from "@/experience/vehicles/catalog";
@@ -51,6 +46,12 @@ const PAGE_SIZE = 24;
 const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
 const SCROLL_STORAGE_PREFIX = "lume.vehicle-scroll:";
+const EMPTY_VEHICLE_FACETS: VehicleFacets = {
+  makes: [],
+  models: [],
+  states: [],
+  cities: [],
+};
 
 function formatMileage(miles: number | null): string {
   if (miles === null) return "N/A";
@@ -71,6 +72,16 @@ function readStoredIds(key: string): string[] {
 function writeStoredIds(key: string, ids: string[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(key, JSON.stringify(ids));
+}
+
+function mergeVehicleLookup(
+  current: Record<string, Vehicle>,
+  vehicles: Vehicle[]
+): Record<string, Vehicle> {
+  if (vehicles.length === 0) return current;
+  const next = { ...current };
+  for (const vehicle of vehicles) next[vehicle.id] = vehicle;
+  return next;
 }
 
 function getScrollStorageKey(filters: VehicleFilters, sort: VehicleSort, page: number): string {
@@ -396,7 +407,7 @@ function PillButton({
 
 function AdvancedFilters({
   open,
-  vehicles,
+  facets,
   filters,
   activeCount,
   onChange,
@@ -404,7 +415,7 @@ function AdvancedFilters({
   onClose,
 }: {
   open: boolean;
-  vehicles: Vehicle[];
+  facets: VehicleFacets;
   filters: VehicleFilters;
   activeCount: number;
   onChange: (patch: Partial<VehicleFilters>) => void;
@@ -413,11 +424,6 @@ function AdvancedFilters({
 }) {
   const { play } = useSound();
   const dialogRef = useDialogKeyboard(open, onClose);
-  const states = useMemo(() => getUniqueStates(vehicles), [vehicles]);
-  const cities = useMemo(
-    () => getCitiesForState(vehicles, filters.sellerState),
-    [filters.sellerState, vehicles]
-  );
   const years = useMemo(() => {
     const ys: number[] = [];
     for (let y = YEAR_MIN; y <= YEAR_MAX; y++) ys.push(y);
@@ -477,7 +483,7 @@ function AdvancedFilters({
               onChange={(event) => onChange({ sellerState: event.target.value, sellerCity: "" })}
             >
               <option value="">All States</option>
-              {states.map((state) => <option key={state} value={state}>{state}</option>)}
+              {facets.states.map((state) => <option key={state} value={state}>{state}</option>)}
             </select>
           </label>
 
@@ -490,7 +496,7 @@ function AdvancedFilters({
               onChange={(event) => onChange({ sellerCity: event.target.value })}
             >
               <option value="">All Cities</option>
-              {cities.map((city) => <option key={city} value={city}>{city}</option>)}
+              {facets.cities.map((city) => <option key={city} value={city}>{city}</option>)}
             </select>
           </label>
 
@@ -783,6 +789,9 @@ export default function VehiclesPage({
   const isStandard = mode === "standard";
   const initialState = useMemo(() => readVehicleUrlState(), []);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicleLookup, setVehicleLookup] = useState<Record<string, Vehicle>>({});
+  const [totalCount, setTotalCount] = useState(0);
+  const [facets, setFacets] = useState<VehicleFacets>(EMPTY_VEHICLE_FACETS);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [filters, setFilters] = useState<VehicleFilters>(initialState.filters);
@@ -796,17 +805,30 @@ export default function VehiclesPage({
   const restoredScrollRef = useRef(false);
 
   useEffect(() => {
-    loadVehicles()
-      .then((v) => {
-        setVehicles(v);
+    let cancelled = false;
+    setLoading(true);
+    loadVehicleResults(filters, sort, page, PAGE_SIZE)
+      .then((result) => {
+        if (cancelled) return;
+        setVehicles(result.vehicles);
+        setTotalCount(result.totalCount);
+        setFacets(result.facets);
+        setVehicleLookup((current) => mergeVehicleLookup(current, result.vehicles));
         setLoadError(false);
       })
       .catch((error) => {
+        if (cancelled) return;
         console.error("Unable to load vehicle inventory", error);
         setLoadError(true);
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, page, sort]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -815,22 +837,14 @@ export default function VehiclesPage({
     return () => window.clearTimeout(timeout);
   }, [filters, page, sort]);
 
-  const makes = useMemo(() => getUniqueMakes(vehicles), [vehicles]);
-  const models = useMemo(
-    () => (filters.make ? getModelsForMake(vehicles, filters.make) : []),
-    [filters.make, vehicles]
-  );
-  const filtered = useMemo(() => filterVehicles(vehicles, filters), [filters, vehicles]);
-  const sorted = useMemo(() => sortVehicles(filtered, sort), [filtered, sort]);
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paginated = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
   const compareVehicles = useMemo(
     () => compareVehicleIds
-      .map((id) => vehicles.find((vehicle) => vehicle.id === id))
+      .map((id) => vehicleLookup[id])
       .filter((vehicle): vehicle is Vehicle => Boolean(vehicle)),
-    [compareVehicleIds, vehicles]
+    [compareVehicleIds, vehicleLookup]
   );
 
   useVehiclesPageStateBridge({
@@ -939,8 +953,8 @@ export default function VehiclesPage({
                 sort={sort}
                 activeCount={activeCount}
                 savedCount={savedVehicleIds.length}
-                makes={makes}
-                models={models}
+                makes={facets.makes}
+                models={facets.models}
                 onFiltersChange={handleFilterChange}
                 onSortChange={handleSortChange}
                 onOpenFilters={() => setFiltersOpen(true)}
@@ -951,7 +965,7 @@ export default function VehiclesPage({
               <div className="vehiclesPage__resultsBar" ref={gridRef}>
                 {!loading && (
                   <span className="vehiclesPage__resultCount">
-                    {sorted.length} vehicle{sorted.length !== 1 ? "s" : ""}
+                    {totalCount} vehicle{totalCount !== 1 ? "s" : ""}
                     {activeCount > 0 ? " matching filters" : ""}
                   </span>
                 )}
@@ -961,7 +975,7 @@ export default function VehiclesPage({
                 <div className="vehiclesPage__loading">
                   <span>Loading vehicles...</span>
                 </div>
-              ) : sorted.length === 0 ? (
+              ) : totalCount === 0 ? (
                 <div className="vehiclesPage__empty">
                   <p>No vehicles match your filters.</p>
                   <button type="button" className="vehiclesPage__clearBtn" onClick={handleClear}>
@@ -977,7 +991,7 @@ export default function VehiclesPage({
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: isStandard ? 0.18 : 0.3 }}
                   >
-                    {paginated.map((vehicle) => {
+                    {vehicles.map((vehicle) => {
                       const compared = compareVehicleIds.includes(vehicle.id);
                       return (
                         <VehicleCard
@@ -1010,7 +1024,7 @@ export default function VehiclesPage({
 
         <AdvancedFilters
           open={filtersOpen}
-          vehicles={vehicles}
+          facets={facets}
           filters={filters}
           activeCount={activeCount}
           onChange={handleFilterChange}

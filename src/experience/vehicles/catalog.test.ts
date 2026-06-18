@@ -11,6 +11,8 @@ import {
   getUniqueStates,
   getVehicleById,
   sortVehicles,
+  vehicleFacetsFromVehicles,
+  vehicleFiltersToApiSearchParams,
   type Vehicle,
 } from "./catalog";
 import { encodeVehicleUrlState, readVehicleUrlState } from "./urlState";
@@ -147,6 +149,38 @@ describe("vehicle catalog", () => {
     expect(getVehicleById(vehicles, "toyota-ca")?.model).toBe("RAV4");
     expect(getVehicleById(vehicles, "missing")).toBeUndefined();
     expect(formatVehiclePrice(72000)).toBe("Est. $72,000");
+  });
+
+  it("builds API search params for server-side vehicle queries", () => {
+    const params = vehicleFiltersToApiSearchParams(
+      {
+        ...DEFAULT_FILTERS,
+        query: "tesla plaid",
+        make: "Tesla",
+        sellerState: "CA",
+        priceMax: 100000,
+      },
+      "price_desc",
+      24,
+      24
+    );
+
+    expect(params.get("q")).toBe("tesla plaid");
+    expect(params.get("make")).toBe("Tesla");
+    expect(params.get("sellerState")).toBe("CA");
+    expect(params.get("priceMax")).toBe("100000");
+    expect(params.get("sort")).toBe("price_desc");
+    expect(params.get("offset")).toBe("24");
+    expect(params.get("limit")).toBe("24");
+  });
+
+  it("builds fallback facets from local vehicles", () => {
+    expect(vehicleFacetsFromVehicles(vehicles, { make: "Tesla", sellerState: "CA" })).toEqual({
+      makes: ["Ford", "Tesla", "Toyota"],
+      models: ["Model S"],
+      states: ["CA", "FL"],
+      cities: ["Los Angeles", "San Diego"],
+    });
   });
 
   it("encodes only non-default URL state", () => {

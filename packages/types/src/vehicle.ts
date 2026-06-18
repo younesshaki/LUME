@@ -58,4 +58,12 @@ export type VehicleListResponse = {
   vehicles: Vehicle[];
   totalCount: number;
   hasMore: boolean;
+  facets?: VehicleFacets;
+};
+
+export type VehicleFacets = {
+  makes: string[];
+  models: string[];
+  states: string[];
+  cities: string[];
 };
