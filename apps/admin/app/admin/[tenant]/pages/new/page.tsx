@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { listPages } from "@lume/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import PagesListClient from "./PagesListClient";
+import NewPageClient from "./NewPageClient";
 
 type PageProps = { params: Promise<{ tenant: string }> };
 
-export default async function PagesListPage({ params }: PageProps) {
+export default async function NewPageRoute({ params }: PageProps) {
   const { tenant: slug } = await params;
   const supabase = await createSupabaseServerClient();
 
@@ -19,14 +19,11 @@ export default async function PagesListPage({ params }: PageProps) {
   const pages = await listPages(supabase, tenant.id);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Pages</h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          Edit draft page content and publish changes for {tenant.name}.
-        </p>
-      </header>
-      <PagesListClient tenantId={tenant.id} tenantSlug={tenant.slug} initialPages={pages} />
-    </div>
+    <NewPageClient
+      tenantId={tenant.id}
+      tenantSlug={tenant.slug}
+      existingSlugs={pages.map((page) => page.slug)}
+      navOrder={pages.length}
+    />
   );
 }

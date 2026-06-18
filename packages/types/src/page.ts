@@ -55,6 +55,7 @@ export type Page = {
   seoMeta: PageSeoMeta;
   draftRevisionId: string | null;
   publishedRevisionId: string | null;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };

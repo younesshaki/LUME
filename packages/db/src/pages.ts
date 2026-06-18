@@ -36,9 +36,44 @@ export type ReservedPageSlug = (typeof RESERVED_PAGE_SLUGS)[number];
 export const BLOCKED_PAGE_SLUGS = ["admin", "api"] as const;
 
 export const EMPTY_BLOCKS_DOCUMENT: PageBlocksDocument = { version: 1, blocks: [] };
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export type PageSlugValidation =
+  | { ok: true; slug: string }
+  | { ok: false; slug: string; reason: string };
 
 export function isReservedSlug(slug: string): slug is ReservedPageSlug {
   return (RESERVED_PAGE_SLUGS as readonly string[]).includes(slug);
+}
+
+export function normalizePageSlug(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function validateNewPageSlug(
+  input: string,
+  existingSlugs: readonly string[] = []
+): PageSlugValidation {
+  const slug = normalizePageSlug(input);
+  if (!slug) return { ok: false, slug, reason: "Slug is required." };
+  if (!SLUG_PATTERN.test(slug)) {
+    return { ok: false, slug, reason: "Use lowercase letters, numbers, and hyphens." };
+  }
+  if (isReservedSlug(slug)) {
+    return { ok: false, slug, reason: "That slug is reserved for a system page." };
+  }
+  if ((BLOCKED_PAGE_SLUGS as readonly string[]).includes(slug)) {
+    return { ok: false, slug, reason: "That slug conflicts with an app route." };
+  }
+  if (existingSlugs.map(normalizePageSlug).includes(slug)) {
+    return { ok: false, slug, reason: "A page with that slug already exists." };
+  }
+  return { ok: true, slug };
 }
 
 // ─── Structural guards (shape only — per-block prop validation is the registry's job) ──
@@ -84,6 +119,7 @@ export function rowToPage(row: PageRow): Page {
     seoMeta: (row.seo_meta ?? {}) as Page["seoMeta"],
     draftRevisionId: row.draft_revision_id,
     publishedRevisionId: row.published_revision_id,
+    archivedAt: "archived_at" in row ? row.archived_at : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -134,6 +170,91 @@ export async function listPages(client: DbClient, tenantId: string): Promise<Pag
     .order("created_at", { ascending: true });
   if (error) throw new Error(`listPages failed: ${error.message}`);
   return (data ?? []).map(rowToPage);
+}
+
+export async function createPage(
+  client: DbClient,
+  input: {
+    tenantId: string;
+    slug: string;
+    title: string;
+    navOrder: number;
+    seoMeta?: Page["seoMeta"];
+    blocks?: PageBlocksDocument;
+  }
+): Promise<Page> {
+  const { data, error } = await client
+    .from("pages")
+    .insert({
+      tenant_id: input.tenantId,
+      slug: normalizePageSlug(input.slug),
+      title: input.title,
+      nav_order: input.navOrder,
+      is_reserved: false,
+      seo_meta: input.seoMeta ?? {},
+      draft_revision_id: null,
+      published_revision_id: null,
+    })
+    .select("*")
+    .single();
+  if (error || !data) throw new Error(`createPage failed: ${error?.message ?? "no row"}`);
+
+  const page = rowToPage(data);
+  await updateDraftBlocks(client, page.id, input.blocks ?? EMPTY_BLOCKS_DOCUMENT);
+  return (await fetchDraftPage(client, page.id))?.page ?? page;
+}
+
+export async function duplicatePage(
+  client: DbClient,
+  sourcePageId: string,
+  input: { slug: string; title: string; navOrder: number }
+): Promise<Page> {
+  const source = await fetchDraftPage(client, sourcePageId);
+  if (!source) throw new Error(`duplicatePage: page ${sourcePageId} not found`);
+  return createPage(client, {
+    tenantId: source.page.tenantId,
+    slug: input.slug,
+    title: input.title,
+    navOrder: input.navOrder,
+    seoMeta: source.page.seoMeta,
+    blocks: source.blocks,
+  });
+}
+
+export async function archivePage(client: DbClient, pageId: string): Promise<void> {
+  const page = await fetchPageForMutation(client, pageId);
+  if (page.isReserved) throw new Error("Reserved system pages cannot be archived.");
+
+  const { error } = await client
+    .from("pages")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", pageId);
+  if (error) throw pageArchiveError(error.message);
+}
+
+export async function deletePage(client: DbClient, pageId: string): Promise<void> {
+  const page = await fetchPageForMutation(client, pageId);
+  if (page.isReserved) throw new Error("Reserved system pages cannot be deleted.");
+
+  const { error } = await client.from("pages").delete().eq("id", pageId);
+  if (error) throw new Error(`deletePage failed: ${error.message}`);
+}
+
+export async function updatePageNavOrder(
+  client: DbClient,
+  tenantId: string,
+  orderedPageIds: readonly string[]
+): Promise<void> {
+  await Promise.all(
+    orderedPageIds.map(async (pageId, navOrder) => {
+      const { error } = await client
+        .from("pages")
+        .update({ nav_order: navOrder })
+        .eq("tenant_id", tenantId)
+        .eq("id", pageId);
+      if (error) throw new Error(`updatePageNavOrder failed: ${error.message}`);
+    })
+  );
 }
 
 // ─── Draft read (admin) ──────────────────────────────────────────────────────
@@ -285,4 +406,21 @@ async function insertRevision(
 async function touchPage(client: DbClient, pageId: string): Promise<void> {
   // The updated_at trigger fires on any update; bumping a no-op column keeps it simple.
   await client.from("pages").update({ updated_at: new Date().toISOString() }).eq("id", pageId);
+}
+
+async function fetchPageForMutation(client: DbClient, pageId: string): Promise<Page> {
+  const { data, error } = await client.from("pages").select("*").eq("id", pageId).single();
+  if (error || !data) {
+    throw new Error(`fetchPageForMutation failed: ${error?.message ?? "no row"}`);
+  }
+  return rowToPage(data);
+}
+
+function pageArchiveError(message: string): Error {
+  if (message.includes("archived_at")) {
+    return new Error(
+      "archivePage failed: archived_at column is missing. Apply migration 018_pages_archived_at.sql."
+    );
+  }
+  return new Error(`archivePage failed: ${message}`);
 }

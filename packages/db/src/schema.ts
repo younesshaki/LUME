@@ -182,13 +182,14 @@ export type Database = {
           seo_meta: Record<string, unknown>;
           draft_revision_id: string | null;
           published_revision_id: string | null;
+          archived_at: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["pages"]["Row"],
-          "id" | "created_at" | "updated_at"
-        > & { id?: string };
+          "id" | "archived_at" | "created_at" | "updated_at"
+        > & { id?: string; archived_at?: string | null };
         Update: Partial<Database["public"]["Tables"]["pages"]["Insert"]> & {
           updated_at?: string;
         };
