@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { fetchDraftPage } from "@lume/db";
+import { fetchDraftPage, listPageRevisions } from "@lume/db";
 import { listEditorBlockDescriptors } from "@lume/blocks";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import PageEditorClient from "./PageEditorClient";
@@ -19,6 +19,7 @@ export default async function PageEditorPage({ params }: PageProps) {
 
   const draft = await fetchDraftPage(supabase, pageId);
   if (!draft || draft.page.tenantId !== tenant.id) notFound();
+  const revisions = await listPageRevisions(supabase, pageId, tenant.id);
 
   return (
     <PageEditorClient
@@ -28,8 +29,11 @@ export default async function PageEditorPage({ params }: PageProps) {
         id: draft.page.id,
         slug: draft.page.slug,
         title: draft.page.title,
+        draftRevisionId: draft.page.draftRevisionId,
+        publishedRevisionId: draft.page.publishedRevisionId,
       }}
       initialBlocks={draft.blocks}
+      initialRevisions={revisions}
       blockDescriptors={listEditorBlockDescriptors()}
     />
   );

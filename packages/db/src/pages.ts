@@ -285,6 +285,27 @@ export async function fetchDraftPage(
   return { page, blocks: revRow ? asBlocksDocument(revRow.blocks) : EMPTY_BLOCKS_DOCUMENT };
 }
 
+/** List a page's revision history newest-first for admin preview/restore UI. */
+export async function listPageRevisions(
+  client: DbClient,
+  pageId: string,
+  tenantId?: string
+): Promise<PageRevision[]> {
+  let query = client
+    .from("page_revisions")
+    .select("*")
+    .eq("page_id", pageId)
+    .order("created_at", { ascending: false });
+
+  if (tenantId) {
+    query = query.eq("tenant_id", tenantId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(`listPageRevisions failed: ${error.message}`);
+  return (data ?? []).map(rowToPageRevision);
+}
+
 // ─── Draft mutate ────────────────────────────────────────────────────────────
 /** Replace the draft revision's blocks. Creates a draft revision if none exists. */
 export async function updateDraftBlocks(

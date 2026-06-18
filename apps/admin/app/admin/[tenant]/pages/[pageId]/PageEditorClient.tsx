@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { publishDraft, updateDraftBlocks } from "@lume/db";
-import type { PageBlock, PageBlocksDocument } from "@lume/types";
+import { publishDraft, restoreRevision, updateDraftBlocks } from "@lume/db";
+import type { PageBlock, PageBlocksDocument, PageRevision } from "@lume/types";
 import type { BlockField, EditorBlockDescriptor } from "@lume/blocks";
 import { validatePageBlocksDocument } from "@lume/blocks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -13,6 +13,8 @@ type EditorPage = {
   id: string;
   slug: string;
   title: string;
+  draftRevisionId: string | null;
+  publishedRevisionId: string | null;
 };
 
 type SaveState =
@@ -26,6 +28,7 @@ type PageEditorClientProps = {
   tenantSlug: string;
   page: EditorPage;
   initialBlocks: PageBlocksDocument;
+  initialRevisions: PageRevision[];
   blockDescriptors: EditorBlockDescriptor[];
 };
 
@@ -34,6 +37,7 @@ export default function PageEditorClient({
   tenantSlug,
   page,
   initialBlocks,
+  initialRevisions,
   blockDescriptors,
 }: PageEditorClientProps) {
   const router = useRouter();
@@ -43,6 +47,9 @@ export default function PageEditorClient({
   );
   const [state, setState] = useState<SaveState>({ type: "idle", message: "" });
   const [blockErrors, setBlockErrors] = useState<Record<string, string[]>>({});
+  const [previewRevisionId, setPreviewRevisionId] = useState<string | null>(
+    initialRevisions[0]?.id ?? null
+  );
 
   const descriptorsByType = useMemo(
     () => new Map(blockDescriptors.map((descriptor) => [descriptor.type, descriptor])),
@@ -54,6 +61,10 @@ export default function PageEditorClient({
   );
   const selectedBlock = blocks.find((block) => block.id === selectedBlockId) ?? null;
   const selectedDescriptor = selectedBlock ? descriptorsByType.get(selectedBlock.type) : null;
+  const previewRevision =
+    initialRevisions.find((revision) => revision.id === previewRevisionId) ??
+    initialRevisions[0] ??
+    null;
 
   function addBlock(descriptor: EditorBlockDescriptor) {
     const block: PageBlock = {
@@ -141,6 +152,22 @@ export default function PageEditorClient({
       router.refresh();
     } catch (error) {
       setState({ type: "error", message: errorMessage(error, "Unable to publish draft.") });
+    }
+  }
+
+  async function restoreRevisionToDraft(revision: PageRevision) {
+    setState({ type: "saving", message: "Restoring revision..." });
+    try {
+      const supabase = createPageServiceClient();
+      await restoreRevision(supabase, page.id, revision.id);
+      setBlocks(revision.blocks.blocks);
+      setSelectedBlockId(revision.blocks.blocks[0]?.id ?? null);
+      setBlockErrors({});
+      setPreviewRevisionId(revision.id);
+      setState({ type: "success", message: "Revision restored to the draft." });
+      router.refresh();
+    } catch (error) {
+      setState({ type: "error", message: errorMessage(error, "Unable to restore revision.") });
     }
   }
 
@@ -322,7 +349,154 @@ export default function PageEditorClient({
               ))}
             </div>
           )}
+
+          <RevisionHistory
+            page={page}
+            revisions={initialRevisions}
+            previewRevision={previewRevision}
+            descriptorsByType={descriptorsByType}
+            isBusy={state.type === "saving"}
+            onPreview={(revisionId) => setPreviewRevisionId(revisionId)}
+            onRestore={restoreRevisionToDraft}
+          />
         </aside>
+      </div>
+    </div>
+  );
+}
+
+function RevisionHistory({
+  page,
+  revisions,
+  previewRevision,
+  descriptorsByType,
+  isBusy,
+  onPreview,
+  onRestore,
+}: {
+  page: EditorPage;
+  revisions: PageRevision[];
+  previewRevision: PageRevision | null;
+  descriptorsByType: Map<string, EditorBlockDescriptor>;
+  isBusy: boolean;
+  onPreview: (revisionId: string) => void;
+  onRestore: (revision: PageRevision) => void;
+}) {
+  return (
+    <section className="mt-6 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold">Revision History</h2>
+          <p className="mt-1 text-xs text-neutral-500">Preview and restore older page drafts.</p>
+        </div>
+        <span className="text-xs text-neutral-500">{revisions.length}</span>
+      </div>
+
+      {revisions.length === 0 ? (
+        <p className="mt-4 rounded-lg border border-dashed border-neutral-300 p-3 text-xs text-neutral-500 dark:border-neutral-700">
+          No revisions yet.
+        </p>
+      ) : (
+        <div className="mt-4 space-y-2">
+          {revisions.map((revision) => {
+            const isPreviewing = previewRevision?.id === revision.id;
+            return (
+              <div
+                key={revision.id}
+                className={`rounded-lg border p-3 ${
+                  isPreviewing
+                    ? "border-neutral-900 bg-neutral-50 dark:border-white dark:bg-neutral-900"
+                    : "border-neutral-200 dark:border-neutral-800"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className="text-xs font-medium capitalize">{revision.kind}</span>
+                      {revision.id === page.draftRevisionId && <RevisionBadge>Draft</RevisionBadge>}
+                      {revision.id === page.publishedRevisionId && (
+                        <RevisionBadge>Published</RevisionBadge>
+                      )}
+                    </div>
+                    <p className="mt-1 truncate text-xs text-neutral-500">
+                      {formatDateTime(revision.createdAt)}
+                    </p>
+                    <p className="mt-1 truncate text-[11px] text-neutral-400">{revision.id}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onPreview(revision.id)}
+                      className="rounded border border-neutral-200 px-2 py-1 text-xs hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
+                    >
+                      Preview
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRestore(revision)}
+                      disabled={isBusy}
+                      className="rounded border border-neutral-200 px-2 py-1 text-xs hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {previewRevision && (
+        <RevisionPreview revision={previewRevision} descriptorsByType={descriptorsByType} />
+      )}
+    </section>
+  );
+}
+
+function RevisionBadge({ children }: { children: string }) {
+  return (
+    <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+      {children}
+    </span>
+  );
+}
+
+function RevisionPreview({
+  revision,
+  descriptorsByType,
+}: {
+  revision: PageRevision;
+  descriptorsByType: Map<string, EditorBlockDescriptor>;
+}) {
+  return (
+    <div className="mt-4 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold">Preview</h3>
+        <span className="text-xs text-neutral-500">
+          {revision.blocks.blocks.length} block{revision.blocks.blocks.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <div className="mt-3 space-y-2">
+        {revision.blocks.blocks.length === 0 && (
+          <p className="text-xs text-neutral-500">This revision has no blocks.</p>
+        )}
+        {revision.blocks.blocks.map((block) => {
+          const descriptor = descriptorsByType.get(block.type);
+          return (
+            <details
+              key={block.id}
+              className="rounded border border-neutral-200 p-2 text-xs dark:border-neutral-800"
+            >
+              <summary className="cursor-pointer font-medium">
+                {descriptor?.displayName ?? block.type}
+              </summary>
+              <pre className="mt-2 max-h-48 overflow-auto rounded bg-neutral-50 p-2 text-[11px] text-neutral-600 dark:bg-neutral-950 dark:text-neutral-300">
+                {JSON.stringify(block.props, null, 2)}
+              </pre>
+            </details>
+          );
+        })}
       </div>
     </div>
   );
@@ -592,6 +766,15 @@ function createBlockId(type: string): string {
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function createPageServiceClient(): Parameters<typeof updateDraftBlocks>[0] {
