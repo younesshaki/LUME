@@ -5,7 +5,15 @@ export type BlockCategory = "content" | "data" | "media";
 
 export type BlockValidationResult = { ok: true } | { ok: false; errors: string[] };
 
-export type BlockFieldType = "text" | "textarea" | "number" | "boolean" | "select" | "url";
+export type BlockFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "boolean"
+  | "select"
+  | "url"
+  | "string-list"
+  | "statement-list";
 
 export type BlockFieldOption = {
   label: string;
@@ -17,6 +25,7 @@ export type BlockField = {
   label: string;
   type: BlockFieldType;
   options?: BlockFieldOption[];
+  itemFields?: BlockField[];
   helpText?: string;
   placeholder?: string;
 };
@@ -130,6 +139,7 @@ export const BLOCK_DESCRIPTORS = {
     description: "A focused content band with copy and optional media.",
     category: "content",
     modes: ["experience", "standard"],
+    palette: true,
     defaultProps: {
       kicker: "Product Language",
       heading: "Energy, treated like an object of desire.",
@@ -159,13 +169,24 @@ export const BLOCK_DESCRIPTORS = {
     description: "An ordered list of short statements.",
     category: "content",
     modes: ["experience", "standard"],
+    palette: true,
     defaultProps: {
       items: [] as Array<{ label: string; body: string }>,
     },
     schema: z.object({
       items: z.array(z.object({ label: z.string(), body: z.string() })).default([]),
     }),
-    fields: [],
+    fields: [
+      {
+        name: "items",
+        label: "Statements",
+        type: "statement-list",
+        itemFields: [
+          { name: "label", label: "Label", type: "text" },
+          { name: "body", label: "Body", type: "textarea" },
+        ],
+      },
+    ],
   }),
 
   "rich-text": descriptor({
@@ -174,6 +195,7 @@ export const BLOCK_DESCRIPTORS = {
     description: "Simple long-form copy.",
     category: "content",
     modes: ["experience", "standard"],
+    palette: true,
     defaultProps: { body: "" },
     schema: z.object({ body: z.string().min(1, "Body is required") }),
     fields: [{ name: "body", label: "Body", type: "textarea" }],
@@ -185,6 +207,7 @@ export const BLOCK_DESCRIPTORS = {
     description: "Public product catalog block.",
     category: "data",
     modes: ["experience", "standard"],
+    palette: true,
     defaultProps: {
       title: "Products",
       subtitle: "",
@@ -198,6 +221,17 @@ export const BLOCK_DESCRIPTORS = {
     fields: [
       { name: "title", label: "Title", type: "text" },
       { name: "subtitle", label: "Subtitle", type: "textarea" },
+      {
+        name: "categories",
+        label: "Categories",
+        type: "string-list",
+        helpText: "Leave empty to show every category.",
+        options: [
+          { label: "Drink", value: "drink" },
+          { label: "Fragrance", value: "fragrance" },
+          { label: "Fashion", value: "fashion" },
+        ],
+      },
     ],
   }),
 
@@ -207,6 +241,7 @@ export const BLOCK_DESCRIPTORS = {
     description: "Public vehicle inventory block.",
     category: "data",
     modes: ["experience", "standard"],
+    palette: true,
     defaultProps: {
       title: "Vehicles",
       showFilters: true,
@@ -228,6 +263,7 @@ export const BLOCK_DESCRIPTORS = {
     category: "data",
     modes: ["experience", "standard"],
     experienceEnhanced: true,
+    palette: true,
     defaultProps: {
       title: "Showcase",
       chapterIds: [
@@ -240,7 +276,19 @@ export const BLOCK_DESCRIPTORS = {
       title: nullableString,
       chapterIds: z.array(z.string()).default([]),
     }),
-    fields: [{ name: "title", label: "Title", type: "text" }],
+    fields: [
+      { name: "title", label: "Title", type: "text" },
+      {
+        name: "chapterIds",
+        label: "Chapter IDs",
+        type: "string-list",
+        options: [
+          { label: "Chapter 1", value: "showcase-chapter-1" },
+          { label: "Chapter 2", value: "showcase-chapter-2" },
+          { label: "Chapter 3", value: "showcase-chapter-3" },
+        ],
+      },
+    ],
   }),
 } as const satisfies Record<string, BlockDescriptor>;
 

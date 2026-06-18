@@ -342,10 +342,17 @@ function FieldControl({
   const id = `field-${field.name}`;
   const commonClass =
     "mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700";
+  const labelClass = "text-xs font-medium text-neutral-500";
 
   return (
-    <label htmlFor={id} className="block">
-      <span className="text-xs font-medium text-neutral-500">{field.label}</span>
+    <div>
+      {field.type === "statement-list" ? (
+        <span className={labelClass}>{field.label}</span>
+      ) : (
+        <label htmlFor={id} className={labelClass}>
+          {field.label}
+        </label>
+      )}
       {field.type === "textarea" ? (
         <textarea
           id={id}
@@ -356,7 +363,7 @@ function FieldControl({
           className={commonClass}
         />
       ) : field.type === "boolean" ? (
-        <span className="mt-2 flex items-center gap-2 text-sm">
+        <label htmlFor={id} className="mt-2 flex items-center gap-2 text-sm">
           <input
             id={id}
             type="checkbox"
@@ -364,7 +371,7 @@ function FieldControl({
             onChange={(event) => onChange(event.target.checked)}
           />
           Enabled
-        </span>
+        </label>
       ) : field.type === "select" ? (
         <select
           id={id}
@@ -378,6 +385,10 @@ function FieldControl({
             </option>
           ))}
         </select>
+      ) : field.type === "string-list" ? (
+        <StringListField id={id} field={field} value={value} onChange={onChange} />
+      ) : field.type === "statement-list" ? (
+        <StatementListField value={value} onChange={onChange} />
       ) : (
         <input
           id={id}
@@ -398,8 +409,157 @@ function FieldControl({
           ))}
         </ul>
       )}
-    </label>
+    </div>
   );
+}
+
+function StringListField({
+  id,
+  field,
+  value,
+  onChange,
+}: {
+  id: string;
+  field: BlockField;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const items = asStringArray(value);
+
+  if (field.options?.length) {
+    return (
+      <div id={id} className="mt-2 space-y-2">
+        {field.options.map((option) => (
+          <label key={option.value} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={items.includes(option.value)}
+              onChange={(event) =>
+                onChange(toggleStringListItem(items, option.value, event.target.checked))
+              }
+            />
+            {option.label}
+          </label>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <textarea
+      id={id}
+      value={items.join("\n")}
+      placeholder={field.placeholder ?? "One item per line"}
+      rows={4}
+      onChange={(event) =>
+        onChange(
+          event.target.value
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        )
+      }
+      className="mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+    />
+  );
+}
+
+function StatementListField({
+  value,
+  onChange,
+}: {
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const items = asStatementItems(value);
+
+  function updateItem(index: number, key: keyof StatementItem, nextValue: string) {
+    onChange(
+      items.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: nextValue } : item
+      )
+    );
+  }
+
+  function removeItem(index: number) {
+    onChange(items.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  return (
+    <div className="mt-2 space-y-3">
+      {items.length === 0 && (
+        <div className="rounded-lg border border-dashed border-neutral-300 p-3 text-xs text-neutral-500 dark:border-neutral-700">
+          No statements yet.
+        </div>
+      )}
+      {items.map((item, index) => (
+        <div key={index} className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-neutral-500">Statement {index + 1}</span>
+            <button
+              type="button"
+              onClick={() => removeItem(index)}
+              className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"
+            >
+              Remove
+            </button>
+          </div>
+          <label className="mt-3 block text-xs font-medium text-neutral-500">
+            Label
+            <input
+              type="text"
+              value={item.label}
+              onChange={(event) => updateItem(index, "label", event.target.value)}
+              className="mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+            />
+          </label>
+          <label className="mt-3 block text-xs font-medium text-neutral-500">
+            Body
+            <textarea
+              value={item.body}
+              rows={3}
+              onChange={(event) => updateItem(index, "body", event.target.value)}
+              className="mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+            />
+          </label>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...items, { label: "", body: "" }])}
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
+      >
+        Add statement
+      </button>
+    </div>
+  );
+}
+
+type StatementItem = {
+  label: string;
+  body: string;
+};
+
+function asStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string");
+  }
+  return [];
+}
+
+function asStatementItems(value: unknown): StatementItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => item !== null && typeof item === "object")
+    .map((item) => ({
+      label: typeof item.label === "string" ? item.label : "",
+      body: typeof item.body === "string" ? item.body : "",
+    }));
+}
+
+function toggleStringListItem(items: string[], value: string, checked: boolean): string[] {
+  if (checked) return items.includes(value) ? items : [...items, value];
+  return items.filter((item) => item !== value);
 }
 
 function currentDocument(blocks: PageBlock[], version: number): PageBlocksDocument {
