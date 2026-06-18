@@ -1,7 +1,25 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Higher Jump";
+  src: url("/fonts/higher-jump/Higher Jump.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Moralana";
+  src: url("/fonts/moralana/Moralana DEMO.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light dark;
+  --scene-font-moralana: "Moralana", Georgia, "Times New Roman", serif;
+  --scene-font-higher-jump: "Higher Jump", Georgia, "Times New Roman", serif;
 }
 
 html, body {
