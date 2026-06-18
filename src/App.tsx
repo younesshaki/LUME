@@ -47,6 +47,7 @@ const loadVehiclesPage = () => import("./experience/ui/VehiclesPage");
 const loadShowcasePage = () => import("./experience/ui/ShowcasePage");
 const loadShowcaseTitleCard = () => import("./experience/ui/ShowcaseTitleCard");
 const loadStoryHomePage = () => import("./experience/ui/StoryHomePage");
+const loadPageRendererRoutes = () => import("./lib/pageBuilder/PageRendererRoutes");
 
 const AdminRouter = lazy(loadAdminRouter);
 const ContactPage = lazy(loadContactPage);
@@ -58,6 +59,11 @@ const VehiclesPage = lazy(loadVehiclesPage);
 const ShowcasePage = lazy(loadShowcasePage);
 const ShowcaseTitleCard = lazy(loadShowcaseTitleCard);
 const StoryHomePage = lazy(loadStoryHomePage);
+const ContactPageRendererRoute = lazy(() =>
+  loadPageRendererRoutes().then((module) => ({
+    default: module.ContactPageRendererRoute,
+  }))
+);
 const OllamaChat = lazy(() =>
   import("./components/chat/OllamaChat").then((module) => ({
     default: module.OllamaChat,
@@ -72,6 +78,7 @@ type ShowcaseEntryState = {
 const MEDIA_QUALITY_STORAGE_KEY = "nomad.media-quality.v1";
 const GATE_SESSION_STORAGE_KEY = "lume.gate-passed.v1";
 const LOCAL_CHAT_ENABLED = import.meta.env.VITE_ENABLE_LOCAL_CHAT === "true";
+const PAGE_RENDERER_ENABLED = import.meta.env.VITE_PAGE_RENDERER === "true";
 
 type NetworkInformationLike = {
   saveData?: boolean;
@@ -462,12 +469,21 @@ export default function App() {
             path={ROUTE_PATHS.contact}
             element={
               <StoryProvider>
-                <ContactPage
-                  onGoHome={handleGoHome}
-                  onNavigateToProducts={handleNavigateToProducts}
-                  onNavigateToVehicles={handleNavigateToVehicles}
-                  onNavigateToShowcase={handleNavigateToShowcase}
-                />
+                {PAGE_RENDERER_ENABLED ? (
+                  <ContactPageRendererRoute
+                    onGoHome={handleGoHome}
+                    onNavigateToProducts={handleNavigateToProducts}
+                    onNavigateToVehicles={handleNavigateToVehicles}
+                    onNavigateToShowcase={handleNavigateToShowcase}
+                  />
+                ) : (
+                  <ContactPage
+                    onGoHome={handleGoHome}
+                    onNavigateToProducts={handleNavigateToProducts}
+                    onNavigateToVehicles={handleNavigateToVehicles}
+                    onNavigateToShowcase={handleNavigateToShowcase}
+                  />
+                )}
               </StoryProvider>
             }
           />
