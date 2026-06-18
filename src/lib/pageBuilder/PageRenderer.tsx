@@ -1,8 +1,9 @@
-import { Component, ReactNode, useEffect, useMemo, useState } from "react";
+import { Component, CSSProperties, ReactNode, useEffect, useMemo, useState } from "react";
 import { fetchPublishedPage } from "@lume/db";
 import { validateBlock, type BlockDescriptor, type BlockMode } from "@lume/blocks";
 import type { PageBlock, PublishedPage } from "@lume/types";
 import CinematicShell from "@/experience/ui/CinematicShell";
+import homepageBackgroundImage from "@/experience/assets/images/lume-homepage-background.png";
 import { useDualMode } from "@/lib/DualModeContext";
 import { supabase } from "@/lib/supabase";
 import { publicTenantSlug, resolveTenantId } from "@/lib/publicTenant";
@@ -16,6 +17,9 @@ if (isPageRendererEnabled) registerBlocks();
 type PageFrame = {
   rootClassName: string;
   mainClassName: string;
+  mainId?: string;
+  rootStyle?: CSSProperties & Record<string, string>;
+  beforeMain?: ReactNode;
 };
 
 type PageRendererProps = {
@@ -40,6 +44,11 @@ const PAGE_FRAMES: Record<string, PageFrame> = {
   home: {
     rootClassName: "storyHome",
     mainClassName: "",
+    mainId: "top",
+    rootStyle: {
+      "--story-home-bg-image": `url(${homepageBackgroundImage})`,
+    } as CSSProperties & Record<string, string>,
+    beforeMain: <div className="storyHome__background" aria-hidden="true" />,
   },
   products: {
     rootClassName: "productsPage",
@@ -126,8 +135,10 @@ export function PageRenderer({
   return (
     <PageBuilderRenderProvider value={{ pageSlug: slug, ...context }}>
       <CinematicShell>
-        <div className={frame.rootClassName}>
+        <div className={frame.rootClassName} style={frame.rootStyle}>
+          {frame.beforeMain}
           <main
+            id={frame.mainId}
             className={frame.mainClassName || undefined}
             style={{ paddingTop: "72px", paddingBottom: "160px" }}
           >
@@ -149,8 +160,10 @@ function PageRendererLoading({ slug }: { slug: string }) {
   const frame = PAGE_FRAMES[slug] ?? PAGE_FRAMES.home;
   return (
     <CinematicShell>
-      <div className={frame.rootClassName}>
+      <div className={frame.rootClassName} style={frame.rootStyle}>
+        {frame.beforeMain}
         <main
+          id={frame.mainId}
           className={frame.mainClassName || undefined}
           style={{ paddingTop: "72px", paddingBottom: "160px" }}
         >

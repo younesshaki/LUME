@@ -64,6 +64,26 @@ const ContactPageRendererRoute = lazy(() =>
     default: module.ContactPageRendererRoute,
   }))
 );
+const HomePageRendererRoute = lazy(() =>
+  loadPageRendererRoutes().then((module) => ({
+    default: module.HomePageRendererRoute,
+  }))
+);
+const ProductsPageRendererRoute = lazy(() =>
+  loadPageRendererRoutes().then((module) => ({
+    default: module.ProductsPageRendererRoute,
+  }))
+);
+const VehiclesPageRendererRoute = lazy(() =>
+  loadPageRendererRoutes().then((module) => ({
+    default: module.VehiclesPageRendererRoute,
+  }))
+);
+const ShowcasePageRendererRoute = lazy(() =>
+  loadPageRendererRoutes().then((module) => ({
+    default: module.ShowcasePageRendererRoute,
+  }))
+);
 const OllamaChat = lazy(() =>
   import("./components/chat/OllamaChat").then((module) => ({
     default: module.OllamaChat,
@@ -364,13 +384,23 @@ export default function App() {
             path={ROUTE_PATHS.home}
             element={
               <StoryProvider>
-                <StoryHomePage
-                  onEnter={handleEnterExperience}
-                  onNavigateToProducts={handleNavigateToProducts}
-                  onNavigateToVehicles={handleNavigateToVehicles}
-                  onNavigateToShowcase={handleNavigateToShowcase}
-                  onNavigateToContact={handleNavigateToContact}
-                />
+                {PAGE_RENDERER_ENABLED ? (
+                  <HomePageRendererRoute
+                    onEnter={handleEnterExperience}
+                    onNavigateToProducts={handleNavigateToProducts}
+                    onNavigateToVehicles={handleNavigateToVehicles}
+                    onNavigateToShowcase={handleNavigateToShowcase}
+                    onNavigateToContact={handleNavigateToContact}
+                  />
+                ) : (
+                  <StoryHomePage
+                    onEnter={handleEnterExperience}
+                    onNavigateToProducts={handleNavigateToProducts}
+                    onNavigateToVehicles={handleNavigateToVehicles}
+                    onNavigateToShowcase={handleNavigateToShowcase}
+                    onNavigateToContact={handleNavigateToContact}
+                  />
+                )}
               </StoryProvider>
             }
           />
@@ -378,13 +408,23 @@ export default function App() {
             path={ROUTE_PATHS.products}
             element={
               <StoryProvider>
-                <ProductsPage
-                  onGoHome={handleGoHome}
-                  onSelectProduct={handleSelectProduct}
-                  onNavigateToShowcase={handleNavigateToShowcase}
-                  onNavigateToContact={handleNavigateToContact}
-                  onNavigateToVehicles={handleNavigateToVehicles}
-                />
+                {PAGE_RENDERER_ENABLED ? (
+                  <ProductsPageRendererRoute
+                    onGoHome={handleGoHome}
+                    onSelectProduct={handleSelectProduct}
+                    onNavigateToShowcase={handleNavigateToShowcase}
+                    onNavigateToContact={handleNavigateToContact}
+                    onNavigateToVehicles={handleNavigateToVehicles}
+                  />
+                ) : (
+                  <ProductsPage
+                    onGoHome={handleGoHome}
+                    onSelectProduct={handleSelectProduct}
+                    onNavigateToShowcase={handleNavigateToShowcase}
+                    onNavigateToContact={handleNavigateToContact}
+                    onNavigateToVehicles={handleNavigateToVehicles}
+                  />
+                )}
               </StoryProvider>
             }
           />
@@ -407,13 +447,23 @@ export default function App() {
             path={ROUTE_PATHS.vehicles}
             element={
               <StoryProvider>
-                <VehiclesPage
-                  onGoHome={handleGoHome}
-                  onNavigateToProducts={handleNavigateToProducts}
-                  onNavigateToShowcase={handleNavigateToShowcase}
-                  onNavigateToContact={handleNavigateToContact}
-                  onSelectVehicle={handleSelectVehicle}
-                />
+                {PAGE_RENDERER_ENABLED ? (
+                  <VehiclesPageRendererRoute
+                    onGoHome={handleGoHome}
+                    onNavigateToProducts={handleNavigateToProducts}
+                    onNavigateToShowcase={handleNavigateToShowcase}
+                    onNavigateToContact={handleNavigateToContact}
+                    onSelectVehicle={handleSelectVehicle}
+                  />
+                ) : (
+                  <VehiclesPage
+                    onGoHome={handleGoHome}
+                    onNavigateToProducts={handleNavigateToProducts}
+                    onNavigateToShowcase={handleNavigateToShowcase}
+                    onNavigateToContact={handleNavigateToContact}
+                    onSelectVehicle={handleSelectVehicle}
+                  />
+                )}
               </StoryProvider>
             }
           />
@@ -435,13 +485,23 @@ export default function App() {
             path={ROUTE_PATHS.showcase}
             element={
               <StoryProvider>
-                <ShowcasePage
-                  onGoHome={handleGoHome}
-                  onNavigateToProducts={handleNavigateToProducts}
-                  onNavigateToVehicles={handleNavigateToVehicles}
-                  onNavigateToContact={handleNavigateToContact}
-                  onEnter={handleEnterExperience}
-                />
+                {PAGE_RENDERER_ENABLED ? (
+                  <ShowcasePageRendererRoute
+                    onGoHome={handleGoHome}
+                    onNavigateToProducts={handleNavigateToProducts}
+                    onNavigateToVehicles={handleNavigateToVehicles}
+                    onNavigateToContact={handleNavigateToContact}
+                    onEnter={handleEnterExperience}
+                  />
+                ) : (
+                  <ShowcasePage
+                    onGoHome={handleGoHome}
+                    onNavigateToProducts={handleNavigateToProducts}
+                    onNavigateToVehicles={handleNavigateToVehicles}
+                    onNavigateToContact={handleNavigateToContact}
+                    onEnter={handleEnterExperience}
+                  />
+                )}
               </StoryProvider>
             }
           />
