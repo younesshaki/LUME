@@ -1,6 +1,6 @@
 import { Component, ReactNode, useEffect, useMemo, useState } from "react";
 import { fetchPublishedPage } from "@lume/db";
-import { validateBlock } from "@lume/blocks";
+import { validateBlock, type BlockDescriptor, type BlockMode } from "@lume/blocks";
 import type { PageBlock, PublishedPage } from "@lume/types";
 import CinematicShell from "@/experience/ui/CinematicShell";
 import { useDualMode } from "@/lib/DualModeContext";
@@ -171,7 +171,7 @@ type RenderableBlock = {
 function toRenderableBlock(
   block: PageBlock,
   slug: string,
-  mode: "experience" | "standard"
+  mode: BlockMode
 ): RenderableBlock | null {
   try {
     const descriptor = getBlockDescriptor(block.type);
@@ -180,7 +180,7 @@ function toRenderableBlock(
       return null;
     }
 
-    if (!descriptor.modes.includes(mode) || (mode === "standard" && descriptor.experienceOnly)) {
+    if (!isBlockVisibleInMode(descriptor, mode)) {
       return null;
     }
 
@@ -204,6 +204,13 @@ function toRenderableBlock(
     console.warn(`[pageBuilder] skipping block "${block.type}" on ${slug}`, error);
     return null;
   }
+}
+
+export function isBlockVisibleInMode(
+  descriptor: Pick<BlockDescriptor, "modes" | "experienceOnly">,
+  mode: BlockMode
+): boolean {
+  return descriptor.modes.includes(mode) && !(mode === "standard" && descriptor.experienceOnly);
 }
 
 class BlockBoundary extends Component<
