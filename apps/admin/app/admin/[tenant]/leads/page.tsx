@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { rowToLead } from "@lume/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -64,7 +65,12 @@ export default async function LeadsPage({ params }: PageProps) {
                 className="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
               >
                 <td className="px-4 py-3">
-                  <p className="font-medium">{leadName(lead.firstName, lead.lastName)}</p>
+                  <Link
+                    href={`/admin/${tenant.slug}/leads/${lead.id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {leadName(lead.firstName, lead.lastName)}
+                  </Link>
                   {lead.message && (
                     <p className="mt-1 max-w-md truncate text-xs text-neutral-500">{lead.message}</p>
                   )}
