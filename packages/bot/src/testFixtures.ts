@@ -43,3 +43,11 @@ export function fakeQueryVehicles(vehicles: Vehicle[]): {
   };
   return { fn, calls };
 }
+
+/** A fake getVehicleById backed by a fixed list (lookup by id). */
+export function fakeGetVehicleById(
+  vehicles: Vehicle[]
+): (id: string) => Promise<Vehicle | null> {
+  const byId = new Map(vehicles.map((v) => [v.id, v]));
+  return async (id: string) => byId.get(id) ?? null;
+}

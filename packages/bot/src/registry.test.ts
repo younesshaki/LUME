@@ -8,8 +8,13 @@ const baseCtx = (vehicles = [makeVehicle()]) => ({
 });
 
 describe("registry", () => {
-  it("exposes find_vehicles and find_best_deal", () => {
-    expect(BOT_TOOLS.map((t) => t.name).sort()).toEqual(["find_best_deal", "find_vehicles"]);
+  it("exposes the registered tools", () => {
+    expect(BOT_TOOLS.map((t) => t.name).sort()).toEqual([
+      "compare_vehicles",
+      "find_best_deal",
+      "find_vehicles",
+      "get_vehicle_details",
+    ]);
     expect(getBotTool("find_vehicles")?.name).toBe("find_vehicles");
     expect(getBotTool("nope")).toBeUndefined();
   });

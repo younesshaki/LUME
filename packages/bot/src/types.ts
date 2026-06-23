@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type {
   BotAction,
   TenantId,
+  Vehicle,
   VehicleListResponse,
   VehicleQuery,
 } from "@lume/types";
@@ -10,12 +11,16 @@ import type {
  * Capabilities injected into a tool at execution time. Keeping data access
  * behind this interface (rather than importing @lume/db directly) keeps
  * @lume/bot dependency-light and unit-testable with a fake executor — the
- * admin API route wires `queryVehicles` to the real tenant-scoped Supabase
- * query when it constructs the context.
+ * admin API route wires these to the real tenant-scoped Supabase queries when
+ * it constructs the context.
+ *
+ * `getVehicleById` is optional: tools that need single-record lookups degrade
+ * gracefully (returning a structured error) when the host hasn't wired it.
  */
 export type BotToolContext = {
   tenantId: TenantId;
   queryVehicles: (query: VehicleQuery) => Promise<VehicleListResponse>;
+  getVehicleById?: (id: string) => Promise<Vehicle | null>;
 };
 
 export type BotToolError = {

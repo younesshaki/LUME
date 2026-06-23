@@ -27,4 +27,22 @@ export {
   findBestDealSchema,
   findBestDealTool,
 } from "./tools/findBestDeal";
+export {
+  type GetVehicleDetailsArgs,
+  getVehicleDetailsSchema,
+  getVehicleDetailsTool,
+} from "./tools/getVehicleDetails";
+export {
+  type CompareVehiclesArgs,
+  compareVehiclesSchema,
+  compareVehiclesTool,
+} from "./tools/compareVehicles";
 export { BOT_TOOLS, getBotTool, runBotTool, toToolSpecs } from "./registry";
+export {
+  type BotTurnResult,
+  type RunToolCallsOptions,
+  type ToolCall,
+  type ToolRunStep,
+  DEFAULT_MAX_STEPS,
+  runToolCalls,
+} from "./runner";

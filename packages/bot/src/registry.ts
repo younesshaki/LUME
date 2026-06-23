@@ -2,9 +2,16 @@ import type { AnyBotTool, BotToolContext, BotToolResult, ToolSpec } from "./type
 import { zodToJsonSchema } from "./jsonSchema";
 import { findVehiclesTool } from "./tools/findVehicles";
 import { findBestDealTool } from "./tools/findBestDeal";
+import { getVehicleDetailsTool } from "./tools/getVehicleDetails";
+import { compareVehiclesTool } from "./tools/compareVehicles";
 
 /** All tools the bot may call, keyed by their LLM-facing name. */
-export const BOT_TOOLS: readonly AnyBotTool[] = [findVehiclesTool, findBestDealTool];
+export const BOT_TOOLS: readonly AnyBotTool[] = [
+  findVehiclesTool,
+  findBestDealTool,
+  getVehicleDetailsTool,
+  compareVehiclesTool,
+];
 
 const TOOLS_BY_NAME = new Map<string, AnyBotTool>(BOT_TOOLS.map((tool) => [tool.name, tool]));
 
