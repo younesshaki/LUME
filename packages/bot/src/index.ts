@@ -46,3 +46,9 @@ export {
   DEFAULT_MAX_STEPS,
   runToolCalls,
 } from "./runner";
+export {
+  type LlmToolCall,
+  type ToolResultMessage,
+  parseToolCalls,
+  toToolResultMessages,
+} from "./llmAdapter";
