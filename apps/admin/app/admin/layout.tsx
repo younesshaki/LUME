@@ -66,6 +66,12 @@ export default async function AdminLayout({
                   Leads
                 </Link>
                 <Link
+                  href={`/admin/${tenant.slug}/analytics`}
+                  className="block rounded-md px-2 py-1 pl-6 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                >
+                  Analytics
+                </Link>
+                <Link
                   href={`/admin/${tenant.slug}/assets`}
                   className="block rounded-md px-2 py-1 pl-6 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900"
                 >
