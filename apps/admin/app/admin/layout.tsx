@@ -84,6 +84,12 @@ export default async function AdminLayout({
                   Branding
                 </Link>
                 <Link
+                  href={`/admin/${tenant.slug}/domains`}
+                  className="block rounded-md px-2 py-1 pl-6 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                >
+                  Domains
+                </Link>
+                <Link
                   href={`/admin/${tenant.slug}/persona`}
                   className="block rounded-md px-2 py-1 pl-6 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900"
                 >
