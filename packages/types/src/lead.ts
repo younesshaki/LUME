@@ -2,6 +2,7 @@ import type { TenantId } from "./tenant";
 
 export type LeadSource = "chat" | "contact-form" | "test-drive" | "csv-import" | "api";
 export type LeadStatus = "new" | "contacted" | "qualified" | "won" | "lost";
+export type LeadActivityType = "note" | "call" | "email" | "status_change" | "assignment";
 
 export type Lead = {
   id: string;
@@ -41,4 +42,14 @@ export type LeadCaptureInput = {
 
 export type LeadCaptureResponse = {
   leadId: string;
+};
+
+export type LeadActivity = {
+  id: string;
+  leadId: string;
+  tenantId: TenantId;
+  actorUserId: string | null;
+  type: LeadActivityType;
+  body: string | null;
+  createdAt: string;
 };
