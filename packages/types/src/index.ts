@@ -7,5 +7,6 @@ export type * from "./page";
 export type * from "./tenantTheme";
 export type * from "./lead";
 export type * from "./tenantDomain";
+export type * from "./tenantInvite";
 export type * from "./botPersona";
 export type * from "./loyalty";
