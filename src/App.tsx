@@ -37,8 +37,9 @@ import {
   storePendingInventoryFilter,
   storePendingLeadFormPrefill,
 } from "./lib/botActionConsumers";
+import { isPageRendererEnabled } from "./lib/pageBuilder/featureFlag";
 
-if (import.meta.env.VITE_PAGE_RENDERER === "true") {
+if (isPageRendererEnabled) {
   void import("./lib/pageBuilder/registerBlocks").then(({ registerBlocks }) => {
     registerBlocks();
   });
@@ -105,7 +106,7 @@ type ShowcaseEntryState = {
 const MEDIA_QUALITY_STORAGE_KEY = "nomad.media-quality.v1";
 const GATE_SESSION_STORAGE_KEY = "lume.gate-passed.v1";
 const LOCAL_CHAT_ENABLED = import.meta.env.VITE_ENABLE_LOCAL_CHAT === "true";
-const PAGE_RENDERER_ENABLED = import.meta.env.VITE_PAGE_RENDERER === "true";
+const PAGE_RENDERER_ENABLED = isPageRendererEnabled;
 
 type NetworkInformationLike = {
   saveData?: boolean;
