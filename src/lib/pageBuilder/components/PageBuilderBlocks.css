@@ -1,3 +1,12 @@
+/* The hand-built hero skins (e.g. .storyHome__hero) reserve a full viewport
+   because their heroes contain sibling content (showcase cards). As a block,
+   the hero holds only its own copy, so it must hug its content — otherwise
+   the unused viewport height renders as a gap before the next block. */
+/* Doubled class beats the skin selector regardless of stylesheet order. */
+.pageBuilderHero.pageBuilderHero {
+  min-height: auto;
+}
+
 .pageBuilderHero__ctas {
   display: flex;
   flex-wrap: wrap;

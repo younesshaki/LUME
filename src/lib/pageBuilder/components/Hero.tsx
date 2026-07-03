@@ -67,6 +67,7 @@ export function Hero({ block }: BlockComponentProps) {
   const alignment = stringProp(block, "alignment", "center");
   const sectionClassName = [
     skin.section,
+    "pageBuilderHero",
     alignment === "left" ? "pageBuilderHero--left" : "",
   ]
     .filter(Boolean)
