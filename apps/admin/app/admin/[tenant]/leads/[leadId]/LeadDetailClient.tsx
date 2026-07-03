@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Lead, LeadActivity, LeadStatus } from "@lume/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { rowToLeadActivity, type LeadActivityRow } from "@/lib/leadActivities";
+import { rowToLeadActivity } from "@/lib/leadActivities";
 
 type LeadDetailClientProps = {
   tenantId: string;
@@ -40,16 +40,16 @@ export default function LeadDetailClient({
     setState({ type: "saving", message: "Updating lead status..." });
     try {
       const supabase = createSupabaseBrowserClient();
-      const { error: updateError } = await (supabase.from("leads") as any)
+      const { error: updateError } = await supabase
+        .from("leads")
         .update({ status: nextStatus })
         .eq("tenant_id", tenantId)
         .eq("id", currentLead.id);
       if (updateError) throw new Error(updateError.message);
 
       const body = `Status changed from ${previousStatus} to ${nextStatus}.`;
-      const { data: activityRow, error: activityError } = await (
-        supabase.from("lead_activities") as any
-      )
+      const { data: activityRow, error: activityError } = await supabase
+        .from("lead_activities")
         .insert({
           tenant_id: tenantId,
           lead_id: currentLead.id,
@@ -63,7 +63,7 @@ export default function LeadDetailClient({
 
       setCurrentLead((current) => ({ ...current, status: nextStatus }));
       setActivities((current) => [
-        rowToLeadActivity(activityRow as LeadActivityRow),
+        rowToLeadActivity(activityRow),
         ...current,
       ]);
       setState({ type: "success", message: "Lead status updated." });

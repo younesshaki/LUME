@@ -22,8 +22,17 @@ export default async function AdminLayout({
   // Memberships are RLS-protected: this returns only the rows the user can see.
   const { data: memberships } = await supabase
     .from("tenant_members")
-    .select("tenant_id, role, tenants:tenant_id(id, slug, name, status)")
+    .select("tenant_id, role")
     .eq("user_id", user.id);
+
+  const tenantIds = memberships?.map((membership) => membership.tenant_id) ?? [];
+  const { data: tenants } = tenantIds.length
+    ? await supabase
+        .from("tenants")
+        .select("id, slug, name, status")
+        .in("id", tenantIds)
+    : { data: [] };
+  const tenantsById = new Map((tenants ?? []).map((tenant) => [tenant.id, tenant]));
 
   return (
     <div className="min-h-screen flex">
@@ -42,7 +51,7 @@ export default async function AdminLayout({
             </p>
           )}
           {memberships?.map((m) => {
-            const tenant = Array.isArray(m.tenants) ? m.tenants[0] : m.tenants;
+            const tenant = tenantsById.get(m.tenant_id);
             if (!tenant) return null;
             return (
               <div key={tenant.id} className="space-y-0.5">

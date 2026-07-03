@@ -9,7 +9,6 @@ import {
   rowToTenantDomain,
   validateDomainInput,
   verificationHost,
-  type TenantDomainRow,
 } from "@/lib/domains";
 
 type DomainsClientProps = {
@@ -48,12 +47,13 @@ export default function DomainsClient({
     const domain = normalizeDomainInput(domainInput);
     setStatus({ type: "saving", message: "Adding domain..." });
     try {
-      const { data, error } = await (createSupabaseBrowserClient().from("tenant_domains") as any)
+      const { data, error } = await createSupabaseBrowserClient()
+        .from("tenant_domains")
         .insert({ tenant_id: tenantId, domain })
         .select("*")
         .single();
       if (error) throw new Error(error.message);
-      setDomains((current) => [rowToTenantDomain(data as TenantDomainRow), ...current]);
+      setDomains((current) => [rowToTenantDomain(data), ...current]);
       setDomainInput("");
       setStatus({ type: "success", message: "Domain added. Add the TXT record below to verify ownership." });
       router.refresh();
@@ -72,7 +72,8 @@ export default function DomainsClient({
     setRemovingId(domain.id);
     setStatus({ type: "saving", message: "Removing domain..." });
     try {
-      const { error } = await (createSupabaseBrowserClient().from("tenant_domains") as any)
+      const { error } = await createSupabaseBrowserClient()
+        .from("tenant_domains")
         .delete()
         .eq("tenant_id", tenantId)
         .eq("id", domain.id);

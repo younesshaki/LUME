@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { Database } from "@lume/db";
 import { useState } from "react";
 
 const BODY_STYLES = ["SUV", "Sedan", "Coupe", "Truck", "Convertible", "Hatchback", "Wagon"];
@@ -26,6 +27,8 @@ type FormState = {
   seller_city: string;
   seller_state: string;
 };
+
+type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
 
 const EMPTY: FormState = {
   year: new Date().getFullYear(),
@@ -89,13 +92,14 @@ export default function VehicleForm({
       seller_state: data.seller_state,
       is_special: false,
       special_image_src: null,
-    } satisfies Record<string, unknown>;
+    } satisfies VehicleInsert;
 
     if (isNew) {
-      const { error } = await (supabase.from("vehicles") as any).insert(payload);
+      const { error } = await supabase.from("vehicles").insert(payload);
       if (error) { setError(error.message); setSaving(false); return; }
     } else {
-      const { error } = await (supabase.from("vehicles") as any)
+      const { error } = await supabase
+        .from("vehicles")
         .update(payload)
         .eq("id", vehicleId)
         .eq("tenant_id", tenantId);

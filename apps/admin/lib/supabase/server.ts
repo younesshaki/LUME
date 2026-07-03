@@ -8,6 +8,8 @@
  */
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@lume/db";
 
 type CookieToSet = {
   name: string;
@@ -15,7 +17,7 @@ type CookieToSet = {
   options?: Parameters<Awaited<ReturnType<typeof cookies>>["set"]>[2];
 };
 
-export async function createSupabaseServerClient() {
+export async function createSupabaseServerClient(): Promise<SupabaseClient<Database, "public">> {
   const cookieStore = await cookies();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const anonKey =
@@ -27,7 +29,7 @@ export async function createSupabaseServerClient() {
     );
   }
 
-  return createServerClient(url, anonKey, {
+  return createServerClient<Database>(url, anonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -45,5 +47,5 @@ export async function createSupabaseServerClient() {
         }
       },
     },
-  });
+  }) as unknown as SupabaseClient<Database, "public">;
 }

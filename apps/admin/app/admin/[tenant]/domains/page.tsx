@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   rowToTenantDomain,
-  type TenantDomainRow,
 } from "@/lib/domains";
 import DomainsClient from "./DomainsClient";
 
@@ -21,7 +20,8 @@ export default async function DomainsPage({ params }: PageProps) {
     .maybeSingle();
   if (!tenant) notFound();
 
-  const { data, error } = await (supabase.from("tenant_domains") as any)
+  const { data, error } = await supabase
+    .from("tenant_domains")
     .select("*")
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false });
@@ -35,7 +35,7 @@ export default async function DomainsPage({ params }: PageProps) {
       tenantId={tenant.id}
       tenantSlug={tenant.slug}
       tenantName={tenant.name}
-      initialDomains={((data ?? []) as TenantDomainRow[]).map(rowToTenantDomain)}
+      initialDomains={(data ?? []).map(rowToTenantDomain)}
     />
   );
 }

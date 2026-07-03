@@ -5,7 +5,6 @@ import {
   rowToTeamMember,
   rowToTenantInvite,
   type TeamMemberRow,
-  type TenantInviteRow,
 } from "@/lib/team";
 import TeamClient from "./TeamClient";
 
@@ -45,7 +44,8 @@ export default async function TeamPage({ params }: PageProps) {
     throw new Error(`Unable to load team members: ${membersError.message}`);
   }
 
-  const { data: inviteRows, error: invitesError } = await (supabase.from("tenant_invites") as any)
+  const { data: inviteRows, error: invitesError } = await supabase
+    .from("tenant_invites")
     .select("*")
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false });
@@ -62,7 +62,7 @@ export default async function TeamPage({ params }: PageProps) {
       currentUserId={user?.id ?? ""}
       canManage={canManageTeam(currentMembership?.role ?? null)}
       initialMembers={((memberRows ?? []) as TeamMemberRow[]).map(rowToTeamMember)}
-      initialInvites={((inviteRows ?? []) as TenantInviteRow[]).map(rowToTenantInvite)}
+      initialInvites={(inviteRows ?? []).map(rowToTenantInvite)}
     />
   );
 }
