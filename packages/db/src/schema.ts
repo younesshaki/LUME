@@ -215,6 +215,171 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["page_revisions"]["Insert"]>;
         Relationships: [];
       };
+      tenant_domains: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          domain: string;
+          verified: boolean;
+          verification_token: string;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_domains"]["Row"],
+          "id" | "verified" | "verification_token" | "created_at"
+        > & {
+          id?: string;
+          verified?: boolean;
+          verification_token?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_domains"]["Insert"]>;
+        Relationships: [];
+      };
+      bot_personas: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string;
+          tone: "cinematic" | "concise" | "warm" | "formal" | "technical";
+          system_prompt: string;
+          capabilities: Record<string, unknown>;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["bot_personas"]["Row"],
+          | "id"
+          | "name"
+          | "tone"
+          | "system_prompt"
+          | "capabilities"
+          | "is_active"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          name?: string;
+          tone?: "cinematic" | "concise" | "warm" | "formal" | "technical";
+          system_prompt?: string;
+          capabilities?: Record<string, unknown>;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["bot_personas"]["Insert"]>;
+        Relationships: [];
+      };
+      loyalty_accounts: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          lead_id: string | null;
+          external_customer_id: string | null;
+          email: string | null;
+          phone: string | null;
+          points_balance: number;
+          tier: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["loyalty_accounts"]["Row"],
+          | "id"
+          | "lead_id"
+          | "external_customer_id"
+          | "email"
+          | "phone"
+          | "points_balance"
+          | "tier"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          lead_id?: string | null;
+          external_customer_id?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          points_balance?: number;
+          tier?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["loyalty_accounts"]["Insert"]>;
+        Relationships: [];
+      };
+      loyalty_transactions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          account_id: string;
+          lead_id: string | null;
+          source: "manual" | "lead" | "purchase" | "redemption" | "adjustment" | "expiration";
+          points_delta: number;
+          balance_after: number;
+          description: string | null;
+          metadata: Record<string, unknown>;
+          occurred_at: string;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["loyalty_transactions"]["Row"],
+          | "id"
+          | "lead_id"
+          | "source"
+          | "description"
+          | "metadata"
+          | "occurred_at"
+          | "created_at"
+        > & {
+          id?: string;
+          lead_id?: string | null;
+          source?: "manual" | "lead" | "purchase" | "redemption" | "adjustment" | "expiration";
+          description?: string | null;
+          metadata?: Record<string, unknown>;
+          occurred_at?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["loyalty_transactions"]["Insert"]>;
+        Relationships: [];
+      };
+      tenant_invites: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          email: string;
+          role: "owner" | "admin" | "editor" | "viewer";
+          token: string;
+          status: "pending" | "accepted" | "revoked" | "expired";
+          expires_at: string;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_invites"]["Row"],
+          | "id"
+          | "role"
+          | "token"
+          | "status"
+          | "expires_at"
+          | "created_by"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          role?: "owner" | "admin" | "editor" | "viewer";
+          token?: string;
+          status?: "pending" | "accepted" | "revoked" | "expired";
+          expires_at?: string;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_invites"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

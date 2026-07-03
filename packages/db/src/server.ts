@@ -17,7 +17,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./schema";
 
-export type ServerSupabaseClient = SupabaseClient<Database>;
+export type ServerSupabaseClient = SupabaseClient<Database, "public">;
 
 function requireEnv(name: string): string {
   const value = process.env[name];

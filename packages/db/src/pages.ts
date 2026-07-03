@@ -19,7 +19,7 @@ import type {
 } from "@lume/types";
 import type { Database } from "./schema";
 
-type DbClient = SupabaseClient<Database>;
+type DbClient = SupabaseClient<Database, "public">;
 
 /** Reserved pages map 1:1 to hardcoded routes that must always render. They can
  * be edited but never deleted (SCRUM-188). */
