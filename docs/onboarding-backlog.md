@@ -1,0 +1,78 @@
+# Tenant Onboarding Backlog
+
+_Produced 2026-07-04 by actually provisioning a second tenant (`demo`) on prod
+and recording every manual step and gap. This list is the distance between
+"we have multi-tenant tables" and "a customer can sign up"._
+
+## What was done (the current "onboarding runbook")
+
+```bash
+# 1. Assemble env by hand — seed env lives nowhere as such:
+#    SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY  → only in apps/admin/.env.local
+#    R2_PUBLIC_BASE_URL                        → only as VITE_R2_PUBLIC_BASE_URL in root .env.local
+set -a; source apps/admin/.env.local; source .env.local; set +a
+export R2_PUBLIC_BASE_URL="$VITE_R2_PUBLIC_BASE_URL"
+export SEED_OWNER_EMAIL=<owner email>  SEED_TENANT_SLUG=demo  SEED_TENANT_NAME="LUME Demo"
+
+# 2. Tenant + owner membership + vehicles (LUME's CSV) + RAG chunks (LUME's embeddings)
+npx tsx scripts/seed-default-tenant.ts
+
+# 3. Pages (separate script, must repeat the slug)
+SEED_TENANT_SLUG=demo npx tsx scripts/seed-default-pages.ts
+```
+
+Result: tenant `efab59f0-c566-42dc-96d9-d40a6ad2a2f3`, owner membership,
+1000 vehicles, 19 rag chunks, 5 published pages.
+
+## What was verified (multi-tenancy holds)
+
+- `tenant_by_slug('demo')` resolves as anon; status gating works.
+- Anon RLS vehicle read returns exactly the demo tenant's 1000 rows.
+- `get_published_page(demo, 'home')` returns the seeded revision as anon.
+- Prod public `/api/vehicles` with `X-Lume-Tenant: demo` returns demo-scoped
+  data (header-based tenant routing works on the deployed functions).
+- `default` tenant untouched: still 1009 vehicles / 6 pages / 2 members.
+
+## The backlog (ranked by how hard it blocks a real customer)
+
+1. **A second tenant has no website.** The public Vite site serves ONE tenant
+   per build (`VITE_LUME_TENANT` is baked in at build time). `demo` is fully
+   provisioned in the DB but unreachable by any visitor. Subdomain-based
+   tenancy (`{tenant}.lume.app`, per the vision doc) or per-tenant deploys is
+   the single biggest missing piece of the SaaS story.
+2. **No blank-tenant mode.** The seed loads LUME's own demo CSV and
+   embeddings into every tenant. A real customer needs an *empty* tenant plus
+   self-service imports (CSV upload UI exists for vehicles? no — admin
+   vehicle form is one-at-a-time; CSV import is Jira backlog).
+3. **Owner must already exist in Supabase auth.** The seed aborts if the
+   email has no auth user. Real onboarding = invite/signup flow that creates
+   the auth user, the tenant, and the owner membership in one transaction
+   (tenant_invites table + admin team UI exist; the *signup-accept* path and
+   any "create tenant" surface do not).
+4. **Provisioning is two scripts + hand-assembled env.** Needs a single
+   `create-tenant` entrypoint (script now; admin/API surface later) that does
+   tenant → membership → pages → (optional) sample data, idempotently.
+   Includes consolidating seed env into one documented place.
+5. **No admin URL a customer could use.** The deployed Next admin sits behind
+   Vercel SSO deployment protection, and `lume-admin.vercel.app` is NOT this
+   repo's app (global-subdomain collision with an old prototype project).
+   Customers need a stable, publicly reachable admin origin (`app.lume.app`
+   per vision) with the app's own Supabase auth as the gate.
+6. **No initial theme/branding step.** New tenants get an empty `theme`.
+   Provisioning should either copy a starter theme or drop the owner into
+   the branding editor as a first-run step.
+7. **No bot persona row.** `bot_personas` stays empty for a new tenant; chat
+   doesn't read personas yet either. Provisioning should insert the default
+   persona; chat should honor it (natural follow-up to SCRUM-144).
+8. **Embeddings are copied, not generated.** RAG chunks come from a static
+   `embeddings.json`. Customer documents need a hosted embedder path
+   (the `Embedder` interface is pluggable — this is wiring + provider choice).
+9. **No lifecycle management.** No trial→active→suspended transitions, no
+   billing hook, no off-boarding/delete-tenant path (cascades exist on the
+   FK level; nothing operational).
+
+## Cleanup note
+
+The `demo` tenant is real data on prod. It's harmless (only reachable by
+explicit slug) and useful for testing; delete with
+`delete from tenants where slug = 'demo'` (cascades) if unwanted.

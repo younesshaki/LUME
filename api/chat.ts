@@ -6,16 +6,21 @@
  * the public site can keep calling a same-origin URL; it forwards the request
  * to the admin deployment and pipes the SSE response back untouched.
  *
- * Config: LUME_CHAT_UPSTREAM_URL overrides the upstream (defaults to the
- * lume-admin production deployment). ALLOWED_CHAT_ORIGINS on the *admin*
- * project must include this site's origin, which is forwarded unchanged.
+ * Config: LUME_CHAT_UPSTREAM_URL (required) — the admin deployment's
+ * /api/chat URL. There is deliberately no default: lume-admin.vercel.app is
+ * NOT this repo's admin app (the global subdomain belongs to an older
+ * prototype project), and the real deployment URL is env-specific.
+ * ALLOWED_CHAT_ORIGINS on the *admin* project must include this site's
+ * origin, which is forwarded unchanged. If the admin project has Vercel
+ * Deployment Protection enabled, set LUME_CHAT_BYPASS_SECRET to the
+ * project's Protection Bypass for Automation secret.
  *
  * Note: DEEPSEEK_API_KEY is no longer read here — after rotating the key
- * (SCRUM-115) it only needs to exist on the lume-admin project.
+ * (SCRUM-115) it only needs to exist on the admin project.
  */
 
-const UPSTREAM_URL =
-  process.env.LUME_CHAT_UPSTREAM_URL ?? "https://lume-admin.vercel.app/api/chat";
+const UPSTREAM_URL = process.env.LUME_CHAT_UPSTREAM_URL;
+const BYPASS_SECRET = process.env.LUME_CHAT_BYPASS_SECRET;
 
 const FORWARDED_REQUEST_HEADERS = ["content-type", "origin", "x-lume-tenant"] as const;
 const FORWARDED_RESPONSE_HEADERS = [
@@ -49,11 +54,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  if (!UPSTREAM_URL) {
+    console.error("[/api/chat proxy] LUME_CHAT_UPSTREAM_URL not configured");
+    return res.status(500).json({ error: "Chat upstream not configured" });
+  }
+
   const headers: Record<string, string> = {};
   for (const name of FORWARDED_REQUEST_HEADERS) {
     const value = header(req, name);
     if (value) headers[name] = value;
   }
+  if (BYPASS_SECRET) headers["x-vercel-protection-bypass"] = BYPASS_SECRET;
 
   // Preserve ?tenant= fallback used by lib/tenant.ts upstream.
   const tenantQuery = query(req, "tenant");

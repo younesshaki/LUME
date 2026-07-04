@@ -168,6 +168,15 @@ to admin → admin builds prompt + streams Deepseek back.
 
 ## Deferred: moving Vite into apps/web
 
+**Trigger condition (decided 2026-07-04):** this move stops being deferrable
+the moment work starts on making a second tenant publicly reachable —
+subdomain routing, per-tenant builds, or custom domains going live (see
+`docs/onboarding-backlog.md` item 1). Do the move BEFORE that work, not
+during it. Secondary trigger: any new root-level serverless function or
+config that would deepen root-relative coupling — prefer doing the move
+first. Until a trigger fires, keep new shared code in `packages/*` so the
+move stays cheap.
+
 When ready:
 
 1. `mkdir apps/web && git mv {src,public,index.html,vite.config.ts,vitest.config.ts,tsconfig.json,tsconfig.node.json,components.json} apps/web/`
