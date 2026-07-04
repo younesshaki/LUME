@@ -10,7 +10,6 @@ import {
   rowToTenantInvite,
   validateInviteEmail,
   type TeamMember,
-  type TenantInviteRow,
 } from "@/lib/team";
 
 type TeamClientProps = {
@@ -52,7 +51,8 @@ export default function TeamClient({
     setBusyKey(member.userId);
     setStatus({ type: "saving", message: "Updating member role..." });
     try {
-      const { error } = await (createSupabaseBrowserClient().from("tenant_members") as any)
+      const { error } = await createSupabaseBrowserClient()
+        .from("tenant_members")
         .update({ role })
         .eq("tenant_id", tenantId)
         .eq("user_id", member.userId);
@@ -80,7 +80,8 @@ export default function TeamClient({
     setBusyKey(member.userId);
     setStatus({ type: "saving", message: "Removing team member..." });
     try {
-      const { error } = await (createSupabaseBrowserClient().from("tenant_members") as any)
+      const { error } = await createSupabaseBrowserClient()
+        .from("tenant_members")
         .delete()
         .eq("tenant_id", tenantId)
         .eq("user_id", member.userId);
@@ -110,7 +111,8 @@ export default function TeamClient({
 
     setStatus({ type: "saving", message: "Creating invite..." });
     try {
-      const { data, error } = await (createSupabaseBrowserClient().from("tenant_invites") as any)
+      const { data, error } = await createSupabaseBrowserClient()
+        .from("tenant_invites")
         .insert({
           tenant_id: tenantId,
           email: normalizeInviteEmail(inviteEmail),
@@ -120,7 +122,7 @@ export default function TeamClient({
         .select("*")
         .single();
       if (error) throw new Error(error.message);
-      setInvites((current) => [rowToTenantInvite(data as TenantInviteRow), ...current]);
+      setInvites((current) => [rowToTenantInvite(data), ...current]);
       setInviteEmail("");
       setInviteRole("viewer");
       setStatus({ type: "success", message: "Invite created." });
@@ -139,7 +141,8 @@ export default function TeamClient({
     setBusyKey(invite.id);
     setStatus({ type: "saving", message: "Revoking invite..." });
     try {
-      const { data, error } = await (createSupabaseBrowserClient().from("tenant_invites") as any)
+      const { data, error } = await createSupabaseBrowserClient()
+        .from("tenant_invites")
         .update({ status: "revoked" })
         .eq("tenant_id", tenantId)
         .eq("id", invite.id)
@@ -147,7 +150,7 @@ export default function TeamClient({
         .single();
       if (error) throw new Error(error.message);
       setInvites((current) =>
-        current.map((item) => item.id === invite.id ? rowToTenantInvite(data as TenantInviteRow) : item)
+        current.map((item) => item.id === invite.id ? rowToTenantInvite(data) : item)
       );
       setStatus({ type: "success", message: "Invite revoked." });
       router.refresh();

@@ -8,7 +8,7 @@ export type TenantAsset = {
   updatedAt: string | null;
 };
 
-type StorageClient = SupabaseClient<Database>;
+type StorageClient = SupabaseClient<Database, "public">;
 
 export async function listTenantMediaAssets(
   client: StorageClient,

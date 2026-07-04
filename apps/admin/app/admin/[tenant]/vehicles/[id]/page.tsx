@@ -42,7 +42,7 @@ export default async function EditVehiclePage({ params }: PageProps) {
         interior_color: vehicle.interior_color,
         drivetrain: vehicle.drivetrain,
         fuel_type: vehicle.fuel_type,
-        stock_type: vehicle.stock_type,
+        stock_type: vehicle.stock_type ?? "Used",
         seller_city: vehicle.seller_city,
         seller_state: vehicle.seller_state,
       }}

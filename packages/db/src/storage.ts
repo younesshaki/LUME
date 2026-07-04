@@ -51,7 +51,7 @@ export function isTenantOwnedPath(tenantId: string, objectKey: string): boolean 
   return objectKey === tenantId || objectKey.startsWith(`${tenantId}/`);
 }
 
-type AnySupabaseClient = SupabaseClient<Database> | SupabaseClient;
+type AnySupabaseClient = SupabaseClient<Database, "public"> | SupabaseClient;
 
 /**
  * Create a time-limited signed URL for a private object. Returns null on error

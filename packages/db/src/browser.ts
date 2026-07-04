@@ -6,7 +6,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./schema";
 
-export type BrowserSupabaseClient = SupabaseClient<Database>;
+export type BrowserSupabaseClient = SupabaseClient<Database, "public">;
 
 export function createBrowserClient(opts: {
   url: string;
