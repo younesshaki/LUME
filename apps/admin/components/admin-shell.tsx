@@ -73,6 +73,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -124,6 +125,9 @@ export function AdminShell({
   const activeTenant = useActiveTenant(tenants, pathname);
 
   return (
+    // This shadcn sidebar version does not mount its own TooltipProvider;
+    // the collapsed-rail tooltips crash without one.
+    <TooltipProvider delayDuration={0}>
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
@@ -201,6 +205,7 @@ export function AdminShell({
         <div className="flex-1 p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
+    </TooltipProvider>
   );
 }
 
