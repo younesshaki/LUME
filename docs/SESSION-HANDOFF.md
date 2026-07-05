@@ -5,6 +5,29 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-05 (later): self-serve SaaS onboarding SHIPPED (`bcc173f`, deployed)
+
+- **Signup → site:** `/signup` → `/admin/onboarding` → `provisionTenant()`
+  (@lume/db): unique slug, owner membership, default persona, starter pages
+  (DEFAULT_PAGES now lives in @lume/blocks). Idempotent; e2e-tested against
+  prod including cascade cleanup.
+- **Every tenant viewable:** public site resolves tenant at runtime
+  (subdomain → persisted `?tenant=` → build default); per-tenant
+  "View website" links in the admin sidebar (`?tenant=slug&preview=lume`).
+- **Platform-owner layer:** migration **024 applied** (advisors: only the
+  known intentional SECURITY DEFINER warnings). `platform_admins` +
+  `is_platform_admin()`; `tenant_ids_for_current_user()` /
+  `user_has_tenant_role()` extended so platform admins pass every tenant's
+  RLS. `/admin/platform` lists all tenants (owner email, members) with
+  one-click Enter. hakicsi89@gmail.com seeded. RLS verified by JWT
+  simulation for both admin and non-admin.
+- 162 tests; all builds clean; deployed and live-verified
+  (/signup 200, /admin/platform auth-gated, runtime-tenant bundle live).
+- Still open for the full vision: canonical subdomain/custom-domain public
+  URLs (needs apps/web move + wildcard domain), invite→signup handoff,
+  DeepSeek balance for live chat replies.
+
+
 - **Branch:** `main`, **pushed and deployed 2026-07-05** (`8acad9d`, both
   Vercel projects READY). Live-verified: public /api/chat proxies through
   lume-admin-five to the chat route and returns DeepSeek's 402 (balance
