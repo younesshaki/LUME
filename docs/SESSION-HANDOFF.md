@@ -5,6 +5,22 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-05 (night): Playwright e2e smoke suite SHIPPED (`b54d8ac`, pushed)
+
+- **`npm run test:e2e`** (root or apps/admin): 9 tests covering the whole
+  paying-customer journey — signup → onboarding provisions a tenant → shell
+  (tenant switcher, no Platform nav for non-admins) → vehicles empty state →
+  CSV import (5-row fixture) → search/sort → alert-dialog delete → leads →
+  `/admin/platform` 404s for non-admins → sign out + middleware re-lock.
+- Mechanics: Playwright starts the admin dev server itself (`webServer`,
+  reuses a running one); throwaway user `lume-e2e-smoke@example.com` +
+  tenant created through the real UI, destroyed via service role in global
+  setup (leftover sweep) + teardown. Verified 0 leftovers on prod after runs.
+- NOT part of `npm test` (vitest excludes `apps/admin/e2e/**`). Jira:
+  SCRUM-213 (created + evidence comment). Signup-with-session works, i.e.
+  Supabase email confirmation is currently OFF — if it's ever enabled the
+  first e2e test will catch it (lands on "Check your email").
+
 ### 2026-07-05 (later): self-serve SaaS onboarding SHIPPED (`bcc173f`, deployed)
 
 - **Signup → site:** `/signup` → `/admin/onboarding` → `provisionTenant()`
