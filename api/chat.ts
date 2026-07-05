@@ -22,10 +22,18 @@
 const UPSTREAM_URL = process.env.LUME_CHAT_UPSTREAM_URL;
 const BYPASS_SECRET = process.env.LUME_CHAT_BYPASS_SECRET;
 
-const FORWARDED_REQUEST_HEADERS = ["content-type", "origin", "x-lume-tenant"] as const;
+// x-forwarded-for is forwarded so the upstream's per-IP rate limiting keys
+// on the real client, not this proxy's egress IP.
+const FORWARDED_REQUEST_HEADERS = [
+  "content-type",
+  "origin",
+  "x-lume-tenant",
+  "x-forwarded-for",
+] as const;
 const FORWARDED_RESPONSE_HEADERS = [
   "content-type",
   "cache-control",
+  "retry-after",
   "x-source-categories",
   "access-control-allow-origin",
   "access-control-allow-headers",

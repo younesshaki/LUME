@@ -38,6 +38,7 @@ import {
   retrieveByKeywords,
 } from "@lume/rag";
 import { getTenantFromRequest } from "@/lib/tenant";
+import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import {
   extractDeepseekTextDelta,
@@ -65,6 +66,19 @@ export async function OPTIONS(request: Request) {
 export async function POST(request: Request): Promise<Response> {
   if (!isAllowedOrigin(request)) {
     return json({ error: "Forbidden origin" }, 403);
+  }
+
+  // SCRUM-112: 10 chat requests/min per client IP, best-effort in-memory.
+  const rate = checkChatRateLimit(clientIpFromRequest(request));
+  if (!rate.allowed) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(rate.retryAfterSeconds),
+        ...corsHeadersFor(request),
+      },
+    });
   }
 
   let body: ChatRequest;
