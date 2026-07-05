@@ -5,9 +5,10 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
-- **Branch:** `main`, local is **12 commits ahead of origin — NOT pushed**
-  (push = auto-deploy of both Vercel projects; blocked on the deploy
-  prerequisites below).
+- **Branch:** `main`, **pushed and deployed 2026-07-05** (`8acad9d`, both
+  Vercel projects READY). Live-verified: public /api/chat proxies through
+  lume-admin-five to the chat route and returns DeepSeek's 402 (balance
+  gate) — the full pipe works; only the LLM reply is missing.
 - **Local main contains (unpushed):**
   1. `99337cd` Codex merge — complete `Database` types, zero `as any`
      Supabase casts in admin, first admin unit tests.
@@ -30,7 +31,7 @@ live state + in-flight work that isn't obvious from the code alone._
 - **Verification baseline:** `npm run typecheck:all` clean, `npm test` =
   **159 passing**, builds clean. Chat verified end-to-end vs a mock LLM
   upstream with real DB queries (persona prompt, tool actions, botName in
-  meta, 429 on the 11th request). Local main is 12 commits ahead of origin.
+  meta, 429 on the 11th request).
 - **Jira annotated** with evidence comments: SCRUM-144, 119, 97, 115, 112.
 - **Two tenants now exist:** `default` (1009 vehicles, 6 pages) and `demo`
   (`efab59f0-…`, 1000 vehicles, 5 pages, seeded 2026-07-04 via the seed
