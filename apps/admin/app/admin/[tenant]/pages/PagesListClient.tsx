@@ -123,7 +123,7 @@ export default function PagesListClient({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted-foreground">
             Drag rows to reorder public navigation. Reserved pages cannot be deleted.
           </p>
         </div>
@@ -150,21 +150,21 @@ export default function PagesListClient({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+      <div className="overflow-hidden rounded-xl border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Order</th>
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Page</th>
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Slug</th>
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Status</th>
-              <th className="px-4 py-3 text-right font-medium text-neutral-500">Actions</th>
+            <tr className="border-b bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Order</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Page</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Slug</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {pages.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-neutral-500">
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                   No pages found for this tenant.
                 </td>
               </tr>
@@ -181,7 +181,7 @@ export default function PagesListClient({
                 }}
                 className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900/50"
               >
-                <td className="px-4 py-3 text-neutral-500">
+                <td className="px-4 py-3 text-muted-foreground">
                   <span className="cursor-grab rounded border border-neutral-200 px-2 py-1 text-xs dark:border-neutral-800">
                     {index + 1}
                   </span>
@@ -202,21 +202,21 @@ export default function PagesListClient({
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <code className="text-xs text-neutral-500">/{page.slug}</code>
+                  <code className="text-xs text-muted-foreground">/{page.slug}</code>
                 </td>
-                <td className="px-4 py-3 text-neutral-500">{pageStatus(page)}</td>
+                <td className="px-4 py-3 text-muted-foreground">{pageStatus(page)}</td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-3">
                     <Link
                       href={`/admin/${tenantSlug}/pages/${page.id}`}
-                      className="text-xs font-medium text-neutral-600 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-white"
+                      className="text-xs font-medium text-neutral-600 hover:text-neutral-950 dark:text-muted-foreground dark:hover:text-white"
                     >
                       Edit
                     </Link>
                     <button
                       type="button"
                       onClick={() => void handleDuplicate(page)}
-                      className="text-xs font-medium text-neutral-600 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-white"
+                      className="text-xs font-medium text-neutral-600 hover:text-neutral-950 dark:text-muted-foreground dark:hover:text-white"
                     >
                       Duplicate
                     </button>
@@ -224,7 +224,7 @@ export default function PagesListClient({
                       type="button"
                       disabled={page.isReserved || Boolean(page.archivedAt)}
                       onClick={() => void handleArchive(page)}
-                      className="text-xs font-medium text-neutral-600 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-400 dark:hover:text-white"
+                      className="text-xs font-medium text-neutral-600 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40 dark:text-muted-foreground dark:hover:text-white"
                     >
                       Archive
                     </button>
@@ -232,7 +232,7 @@ export default function PagesListClient({
                       type="button"
                       disabled={page.isReserved}
                       onClick={() => void handleDelete(page)}
-                      className="text-xs font-medium text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="text-xs font-medium text-destructive hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Delete
                     </button>

@@ -22,7 +22,7 @@ export default async function PagesListPage({ params }: PageProps) {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Pages</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Edit draft page content and publish changes for {tenant.name}.
         </p>
       </header>

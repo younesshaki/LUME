@@ -73,7 +73,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Analytics</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Tenant-scoped operating signals for {tenant.name}.
         </p>
       </header>
@@ -105,23 +105,23 @@ export default async function AnalyticsPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-hidden rounded-xl border">
           <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
             <h2 className="text-sm font-semibold">Recent Leads</h2>
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-                <th className="px-4 py-3 text-left font-medium text-neutral-500">Lead</th>
-                <th className="px-4 py-3 text-left font-medium text-neutral-500">Contact</th>
-                <th className="px-4 py-3 text-left font-medium text-neutral-500">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-neutral-500">Created</th>
+              <tr className="border-b bg-muted/50">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Lead</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Contact</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
               </tr>
             </thead>
             <tbody>
               {recentLeads.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-neutral-500">
+                  <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
                     No leads in the last 7 days.
                   </td>
                 </tr>
@@ -129,7 +129,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
               {recentLeads.map((lead) => (
                 <tr
                   key={lead.id}
-                  className="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
+                  className="border-b last:border-0"
                 >
                   <td className="px-4 py-3">
                     <Link
@@ -139,15 +139,15 @@ export default async function AnalyticsPage({ params }: PageProps) {
                       {leadName(lead)}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-neutral-500">
+                  <td className="px-4 py-3 text-muted-foreground">
                     {lead.email || lead.phone || "N/A"}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                    <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
                       {lead.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-neutral-500">{formatDate(lead.created_at)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatDate(lead.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -169,9 +169,9 @@ function MetricCard({
 }) {
   return (
     <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
-      <p className="text-sm text-neutral-500">{label}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
       <p className="mt-2 text-3xl font-semibold">{value.toLocaleString()}</p>
-      {helper && <p className="mt-1 text-xs text-neutral-500">{helper}</p>}
+      {helper && <p className="mt-1 text-xs text-muted-foreground">{helper}</p>}
     </div>
   );
 }

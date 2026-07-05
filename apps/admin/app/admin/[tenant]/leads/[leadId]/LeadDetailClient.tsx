@@ -81,12 +81,12 @@ export default function LeadDetailClient({
         <div>
           <Link
             href={`/admin/${tenantSlug}/leads`}
-            className="text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            className="text-sm text-muted-foreground hover:text-neutral-900 dark:hover:text-neutral-100"
           >
             Back to leads
           </Link>
           <h1 className="mt-2 text-2xl font-semibold">{leadName(currentLead)}</h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Lead for {tenantName} captured from {currentLead.source}.
           </p>
         </div>
@@ -129,7 +129,7 @@ export default function LeadDetailClient({
               </p>
             </div>
           )}
-          <div className="border-t border-neutral-200 pt-4 text-xs text-neutral-500 dark:border-neutral-800">
+          <div className="border-t border-neutral-200 pt-4 text-xs text-muted-foreground dark:border-neutral-800">
             <p>UTM source: {currentLead.utmSource || "N/A"}</p>
             <p>UTM medium: {currentLead.utmMedium || "N/A"}</p>
             <p>UTM campaign: {currentLead.utmCampaign || "N/A"}</p>
@@ -140,7 +140,7 @@ export default function LeadDetailClient({
           <h2 className="text-sm font-semibold">Timeline</h2>
           <div className="mt-4 space-y-4">
             {activities.length === 0 && (
-              <p className="text-sm text-neutral-500">No activity has been recorded yet.</p>
+              <p className="text-sm text-muted-foreground">No activity has been recorded yet.</p>
             )}
             {activities.map((activity) => (
               <article
@@ -149,7 +149,7 @@ export default function LeadDetailClient({
               >
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm font-medium">{activityLabel(activity.type)}</p>
-                  <time className="text-xs text-neutral-500">
+                  <time className="text-xs text-muted-foreground">
                     {formatDate(activity.createdAt)}
                   </time>
                 </div>
@@ -170,7 +170,7 @@ export default function LeadDetailClient({
 function InfoRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-neutral-500">{label}</dt>
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
       <dd className="mt-1 break-words text-neutral-800 dark:text-neutral-100">
         {value || "N/A"}
       </dd>

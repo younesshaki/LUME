@@ -215,12 +215,12 @@ export default function PageEditorClient({
         <div>
           <Link
             href={`/admin/${tenantSlug}/pages`}
-            className="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
             Back to Pages
           </Link>
           <h1 className="mt-2 text-2xl font-semibold">{page.title || page.slug}</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted-foreground">
             Tenant <code>{tenantSlug}</code> - Page <code>/{page.slug}</code>
           </p>
           <PublicationStatusBadge status={publicationStatus} />
@@ -246,7 +246,7 @@ export default function PageEditorClient({
             type="button"
             onClick={unpublish}
             disabled={state.type === "saving" || !page.publishedRevisionId}
-            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:hover:bg-red-950/30"
+            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-destructive hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:hover:bg-red-950/30"
           >
             Unpublish
           </button>
@@ -271,7 +271,7 @@ export default function PageEditorClient({
       <div className="grid flex-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)_360px]">
         <aside className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Blocks</h2>
-          <p className="mt-1 text-xs text-neutral-500">Add supported content blocks.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Add supported content blocks.</p>
           <div className="mt-4 space-y-2">
             {paletteDescriptors.map((descriptor) => (
               <button
@@ -281,7 +281,7 @@ export default function PageEditorClient({
                 className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
               >
                 <span className="block font-medium">{descriptor.displayName}</span>
-                <span className="mt-0.5 block text-xs text-neutral-500">{descriptor.description}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">{descriptor.description}</span>
               </button>
             ))}
           </div>
@@ -290,13 +290,13 @@ export default function PageEditorClient({
         <main className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Page Order</h2>
-            <span className="text-xs text-neutral-500">
+            <span className="text-xs text-muted-foreground">
               {blocks.length} block{blocks.length === 1 ? "" : "s"}
             </span>
           </div>
           <div className="mt-4 space-y-2">
             {blocks.length === 0 && (
-              <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500 dark:border-neutral-700">
+              <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-sm text-muted-foreground dark:border-neutral-700">
                 Add a Hero block to start this draft.
               </div>
             )}
@@ -310,7 +310,7 @@ export default function PageEditorClient({
                   className={`rounded-lg border p-3 ${
                     selected
                       ? "border-neutral-900 bg-neutral-50 dark:border-white dark:bg-neutral-900"
-                      : "border-neutral-200 dark:border-neutral-800"
+                      : "border-border"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -322,7 +322,7 @@ export default function PageEditorClient({
                       <span className="block truncate text-sm font-medium">
                         {descriptor?.displayName ?? block.type}
                       </span>
-                      <span className="block truncate text-xs text-neutral-500">
+                      <span className="block truncate text-xs text-muted-foreground">
                         {block.type} - {block.id}
                       </span>
                     </button>
@@ -346,14 +346,14 @@ export default function PageEditorClient({
                       <button
                         type="button"
                         onClick={() => removeBlock(block.id)}
-                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"
+                        className="rounded border border-red-200 px-2 py-1 text-xs text-destructive hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"
                       >
                         Remove
                       </button>
                     </div>
                   </div>
                   {errors.length > 0 && (
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-red-600">
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-destructive">
                       {errors.map((error) => (
                         <li key={error}>{error}</li>
                       ))}
@@ -374,9 +374,9 @@ export default function PageEditorClient({
         <aside className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Properties</h2>
           {!selectedBlock || !selectedDescriptor ? (
-            <p className="mt-4 text-sm text-neutral-500">Select a block to edit its props.</p>
+            <p className="mt-4 text-sm text-muted-foreground">Select a block to edit its props.</p>
           ) : selectedDescriptor.fields.length === 0 ? (
-            <p className="mt-4 text-sm text-neutral-500">
+            <p className="mt-4 text-sm text-muted-foreground">
               {selectedDescriptor.displayName} is not editable in this vertical slice.
             </p>
           ) : (
@@ -447,13 +447,13 @@ function RevisionHistory({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold">Revision History</h2>
-          <p className="mt-1 text-xs text-neutral-500">Preview and restore older page drafts.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Preview and restore older page drafts.</p>
         </div>
-        <span className="text-xs text-neutral-500">{revisions.length}</span>
+        <span className="text-xs text-muted-foreground">{revisions.length}</span>
       </div>
 
       {revisions.length === 0 ? (
-        <p className="mt-4 rounded-lg border border-dashed border-neutral-300 p-3 text-xs text-neutral-500 dark:border-neutral-700">
+        <p className="mt-4 rounded-lg border border-dashed border-neutral-300 p-3 text-xs text-muted-foreground dark:border-neutral-700">
           No revisions yet.
         </p>
       ) : (
@@ -466,7 +466,7 @@ function RevisionHistory({
                 className={`rounded-lg border p-3 ${
                   isPreviewing
                     ? "border-neutral-900 bg-neutral-50 dark:border-white dark:bg-neutral-900"
-                    : "border-neutral-200 dark:border-neutral-800"
+                    : "border-border"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -478,10 +478,10 @@ function RevisionHistory({
                         <RevisionBadge>Published</RevisionBadge>
                       )}
                     </div>
-                    <p className="mt-1 truncate text-xs text-neutral-500">
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
                       {formatDateTime(revision.createdAt)}
                     </p>
-                    <p className="mt-1 truncate text-[11px] text-neutral-400">{revision.id}</p>
+                    <p className="mt-1 truncate text-[11px] text-muted-foreground">{revision.id}</p>
                   </div>
                   <div className="flex shrink-0 gap-1">
                     <button
@@ -533,13 +533,13 @@ function RevisionPreview({
     <div className="mt-4 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold">Preview</h3>
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-muted-foreground">
           {revision.blocks.blocks.length} block{revision.blocks.blocks.length === 1 ? "" : "s"}
         </span>
       </div>
       <div className="mt-3 space-y-2">
         {revision.blocks.blocks.length === 0 && (
-          <p className="text-xs text-neutral-500">This revision has no blocks.</p>
+          <p className="text-xs text-muted-foreground">This revision has no blocks.</p>
         )}
         {revision.blocks.blocks.map((block) => {
           const descriptor = descriptorsByType.get(block.type);
@@ -578,7 +578,7 @@ function FieldControl({
   const id = `field-${field.name}`;
   const commonClass =
     "mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700";
-  const labelClass = "text-xs font-medium text-neutral-500";
+  const labelClass = "text-xs font-medium text-muted-foreground";
 
   return (
     <div>
@@ -637,12 +637,12 @@ function FieldControl({
           className={commonClass}
         />
       )}
-      {field.helpText && <span className="mt-1 block text-xs text-neutral-500">{field.helpText}</span>}
+      {field.helpText && <span className="mt-1 block text-xs text-muted-foreground">{field.helpText}</span>}
       {isMediaField(field) && (
         <AssetPickerField tenantId={tenantId} value={String(value ?? "")} onSelect={onChange} />
       )}
       {errors.length > 0 && (
-        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-red-600">
+        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-destructive">
           {errors.map((error) => (
             <li key={error}>{error}</li>
           ))}
@@ -687,12 +687,12 @@ function AssetPickerField({
       >
         Choose asset
       </button>
-      {value && <p className="mt-1 truncate text-[11px] text-neutral-500">Selected: {value}</p>}
+      {value && <p className="mt-1 truncate text-[11px] text-muted-foreground">Selected: {value}</p>}
       {open && (
         <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-neutral-200 p-2 dark:border-neutral-800">
-          {status && <p className="p-2 text-xs text-neutral-500">{status}</p>}
+          {status && <p className="p-2 text-xs text-muted-foreground">{status}</p>}
           {!status && assets.length === 0 && (
-            <p className="p-2 text-xs text-neutral-500">No uploaded media assets.</p>
+            <p className="p-2 text-xs text-muted-foreground">No uploaded media assets.</p>
           )}
           <div className="grid grid-cols-2 gap-2">
             {assets.map((asset) => (
@@ -791,23 +791,23 @@ function StatementListField({
   return (
     <div className="mt-2 space-y-3">
       {items.length === 0 && (
-        <div className="rounded-lg border border-dashed border-neutral-300 p-3 text-xs text-neutral-500 dark:border-neutral-700">
+        <div className="rounded-lg border border-dashed border-neutral-300 p-3 text-xs text-muted-foreground dark:border-neutral-700">
           No statements yet.
         </div>
       )}
       {items.map((item, index) => (
         <div key={index} className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-neutral-500">Statement {index + 1}</span>
+            <span className="text-xs font-medium text-muted-foreground">Statement {index + 1}</span>
             <button
               type="button"
               onClick={() => removeItem(index)}
-              className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"
+              className="rounded border border-red-200 px-2 py-1 text-xs text-destructive hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"
             >
               Remove
             </button>
           </div>
-          <label className="mt-3 block text-xs font-medium text-neutral-500">
+          <label className="mt-3 block text-xs font-medium text-muted-foreground">
             Label
             <input
               type="text"
@@ -816,7 +816,7 @@ function StatementListField({
               className="mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
             />
           </label>
-          <label className="mt-3 block text-xs font-medium text-neutral-500">
+          <label className="mt-3 block text-xs font-medium text-muted-foreground">
             Body
             <textarea
               value={item.body}

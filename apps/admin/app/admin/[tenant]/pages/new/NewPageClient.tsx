@@ -68,12 +68,12 @@ export default function NewPageClient({
       <div>
         <Link
           href={`/admin/${tenantSlug}/pages`}
-          className="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+          className="text-xs text-muted-foreground hover:text-foreground"
         >
           Back to Pages
         </Link>
         <h1 className="mt-2 text-2xl font-semibold">New Page</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Create a custom tenant page. Reserved system routes are blocked.
         </p>
       </div>
@@ -90,8 +90,8 @@ export default function NewPageClient({
 
       <label className="block">
         <span className="text-sm font-medium">Slug</span>
-        <div className="mt-1 flex rounded-lg border border-neutral-300 dark:border-neutral-700">
-          <span className="border-r border-neutral-300 px-3 py-2 text-sm text-neutral-500 dark:border-neutral-700">
+        <div className="mt-1 flex rounded-lg border border-input">
+          <span className="border-r border-neutral-300 px-3 py-2 text-sm text-muted-foreground dark:border-neutral-700">
             /
           </span>
           <input
@@ -106,7 +106,7 @@ export default function NewPageClient({
         </div>
         <span
           className={`mt-1 block text-xs ${
-            validation.ok ? "text-neutral-500" : "text-red-600"
+            validation.ok ? "text-muted-foreground" : "text-destructive"
           }`}
         >
           {validation.ok ? "Lowercase URL slug for this page." : validation.reason}

@@ -180,7 +180,7 @@ export default function TeamClient({
     <div className="max-w-6xl space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Team</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Manage tenant members and pending invites for {tenantName}{" "}
           <code>/{tenantSlug}</code>.
         </p>
@@ -194,29 +194,29 @@ export default function TeamClient({
       )}
       {status.message && <StatusBanner type={status.type} message={status.message} />}
 
-      <section className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+      <section className="overflow-hidden rounded-xl border">
         <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Members</h2>
         </div>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">User</th>
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Role</th>
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Joined</th>
-              <th className="px-4 py-3 text-right font-medium text-neutral-500">Actions</th>
+            <tr className="border-b bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Joined</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {members.map((member) => (
               <tr
                 key={member.userId}
-                className="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
+                className="border-b last:border-0"
               >
                 <td className="px-4 py-3">
                   <p className="font-mono text-xs">{member.userId}</p>
                   {member.userId === currentUserId && (
-                    <p className="mt-1 text-xs text-neutral-500">Current user</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Current user</p>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -233,7 +233,7 @@ export default function TeamClient({
                     ))}
                   </select>
                 </td>
-                <td className="px-4 py-3 text-neutral-500">{formatDate(member.createdAt)}</td>
+                <td className="px-4 py-3 text-muted-foreground">{formatDate(member.createdAt)}</td>
                 <td className="px-4 py-3 text-right">
                   <button
                     type="button"
@@ -256,7 +256,7 @@ export default function TeamClient({
           className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
         >
           <h2 className="text-sm font-semibold">Invite Member</h2>
-          <label className="mt-4 block text-xs font-medium text-neutral-500">
+          <label className="mt-4 block text-xs font-medium text-muted-foreground">
             Email
             <input
               type="email"
@@ -269,7 +269,7 @@ export default function TeamClient({
               className="mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm disabled:opacity-50 dark:border-neutral-700"
             />
           </label>
-          <label className="mt-4 block text-xs font-medium text-neutral-500">
+          <label className="mt-4 block text-xs font-medium text-muted-foreground">
             Role
             <select
               value={inviteRole}
@@ -293,24 +293,24 @@ export default function TeamClient({
           </button>
         </form>
 
-        <div className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-hidden rounded-xl border">
           <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
             <h2 className="text-sm font-semibold">Pending Invites</h2>
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-                <th className="px-4 py-3 text-left font-medium text-neutral-500">Email</th>
-                <th className="px-4 py-3 text-left font-medium text-neutral-500">Role</th>
-                <th className="px-4 py-3 text-left font-medium text-neutral-500">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-neutral-500">Expires</th>
-                <th className="px-4 py-3 text-right font-medium text-neutral-500">Actions</th>
+              <tr className="border-b bg-muted/50">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {invites.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-neutral-500">
+                  <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                     No invites have been created yet.
                   </td>
                 </tr>
@@ -318,27 +318,27 @@ export default function TeamClient({
               {invites.map((invite) => (
                 <tr
                   key={invite.id}
-                  className="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
+                  className="border-b last:border-0"
                 >
                   <td className="px-4 py-3">
                     <p>{invite.email}</p>
                     {invite.status === "pending" && (
                       <button
                         type="button"
-                        className="mt-1 text-xs text-neutral-500 underline underline-offset-2 hover:text-neutral-700 dark:hover:text-neutral-300"
+                        className="mt-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
                         onClick={() => void copyInviteLink(invite)}
                       >
                         {copiedInviteId === invite.id ? "Link copied!" : "Copy invite link"}
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-neutral-500">{invite.role}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{invite.role}</td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                    <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
                       {invite.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-neutral-500">{formatDate(invite.expiresAt)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatDate(invite.expiresAt)}</td>
                   <td className="px-4 py-3 text-right">
                     <button
                       type="button"

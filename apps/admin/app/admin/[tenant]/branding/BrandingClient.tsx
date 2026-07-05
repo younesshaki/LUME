@@ -98,7 +98,7 @@ export default function BrandingClient({
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Branding</h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Theme public site tokens for {tenantName} <code>/{tenantSlug}</code>.
           </p>
         </div>
@@ -167,7 +167,7 @@ export default function BrandingClient({
                   setForm((current) => ({ ...current, dockVariant: value as TenantDockVariant }))
                 }
               />
-              <label className="block text-xs font-medium text-neutral-500">
+              <label className="block text-xs font-medium text-muted-foreground">
                 Cinematic intensity
                 <input
                   type="range"
@@ -183,7 +183,7 @@ export default function BrandingClient({
                   }
                   className="mt-3 w-full"
                 />
-                <span className="mt-1 block text-xs text-neutral-500">
+                <span className="mt-1 block text-xs text-muted-foreground">
                   {form.cinematicIntensity.toFixed(2)}
                 </span>
               </label>
@@ -250,7 +250,7 @@ function ColorControl({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block text-xs font-medium text-neutral-500">
+    <label className="block text-xs font-medium text-muted-foreground">
       {label}
       <div className="mt-1 flex gap-2">
         <input
@@ -282,7 +282,7 @@ function SelectControl({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block text-xs font-medium text-neutral-500">
+    <label className="block text-xs font-medium text-muted-foreground">
       {label}
       <select
         value={value}
