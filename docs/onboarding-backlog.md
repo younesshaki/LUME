@@ -56,7 +56,9 @@ Result: tenant `efab59f0-c566-42dc-96d9-d40a6ad2a2f3`, owner membership,
    embeddings into every tenant.~~ _Addressed 2026-07-05:_ `create:tenant`
    provisions blank by default, and the admin now has a CSV inventory import
    (`/admin/[tenant]/vehicles/import` — preview + per-line validation +
-   batched insert). Remaining: knowledge-doc upload → embeddings (item 8).
+   batched insert; since 2026-07-06 also add-vs-replace modes and duplicate
+   detection with per-row decisions). Remaining: knowledge-doc upload →
+   embeddings (item 8).
 3. **Owner must already exist in Supabase auth.** _Addressed 2026-07-05:_
    `/signup` creates the account and `/admin/onboarding` auto-provisions the
    tenant (name → unique slug → owner membership → persona → pages) via

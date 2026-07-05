@@ -5,6 +5,18 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-06: CSV import modes + duplicate detection SHIPPED (`d553408`, pushed)
+
+- `/admin/[tenant]/vehicles/import` now offers **Add vs Replace** ("Replace
+  entire inventory" = delete-then-insert behind a destructive confirm
+  dialog) and **duplicate detection** against current inventory
+  (external_id first, else normalized year+make+model+trim+mileage) with
+  per-row skip/import checkboxes + a summary line. Duplicates default to
+  skipped, so re-uploading the same feed is now a no-op instead of doubling.
+- Pure logic: `findDuplicates()` in `apps/admin/lib/vehicleImport.ts`
+  (5 new unit tests → 167 total). e2e suite extended with a re-import +
+  replace journey (10 tests). Jira: SCRUM-161 progress comment.
+
 ### 2026-07-05 (night): Playwright e2e smoke suite SHIPPED (`b54d8ac`, pushed)
 
 - **`npm run test:e2e`** (root or apps/admin): 9 tests covering the whole
