@@ -7,6 +7,7 @@
  * the gate. The membership write happens in a server action, never on GET.
  */
 import Link from "next/link";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createServiceClient } from "@lume/db/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -115,6 +116,7 @@ export default async function InvitePage({ params }: PageProps) {
       .eq("status", "pending");
     if (inviteErr) throw new Error(`Failed to mark invite accepted: ${inviteErr.message}`);
 
+    revalidatePath("/admin", "layout");
     redirect(`/admin/${loaded.tenant.slug}`);
   }
 

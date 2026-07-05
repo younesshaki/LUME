@@ -290,7 +290,15 @@ export async function loadVehicles(): Promise<Vehicle[]> {
       return cached;
     }
   } catch (error) {
-    console.warn("Falling back to CSV vehicle catalog after API load failed", error);
+    console.warn("Vehicle API load failed", error);
+  }
+
+  // The CSV is LUME's own legacy catalog — a valid fallback ONLY for the
+  // default tenant. Any other tenant with no vehicles yet must show an
+  // empty inventory, not another business's cars.
+  if (TENANT_SLUG !== "default") {
+    cached = [];
+    return cached;
   }
 
   cached = await loadVehiclesFromCsv();

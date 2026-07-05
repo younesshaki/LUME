@@ -6,6 +6,7 @@
  * no-op returning the existing tenant if the user already owns one, so
  * double submits and email-confirm round trips are safe.
  */
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DEFAULT_PAGES } from "@lume/blocks";
 import { createServiceClient } from "@lume/db/server";
@@ -58,6 +59,9 @@ export default async function OnboardingPage() {
       })),
     });
 
+    // The sidebar layout is cached with the pre-signup (tenant-less) state;
+    // without this the new tenant is invisible until the cache expires.
+    revalidatePath("/admin", "layout");
     redirect(`/admin/${result.slug}`);
   }
 
