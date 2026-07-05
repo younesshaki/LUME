@@ -50,10 +50,11 @@ Result: tenant `efab59f0-c566-42dc-96d9-d40a6ad2a2f3`, owner membership,
    provisioned in the DB but unreachable by any visitor. Subdomain-based
    tenancy (`{tenant}.lume.app`, per the vision doc) or per-tenant deploys is
    the single biggest missing piece of the SaaS story.
-2. **No blank-tenant mode.** The seed loads LUME's own demo CSV and
-   embeddings into every tenant. A real customer needs an *empty* tenant plus
-   self-service imports (CSV upload UI exists for vehicles? no — admin
-   vehicle form is one-at-a-time; CSV import is Jira backlog).
+2. **No blank-tenant mode.** ~~The seed loads LUME's own demo CSV and
+   embeddings into every tenant.~~ _Addressed 2026-07-05:_ `create:tenant`
+   provisions blank by default, and the admin now has a CSV inventory import
+   (`/admin/[tenant]/vehicles/import` — preview + per-line validation +
+   batched insert). Remaining: knowledge-doc upload → embeddings (item 8).
 3. **Owner must already exist in Supabase auth.** The seed aborts if the
    email has no auth user. Real onboarding = invite/signup flow that creates
    the auth user, the tenant, and the owner membership in one transaction

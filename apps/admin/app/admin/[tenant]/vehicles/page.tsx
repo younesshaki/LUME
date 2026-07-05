@@ -36,12 +36,20 @@ export default async function VehiclesPage({ params }: PageProps) {
                 : "Loading…"}
           </p>
         </div>
-        <Link
-          href={`/admin/${slug}/vehicles/new`}
-          className="rounded-lg bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-700 transition-colors"
-        >
-          + Add Vehicle
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href={`/admin/${slug}/vehicles/import`}
+            className="rounded-lg border border-neutral-300 dark:border-neutral-700 px-4 py-2 text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          >
+            Import CSV
+          </Link>
+          <Link
+            href={`/admin/${slug}/vehicles/new`}
+            className="rounded-lg bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-700 transition-colors"
+          >
+            + Add Vehicle
+          </Link>
+        </div>
       </header>
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
