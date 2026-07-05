@@ -37,26 +37,30 @@ live state + in-flight work that isn't obvious from the code alone._
   scripts as an onboarding dry-run). Isolation verified end-to-end as anon.
   Gaps found are ranked in `docs/onboarding-backlog.md`.
 
-## ⚠️ Deploy prerequisites (do these BEFORE pushing main)
+## ⚠️ Deploy prerequisites (updated 2026-07-05 — only ONE remains)
 
-The chat consolidation changes prod behavior. Pushing without these leaves
-public chat broken (the proxy fails fast with "Chat upstream not configured"):
+Vercel config was completed via API this session:
 
-1. **DeepSeek account has NO balance** — live chat test returned
-   `402 Insufficient Balance`. Top up, and rotate the key while at it
-   (SCRUM-115). The key is now only needed on the **admin** Vercel project;
-   delete `DEEPSEEK_API_KEY` from the public `lume` project after deploy.
-2. **`lume-admin.vercel.app` is NOT our admin app.** The global subdomain
-   belongs to an older "Lume Admin Panel" Vite prototype project. The real
-   Next admin serves from the team-scoped URLs and currently sits behind
-   **Vercel SSO deployment protection** (all requests 302 to vercel.com).
-3. Therefore, on the public `lume` Vercel project set:
-   - `LUME_CHAT_UPSTREAM_URL` = `<real admin production URL>/api/chat`
-   - `LUME_CHAT_BYPASS_SECRET` = the admin project's "Protection Bypass for
-     Automation" secret (or disable deployment protection on the admin
-     project — its own Supabase auth + middleware already gate the UI).
-4. `ALLOWED_CHAT_ORIGINS` on the admin project must include
-   `https://lume-jade-three.vercel.app`.
+- ✅ `LUME_CHAT_UPSTREAM_URL=https://lume-admin-five.vercel.app/api/chat` set
+  on `lume` (production+preview). **`lume-admin-five.vercel.app` is the real
+  admin production alias** — and its API routes are publicly reachable
+  (verified: POST /api/chat reaches DeepSeek). `lume-admin.vercel.app` is
+  still a foreign prototype project; never use it. SSO protection only bit
+  on the git-branch aliases.
+- ✅ `LUME_CHAT_BYPASS_SECRET` created on lume-admin + set on `lume`
+  (belt-and-braces; the proxy sends it if present).
+- ✅ `ALLOWED_CHAT_ORIGINS` on lume-admin already includes
+  `https://lume-jade-three.vercel.app` (+ localhost:5173).
+
+Remaining before push:
+
+1. **DeepSeek account has NO balance** — `402 Insufficient Balance` verified
+   against the deployed admin. Top up, and rotate the key while at it
+   (SCRUM-115): update `DEEPSEEK_API_KEY` on the **lume-admin** Vercel
+   project (+ local `apps/admin/.env.local`); after deploy, delete the copy
+   on the public `lume` project.
+   Note: pushing before the top-up deploys fine — chat just returns the 402
+   error until the balance exists.
 
 ## What was built this session (2026-07-04)
 
