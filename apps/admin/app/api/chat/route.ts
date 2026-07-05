@@ -39,23 +39,24 @@ import {
 } from "@lume/rag";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
+import {
+  extractDeepseekTextDelta,
+  extractInlineActions,
+  parseBotActionLine,
+} from "@/lib/botActions";
+import {
+  actionSystemPrompt,
+  filterAllowedActions,
+  isActionAllowed,
+  loadActivePersona,
+  personaBasePrompt,
+} from "@/lib/chatPersona";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_MESSAGES = 30;
 const MAX_USER_CONTENT_LENGTH = 4_000;
-const BOT_ACTION_SYSTEM_PROMPT = `
-Structured actions:
-When an action would help the user, you may emit exactly one JSON object on its own line. Keep normal helpful text streaming as usual. The JSON line must match one of these shapes:
-{"type":"filter_inventory","make":"string","priceMin":0,"priceMax":0,"bodyStyle":"string"}
-{"type":"navigate","route":"string"}
-{"type":"highlight-vehicle","vehicleId":"string"}
-{"type":"open-lead-form","prefill":{}}
-{"type":"capture_lead","contact":{"email":"string","phone":"string","firstName":"string","lastName":"string","message":"string"},"vehicleId":"string"}
-{"type":"scroll-to","sectionId":"string"}
-Only include fields that are useful. Do not wrap action JSON in markdown.
-You also have function tools (find_vehicles, find_best_deal, get_vehicle_details, compare_vehicles) — prefer them for inventory questions; they query the live database.`;
 
 export async function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeadersFor(request) });
@@ -105,6 +106,14 @@ export async function POST(request: Request): Promise<Response> {
   // for retrieveContext() from @lume/rag/server + an embedder.
   const supabase = createServiceClient();
 
+  // Persona (admin-configured voice + capabilities) and tenant display name;
+  // both degrade gracefully — chat never fails because persona is missing.
+  const [persona, { data: tenantRow }] = await Promise.all([
+    loadActivePersona(supabase, tenant.tenantId),
+    supabase.from("tenants").select("name").eq("id", tenant.tenantId).maybeSingle(),
+  ]);
+  const tenantName = tenantRow?.name ?? tenant.slug;
+
   let assembled;
   try {
     const { data: chunkRows, error: chunkErr } = await supabase
@@ -141,6 +150,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     assembled = assembleSystemPrompt({
+      basePrompt: personaBasePrompt(persona, tenantName),
       contextChunks,
       matchedVehicles,
       totalMatched,
@@ -162,7 +172,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const systemMessage = {
     role: "system" as const,
-    content: `${assembled.prompt}\n\n${BOT_ACTION_SYSTEM_PROMPT}`,
+    content: `${assembled.prompt}\n${actionSystemPrompt(persona.capabilities)}`,
   };
 
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
@@ -226,7 +236,10 @@ export async function POST(request: Request): Promise<Response> {
       start(controller) {
         const encoder = new TextEncoder();
         controller.enqueue(encoder.encode(metaEvent));
-        for (const action of extractInlineActions(content)) {
+        for (const action of filterAllowedActions(
+          extractInlineActions(content),
+          persona.capabilities
+        )) {
           controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
         }
         if (content) {
@@ -298,7 +311,7 @@ export async function POST(request: Request): Promise<Response> {
       controller.enqueue(encoder.encode(metaEvent));
       // Tool-emitted UI actions go out before the prose starts streaming so
       // the interface reacts (filters, highlights) while the model talks.
-      for (const action of turn.actions) {
+      for (const action of filterAllowedActions(turn.actions, persona.capabilities)) {
         controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
       }
 
@@ -319,7 +332,9 @@ export async function POST(request: Request): Promise<Response> {
 
         if (trimmed === "data: [DONE]") {
           const finalAction = parseBotActionLine(actionLineBuffer);
-          if (finalAction) pendingActions.push(finalAction);
+          if (finalAction && isActionAllowed(finalAction, persona.capabilities)) {
+            pendingActions.push(finalAction);
+          }
           actionLineBuffer = "";
           flushActionEvents();
         }
@@ -340,7 +355,9 @@ export async function POST(request: Request): Promise<Response> {
 
         for (const actionLine of actionLines) {
           const action = parseBotActionLine(actionLine);
-          if (action) pendingActions.push(action);
+          if (action && isActionAllowed(action, persona.capabilities)) {
+            pendingActions.push(action);
+          }
         }
       };
 
@@ -361,7 +378,9 @@ export async function POST(request: Request): Promise<Response> {
           processSseLine(sseLineBuffer);
         }
         const finalAction = parseBotActionLine(actionLineBuffer);
-        if (finalAction) pendingActions.push(finalAction);
+        if (finalAction && isActionAllowed(finalAction, persona.capabilities)) {
+          pendingActions.push(finalAction);
+        }
         flushActionEvents();
       } catch (err) {
         const message = err instanceof Error ? err.message : "stream failure";
@@ -400,97 +419,3 @@ type DeepseekMessage = {
 type DeepseekCompletion = {
   choices?: Array<{ message?: DeepseekMessage }>;
 };
-
-type DeepseekStreamChunk = {
-  choices?: Array<{ delta?: { content?: string } }>;
-};
-
-function extractDeepseekTextDelta(line: string): string | undefined {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("data: ") || trimmed === "data: [DONE]") {
-    return undefined;
-  }
-
-  try {
-    const chunk = JSON.parse(trimmed.slice(6)) as DeepseekStreamChunk;
-    return chunk.choices?.[0]?.delta?.content;
-  } catch {
-    return undefined;
-  }
-}
-
-/** Pull legacy inline JSON action lines out of a complete (non-streamed) reply. */
-function extractInlineActions(content: string): BotAction[] {
-  const actions: BotAction[] = [];
-  for (const line of content.split(/\r?\n/)) {
-    const action = parseBotActionLine(line);
-    if (action) actions.push(action);
-  }
-  return actions;
-}
-
-function parseBotActionLine(line: string): BotAction | undefined {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
-    return undefined;
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed) as unknown;
-    return isBotAction(parsed) ? parsed : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function isBotAction(value: unknown): value is BotAction {
-  if (!isRecord(value) || typeof value.type !== "string") {
-    return false;
-  }
-
-  switch (value.type) {
-    case "filter_inventory":
-      return (
-        isOptionalString(value.make) &&
-        isOptionalNumber(value.priceMin) &&
-        isOptionalNumber(value.priceMax) &&
-        isOptionalString(value.bodyStyle)
-      );
-    case "navigate":
-      return typeof value.route === "string";
-    case "highlight-vehicle":
-      return typeof value.vehicleId === "string";
-    case "open-lead-form":
-      return value.prefill === undefined || isRecord(value.prefill);
-    case "capture_lead":
-      return isLeadContact(value.contact) && isOptionalString(value.vehicleId);
-    case "scroll-to":
-      return typeof value.sectionId === "string";
-    default:
-      return false;
-  }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isOptionalString(value: unknown): boolean {
-  return value === undefined || typeof value === "string";
-}
-
-function isOptionalNumber(value: unknown): boolean {
-  return value === undefined || typeof value === "number";
-}
-
-function isLeadContact(value: unknown): boolean {
-  return (
-    isRecord(value) &&
-    isOptionalString(value.firstName) &&
-    isOptionalString(value.lastName) &&
-    isOptionalString(value.message) &&
-    (typeof value.email === "string" || typeof value.phone === "string") &&
-    isOptionalString(value.email) &&
-    isOptionalString(value.phone)
-  );
-}
