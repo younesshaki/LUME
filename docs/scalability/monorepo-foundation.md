@@ -177,6 +177,21 @@ config that would deepen root-relative coupling — prefer doing the move
 first. Until a trigger fires, keep new shared code in `packages/*` so the
 move stays cheap.
 
+Coupling audit (2026-07-05) — the concrete things the move will break:
+
+- `scripts/generateEmbeddings.ts` imports `../src/lib/knowledge/chunks.js`
+  (legacy; script itself is superseded by the DB-first flow — consider
+  deleting instead of moving).
+- `scripts/seed-default-pages.ts` imports `../src/lib/pageBuilder/defaultPages`
+  (and `scripts/create-tenant.ts` shells out to it). Cleanest fix: move
+  DEFAULT_PAGES into `@lume/blocks` or a new `@lume/content` package first.
+- Root `vercel.json` builds the Vite app (`buildCommand: npm run build`,
+  `outputDirectory: dist`) and root `api/*.ts` are the public serverless
+  functions — both are self-contained (no `src/` imports), but the functions
+  must stay deployed with whatever project serves the public site.
+- Root `api/*.ts` functions have no workspace imports (verified) — they can
+  move as-is.
+
 When ready:
 
 1. `mkdir apps/web && git mv {src,public,index.html,vite.config.ts,vitest.config.ts,tsconfig.json,tsconfig.node.json,components.json} apps/web/`

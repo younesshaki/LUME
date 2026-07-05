@@ -1,22 +1,31 @@
 # LUME — Session Handoff
 
-_Last updated: 2026-07-04. Read `CLAUDE.md` first, then this. This captures
+_Last updated: 2026-07-05. Read `CLAUDE.md` first, then this. This captures
 live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
-- **Branch:** `main`, local is **4 commits ahead of origin — NOT pushed**
+- **Branch:** `main`, local is **8 commits ahead of origin — NOT pushed**
   (push = auto-deploy of both Vercel projects; blocked on the deploy
-  prerequisites below). Working tree has only untracked docs.
+  prerequisites below).
 - **Local main contains (unpushed):**
-  1. `99337cd` Codex merge — complete `Database` types (migs 020–023),
-     zero `as any` Supabase casts in admin, first admin unit tests.
+  1. `99337cd` Codex merge — complete `Database` types, zero `as any`
+     Supabase casts in admin, first admin unit tests.
   2. `2371f7e` **SCRUM-144 + 119** — `@lume/bot` wired into the admin
-     `/api/chat` (two-phase DeepSeek tool-calling per `packages/bot/README.md`);
-     root `api/chat.ts` reduced to a thin proxy (556 → ~115 lines).
-  3. Proxy hardening + docs (this session's last commit).
+     `/api/chat`; root `api/chat.ts` reduced to a thin proxy.
+  3. `b8e8008` proxy hardening + onboarding backlog + docs.
+  4. `be730fc` **chat honors bot_personas** — voice/tone via
+     `personaBasePrompt`, capability enforcement on every action path.
+  5. `fd110b9` **`npm run create:tenant`** single-command provisioning
+     (blank tenant + owner + persona + pages; `--with-sample-data` opt-in).
+  6. `8abc8be` persona **name** flows to the visitor chat UI (meta event).
+  7. `a54ae69` **SCRUM-112 rate limiting** — 10 chat req/min/IP, 429 +
+     Retry-After; proxy forwards x-forwarded-for.
 - **Verification baseline:** `npm run typecheck:all` clean, `npm test` =
-  **128 passing**, `npm run build:admin` + root typecheck clean.
+  **149 passing**, builds clean. Chat verified end-to-end vs a mock LLM
+  upstream with real DB queries (persona prompt, tool actions, botName in
+  meta, 429 on the 11th request).
+- **Jira annotated** with evidence comments: SCRUM-144, 119, 97, 115, 112.
 - **Two tenants now exist:** `default` (1009 vehicles, 6 pages) and `demo`
   (`efab59f0-…`, 1000 vehicles, 5 pages, seeded 2026-07-04 via the seed
   scripts as an onboarding dry-run). Isolation verified end-to-end as anon.
@@ -76,13 +85,14 @@ public chat broken (the proxy fails fast with "Chat upstream not configured"):
 
 1. User: DeepSeek top-up + key rotation + the env vars above → then push
    main → live-verify chat tool-calling on prod (ask about the cheapest
-   Porsche; expect `filter_inventory` action + streamed prose).
-2. Wire `bot_personas` into the chat system prompt (table + admin UI exist;
-   chat ignores personas — natural follow-up to SCRUM-144).
-3. Start on `docs/onboarding-backlog.md` item 1 (public reachability for a
-   second tenant) — but do the apps/web move first per the trigger condition.
-4. Jira: SCRUM-144/119 done pending deploy; annotate with evidence comments
-   (board workflow still only allows À faire → En cours).
+   Porsche; expect `filter_inventory` action + streamed prose, and the
+   persona name in the chat header).
+2. Start on `docs/onboarding-backlog.md` item 1 (public reachability for a
+   second tenant) — but do the apps/web move first per the trigger
+   condition; a coupling audit is now in
+   `docs/scalability/monorepo-foundation.md`.
+3. Remaining backlog: invite-accept/signup flow (item 3), CSV inventory
+   import UI (item 2), hosted embedder (item 8), lifecycle/billing (item 9).
 
 ## Parallel-agent (Codex) workflow that has been working
 
