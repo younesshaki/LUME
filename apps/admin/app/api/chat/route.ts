@@ -224,6 +224,7 @@ export async function POST(request: Request): Promise<Response> {
   const metaEvent = sseEvent({
     type: "meta",
     sourceCategories: assembled.sourceCategories,
+    botName: persona.name,
   });
 
   // ── No tools requested: re-emit the prose as SSE ──────────────────────────

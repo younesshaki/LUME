@@ -13,6 +13,7 @@ import { useOllamaChatStateBridge } from "./OllamaChat.state";
 import type { ChatMessage, ChatRole, OllamaApiMessage } from "./OllamaChat.types";
 
 const STORAGE_KEY = "lume-chat-v1";
+const BOT_NAME_STORAGE_KEY = "lume.chat.bot-name.v1";
 
 const SUGGESTIONS = [
   "What is LUME?",
@@ -73,6 +74,15 @@ export function OllamaChat() {
   const [ratings, setRatings] = useState<Record<string, "up" | "down" | null>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
+  // Persona display name; served in the chat stream's meta event so each
+  // tenant's configured bot identity shows without a client rebuild.
+  const [botName, setBotName] = useState(() => {
+    try {
+      return localStorage.getItem(BOT_NAME_STORAGE_KEY) ?? "LUME";
+    } catch {
+      return "LUME";
+    }
+  });
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
@@ -173,6 +183,14 @@ export function OllamaChat() {
       for await (const event of streamChat(messages, abortController.signal)) {
         if (event.kind === "meta") {
           sourceCategories = event.sourceCategories;
+          if (event.botName && event.botName !== botName) {
+            setBotName(event.botName);
+            try {
+              localStorage.setItem(BOT_NAME_STORAGE_KEY, event.botName);
+            } catch {
+              // quota exceeded or private mode
+            }
+          }
           continue;
         }
         if (event.kind === "action") {
@@ -301,7 +319,7 @@ export function OllamaChat() {
 
             <header className="ollamaChat__header">
               <div className="ollamaChat__title">
-                <strong>LUME</strong>
+                <strong>{botName}</strong>
                 <span>Assistant</span>
               </div>
               <div className="ollamaChat__headerActions">
@@ -339,7 +357,7 @@ export function OllamaChat() {
                   transition={{ duration: 0.2 }}
                 >
                   <span className="ollamaChat__messageLabel">
-                    {message.role === "user" ? "You" : "LUME"}
+                    {message.role === "user" ? "You" : botName}
                   </span>
                   <span
                     className={`ollamaChat__messageText${
@@ -446,7 +464,7 @@ export function OllamaChat() {
                   animate="visible"
                   transition={{ duration: 0.2 }}
                 >
-                  <span className="ollamaChat__messageLabel">LUME</span>
+                  <span className="ollamaChat__messageLabel">{botName}</span>
                   <span className="ollamaChat__messageText">
                     <EncryptedText
                       key={retrievalKey}

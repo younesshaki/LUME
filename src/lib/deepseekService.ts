@@ -20,12 +20,12 @@ export type DeepseekMessage = {
   content: string;
 };
 
-type ChatMetaEvent = { type: "meta"; sourceCategories: string[] };
+type ChatMetaEvent = { type: "meta"; sourceCategories: string[]; botName?: string };
 type ChatActionEvent = { type: "action"; action: BotAction };
 type ChatErrorEvent = { type: "error"; message: string };
 
 export type ChatStreamYield =
-  | { kind: "meta"; sourceCategories: string[] }
+  | { kind: "meta"; sourceCategories: string[]; botName?: string }
   | { kind: "delta"; text: string }
   | { kind: "action"; action: BotAction };
 
@@ -93,7 +93,13 @@ export async function* streamChat(
         }
 
         if (isMetaEvent(parsed)) {
-          yield { kind: "meta", sourceCategories: parsed.sourceCategories };
+          yield {
+            kind: "meta",
+            sourceCategories: parsed.sourceCategories,
+            ...(typeof parsed.botName === "string" && parsed.botName.trim()
+              ? { botName: parsed.botName.trim() }
+              : {}),
+          };
           continue;
         }
         if (isActionEvent(parsed)) {
