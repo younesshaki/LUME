@@ -20,7 +20,8 @@
     "build:admin": "npm run build --workspace=@lume/admin",
     "preview": "vite preview",
     "embed": "tsx scripts/generateEmbeddings.ts",
-    "seed:default-tenant": "tsx scripts/seed-default-tenant.ts"
+    "seed:default-tenant": "tsx scripts/seed-default-tenant.ts",
+    "create:tenant": "tsx scripts/create-tenant.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

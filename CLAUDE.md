@@ -47,6 +47,7 @@ moving it is task #10 in the foundation plan and is *not* trivial — see
 | Build public site | `npm run build` |
 | Build admin | `npm run build:admin` |
 | Seed default tenant | `npm run seed:default-tenant` (needs env, see below) |
+| Provision a tenant (blank, one command) | `npm run create:tenant -- --slug x --owner-email y` |
 | Regenerate embeddings | `npm run embed` (Ollama) — legacy; prefer the seed script + DB |
 
 The Vite dev server proxies `/api/*` to `http://127.0.0.1:3000` (the

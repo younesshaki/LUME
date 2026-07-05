@@ -106,13 +106,10 @@ export async function POST(request: Request): Promise<Response> {
   // for retrieveContext() from @lume/rag/server + an embedder.
   const supabase = createServiceClient();
 
-  // Persona (admin-configured voice + capabilities) and tenant display name;
-  // both degrade gracefully — chat never fails because persona is missing.
-  const [persona, { data: tenantRow }] = await Promise.all([
-    loadActivePersona(supabase, tenant.tenantId),
-    supabase.from("tenants").select("name").eq("id", tenant.tenantId).maybeSingle(),
-  ]);
-  const tenantName = tenantRow?.name ?? tenant.slug;
+  // Persona (admin-configured voice + capabilities); degrades to the default
+  // persona — chat never fails because persona storage is missing.
+  const persona = await loadActivePersona(supabase, tenant.tenantId);
+  const tenantName = tenant.name ?? tenant.slug;
 
   let assembled;
   try {

@@ -22,4 +22,6 @@ export type TenantMember = {
 export type TenantContext = {
   tenantId: TenantId;
   slug: string;
+  /** Tenant display name, when the resolution path provides it. */
+  name?: string;
 };

@@ -33,7 +33,7 @@ export async function resolveTenantBySlug(slug: string): Promise<TenantContext |
   }
   const row = data?.[0];
   if (!row || row.status !== "active") return null;
-  return { tenantId: row.id, slug: row.slug };
+  return { tenantId: row.id, slug: row.slug, name: row.name };
 }
 
 /**

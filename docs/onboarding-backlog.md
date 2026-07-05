@@ -4,22 +4,32 @@ _Produced 2026-07-04 by actually provisioning a second tenant (`demo`) on prod
 and recording every manual step and gap. This list is the distance between
 "we have multi-tenant tables" and "a customer can sign up"._
 
-## What was done (the current "onboarding runbook")
+_Update 2026-07-05: items 3 (partially), 4, 6 (partially) and 7 (persona row)
+are addressed by `scripts/create-tenant.ts` — see the runbook below. Items
+1, 2 (import UX), 5, 8, 9 remain open._
+
+## The onboarding runbook (current)
 
 ```bash
-# 1. Assemble env by hand — seed env lives nowhere as such:
-#    SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY  → only in apps/admin/.env.local
-#    R2_PUBLIC_BASE_URL                        → only as VITE_R2_PUBLIC_BASE_URL in root .env.local
+# One command: tenant + owner membership + default bot persona + pages.
+# Env is auto-assembled from apps/admin/.env.local (+ root .env.local for R2).
+# Blank tenant by default; --with-sample-data loads LUME's demo CSV + chunks.
+npm run create:tenant -- --slug acme --name "Acme Motors" \
+  --owner-email owner@acme.com [--with-sample-data] [--force-pages]
+```
+
+<details>
+<summary>Original manual runbook (superseded, kept for the record)</summary>
+
+```bash
 set -a; source apps/admin/.env.local; source .env.local; set +a
 export R2_PUBLIC_BASE_URL="$VITE_R2_PUBLIC_BASE_URL"
 export SEED_OWNER_EMAIL=<owner email>  SEED_TENANT_SLUG=demo  SEED_TENANT_NAME="LUME Demo"
-
-# 2. Tenant + owner membership + vehicles (LUME's CSV) + RAG chunks (LUME's embeddings)
 npx tsx scripts/seed-default-tenant.ts
-
-# 3. Pages (separate script, must repeat the slug)
 SEED_TENANT_SLUG=demo npx tsx scripts/seed-default-pages.ts
 ```
+
+</details>
 
 Result: tenant `efab59f0-c566-42dc-96d9-d40a6ad2a2f3`, owner membership,
 1000 vehicles, 19 rag chunks, 5 published pages.
