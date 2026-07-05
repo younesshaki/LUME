@@ -8,4 +8,6 @@
 export * from "./blockTypes";
 export * from "./registry";
 export * from "./validation";
-export * from "./defaultPages";
+// DEFAULT_PAGES moved to @lume/blocks so server code (admin provisioning)
+// and the seed script can import it without reaching into src/.
+export { DEFAULT_PAGES, type DefaultPageSeed } from "@lume/blocks";

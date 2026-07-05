@@ -7,13 +7,13 @@
  * API key. It only sends user/assistant turns and consumes deltas.
  */
 import type { BotAction } from "@lume/types";
+import { publicTenantSlug } from "./publicTenant";
 
 const CHAT_ENDPOINT = "/api/chat";
 
-/** Slug of the tenant whose RAG/vehicles should be used. Set from env so the
- * same Vite bundle can be served per-tenant once subdomain routing flips on
- * — for now this is a single-tenant deployment. */
-const TENANT_SLUG = (import.meta.env.VITE_LUME_TENANT as string | undefined) ?? "default";
+/** Tenant whose RAG/vehicles should be used — runtime-resolved (subdomain /
+ * ?tenant= override / build default), shared with the rest of the app. */
+const TENANT_SLUG = publicTenantSlug;
 
 export type DeepseekMessage = {
   role: "user" | "assistant" | "system";

@@ -1,9 +1,10 @@
+import { publicTenantSlug } from "@/lib/publicTenant";
 import { R2, mediaUrl, fallbackMediaUrl } from "@/config/cdn";
 
 const CSV_KEY = "vehicles-with-generated-images.csv";
 const VEHICLES_API_PATH = "/api/vehicles";
 const API_PAGE_SIZE = 200;
-const TENANT_SLUG = (import.meta.env.VITE_LUME_TENANT as string | undefined) ?? "default";
+const TENANT_SLUG = publicTenantSlug;
 const ADMIN_API_HOST = (import.meta.env.VITE_ADMIN_API_HOST as string | undefined)?.replace(/\/$/, "");
 
 export type Vehicle = {

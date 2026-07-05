@@ -380,9 +380,22 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["tenant_invites"]["Insert"]>;
         Relationships: [];
       };
+      platform_admins: {
+        Row: {
+          user_id: string;
+          created_at: string;
+        };
+        Insert: { user_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["platform_admins"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
+      is_platform_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
       tenant_by_slug: {
         Args: { p_slug: string };
         Returns: {

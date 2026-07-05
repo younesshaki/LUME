@@ -4,10 +4,53 @@ import { isSupabaseConfigured, supabase } from "./supabase";
 
 export const DEFAULT_PUBLIC_TENANT_SLUG = "default";
 
-export const publicTenantSlug = normalizeTenantSlug(
-  (import.meta.env.VITE_LUME_TENANT as string | undefined) ??
-    DEFAULT_PUBLIC_TENANT_SLUG
-);
+const TENANT_STORAGE_KEY = "lume.public-tenant.v1";
+const RESERVED_SUBDOMAINS = new Set(["www", "app", "api", "admin", "static", "cdn"]);
+
+/**
+ * Which tenant this browser session renders, resolved at boot:
+ *   1. Subdomain (acme.lume.app → "acme") — the eventual SaaS routing.
+ *   2. ?tenant=<slug> query param — persisted per browser (localStorage),
+ *      so one deployment can present any tenant's site (admin "View
+ *      website" uses this). ?tenant=<build default> clears the override.
+ *   3. Build-time VITE_LUME_TENANT (today's single-tenant deployments).
+ */
+function computePublicTenantSlug(): string {
+  const buildDefault = normalizeTenantSlug(
+    (import.meta.env.VITE_LUME_TENANT as string | undefined) ??
+      DEFAULT_PUBLIC_TENANT_SLUG
+  );
+  if (typeof window === "undefined") return buildDefault;
+
+  try {
+    const parts = window.location.hostname.split(".");
+    if (parts.length >= 3) {
+      const sub = normalizeTenantSlug(parts[0]);
+      if (sub && !RESERVED_SUBDOMAINS.has(sub) && !window.location.hostname.endsWith(".vercel.app")) {
+        return sub;
+      }
+    }
+
+    const param = new URLSearchParams(window.location.search).get("tenant");
+    if (param !== null) {
+      const slug = normalizeTenantSlug(param);
+      if (!slug || slug === buildDefault) {
+        window.localStorage.removeItem(TENANT_STORAGE_KEY);
+        return buildDefault;
+      }
+      window.localStorage.setItem(TENANT_STORAGE_KEY, slug);
+      return slug;
+    }
+
+    const stored = window.localStorage.getItem(TENANT_STORAGE_KEY);
+    if (stored) return normalizeTenantSlug(stored) || buildDefault;
+  } catch {
+    // storage/URL access unavailable — fall through to the build default
+  }
+  return buildDefault;
+}
+
+export const publicTenantSlug = computePublicTenantSlug();
 
 type TenantLookupClient = Pick<SupabaseClient<Database>, "rpc">;
 

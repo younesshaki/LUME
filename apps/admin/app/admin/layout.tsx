@@ -20,10 +20,10 @@ export default async function AdminLayout({
   if (!user) redirect("/login?next=/admin");
 
   // Memberships are RLS-protected: this returns only the rows the user can see.
-  const { data: memberships } = await supabase
-    .from("tenant_members")
-    .select("tenant_id, role")
-    .eq("user_id", user.id);
+  const [{ data: memberships }, { data: isPlatformAdmin }] = await Promise.all([
+    supabase.from("tenant_members").select("tenant_id, role").eq("user_id", user.id),
+    supabase.rpc("is_platform_admin"),
+  ]);
 
   const tenantIds = memberships?.map((membership) => membership.tenant_id) ?? [];
   const { data: tenants } = tenantIds.length
@@ -34,6 +34,15 @@ export default async function AdminLayout({
     : { data: [] };
   const tenantsById = new Map((tenants ?? []).map((tenant) => [tenant.id, tenant]));
 
+  const publicSiteUrl =
+    process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? "https://lume-jade-three.vercel.app";
+  // The public deployment renders one tenant by default; other tenants are
+  // viewed via the runtime ?tenant= override (+ preview mode for DB pages).
+  const tenantSiteUrl = (slug: string) =>
+    slug === "default"
+      ? publicSiteUrl
+      : `${publicSiteUrl}/home?tenant=${encodeURIComponent(slug)}&preview=lume`;
+
   return (
     <div className="min-h-screen flex">
       <aside className="w-64 shrink-0 border-r border-neutral-200 dark:border-neutral-800 p-4 space-y-4">
@@ -42,13 +51,24 @@ export default async function AdminLayout({
           <p className="text-xs text-neutral-500 mt-1 truncate">{user.email}</p>
         </div>
         <nav className="space-y-1 text-sm">
+          {isPlatformAdmin && (
+            <Link
+              href="/admin/platform"
+              className="block rounded-md px-2 py-1.5 mb-2 font-medium bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800"
+            >
+              ⚙ Platform
+            </Link>
+          )}
           <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
             Tenants
           </p>
           {memberships?.length === 0 && (
-            <p className="text-xs text-neutral-500 italic">
-              You don&apos;t belong to any tenant yet.
-            </p>
+            <Link
+              href="/admin/onboarding"
+              className="block rounded-md px-2 py-1.5 text-xs text-neutral-500 underline underline-offset-2 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+            >
+              Create your site →
+            </Link>
           )}
           {memberships?.map((m) => {
             const tenant = tenantsById.get(m.tenant_id);
@@ -122,6 +142,14 @@ export default async function AdminLayout({
                 >
                   Knowledge
                 </Link>
+                <a
+                  href={tenantSiteUrl(tenant.slug)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-md px-2 py-1 pl-6 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                >
+                  View website ↗
+                </a>
               </div>
             );
           })}

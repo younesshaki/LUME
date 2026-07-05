@@ -19,7 +19,7 @@
  * the page is already published, unless FORCE=1.
  */
 import { createClient } from "@supabase/supabase-js";
-import { DEFAULT_PAGES } from "../src/lib/pageBuilder/defaultPages";
+import { DEFAULT_PAGES } from "@lume/blocks";
 
 // Untyped client (matches scripts/seed-default-tenant.ts) — the seed writes a
 // handful of rows and doesn't need the generated Database typing.

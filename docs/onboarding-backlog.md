@@ -45,21 +45,24 @@ Result: tenant `efab59f0-c566-42dc-96d9-d40a6ad2a2f3`, owner membership,
 
 ## The backlog (ranked by how hard it blocks a real customer)
 
-1. **A second tenant has no website.** The public Vite site serves ONE tenant
-   per build (`VITE_LUME_TENANT` is baked in at build time). `demo` is fully
-   provisioned in the DB but unreachable by any visitor. Subdomain-based
-   tenancy (`{tenant}.lume.app`, per the vision doc) or per-tenant deploys is
-   the single biggest missing piece of the SaaS story.
+1. **A second tenant has no website.** _Partially addressed 2026-07-05:_ the
+   public site now resolves its tenant at runtime — subdomain first (ready
+   for `{tenant}.lume.app`), then a persisted `?tenant=<slug>` override, then
+   the build default. Every tenant is viewable today via the admin's
+   per-tenant "View website" link (`?tenant=slug&preview=lume`). Still open:
+   real subdomain/custom-domain routing as the *canonical* public URL
+   (needs the apps/web move + wildcard domain).
 2. **No blank-tenant mode.** ~~The seed loads LUME's own demo CSV and
    embeddings into every tenant.~~ _Addressed 2026-07-05:_ `create:tenant`
    provisions blank by default, and the admin now has a CSV inventory import
    (`/admin/[tenant]/vehicles/import` — preview + per-line validation +
    batched insert). Remaining: knowledge-doc upload → embeddings (item 8).
-3. **Owner must already exist in Supabase auth.** _Partially addressed
-   2026-07-05:_ invitees can now redeem invites at `/invite/[token]`
-   (validate → accept → membership, "Copy invite link" in the team UI).
-   Still missing: signup for invitees with no auth account (the page
-   requires an existing login), and a "create tenant" surface.
+3. **Owner must already exist in Supabase auth.** _Addressed 2026-07-05:_
+   `/signup` creates the account and `/admin/onboarding` auto-provisions the
+   tenant (name → unique slug → owner membership → persona → pages) via
+   `provisionTenant()` in `@lume/db`. Invite redemption at `/invite/[token]`.
+   Remaining nicety: invite links for brand-new users should route through
+   /signup pre-filled.
 4. **Provisioning is two scripts + hand-assembled env.** Needs a single
    `create-tenant` entrypoint (script now; admin/API surface later) that does
    tenant → membership → pages → (optional) sample data, idempotently.

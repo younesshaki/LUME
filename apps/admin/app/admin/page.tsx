@@ -1,8 +1,12 @@
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function AdminIndexPage() {
   const supabase = await createSupabaseServerClient();
   const { data: tenants } = await supabase.from("tenants").select("id, slug, name");
+
+  // Fresh account with no tenant yet → first-run onboarding creates one.
+  if (tenants?.length === 0) redirect("/admin/onboarding");
 
   return (
     <div className="max-w-3xl space-y-6">

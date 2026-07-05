@@ -101,6 +101,12 @@ function LoginShell({
         >
           {pending ? "Signing in..." : "Sign in"}
         </button>
+        <p className="text-xs text-neutral-500">
+          New to LUME?{" "}
+          <a href="/signup" className="underline underline-offset-2">
+            Create your site
+          </a>
+        </p>
       </form>
     </main>
   );
