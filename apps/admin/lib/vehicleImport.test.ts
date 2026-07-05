@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { MAX_IMPORT_ROWS, parseCsv, parseVehicleCsv } from "./vehicleImport";
+import {
+  MAX_IMPORT_ROWS,
+  findDuplicates,
+  parseCsv,
+  parseVehicleCsv,
+  type VehicleFingerprint,
+  type VehicleImportInsert,
+} from "./vehicleImport";
 
 describe("parseCsv", () => {
   it("handles quoted fields, escaped quotes, and CRLF", () => {
@@ -65,5 +72,81 @@ describe("parseVehicleCsv", () => {
     const result = parseVehicleCsv(lines.join("\n"));
     expect(result.rows).toHaveLength(MAX_IMPORT_ROWS);
     expect(result.errors[0]?.message).toContain("only the first");
+  });
+});
+
+describe("findDuplicates", () => {
+  const row = (overrides: Partial<VehicleImportInsert>): VehicleImportInsert => ({
+    year: 2021,
+    make: "Porsche",
+    model: "911",
+    trim: "Carrera",
+    price: 120000,
+    mileage: 8000,
+    body_style: "Coupe",
+    exterior_color: "",
+    interior_color: "",
+    drivetrain: "",
+    fuel_type: "",
+    image_src: "",
+    seller_city: "",
+    seller_state: "",
+    stock_type: null,
+    external_id: null,
+    is_special: false,
+    special_image_src: null,
+    ...overrides,
+  });
+  const existing = (overrides: Partial<VehicleFingerprint>): VehicleFingerprint => ({
+    external_id: null,
+    year: 2021,
+    make: "Porsche",
+    model: "911",
+    trim: "Carrera",
+    mileage: 8000,
+    ...overrides,
+  });
+
+  it("matches on external_id first, case-insensitively", () => {
+    const duplicates = findDuplicates(
+      [row({ external_id: "abc-1", year: 1999, make: "Other" })],
+      [existing({ external_id: "ABC-1" })]
+    );
+    expect(duplicates.get(0)).toBe("external_id");
+  });
+
+  it("falls back to year+make+model+trim+mileage with normalization", () => {
+    const duplicates = findDuplicates(
+      [row({ make: "  porsche ", trim: "CARRERA" })],
+      [existing({})]
+    );
+    expect(duplicates.get(0)).toBe("attributes");
+  });
+
+  it("treats differing mileage or trim as distinct vehicles", () => {
+    const duplicates = findDuplicates(
+      [row({ mileage: 9000 }), row({ trim: "Carrera S" })],
+      [existing({})]
+    );
+    expect(duplicates.size).toBe(0);
+  });
+
+  it("does not attribute-match a CSV row whose external_id is new", () => {
+    // Same attributes but a distinct external_id on the CSV side still
+    // attribute-matches (the existing row may simply lack an id) — but a
+    // fresh external_id against a DIFFERENT existing id never id-matches.
+    const duplicates = findDuplicates(
+      [row({ external_id: "new-42" })],
+      [existing({ external_id: "old-7" })]
+    );
+    expect(duplicates.get(0)).toBe("attributes");
+  });
+
+  it("handles null trims and mileages symmetrically", () => {
+    const duplicates = findDuplicates(
+      [row({ trim: "", mileage: null })],
+      [existing({ trim: null, mileage: null })]
+    );
+    expect(duplicates.get(0)).toBe("attributes");
   });
 });

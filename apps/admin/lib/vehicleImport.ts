@@ -193,6 +193,62 @@ export function parseVehicleCsv(text: string): VehicleImportResult {
   return { rows, errors, recognizedHeaders };
 }
 
+/**
+ * Duplicate detection for re-uploads (the import is otherwise append-only
+ * and doubles inventory). A CSV row duplicates an existing vehicle when:
+ *   - both have an external_id and they match (case-insensitive), else
+ *   - year + make + model + trim + mileage all match (strings normalized).
+ */
+export type VehicleFingerprint = {
+  external_id: string | null;
+  year: number;
+  make: string;
+  model: string;
+  trim: string | null;
+  mileage: number | null;
+};
+
+export type DuplicateReason = "external_id" | "attributes";
+
+const norm = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
+
+function attributeKey(v: VehicleFingerprint): string {
+  return [v.year, norm(v.make), norm(v.model), norm(v.trim), v.mileage ?? ""].join("|");
+}
+
+/** Map of CSV row index → why it matches something already in inventory. */
+export function findDuplicates(
+  rows: VehicleImportInsert[],
+  existing: VehicleFingerprint[]
+): Map<number, DuplicateReason> {
+  const byExternalId = new Set<string>();
+  const byAttributes = new Set<string>();
+  for (const vehicle of existing) {
+    if (vehicle.external_id) byExternalId.add(norm(vehicle.external_id));
+    byAttributes.add(attributeKey(vehicle));
+  }
+
+  const duplicates = new Map<number, DuplicateReason>();
+  rows.forEach((row, index) => {
+    if (row.external_id && byExternalId.has(norm(row.external_id))) {
+      duplicates.set(index, "external_id");
+      return;
+    }
+    const fingerprint: VehicleFingerprint = {
+      external_id: row.external_id ?? null,
+      year: row.year,
+      make: row.make,
+      model: row.model,
+      trim: row.trim ?? null,
+      mileage: row.mileage ?? null,
+    };
+    if (byAttributes.has(attributeKey(fingerprint))) {
+      duplicates.set(index, "attributes");
+    }
+  });
+  return duplicates;
+}
+
 function parseIntStrict(value: string | undefined): number | null {
   if (!value || !/^-?\d+$/.test(value)) return null;
   return parseInt(value, 10);

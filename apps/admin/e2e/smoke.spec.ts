@@ -78,6 +78,31 @@ test("CSV import previews and inserts rows", async () => {
   await expect(page.getByRole("row")).toHaveCount(6);
 });
 
+test("re-import detects duplicates and replace mode swaps inventory", async () => {
+  await page.goto(`${vehiclesUrl()}/import`);
+  await page.setInputFiles('input[type="file"]', path.join(fixturesDir, "vehicles.csv"));
+
+  // Same file again: every row already exists, so add mode has nothing to do.
+  await expect(page.getByText("5 duplicates of current inventory")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Import 0 vehicles" })).toBeDisabled();
+
+  // Opting a duplicate back in re-enables the import.
+  await page.getByLabel(/Import duplicate 2021 Porsche 911/).check();
+  await expect(page.getByRole("button", { name: "Import 1 vehicle" })).toBeEnabled();
+
+  // Replace mode: destructive, so it must go through the confirm dialog.
+  await page.getByText("Replace entire inventory", { exact: true }).click();
+  await page.getByRole("button", { name: "Replace inventory with 5 vehicles" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText("Replace entire inventory?");
+  await dialog.getByRole("button", { name: "Delete and import" }).click();
+
+  await expect(page.getByText("Replaced 5 vehicles with 5 imported rows.")).toBeVisible();
+  await page.getByRole("link", { name: "Back to inventory" }).click();
+  await page.waitForURL(`**${vehiclesUrl()}`);
+  await expect(page.getByRole("row")).toHaveCount(6);
+});
+
 test("search filters and sort orders the inventory", async () => {
   await page.goto(vehiclesUrl());
   const search = page.getByPlaceholder(/Search make, model, trim/);
