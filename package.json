@@ -16,6 +16,7 @@
     "check:assets:strict": "node scripts/check-r2-assets.mjs --strict",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "npm run test:e2e --workspace=@lume/admin",
     "build": "tsc && vite build",
     "build:admin": "npm run build --workspace=@lume/admin",
     "preview": "vite preview",

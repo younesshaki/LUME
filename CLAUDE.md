@@ -44,6 +44,7 @@ moving it is task #10 in the foundation plan and is *not* trivial — see
 | Run both for full local stack | both, in two terminals |
 | Typecheck root + workspaces | `npm run typecheck:all` |
 | Test (Vite app only today) | `npm test` |
+| Admin e2e smoke suite (Playwright) | `npm run test:e2e` — starts the admin dev server itself; needs `apps/admin/.env.local` (service role) and network; creates+deletes a throwaway user/tenant on the real Supabase project |
 | Build public site | `npm run build` |
 | Build admin | `npm run build:admin` |
 | Seed default tenant | `npm run seed:default-tenant` (needs env, see below) |
