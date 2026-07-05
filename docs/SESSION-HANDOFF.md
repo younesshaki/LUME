@@ -5,7 +5,7 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
-- **Branch:** `main`, local is **8 commits ahead of origin — NOT pushed**
+- **Branch:** `main`, local is **10 commits ahead of origin — NOT pushed**
   (push = auto-deploy of both Vercel projects; blocked on the deploy
   prerequisites below).
 - **Local main contains (unpushed):**
@@ -21,10 +21,13 @@ live state + in-flight work that isn't obvious from the code alone._
   6. `8abc8be` persona **name** flows to the visitor chat UI (meta event).
   7. `a54ae69` **SCRUM-112 rate limiting** — 10 chat req/min/IP, 429 +
      Retry-After; proxy forwards x-forwarded-for.
+  8. `0aa11ce` **admin CSV inventory import** —
+     `/admin/[tenant]/vehicles/import`, preview + per-line validation +
+     batched RLS-enforced insert (onboarding-backlog item 2).
 - **Verification baseline:** `npm run typecheck:all` clean, `npm test` =
-  **149 passing**, builds clean. Chat verified end-to-end vs a mock LLM
+  **155 passing**, builds clean. Chat verified end-to-end vs a mock LLM
   upstream with real DB queries (persona prompt, tool actions, botName in
-  meta, 429 on the 11th request).
+  meta, 429 on the 11th request). Local main is 10 commits ahead of origin.
 - **Jira annotated** with evidence comments: SCRUM-144, 119, 97, 115, 112.
 - **Two tenants now exist:** `default` (1009 vehicles, 6 pages) and `demo`
   (`efab59f0-…`, 1000 vehicles, 5 pages, seeded 2026-07-04 via the seed
