@@ -8,8 +8,20 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { createServiceClient } from "@lume/db/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
@@ -60,57 +72,56 @@ export default async function PlatformPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Platform</h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          {rows.length} tenant{rows.length === 1 ? "" : "s"} on the platform.
-          Entering a tenant gives you full owner-level access to its admin.
-        </p>
-      </header>
+      <PageHeader
+        title="Platform"
+        description={`${rows.length} tenant${rows.length === 1 ? "" : "s"} on the platform. Entering a tenant gives you full owner-level access to its admin.`}
+      />
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900">
-              <th className="text-left px-4 py-3 font-medium text-neutral-500">Tenant</th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-500">Slug</th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-500">Owner</th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-500">Status</th>
-              <th className="text-right px-4 py-3 font-medium text-neutral-500">Members</th>
-              <th className="text-left px-4 py-3 font-medium text-neutral-500">Created</th>
-              <th className="text-right px-4 py-3 font-medium text-neutral-500">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tenant</TableHead>
+              <TableHead>Slug</TableHead>
+              <TableHead>Owner</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Members</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((tenant) => (
-              <tr
-                key={tenant.id}
-                className="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
-              >
-                <td className="px-4 py-3 font-medium">{tenant.name}</td>
-                <td className="px-4 py-3 text-neutral-500 font-mono text-xs">{tenant.slug}</td>
-                <td className="px-4 py-3 text-neutral-500">{tenant.ownerEmail}</td>
-                <td className="px-4 py-3">
-                  <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-                    {tenant.status}
+              <TableRow key={tenant.id}>
+                <TableCell className="font-medium">
+                  <span className="flex items-center gap-2">
+                    <span className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
+                      {tenant.name.charAt(0).toUpperCase()}
+                    </span>
+                    {tenant.name}
                   </span>
-                </td>
-                <td className="px-4 py-3 text-right">{tenant.memberCount}</td>
-                <td className="px-4 py-3 text-neutral-500">
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">{tenant.slug}</TableCell>
+                <TableCell className="text-muted-foreground">{tenant.ownerEmail}</TableCell>
+                <TableCell>
+                  <StatusBadge status={tenant.status} />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{tenant.memberCount}</TableCell>
+                <TableCell className="text-muted-foreground">
                   {new Date(tenant.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/admin/${tenant.slug}`}
-                    className="rounded-md bg-neutral-900 text-white px-3 py-1.5 text-xs font-medium hover:bg-neutral-700 transition-colors"
-                  >
-                    Enter →
-                  </Link>
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button size="sm" asChild>
+                    <Link href={`/admin/${tenant.slug}`}>
+                      Enter
+                      <ArrowRight />
+                    </Link>
+                  </Button>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
