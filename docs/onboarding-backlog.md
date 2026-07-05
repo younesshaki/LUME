@@ -55,11 +55,11 @@ Result: tenant `efab59f0-c566-42dc-96d9-d40a6ad2a2f3`, owner membership,
    provisions blank by default, and the admin now has a CSV inventory import
    (`/admin/[tenant]/vehicles/import` — preview + per-line validation +
    batched insert). Remaining: knowledge-doc upload → embeddings (item 8).
-3. **Owner must already exist in Supabase auth.** The seed aborts if the
-   email has no auth user. Real onboarding = invite/signup flow that creates
-   the auth user, the tenant, and the owner membership in one transaction
-   (tenant_invites table + admin team UI exist; the *signup-accept* path and
-   any "create tenant" surface do not).
+3. **Owner must already exist in Supabase auth.** _Partially addressed
+   2026-07-05:_ invitees can now redeem invites at `/invite/[token]`
+   (validate → accept → membership, "Copy invite link" in the team UI).
+   Still missing: signup for invitees with no auth account (the page
+   requires an existing login), and a "create tenant" surface.
 4. **Provisioning is two scripts + hand-assembled env.** Needs a single
    `create-tenant` entrypoint (script now; admin/API surface later) that does
    tenant → membership → pages → (optional) sample data, idempotently.
