@@ -19,6 +19,13 @@ export default async function AdminLayout({
 
   if (!user) redirect("/login?next=/admin");
 
+  async function signOut() {
+    "use server";
+    const supabase = await createSupabaseServerClient();
+    await supabase.auth.signOut();
+    redirect("/login");
+  }
+
   // Memberships are RLS-protected: this returns only the rows the user can see.
   const [{ data: memberships }, { data: isPlatformAdmin }] = await Promise.all([
     supabase.from("tenant_members").select("tenant_id, role").eq("user_id", user.id),
@@ -49,6 +56,14 @@ export default async function AdminLayout({
         <div>
           <Link href="/admin" className="font-semibold text-base">LUME Admin</Link>
           <p className="text-xs text-neutral-500 mt-1 truncate">{user.email}</p>
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="mt-1 text-xs text-neutral-500 underline underline-offset-2 hover:text-neutral-700 dark:hover:text-neutral-300"
+            >
+              Sign out
+            </button>
+          </form>
         </div>
         <nav className="space-y-1 text-sm">
           {isPlatformAdmin && (
