@@ -39,7 +39,7 @@
     "lenis": "^1.3.17",
     "leva": "^0.9.35",
     "lil-gui": "^0.21.0",
-    "lucide-react": "^1.11.0",
+    "lucide-react": "^1.14.0",
     "mersennetwister": "^0.2.3",
     "motion": "^12.38.0",
     "postprocessing": "6.38.0",
