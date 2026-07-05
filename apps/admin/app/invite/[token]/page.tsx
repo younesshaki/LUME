@@ -12,6 +12,8 @@ import { redirect } from "next/navigation";
 import { createServiceClient } from "@lume/db/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { validateInviteForUser, type RedeemableInvite } from "@/lib/inviteAccept";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type PageProps = { params: Promise<{ token: string }> };
 
@@ -45,17 +47,16 @@ export default async function InvitePage({ params }: PageProps) {
   if (!user) {
     return (
       <Shell>
-        <h1 className="text-xl font-semibold">You&apos;ve been invited</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="text-xl font-semibold tracking-tight">You&apos;ve been invited</h1>
+        <p className="text-sm text-muted-foreground">
           Sign in with the email address the invite was sent to, and you&apos;ll be
           brought back here to accept it.
         </p>
-        <Link
-          href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}
-          className="inline-block rounded-md bg-neutral-900 dark:bg-neutral-100 dark:text-neutral-900 text-white px-4 py-2 text-sm font-medium"
-        >
-          Sign in to continue
-        </Link>
+        <Button asChild className="w-full">
+          <Link href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}>
+            Sign in to continue
+          </Link>
+        </Button>
       </Shell>
     );
   }
@@ -64,8 +65,8 @@ export default async function InvitePage({ params }: PageProps) {
   if (!loaded) {
     return (
       <Shell>
-        <h1 className="text-xl font-semibold">Invite not found</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="text-xl font-semibold tracking-tight">Invite not found</h1>
+        <p className="text-sm text-muted-foreground">
           This invite link is invalid. Ask a team admin to send a new one.
         </p>
       </Shell>
@@ -77,8 +78,8 @@ export default async function InvitePage({ params }: PageProps) {
   if (problem) {
     return (
       <Shell>
-        <h1 className="text-xl font-semibold">Can&apos;t accept this invite</h1>
-        <p className="text-sm text-neutral-500">{problem}</p>
+        <h1 className="text-xl font-semibold tracking-tight">Can&apos;t accept this invite</h1>
+        <p className="text-sm text-muted-foreground">{problem}</p>
       </Shell>
     );
   }
@@ -122,18 +123,15 @@ export default async function InvitePage({ params }: PageProps) {
 
   return (
     <Shell>
-      <h1 className="text-xl font-semibold">Join {tenant.name}</h1>
-      <p className="text-sm text-neutral-500">
+      <h1 className="text-xl font-semibold tracking-tight">Join {tenant.name}</h1>
+      <p className="text-sm text-muted-foreground">
         You&apos;ve been invited to <strong>{tenant.name}</strong> as{" "}
         <strong>{invite.role}</strong> ({user.email}).
       </p>
       <form action={acceptInvite}>
-        <button
-          type="submit"
-          className="rounded-md bg-neutral-900 dark:bg-neutral-100 dark:text-neutral-900 text-white px-4 py-2 text-sm font-medium"
-        >
+        <Button type="submit" className="w-full">
           Accept invite
-        </button>
+        </Button>
       </form>
     </Shell>
   );
@@ -141,10 +139,10 @@ export default async function InvitePage({ params }: PageProps) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen grid place-items-center px-6">
-      <div className="w-full max-w-sm space-y-4 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 bg-white dark:bg-neutral-950">
-        {children}
-      </div>
+    <main className="grid min-h-screen place-items-center bg-muted/40 px-6">
+      <Card className="w-full max-w-sm">
+        <CardContent className="space-y-4 pt-6">{children}</CardContent>
+      </Card>
     </main>
   );
 }

@@ -4,6 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 /**
  * Self-serve signup. The site name is stashed in user_metadata so the
@@ -47,81 +58,85 @@ export default function SignupPage() {
 
   if (confirmSent) {
     return (
-      <main className="min-h-screen grid place-items-center px-6">
-        <div className="w-full max-w-sm space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 bg-white dark:bg-neutral-950">
-          <h1 className="text-xl font-semibold">Check your email</h1>
-          <p className="text-sm text-neutral-500">
-            We sent a confirmation link to <strong>{email}</strong>. After
-            confirming, sign in and your site will be created automatically.
-          </p>
-          <Link href="/login?next=/admin/onboarding" className="text-sm underline underline-offset-2">
-            Go to sign in
-          </Link>
-        </div>
+      <main className="grid min-h-screen place-items-center bg-muted/40 px-6">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle>Check your email</CardTitle>
+            <CardDescription>
+              We sent a confirmation link to <strong>{email}</strong>. After confirming,
+              sign in and your site will be created automatically.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button variant="outline" asChild className="w-full">
+              <Link href="/login?next=/admin/onboarding">Go to sign in</Link>
+            </Button>
+          </CardFooter>
+        </Card>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen grid place-items-center px-6">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 bg-white dark:bg-neutral-950"
-      >
-        <div>
-          <h1 className="text-xl font-semibold">Create your LUME site</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            One account, one website — live in your admin in seconds.
-          </p>
-        </div>
-        <label className="block text-sm">
-          <span className="text-neutral-600 dark:text-neutral-400">Business / site name</span>
-          <input
-            type="text"
-            value={siteName}
-            onChange={(e) => setSiteName(e.target.value)}
-            required
-            maxLength={80}
-            placeholder="Acme Motors"
-            className="mt-1 w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-neutral-600 dark:text-neutral-400">Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-neutral-600 dark:text-neutral-400">Password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            className="mt-1 w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm"
-          />
-        </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-md bg-neutral-900 dark:bg-neutral-100 dark:text-neutral-900 text-white px-3 py-2 text-sm font-medium disabled:opacity-60"
-        >
-          {pending ? "Creating account..." : "Create account"}
-        </button>
-        <p className="text-xs text-neutral-500">
-          Already have an account?{" "}
-          <Link href="/login" className="underline underline-offset-2">
-            Sign in
-          </Link>
-        </p>
-      </form>
+    <main className="grid min-h-screen place-items-center bg-muted/40 px-6">
+      <Card className="w-full max-w-sm">
+        <form onSubmit={handleSubmit}>
+          <CardHeader className="pb-4">
+            <p className="mb-2 text-sm font-semibold tracking-[0.2em] text-primary">LUME</p>
+            <CardTitle>Create your LUME site</CardTitle>
+            <CardDescription>One account, one website — live in your admin in seconds.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="siteName">Business / site name</Label>
+              <Input
+                id="siteName"
+                type="text"
+                value={siteName}
+                onChange={(e) => setSiteName(e.target.value)}
+                required
+                maxLength={80}
+                placeholder="Acme Motors"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                autoComplete="new-password"
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </CardContent>
+          <CardFooter className="flex-col gap-3 pt-2">
+            <Button type="submit" disabled={pending} className="w-full">
+              {pending ? "Creating account..." : "Create account"}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Already have an account?{" "}
+              <Link href="/login" className="underline underline-offset-2 hover:text-foreground">
+                Sign in
+              </Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Card>
     </main>
   );
 }

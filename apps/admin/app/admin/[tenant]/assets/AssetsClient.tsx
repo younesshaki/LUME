@@ -58,7 +58,7 @@ export default function AssetsClient({ tenantId, tenantSlug, tenantName }: Asset
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Assets</h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Tenant media library for {tenantName} <code>/{tenantSlug}</code>.
           </p>
         </div>
@@ -81,13 +81,13 @@ export default function AssetsClient({ tenantId, tenantSlug, tenantName }: Asset
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {assets.map((asset) => (
-          <article key={asset.objectKey} className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <article key={asset.objectKey} className="overflow-hidden rounded-xl border">
             <div className="aspect-video bg-neutral-100 dark:bg-neutral-900">
               <img src={asset.url} alt="" className="h-full w-full object-cover" />
             </div>
             <div className="space-y-2 p-3">
               <p className="truncate text-sm font-medium">{asset.name}</p>
-              <p className="truncate text-xs text-neutral-500">{asset.objectKey}</p>
+              <p className="truncate text-xs text-muted-foreground">{asset.objectKey}</p>
               <button
                 type="button"
                 onClick={() => void navigator.clipboard?.writeText(asset.url)}
@@ -99,7 +99,7 @@ export default function AssetsClient({ tenantId, tenantSlug, tenantName }: Asset
           </article>
         ))}
         {assets.length === 0 && status.type !== "loading" && (
-          <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500 dark:border-neutral-700">
+          <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-sm text-muted-foreground dark:border-neutral-700">
             No media assets uploaded yet.
           </div>
         )}

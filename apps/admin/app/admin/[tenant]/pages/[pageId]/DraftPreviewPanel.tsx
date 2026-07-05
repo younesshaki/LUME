@@ -25,7 +25,7 @@ export function DraftPreviewPanel({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-semibold">Live Draft Preview</h2>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="mt-1 text-xs text-muted-foreground">
             Admin-only preview of the current unsaved editor state.
           </p>
         </div>

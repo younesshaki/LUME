@@ -12,6 +12,17 @@ import { DEFAULT_PAGES } from "@lume/blocks";
 import { createServiceClient } from "@lume/db/server";
 import { provisionTenant } from "@lume/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default async function OnboardingPage() {
   const supabase = await createSupabaseServerClient();
@@ -66,37 +77,38 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <main className="min-h-screen grid place-items-center px-6">
-      <form
-        action={createSite}
-        className="w-full max-w-sm space-y-4 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 bg-white dark:bg-neutral-950"
-      >
-        <div>
-          <h1 className="text-xl font-semibold">Name your site</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            We&apos;ll set up your website, pages, inventory and AI concierge —
-            you can customize everything afterwards.
-          </p>
-        </div>
-        <label className="block text-sm">
-          <span className="text-neutral-600 dark:text-neutral-400">Business / site name</span>
-          <input
-            type="text"
-            name="siteName"
-            defaultValue={suggestedName}
-            required
-            maxLength={80}
-            placeholder="Acme Motors"
-            className="mt-1 w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm"
-          />
-        </label>
-        <button
-          type="submit"
-          className="w-full rounded-md bg-neutral-900 dark:bg-neutral-100 dark:text-neutral-900 text-white px-3 py-2 text-sm font-medium"
-        >
-          Create my site
-        </button>
-      </form>
+    <main className="grid min-h-[60vh] place-items-center px-6">
+      <Card className="w-full max-w-sm">
+        <form action={createSite}>
+          <CardHeader className="pb-4">
+            <p className="mb-2 text-sm font-semibold tracking-[0.2em] text-primary">LUME</p>
+            <CardTitle>Name your site</CardTitle>
+            <CardDescription>
+              We&apos;ll set up your website, pages, inventory and AI concierge — you can
+              customize everything afterwards.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="siteName">Business / site name</Label>
+              <Input
+                id="siteName"
+                type="text"
+                name="siteName"
+                defaultValue={suggestedName}
+                required
+                maxLength={80}
+                placeholder="Acme Motors"
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="pt-2">
+            <Button type="submit" className="w-full">
+              Create my site
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
     </main>
   );
 }

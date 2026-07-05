@@ -121,7 +121,7 @@ export default function PersonaClient({
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Bot Persona</h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Configure the active visitor-facing bot for {tenantName}{" "}
             <code>/{tenantSlug}</code>.
           </p>
@@ -191,7 +191,7 @@ export default function PersonaClient({
         <aside className="space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <div>
             <h2 className="text-sm font-semibold">Capabilities</h2>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               These flags describe what the bot may do for this tenant.
             </p>
           </div>
@@ -209,7 +209,7 @@ export default function PersonaClient({
                 />
                 <span>
                   <span className="block font-medium">{field.label}</span>
-                  <span className="mt-1 block text-xs leading-5 text-neutral-500">
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
                     {field.description}
                   </span>
                 </span>
@@ -217,7 +217,7 @@ export default function PersonaClient({
             ))}
           </div>
           {persona.id && (
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-muted-foreground">
               Last saved {formatDate(persona.updatedAt)}
             </p>
           )}

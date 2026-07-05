@@ -60,7 +60,7 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
     <div className="space-y-6 max-w-3xl">
       <header>
         <h1 className="text-2xl font-semibold">Import vehicles from CSV</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Required columns: <code>year, make, model, price</code>. Optional:{" "}
           <code>
             trim, mileage, body_style, exterior_color, interior_color, drivetrain,
@@ -72,8 +72,8 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
       </header>
 
       {phase.step === "pick" && (
-        <label className="block rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-700 p-10 text-center cursor-pointer hover:border-neutral-400 transition-colors">
-          <span className="text-sm text-neutral-500">
+        <label className="block rounded-lg border-2 border-dashed border-input p-10 text-center cursor-pointer hover:border-neutral-400 transition-colors">
+          <span className="text-sm text-muted-foreground">
             Choose a .csv file to preview it before anything is written
           </span>
           <input
@@ -98,7 +98,7 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
       )}
 
       {phase.step === "importing" && (
-        <p className="text-sm text-neutral-500" role="status">
+        <p className="text-sm text-muted-foreground" role="status">
           Importing… {phase.done}/{phase.total}
         </p>
       )}
@@ -110,7 +110,7 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
           </p>
           <Link
             href={`/admin/${tenantSlug}/vehicles`}
-            className="inline-block rounded-lg bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-700 transition-colors"
+            className="inline-block rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
           >
             Back to inventory
           </Link>
@@ -119,12 +119,12 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
 
       {phase.step === "failed" && (
         <div className="space-y-3">
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-destructive" role="alert">
             Import stopped after {phase.imported} rows: {phase.message}
           </p>
           <button
             type="button"
-            className="rounded-lg border border-neutral-300 dark:border-neutral-700 px-4 py-2 text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+            className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
             onClick={() => setPhase({ step: "pick" })}
           >
             Start over
@@ -171,12 +171,12 @@ function PreviewPanel({
       )}
 
       {canImport && (
-        <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-x-auto rounded-xl border">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900">
+              <tr className="border-b bg-muted/50">
                 {["Year", "Make", "Model", "Trim", "Price", "Mileage", "Body"].map((h) => (
-                  <th key={h} className="text-left px-3 py-2 font-medium text-neutral-500">
+                  <th key={h} className="text-left px-3 py-2 font-medium text-muted-foreground">
                     {h}
                   </th>
                 ))}
@@ -197,7 +197,7 @@ function PreviewPanel({
             </tbody>
           </table>
           {parsed.rows.length > PREVIEW_ROWS && (
-            <p className="px-3 py-2 text-xs text-neutral-500">
+            <p className="px-3 py-2 text-xs text-muted-foreground">
               …and {parsed.rows.length - PREVIEW_ROWS} more rows
             </p>
           )}
@@ -208,14 +208,14 @@ function PreviewPanel({
         <button
           type="button"
           disabled={!canImport}
-          className="rounded-lg bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           onClick={onImport}
         >
           Import {parsed.rows.length} vehicle{parsed.rows.length === 1 ? "" : "s"}
         </button>
         <button
           type="button"
-          className="rounded-lg border border-neutral-300 dark:border-neutral-700 px-4 py-2 text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
           onClick={onBack}
         >
           Choose another file

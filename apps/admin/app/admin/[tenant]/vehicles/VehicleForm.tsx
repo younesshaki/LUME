@@ -123,99 +123,99 @@ export default function VehicleForm({
       )}
 
       <section className="space-y-4">
-        <h2 className="text-sm font-medium text-neutral-500 uppercase tracking-wide">Stock Info</h2>
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Stock Info</h2>
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Year *</span>
+            <span className="text-xs font-medium text-muted-foreground">Year *</span>
             <input type="number" value={data.year} onChange={(e) => set("year", +e.target.value)}
               required min={1900} max={2030}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Stock Type</span>
+            <span className="text-xs font-medium text-muted-foreground">Stock Type</span>
             <select value={data.stock_type} onChange={(e) => set("stock_type", e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent">
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent">
               {STOCK_TYPES.map((t) => <option key={t}>{t}</option>)}
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Make *</span>
+            <span className="text-xs font-medium text-muted-foreground">Make *</span>
             <input value={data.make} onChange={(e) => set("make", e.target.value)} required
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Model *</span>
+            <span className="text-xs font-medium text-muted-foreground">Model *</span>
             <input value={data.model} onChange={(e) => set("model", e.target.value)} required
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Trim</span>
+            <span className="text-xs font-medium text-muted-foreground">Trim</span>
             <input value={data.trim} onChange={(e) => set("trim", e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Price ($) *</span>
+            <span className="text-xs font-medium text-muted-foreground">Price ($) *</span>
             <input type="number" value={data.price} onChange={(e) => set("price", +e.target.value)}
               required min={1}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Mileage</span>
+            <span className="text-xs font-medium text-muted-foreground">Mileage</span>
             <input type="number" value={data.mileage ?? ""} onChange={(e) => set("mileage", e.target.value ? +e.target.value : null)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
           </label>
         </div>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-medium text-neutral-500 uppercase tracking-wide">Specifications</h2>
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Specifications</h2>
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Body Style</span>
+            <span className="text-xs font-medium text-muted-foreground">Body Style</span>
             <select value={data.body_style} onChange={(e) => set("body_style", e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent">
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent">
               {BODY_STYLES.map((s) => <option key={s}>{s}</option>)}
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Drivetrain</span>
+            <span className="text-xs font-medium text-muted-foreground">Drivetrain</span>
             <select value={data.drivetrain} onChange={(e) => set("drivetrain", e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent">
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent">
               {DRIVETRAINS.map((d) => <option key={d}>{d}</option>)}
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Fuel Type</span>
+            <span className="text-xs font-medium text-muted-foreground">Fuel Type</span>
             <select value={data.fuel_type} onChange={(e) => set("fuel_type", e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent">
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent">
               {FUEL_TYPES.map((f) => <option key={f}>{f}</option>)}
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Exterior Color</span>
+            <span className="text-xs font-medium text-muted-foreground">Exterior Color</span>
             <input value={data.exterior_color} onChange={(e) => set("exterior_color", e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Interior Color</span>
+            <span className="text-xs font-medium text-muted-foreground">Interior Color</span>
             <input value={data.interior_color} onChange={(e) => set("interior_color", e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
           </label>
         </div>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-medium text-neutral-500 uppercase tracking-wide">Location</h2>
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Location</h2>
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">City</span>
+            <span className="text-xs font-medium text-muted-foreground">City</span>
             <input value={data.seller_city} onChange={(e) => set("seller_city", e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent" />
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">State</span>
+            <span className="text-xs font-medium text-muted-foreground">State</span>
             <select value={data.seller_state} onChange={(e) => set("seller_state", e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 px-3 py-2 text-sm bg-transparent">
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent">
               <option value="">—</option>
               {US_STATES.map((s) => <option key={s}>{s}</option>)}
             </select>
@@ -223,13 +223,13 @@ export default function VehicleForm({
         </div>
       </section>
 
-      <div className="flex items-center gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center gap-3 pt-4 border-t border-border">
         <button type="submit" disabled={saving}
           className="rounded-lg bg-neutral-900 text-white px-6 py-2 text-sm font-medium hover:bg-neutral-700 disabled:opacity-50 transition-colors">
           {saving ? "Saving..." : isNew ? "Add Vehicle" : "Save Changes"}
         </button>
         <button type="button" onClick={() => router.back()}
-          className="rounded-lg border border-neutral-300 dark:border-neutral-700 px-6 py-2 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors">
+          className="rounded-lg border border-input px-6 py-2 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors">
           Cancel
         </button>
       </div>

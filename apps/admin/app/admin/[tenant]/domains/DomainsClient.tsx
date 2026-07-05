@@ -95,7 +95,7 @@ export default function DomainsClient({
     <div className="max-w-5xl space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Domains</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Manage custom public domains for {tenantName} <code>/{tenantSlug}</code>.
         </p>
       </header>
@@ -131,7 +131,7 @@ export default function DomainsClient({
 
       <div className="space-y-4">
         {domains.length === 0 && (
-          <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500 dark:border-neutral-700">
+          <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-sm text-muted-foreground dark:border-neutral-700">
             No custom domains have been added yet.
           </div>
         )}
@@ -154,7 +154,7 @@ export default function DomainsClient({
                     {domain.verified ? "Verified" : "Pending verification"}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-neutral-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Added {formatDate(domain.createdAt)}
                 </p>
               </div>
@@ -171,15 +171,15 @@ export default function DomainsClient({
             {!domain.verified && (
               <div className="mt-4 rounded-lg bg-neutral-50 p-3 text-sm dark:bg-neutral-900">
                 <p className="font-medium">DNS verification</p>
-                <p className="mt-1 text-xs text-neutral-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Add this TXT record at your DNS provider, then ask an admin to run verification.
                 </p>
                 <dl className="mt-3 grid gap-3 md:grid-cols-[160px_minmax(0,1fr)]">
-                  <dt className="text-xs uppercase tracking-wide text-neutral-500">Type</dt>
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Type</dt>
                   <dd className="font-mono text-xs">TXT</dd>
-                  <dt className="text-xs uppercase tracking-wide text-neutral-500">Host</dt>
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Host</dt>
                   <dd className="break-all font-mono text-xs">{verificationHost(domain.domain)}</dd>
-                  <dt className="text-xs uppercase tracking-wide text-neutral-500">Value</dt>
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Value</dt>
                   <dd className="break-all font-mono text-xs">{domain.verificationToken}</dd>
                 </dl>
               </div>

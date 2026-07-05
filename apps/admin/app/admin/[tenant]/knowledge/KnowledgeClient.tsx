@@ -63,7 +63,7 @@ export default function KnowledgeClient({
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Knowledge</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           RAG source documents and indexed chunks for {tenantName}{" "}
           <code>/{tenantSlug}</code>.
         </p>
@@ -71,21 +71,21 @@ export default function KnowledgeClient({
 
       {status.message && <StatusBanner type={status.type} message={status.message} />}
 
-      <div className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+      <div className="overflow-hidden rounded-xl border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Document</th>
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Category</th>
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Chunks</th>
-              <th className="px-4 py-3 text-left font-medium text-neutral-500">Updated</th>
-              <th className="px-4 py-3 text-right font-medium text-neutral-500">Actions</th>
+            <tr className="border-b bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Document</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Category</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Chunks</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Updated</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {documents.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-neutral-500">
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                   No knowledge documents indexed yet.
                 </td>
               </tr>
@@ -93,21 +93,21 @@ export default function KnowledgeClient({
             {documents.map((document) => (
               <tr
                 key={document.id}
-                className="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
+                className="border-b last:border-0"
               >
                 <td className="px-4 py-3">
                   <p className="font-medium">{document.title}</p>
                   {document.source && (
-                    <p className="mt-1 max-w-md truncate text-xs text-neutral-500">
+                    <p className="mt-1 max-w-md truncate text-xs text-muted-foreground">
                       {document.source}
                     </p>
                   )}
                 </td>
-                <td className="px-4 py-3 text-neutral-500">{document.category}</td>
-                <td className="px-4 py-3 text-neutral-500">
+                <td className="px-4 py-3 text-muted-foreground">{document.category}</td>
+                <td className="px-4 py-3 text-muted-foreground">
                   {document.chunkCount.toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-neutral-500">
+                <td className="px-4 py-3 text-muted-foreground">
                   {formatDate(document.updatedAt)}
                 </td>
                 <td className="px-4 py-3 text-right">

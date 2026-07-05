@@ -3,6 +3,17 @@
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   return (
@@ -67,47 +78,52 @@ function LoginShell({
   onPasswordChange?: (value: string) => void;
 }) {
   return (
-    <main className="min-h-screen grid place-items-center px-6">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm space-y-4 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 bg-white dark:bg-neutral-950"
-      >
-        <h1 className="text-xl font-semibold">Sign in to LUME Admin</h1>
-        <label className="block text-sm">
-          <span className="text-neutral-600 dark:text-neutral-400">Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => onEmailChange?.(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-neutral-600 dark:text-neutral-400">Password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => onPasswordChange?.(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm"
-          />
-        </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={pending || !onSubmit}
-          className="w-full rounded-md bg-neutral-900 dark:bg-neutral-100 dark:text-neutral-900 text-white px-3 py-2 text-sm font-medium disabled:opacity-60"
-        >
-          {pending ? "Signing in..." : "Sign in"}
-        </button>
-        <p className="text-xs text-neutral-500">
-          New to LUME?{" "}
-          <a href="/signup" className="underline underline-offset-2">
-            Create your site
-          </a>
-        </p>
-      </form>
+    <main className="grid min-h-screen place-items-center bg-muted/40 px-6">
+      <Card className="w-full max-w-sm">
+        <form onSubmit={onSubmit}>
+          <CardHeader className="pb-4">
+            <p className="mb-2 text-sm font-semibold tracking-[0.2em] text-primary">LUME</p>
+            <CardTitle>Sign in to LUME Admin</CardTitle>
+            <CardDescription>Manage your site, inventory, and AI concierge.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => onEmailChange?.(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => onPasswordChange?.(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </CardContent>
+          <CardFooter className="flex-col gap-3 pt-2">
+            <Button type="submit" disabled={pending || !onSubmit} className="w-full">
+              {pending ? "Signing in..." : "Sign in"}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              New to LUME?{" "}
+              <a href="/signup" className="underline underline-offset-2 hover:text-foreground">
+                Create your site
+              </a>
+            </p>
+          </CardFooter>
+        </form>
+      </Card>
     </main>
   );
 }
