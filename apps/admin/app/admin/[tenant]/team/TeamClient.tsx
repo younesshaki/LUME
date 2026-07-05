@@ -40,6 +40,7 @@ export default function TeamClient({
   const router = useRouter();
   const [members, setMembers] = useState(initialMembers);
   const [invites, setInvites] = useState(initialInvites);
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<TenantRole>("viewer");
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
@@ -132,6 +133,17 @@ export default function TeamClient({
         type: "error",
         message: error instanceof Error ? error.message : "Unable to create invite.",
       });
+    }
+  }
+
+  async function copyInviteLink(invite: TenantInvite) {
+    const link = `${window.location.origin}/invite/${invite.token}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedInviteId(invite.id);
+      setTimeout(() => setCopiedInviteId((id) => (id === invite.id ? null : id)), 2000);
+    } catch {
+      window.prompt("Copy this invite link:", link);
     }
   }
 
@@ -311,9 +323,13 @@ export default function TeamClient({
                   <td className="px-4 py-3">
                     <p>{invite.email}</p>
                     {invite.status === "pending" && (
-                      <p className="mt-1 break-all font-mono text-xs text-neutral-500">
-                        {invite.token}
-                      </p>
+                      <button
+                        type="button"
+                        className="mt-1 text-xs text-neutral-500 underline underline-offset-2 hover:text-neutral-700 dark:hover:text-neutral-300"
+                        onClick={() => void copyInviteLink(invite)}
+                      >
+                        {copiedInviteId === invite.id ? "Link copied!" : "Copy invite link"}
+                      </button>
                     )}
                   </td>
                   <td className="px-4 py-3 text-neutral-500">{invite.role}</td>
