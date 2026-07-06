@@ -5,6 +5,43 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-06: apps/web move READY ON BRANCH `codex/web-move` (`0c2688f`, pushed, NOT merged)
+
+The Vite public site now lives at `apps/web/` (`@lume/web`) on the branch,
+per the checklist in `docs/scalability/monorepo-foundation.md`. Fully
+verified on the branch: `typecheck:all`, `npm test` (121 root + 58 web),
+`build` (outputs `apps/web/dist`), `build:admin`, Vite dev boots and
+serves from the new location, 11/11 admin e2e. Key mechanics:
+
+- Root package.json is a thin workspace shell; dev/build/preview/test
+  delegate to `@lume/web`. Root vitest covers apps/admin + packages
+  (jsdom + react plugin for the component tests); web has its own config.
+- `VITE_*` env still loads from the repo-root `.env.local` (`envDir`).
+- Root `api/*` functions did NOT move — the public Vercel project's Root
+  Directory stays `.`, so **no Vercel project-settings change is needed**;
+  only `vercel.json`'s `outputDirectory` changed (`apps/web/dist`).
+- Coupling fixes: generateEmbeddings / check-r2-assets / seed-default-tenant
+  paths, .gitignore negations, CLAUDE.md layout+commands.
+
+**Merge checklist (user review required — do not merge autonomously):**
+
+1. Re-verify on the branch after any main drift: `git rebase main` (or
+   merge main in), then `npm install --legacy-peer-deps`,
+   `npm run typecheck:all && npm test && npm run build && npm run build:admin
+   && npm run test:e2e`.
+2. Confirm the branch's **preview deployment** of the `lume` Vercel project
+   serves the site correctly (branch push already triggers it) — check `/`,
+   a vehicle page, `/api/vehicles` (function still routed), and chat reaches
+   the admin proxy.
+3. Merge to main → production deploy uses the new `outputDirectory`
+   automatically. Do NOT change the Vercel project's Root Directory — it
+   must remain `.`.
+4. After merge: `rm -rf node_modules && npm install --legacy-peer-deps`
+   locally; any personal worktrees/branches touching root `src/**` must be
+   rebased (paths moved to `apps/web/src/**`).
+5. Update any external references to root paths (e.g. Codex lane
+   assignments that say `src/**` now mean `apps/web/src/**`).
+
 ### 2026-07-06: first-run branding SHIPPED (`aeb0a4b`, pushed)
 
 - `provisionTenant()` now seeds `tenants.theme` with `DEFAULT_TENANT_THEME`
