@@ -5,6 +5,30 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-06 (later): custom pages live in the public header (`d8ea67e`, pushed)
+
+- Root cause of "published page redirects to homepage": no public route for
+  custom slugs + PageRenderer flag-gated + blocks only registered when the
+  flag was on. All three fixed: `/:pageSlug` route renders custom pages
+  unconditionally (`force` prop — they have no cinematic fallback);
+  `registerBlocks()` now unconditional inside the lazy renderer chunk.
+- **Header nav is now data-driven**: published, non-archived pages in
+  Pages-screen drag order via anon RPC `list_published_nav_pages`
+  (migration **025 applied**; advisors show only the known intentional
+  SECURITY DEFINER warnings), capped by `tenants.theme.header.maxNavItems`
+  (default 6). Hardcoded nav remains the loading/failure fallback.
+- **New admin section `/admin/[tenant]/navigation`** (sidebar: Navigation):
+  max pages in header, CTA show/hide + label, live visible/overflow
+  preview. `selectHeaderNav()` in @lume/types keeps admin preview and
+  public header in lockstep. BrandingClient now MERGES theme on save
+  (was replacing — would have wiped theme.header).
+- NOTE: default tenant's `food` page (nav_order 6) overflows the default
+  cap of 6 — expected; bump maxNavItems in Navigation or reorder in Pages.
+- Verified in a real browser against local Vite + prod Supabase: custom
+  page in header, click-through + deep link render, unknown slug → /home.
+  12/12 admin e2e, 184 unit tests, builds clean. Reminder: `codex/web-move`
+  needs a rebase to pick these src/ changes up under apps/web/src/.
+
 ### 2026-07-06: apps/web move READY ON BRANCH `codex/web-move` (`0c2688f`, pushed, NOT merged)
 
 The Vite public site now lives at `apps/web/` (`@lume/web`) on the branch,
