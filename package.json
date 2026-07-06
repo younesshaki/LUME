@@ -7,6 +7,9 @@
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "react-is": "^19.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "dev:admin": "npm run dev --workspace=@lume/admin",

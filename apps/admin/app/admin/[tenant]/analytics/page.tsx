@@ -1,11 +1,40 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { LeadStatus } from "@lume/types";
+import { countByValue, leadsPerDay, priceHistogram } from "@/lib/analytics";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  InventoryByBodyStyleChart,
+  InventoryByMakeChart,
+  LeadsOverTimeChart,
+  PriceDistributionChart,
+} from "./AnalyticsCharts";
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
 };
+
+const LEADS_WINDOW_DAYS = 30;
+const VEHICLE_PAGE = 1000;
+
+/** Page through the tenant's vehicles; only the three columns the charts need. */
+async function fetchVehicleFacts(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string
+) {
+  const facts: Array<{ make: string | null; body_style: string | null; price: number | null }> = [];
+  for (let from = 0; ; from += VEHICLE_PAGE) {
+    const { data, error } = await supabase
+      .from("vehicles")
+      .select("make, body_style, price")
+      .eq("tenant_id", tenantId)
+      .range(from, from + VEHICLE_PAGE - 1);
+    if (error) throw new Error(`Unable to load vehicle facts: ${error.message}`);
+    facts.push(...(data ?? []));
+    if (!data || data.length < VEHICLE_PAGE) break;
+  }
+  return facts;
+}
 
 type LeadSummaryRow = {
   id: string;
@@ -31,12 +60,17 @@ export default async function AnalyticsPage({ params }: PageProps) {
   if (!tenant) notFound();
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const windowStart = new Date(
+    Date.now() - LEADS_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  ).toISOString();
 
   const [
     vehiclesResult,
     leadsResult,
+    windowLeadsResult,
     recentLeadsResult,
     priceHistoryResult,
+    vehicleFacts,
   ] = await Promise.all([
     supabase
       .from("vehicles")
@@ -48,6 +82,11 @@ export default async function AnalyticsPage({ params }: PageProps) {
       .eq("tenant_id", tenant.id),
     supabase
       .from("leads")
+      .select("created_at")
+      .eq("tenant_id", tenant.id)
+      .gte("created_at", windowStart),
+    supabase
+      .from("leads")
       .select("id, first_name, last_name, email, phone, status, created_at")
       .eq("tenant_id", tenant.id)
       .gte("created_at", sevenDaysAgo)
@@ -57,10 +96,12 @@ export default async function AnalyticsPage({ params }: PageProps) {
       .from("price_history")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenant.id),
+    fetchVehicleFacts(supabase, tenant.id),
   ]);
 
   if (vehiclesResult.error) throw new Error(`Unable to load vehicles count: ${vehiclesResult.error.message}`);
   if (leadsResult.error) throw new Error(`Unable to load lead status counts: ${leadsResult.error.message}`);
+  if (windowLeadsResult.error) throw new Error(`Unable to load lead history: ${windowLeadsResult.error.message}`);
   if (recentLeadsResult.error) throw new Error(`Unable to load recent leads: ${recentLeadsResult.error.message}`);
   if (priceHistoryResult.error) throw new Error(`Unable to load price history count: ${priceHistoryResult.error.message}`);
 
@@ -68,6 +109,16 @@ export default async function AnalyticsPage({ params }: PageProps) {
     ((leadsResult.data ?? []) as Array<{ status: LeadStatus }>).map((row) => row.status)
   );
   const recentLeads = (recentLeadsResult.data ?? []) as LeadSummaryRow[];
+
+  const leadsSeries = leadsPerDay(
+    (windowLeadsResult.data ?? []).map((row) => row.created_at),
+    LEADS_WINDOW_DAYS
+  );
+  const byMake = countByValue(vehicleFacts.map((v) => v.make), 8);
+  const byBodyStyle = countByValue(vehicleFacts.map((v) => v.body_style), 8);
+  const priceBuckets = priceHistogram(
+    vehicleFacts.map((v) => v.price).filter((price): price is number => price !== null)
+  );
 
   return (
     <div className="space-y-6">
@@ -83,6 +134,15 @@ export default async function AnalyticsPage({ params }: PageProps) {
         <MetricCard label="Recent leads" value={recentLeads.length} helper="Last 7 days" />
         <MetricCard label="Price changes" value={priceHistoryResult.count ?? 0} />
       </section>
+
+      <LeadsOverTimeChart data={leadsSeries} />
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <InventoryByMakeChart data={byMake} />
+        <InventoryByBodyStyleChart data={byBodyStyle} />
+      </section>
+
+      <PriceDistributionChart data={priceBuckets} />
 
       <section className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
         <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">

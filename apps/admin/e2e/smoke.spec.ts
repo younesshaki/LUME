@@ -142,6 +142,23 @@ test("leads page renders its empty state", async () => {
   await expect(page.getByText("No leads yet")).toBeVisible();
 });
 
+test("analytics page renders the chart suite", async () => {
+  await page.goto(`/admin/${tenantSlug}/analytics`);
+  for (const title of [
+    "Leads over time",
+    "Inventory by make",
+    "Inventory by body style",
+    "Price distribution",
+  ]) {
+    await expect(page.getByText(title, { exact: true })).toBeVisible();
+  }
+  // The inventory charts should actually plot the remaining 4 vehicles.
+  await expect(page.locator(".recharts-surface").first()).toBeVisible();
+  // Park the pointer so no chart tooltip pollutes the screenshot.
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: "test-results/analytics.png", fullPage: true });
+});
+
 test("platform page 404s for non-platform-admins", async () => {
   const response = await page.goto("/admin/platform");
   expect(response?.status()).toBe(404);
