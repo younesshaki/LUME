@@ -67,7 +67,7 @@ export default function BrandingClient({
       const supabase = createTenantThemeClient();
       const { error } = await supabase
         .from("tenants")
-        .update({ theme: themeFromBrandingForm(form) } as Database["public"]["Tables"]["tenants"]["Update"])
+        .update({ theme: themeFromBrandingForm(form, initialTheme) } as Database["public"]["Tables"]["tenants"]["Update"])
         .eq("id", tenantId);
       if (error) throw new Error(error.message);
       setState({ type: "success", message: "Branding saved." });

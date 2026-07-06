@@ -8,14 +8,23 @@ import {
 } from "@/components/ui/sheet";
 import { useUIStore } from "@/lib/ui-state";
 import { InvitationCTA } from "../InvitationCTA";
-import { SITE_NAV_ITEMS, type SiteScreen } from "../../siteNavigation";
+import { SITE_NAV_ITEMS, type SiteNavItem } from "../../siteNavigation";
 
 type MobileNavProps = {
   currentScreen: string;
-  onNavigate: (screen: SiteScreen) => void;
+  onNavigate: (screen: string) => void;
+  items?: SiteNavItem[];
+  showCta?: boolean;
+  ctaLabel?: string;
 };
 
-export function MobileNav({ currentScreen, onNavigate }: MobileNavProps) {
+export function MobileNav({
+  currentScreen,
+  onNavigate,
+  items = SITE_NAV_ITEMS,
+  showCta = true,
+  ctaLabel,
+}: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const setHeader = useUIStore((state) => state.setHeader);
 
@@ -24,7 +33,7 @@ export function MobileNav({ currentScreen, onNavigate }: MobileNavProps) {
     setHeader({ mobileMenuOpen: nextOpen });
   };
 
-  const handleNavigate = (screen: SiteScreen) => {
+  const handleNavigate = (screen: string) => {
     onNavigate(screen);
     setMenuOpen(false);
   };
@@ -54,7 +63,7 @@ export function MobileNav({ currentScreen, onNavigate }: MobileNavProps) {
           </button>
         </div>
         <nav aria-label="Mobile navigation" className="flex flex-col flex-1 px-6 pt-8 gap-1">
-          {SITE_NAV_ITEMS.map((item) => {
+          {items.map((item) => {
             const isActive = currentScreen === item.screen;
             return (
               <button
@@ -70,9 +79,15 @@ export function MobileNav({ currentScreen, onNavigate }: MobileNavProps) {
             );
           })}
         </nav>
-        <div className="px-6 py-8">
-          <InvitationCTA onClick={() => handleNavigate("contact")} className="w-full justify-center" />
-        </div>
+        {showCta && (
+          <div className="px-6 py-8">
+            <InvitationCTA
+              onClick={() => handleNavigate("contact")}
+              label={ctaLabel}
+              className="w-full justify-center"
+            />
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );

@@ -1,11 +1,12 @@
 import { useRef, useEffect } from 'react';
 import { useReducedMotion } from 'motion/react';
-import { SITE_NAV_ITEMS, type SiteScreen } from '../../siteNavigation';
+import { SITE_NAV_ITEMS, type SiteNavItem } from '../../siteNavigation';
 import './GooeyNav.css';
 
 type GooeyDesktopNavProps = {
   currentScreen: string;
-  onNavigate: (screen: SiteScreen) => void;
+  onNavigate: (screen: string) => void;
+  items?: SiteNavItem[];
   particleCount?: number;
   particleDistances?: [number, number];
   particleR?: number;
@@ -17,6 +18,7 @@ type GooeyDesktopNavProps = {
 export function GooeyDesktopNav({
   currentScreen,
   onNavigate,
+  items = SITE_NAV_ITEMS,
   particleCount = 20,
   particleDistances = [70, 8],
   particleR = 120,
@@ -30,7 +32,7 @@ export function GooeyDesktopNav({
   const filterRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
-  const activeIndex = SITE_NAV_ITEMS.findIndex(item => item.screen === currentScreen);
+  const activeIndex = items.findIndex(item => item.screen === currentScreen);
 
   const noise = (n = 1) => n / 2 - Math.random() * n;
 
@@ -116,7 +118,7 @@ export function GooeyDesktopNav({
       makeParticles(filterRef.current);
     }
 
-    onNavigate(SITE_NAV_ITEMS[index].screen);
+    onNavigate(items[index].screen);
   };
 
   useEffect(() => {
@@ -133,13 +135,14 @@ export function GooeyDesktopNav({
     });
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
-  }, [activeIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reposition when the item list itself changes
+  }, [activeIndex, items]);
 
   return (
     <div className="gooey-nav-container" ref={containerRef}>
       <nav aria-label="Main navigation">
         <ul ref={navRef}>
-          {SITE_NAV_ITEMS.map((item, index) => (
+          {items.map((item, index) => (
             <li
               key={item.screen}
               className={activeIndex === index ? 'active' : ''}

@@ -57,8 +57,17 @@ export function brandingFormFromTheme(theme: TenantTheme | null | undefined): Br
   };
 }
 
-export function themeFromBrandingForm(form: BrandingThemeForm): TenantTheme {
+/**
+ * Serialize the branding form over the tenant's existing theme. Keys the
+ * branding editor doesn't own (e.g. `header`, edited in Navigation) must
+ * survive a branding save, so spread the base theme first.
+ */
+export function themeFromBrandingForm(
+  form: BrandingThemeForm,
+  baseTheme: TenantTheme | null | undefined = undefined
+): TenantTheme {
   return {
+    ...(baseTheme ?? {}),
     colors: { ...form.colors },
     fonts: { ...form.fonts },
     dockVariant: form.dockVariant,

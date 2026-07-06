@@ -1,6 +1,21 @@
 export type TenantDockVariant = "default" | "minimal" | "floating" | "hidden";
 
+/**
+ * Public-site header configuration, edited in the admin "Navigation"
+ * section. Nav items come from the tenant's published pages (ordered by
+ * nav_order); this only controls how many fit and the CTA button.
+ */
+export type TenantHeaderConfig = {
+  /** How many pages the header shows; the rest overflow (mobile menu shows all). */
+  maxNavItems?: number;
+  /** Show the invitation/CTA button on the right. */
+  showCta?: boolean;
+  /** CTA button label. */
+  ctaLabel?: string;
+};
+
 export type TenantTheme = {
+  header?: TenantHeaderConfig;
   colors?: {
     ink?: string;
     muted?: string;
@@ -34,6 +49,11 @@ export type TenantTheme = {
  * — change them here, not there.
  */
 export const DEFAULT_TENANT_THEME = {
+  header: {
+    maxNavItems: 6,
+    showCta: true,
+    ctaLabel: "Request Invitation",
+  },
   colors: {
     ink: "#fff8ec",
     muted: "#c7bda8",

@@ -160,6 +160,26 @@ export async function fetchPublishedPage(
   };
 }
 
+/**
+ * Ordered nav metadata (slug/title/nav_order) for the tenant's published,
+ * non-archived pages — the public header's data source. Anon-friendly via
+ * the SECURITY DEFINER RPC from migration 025.
+ */
+export async function listPublishedNavPages(
+  client: DbClient,
+  tenantId: string
+): Promise<Array<{ slug: string; title: string; navOrder: number }>> {
+  const { data, error } = await client.rpc("list_published_nav_pages", {
+    p_tenant_id: tenantId,
+  });
+  if (error) throw new Error(`listPublishedNavPages failed: ${error.message}`);
+  return (data ?? []).map((row) => ({
+    slug: row.slug,
+    title: row.title,
+    navOrder: row.nav_order,
+  }));
+}
+
 // ─── Admin list ─────────────────────────────────────────────────────────────
 export async function listPages(client: DbClient, tenantId: string): Promise<Page[]> {
   const { data, error } = await client

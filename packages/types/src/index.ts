@@ -6,6 +6,8 @@ export type * from "./bot-actions";
 export type * from "./page";
 export type * from "./tenantTheme";
 export { DEFAULT_TENANT_THEME } from "./tenantTheme";
+export type * from "./headerNav";
+export { HEADER_NAV_LIMITS, clampMaxNavItems, selectHeaderNav } from "./headerNav";
 export type * from "./lead";
 export type * from "./tenantDomain";
 export type * from "./tenantInvite";

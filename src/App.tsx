@@ -72,6 +72,11 @@ const ContactPageRendererRoute = lazy(() =>
     default: module.ContactPageRendererRoute,
   }))
 );
+const CustomPageRendererRoute = lazy(() =>
+  loadPageRendererRoutes().then((module) => ({
+    default: module.CustomPageRendererRoute,
+  }))
+);
 const HomePageRendererRoute = lazy(() =>
   loadPageRendererRoutes().then((module) => ({
     default: module.HomePageRendererRoute,
@@ -592,6 +597,10 @@ export default function App() {
             }
           />
           <Route path={`${ROUTE_PATHS.admin}/*`} element={<AdminRouter onExit={handleGoHome} />} />
+          {/* Tenant-created pages published from the admin (static routes above
+              always win over this dynamic segment). Unknown slugs still land
+              on /home via the route's own fallback. */}
+          <Route path="/:pageSlug" element={<CustomPageRendererRoute />} />
           <Route path="*" element={<Navigate to={ROUTE_PATHS.home} replace />} />
         </Routes>
       </Suspense>

@@ -142,6 +142,20 @@ test("leads page renders its empty state", async () => {
   await expect(page.getByText("No leads yet")).toBeVisible();
 });
 
+test("navigation settings page previews the published header nav", async () => {
+  await page.goto(`/admin/${tenantSlug}/navigation`);
+  await expect(page.getByText("Header settings")).toBeVisible();
+  // Provisioned starter pages are published, so the preview lists them.
+  await expect(page.getByText("Header preview")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save changes" })).toBeEnabled();
+
+  // Lower the cap and save; the preview reflects it immediately.
+  await page.getByLabel("Pages shown in the header").fill("2");
+  await expect(page.getByText(/2 pages in the header/)).toBeVisible();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Navigation settings saved")).toBeVisible();
+});
+
 test("analytics page renders the chart suite", async () => {
   await page.goto(`/admin/${tenantSlug}/analytics`);
   for (const title of [

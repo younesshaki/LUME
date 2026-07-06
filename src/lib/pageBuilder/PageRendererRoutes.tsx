@@ -1,3 +1,6 @@
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { ROUTE_PATHS } from "@/app-shell/routePaths";
+import { isScreenSlug } from "@/lib/publicNav";
 import ContactPage from "@/experience/ui/ContactPage";
 import ProductsPage from "@/experience/ui/ProductsPage";
 import ShowcasePage from "@/experience/ui/ShowcasePage";
@@ -221,6 +224,33 @@ export function ContactPageRendererRoute({
           }}
         />
       }
+    />
+  );
+}
+
+const CUSTOM_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Public route for tenant-created pages (/:pageSlug). Unlike the five
+ * cinematic screens there is no hand-built fallback, so this renders
+ * unconditionally (not behind the page-renderer flag); an unknown or
+ * unpublished slug falls back to the old catch-all behavior (→ /home).
+ */
+export function CustomPageRendererRoute() {
+  const { pageSlug = "" } = useParams();
+  const navigate = useNavigate();
+  const slug = pageSlug.toLowerCase();
+
+  if (!CUSTOM_SLUG_PATTERN.test(slug) || isScreenSlug(slug)) {
+    return <Navigate to={ROUTE_PATHS.home} replace />;
+  }
+
+  return (
+    <PageRenderer
+      slug={slug}
+      force
+      fallback={<Navigate to={ROUTE_PATHS.home} replace />}
+      footer={<SiteFooter onNavigate={(screen) => navigate(ROUTE_PATHS[screen])} />}
     />
   );
 }

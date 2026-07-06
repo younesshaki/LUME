@@ -444,6 +444,14 @@ export type Database = {
           theme: Record<string, unknown>;
         }[];
       };
+      list_published_nav_pages: {
+        Args: { p_tenant_id: string };
+        Returns: {
+          slug: string;
+          title: string;
+          nav_order: number;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

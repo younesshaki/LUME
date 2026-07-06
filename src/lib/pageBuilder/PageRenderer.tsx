@@ -12,7 +12,10 @@ import { PageBuilderRenderProvider, type PageBuilderRenderContextValue } from ".
 import { registerBlocks } from "./registerBlocks";
 import { isPageRendererEnabled } from "./featureFlag";
 
-if (isPageRendererEnabled) registerBlocks();
+// Always register: custom tenant pages render regardless of the feature flag
+// (force prop), and this module only loads via the lazy renderer chunk anyway.
+// registerBlocks() is idempotent.
+registerBlocks();
 
 type PageFrame = {
   rootClassName: string;
@@ -25,6 +28,11 @@ type PageFrame = {
 type PageRendererProps = {
   slug: string;
   fallback: ReactNode;
+  /**
+   * Render regardless of the page-renderer feature flag. Used by custom
+   * tenant pages, which have no hand-built cinematic fallback to protect.
+   */
+  force?: boolean;
   footer?: ReactNode;
   context?: Omit<PageBuilderRenderContextValue, "pageSlug">;
   loadingFallback?: ReactNode;
@@ -67,18 +75,20 @@ const PAGE_FRAMES: Record<string, PageFrame> = {
 export function PageRenderer({
   slug,
   fallback,
+  force = false,
   footer,
   context,
   loadingFallback,
   tenantSlug = publicTenantSlug,
 }: PageRendererProps) {
   const { mode } = useDualMode();
+  const enabled = force || isPageRendererEnabled;
   const [state, setState] = useState<PageRendererState>(() =>
-    isPageRendererEnabled ? { status: "loading", page: null } : { status: "fallback", page: null }
+    enabled ? { status: "loading", page: null } : { status: "fallback", page: null }
   );
 
   useEffect(() => {
-    if (!isPageRendererEnabled) {
+    if (!enabled) {
       setState({ status: "fallback", page: null });
       return;
     }
@@ -112,7 +122,7 @@ export function PageRenderer({
     return () => {
       cancelled = true;
     };
-  }, [slug, tenantSlug]);
+  }, [slug, tenantSlug, enabled]);
 
   const renderableBlocks = useMemo(
     () =>
@@ -124,13 +134,15 @@ export function PageRenderer({
     [mode, state]
   );
 
-  if (!isPageRendererEnabled || state.status === "fallback") return <>{fallback}</>;
+  if (!enabled || state.status === "fallback") return <>{fallback}</>;
   if (state.status === "loading") {
     return <>{loadingFallback ?? <PageRendererLoading slug={slug} />}</>;
   }
   if (renderableBlocks.length === 0) return <>{fallback}</>;
 
-  const frame = PAGE_FRAMES[slug] ?? PAGE_FRAMES.home;
+  // Custom published pages get a neutral frame (contact's padded dark page),
+  // not the homepage frame with its background art.
+  const frame = PAGE_FRAMES[slug] ?? PAGE_FRAMES.contact;
 
   return (
     <PageBuilderRenderProvider value={{ pageSlug: slug, ...context }}>

@@ -1,9 +1,11 @@
 type InvitationCTAProps = {
   onClick: () => void;
   className?: string;
+  /** Configurable per tenant (theme.header.ctaLabel). */
+  label?: string;
 };
 
-export function InvitationCTA({ onClick, className = "" }: InvitationCTAProps) {
+export function InvitationCTA({ onClick, className = "", label }: InvitationCTAProps) {
   return (
     <button
       onClick={onClick}
@@ -20,7 +22,7 @@ export function InvitationCTA({ onClick, className = "" }: InvitationCTAProps) {
           bg-gradient-to-r from-transparent via-[#C9A84C]/15 to-transparent"
         aria-hidden
       />
-      <span className="relative">Request Invitation</span>
+      <span className="relative">{label?.trim() || "Request Invitation"}</span>
     </button>
   );
 }
