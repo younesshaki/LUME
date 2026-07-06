@@ -75,9 +75,10 @@ Result: tenant `efab59f0-c566-42dc-96d9-d40a6ad2a2f3`, owner membership,
    repo's app (global-subdomain collision with an old prototype project).
    Customers need a stable, publicly reachable admin origin (`app.lume.app`
    per vision) with the app's own Supabase auth as the gate.
-6. **No initial theme/branding step.** New tenants get an empty `theme`.
-   Provisioning should either copy a starter theme or drop the owner into
-   the branding editor as a first-run step.
+6. **No initial theme/branding step.** ~~New tenants get an empty `theme`.~~
+   _Addressed 2026-07-06:_ `provisionTenant()` copies `DEFAULT_TENANT_THEME`
+   (@lume/types) into `tenants.theme`; the branding editor's defaults derive
+   from the same constant. Item closed.
 7. **No bot persona row.** `bot_personas` stays empty for a new tenant; chat
    doesn't read personas yet either. Provisioning should insert the default
    persona; chat should honor it (natural follow-up to SCRUM-144).

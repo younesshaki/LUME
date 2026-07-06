@@ -5,6 +5,15 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-06: first-run branding SHIPPED (`aeb0a4b`, pushed)
+
+- `provisionTenant()` now seeds `tenants.theme` with `DEFAULT_TENANT_THEME`
+  (new canonical constant in `@lume/types`; the branding editor's defaults
+  derive from it — single source of truth, lockstep unit test). New sites
+  render themed from the first pageview. Live-verified on prod with a
+  throwaway tenant (then deleted). Jira: comment on SCRUM-107.
+  Onboarding-backlog item 6 closed.
+
 ### 2026-07-06: leads & platform table parity SHIPPED (`686ab50`, pushed)
 
 - Both tables now use the vehicles pattern: URL-param `q`/`sort`/`dir`/`page`,
