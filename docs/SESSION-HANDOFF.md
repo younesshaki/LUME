@@ -5,6 +5,18 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-06: analytics charts SHIPPED (`c0fadd5`, pushed)
+
+- `/admin/[tenant]/analytics`: 30-day leads area chart, inventory-by-make
+  and by-body-style bars (top 8 + Other), price histogram with friendly
+  buckets. Pure aggregations in `lib/analytics.ts` (+7 tests, 178 total);
+  shadcn `chart.tsx` + recharts 2.15. Gold mark color validated per the
+  dataviz method (light `oklch(0.58 .12 88)`, dark `oklch(0.655 .12 88)`).
+- ⚠️ recharts 2.x under React 19 requires the `react-is: ^19` override —
+  it's set in BOTH the root and apps/admin package.json (npm ignores root
+  overrides for workspace deps). Don't remove either. Mount animations are
+  disabled on the charts (deterministic e2e screenshots). Jira: SCRUM-90.
+
 ### 2026-07-06: invite → signup handoff SHIPPED (`9781dc7`, pushed)
 
 - `/invite/[token]` (signed out) now links to `/signup?invite=<token>`;
