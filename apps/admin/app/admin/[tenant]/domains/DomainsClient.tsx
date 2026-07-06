@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import type { TenantDomain } from "@lume/types";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   normalizeDomainInput,
@@ -66,11 +68,7 @@ export default function DomainsClient({
   }
 
   async function removeDomain(domain: TenantDomain) {
-    const confirmed = window.confirm(`Remove ${domain.domain}?`);
-    if (!confirmed) return;
-
     setRemovingId(domain.id);
-    setStatus({ type: "saving", message: "Removing domain..." });
     try {
       const { error } = await createSupabaseBrowserClient()
         .from("tenant_domains")
@@ -79,12 +77,11 @@ export default function DomainsClient({
         .eq("id", domain.id);
       if (error) throw new Error(error.message);
       setDomains((current) => current.filter((item) => item.id !== domain.id));
-      setStatus({ type: "success", message: "Domain removed." });
+      toast.success(`Removed ${domain.domain}`);
       router.refresh();
     } catch (error) {
-      setStatus({
-        type: "error",
-        message: error instanceof Error ? error.message : "Unable to remove domain.",
+      toast.error("Unable to remove domain", {
+        description: error instanceof Error ? error.message : undefined,
       });
     } finally {
       setRemovingId(null);
@@ -158,14 +155,20 @@ export default function DomainsClient({
                   Added {formatDate(domain.createdAt)}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => void removeDomain(domain)}
-                disabled={removingId === domain.id}
-                className="rounded border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+              <ConfirmActionDialog
+                title={`Remove ${domain.domain}?`}
+                description="The domain stops routing to this site and its verification record becomes invalid. You can add it again later, but it will need to be re-verified."
+                actionLabel="Remove domain"
+                onConfirm={() => void removeDomain(domain)}
               >
-                {removingId === domain.id ? "Removing..." : "Remove"}
-              </button>
+                <button
+                  type="button"
+                  disabled={removingId === domain.id}
+                  className="rounded border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                >
+                  {removingId === domain.id ? "Removing..." : "Remove"}
+                </button>
+              </ConfirmActionDialog>
             </div>
 
             {!domain.verified && (

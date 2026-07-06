@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import type { TenantInvite, TenantRole } from "@lume/types";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   TENANT_ROLES,
@@ -75,11 +77,7 @@ export default function TeamClient({
 
   async function removeMember(member: TeamMember) {
     if (!canManage) return;
-    const confirmed = window.confirm(`Remove member ${member.userId}?`);
-    if (!confirmed) return;
-
     setBusyKey(member.userId);
-    setStatus({ type: "saving", message: "Removing team member..." });
     try {
       const { error } = await createSupabaseBrowserClient()
         .from("tenant_members")
@@ -88,12 +86,11 @@ export default function TeamClient({
         .eq("user_id", member.userId);
       if (error) throw new Error(error.message);
       setMembers((current) => current.filter((item) => item.userId !== member.userId));
-      setStatus({ type: "success", message: "Team member removed." });
+      toast.success("Team member removed");
       router.refresh();
     } catch (error) {
-      setStatus({
-        type: "error",
-        message: error instanceof Error ? error.message : "Unable to remove member.",
+      toast.error("Unable to remove member", {
+        description: error instanceof Error ? error.message : undefined,
       });
     } finally {
       setBusyKey(null);
@@ -235,14 +232,20 @@ export default function TeamClient({
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{formatDate(member.createdAt)}</td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    disabled={!canManage || busyKey === member.userId}
-                    onClick={() => void removeMember(member)}
-                    className="rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                  <ConfirmActionDialog
+                    title="Remove this team member?"
+                    description={`${member.userId === currentUserId ? "This is your own membership — removing it locks you out of this site. " : ""}Member ${member.userId} loses all access to ${tenantName} immediately. They can be re-invited later.`}
+                    actionLabel="Remove member"
+                    onConfirm={() => void removeMember(member)}
                   >
-                    Remove
-                  </button>
+                    <button
+                      type="button"
+                      disabled={!canManage || busyKey === member.userId}
+                      className="rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                    >
+                      Remove
+                    </button>
+                  </ConfirmActionDialog>
                 </td>
               </tr>
             ))}

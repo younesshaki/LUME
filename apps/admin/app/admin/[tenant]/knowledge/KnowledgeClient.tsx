@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { KnowledgeDocument } from "@/lib/knowledge";
 
@@ -12,12 +14,6 @@ type KnowledgeClientProps = {
   initialDocuments: KnowledgeDocument[];
 };
 
-type StatusState =
-  | { type: "idle"; message: string }
-  | { type: "loading"; message: string }
-  | { type: "success"; message: string }
-  | { type: "error"; message: string };
-
 export default function KnowledgeClient({
   tenantId,
   tenantSlug,
@@ -26,19 +22,10 @@ export default function KnowledgeClient({
 }: KnowledgeClientProps) {
   const router = useRouter();
   const [documents, setDocuments] = useState(initialDocuments);
-  const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function deleteDocument(document: KnowledgeDocument) {
-    const confirmed = window.confirm(
-      `Delete "${document.title}" and its ${document.chunkCount} chunk${
-        document.chunkCount === 1 ? "" : "s"
-      }?`
-    );
-    if (!confirmed) return;
-
     setDeletingId(document.id);
-    setStatus({ type: "loading", message: "Deleting knowledge document..." });
     try {
       const { error } = await createSupabaseBrowserClient()
         .from("rag_documents")
@@ -47,12 +34,11 @@ export default function KnowledgeClient({
         .eq("tenant_id", tenantId);
       if (error) throw new Error(error.message);
       setDocuments((current) => current.filter((item) => item.id !== document.id));
-      setStatus({ type: "success", message: "Knowledge document deleted." });
+      toast.success(`Deleted "${document.title}"`);
       router.refresh();
     } catch (error) {
-      setStatus({
-        type: "error",
-        message: error instanceof Error ? error.message : "Unable to delete document.",
+      toast.error("Unable to delete document", {
+        description: error instanceof Error ? error.message : undefined,
       });
     } finally {
       setDeletingId(null);
@@ -68,8 +54,6 @@ export default function KnowledgeClient({
           <code>/{tenantSlug}</code>.
         </p>
       </header>
-
-      {status.message && <StatusBanner type={status.type} message={status.message} />}
 
       <div className="overflow-hidden rounded-xl border">
         <table className="w-full text-sm">
@@ -111,38 +95,26 @@ export default function KnowledgeClient({
                   {formatDate(document.updatedAt)}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => void deleteDocument(document)}
-                    disabled={deletingId === document.id}
-                    className="rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                  <ConfirmActionDialog
+                    title={`Delete "${document.title}"?`}
+                    description={`This permanently removes the document and its ${document.chunkCount.toLocaleString()} chunk${document.chunkCount === 1 ? "" : "s"} from the bot's knowledge. This action cannot be undone.`}
+                    actionLabel="Delete document"
+                    onConfirm={() => void deleteDocument(document)}
                   >
-                    {deletingId === document.id ? "Deleting..." : "Delete"}
-                  </button>
+                    <button
+                      type="button"
+                      disabled={deletingId === document.id}
+                      className="rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                    >
+                      {deletingId === document.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </ConfirmActionDialog>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </div>
-  );
-}
-
-function StatusBanner({ type, message }: { type: StatusState["type"]; message: string }) {
-  const className =
-    type === "error"
-      ? "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300"
-      : type === "success"
-        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
-        : "border-neutral-200 bg-neutral-50 text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300";
-
-  return (
-    <div
-      className={`rounded-lg border px-3 py-2 text-sm ${className}`}
-      role={type === "error" ? "alert" : "status"}
-    >
-      {message}
     </div>
   );
 }

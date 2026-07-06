@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   archivePage,
   deletePage,
@@ -11,6 +12,7 @@ import {
   validateNewPageSlug,
 } from "@lume/db";
 import type { Page } from "@lume/types";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type PagesListClientProps = {
@@ -84,10 +86,6 @@ export default function PagesListClient({
 
   async function handleArchive(page: Page) {
     if (page.isReserved) return;
-    if (!window.confirm(`Archive /${page.slug}? Public rendering will stop after the migration is applied.`)) {
-      return;
-    }
-
     setStatus({ type: "saving", message: "Archiving page..." });
     try {
       const supabase = createPageServiceClient();
@@ -96,26 +94,32 @@ export default function PagesListClient({
       setPages((current) =>
         current.map((item) => (item.id === page.id ? { ...item, archivedAt } : item))
       );
-      setStatus({ type: "success", message: "Page archived." });
+      setStatus({ type: "idle", message: "" });
+      toast.success(`Archived /${page.slug}`);
       router.refresh();
     } catch (error) {
-      setStatus({ type: "error", message: errorMessage(error, "Unable to archive page.") });
+      setStatus({ type: "idle", message: "" });
+      toast.error("Unable to archive page", {
+        description: errorMessage(error, "Unable to archive page."),
+      });
     }
   }
 
   async function handleDelete(page: Page) {
     if (page.isReserved) return;
-    if (!window.confirm(`Delete /${page.slug}? This removes the page and its revisions.`)) return;
-
     setStatus({ type: "saving", message: "Deleting page..." });
     try {
       const supabase = createPageServiceClient();
       await deletePage(supabase, page.id);
       setPages((current) => current.filter((item) => item.id !== page.id));
-      setStatus({ type: "success", message: "Page deleted." });
+      setStatus({ type: "idle", message: "" });
+      toast.success(`Deleted /${page.slug}`);
       router.refresh();
     } catch (error) {
-      setStatus({ type: "error", message: errorMessage(error, "Unable to delete page.") });
+      setStatus({ type: "idle", message: "" });
+      toast.error("Unable to delete page", {
+        description: errorMessage(error, "Unable to delete page."),
+      });
     }
   }
 
@@ -220,22 +224,35 @@ export default function PagesListClient({
                     >
                       Duplicate
                     </button>
-                    <button
-                      type="button"
-                      disabled={page.isReserved || Boolean(page.archivedAt)}
-                      onClick={() => void handleArchive(page)}
-                      className="text-xs font-medium text-neutral-600 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40 dark:text-muted-foreground dark:hover:text-white"
+                    <ConfirmActionDialog
+                      title={`Archive /${page.slug}?`}
+                      description="The page disappears from public navigation and stops rendering on the site. Its content and revisions are kept, so it can be restored later."
+                      actionLabel="Archive page"
+                      destructive={false}
+                      onConfirm={() => void handleArchive(page)}
                     >
-                      Archive
-                    </button>
-                    <button
-                      type="button"
-                      disabled={page.isReserved}
-                      onClick={() => void handleDelete(page)}
-                      className="text-xs font-medium text-destructive hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-40"
+                      <button
+                        type="button"
+                        disabled={page.isReserved || Boolean(page.archivedAt)}
+                        className="text-xs font-medium text-neutral-600 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40 dark:text-muted-foreground dark:hover:text-white"
+                      >
+                        Archive
+                      </button>
+                    </ConfirmActionDialog>
+                    <ConfirmActionDialog
+                      title={`Delete /${page.slug}?`}
+                      description="This permanently removes the page and every one of its revisions. This action cannot be undone."
+                      actionLabel="Delete page"
+                      onConfirm={() => void handleDelete(page)}
                     >
-                      Delete
-                    </button>
+                      <button
+                        type="button"
+                        disabled={page.isReserved}
+                        className="text-xs font-medium text-destructive hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Delete
+                      </button>
+                    </ConfirmActionDialog>
                   </div>
                 </td>
               </tr>
