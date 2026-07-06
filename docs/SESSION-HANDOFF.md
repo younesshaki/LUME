@@ -5,6 +5,13 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-06: leads & platform table parity SHIPPED (`686ab50`, pushed)
+
+- Both tables now use the vehicles pattern: URL-param `q`/`sort`/`dir`/`page`,
+  server-side search/sort/pagination (25/page). Leads searches
+  name/email/phone; platform searches name/slug and only resolves
+  members/owner emails for the visible page. Jira: comment on SCRUM-81.
+
 ### 2026-07-06: analytics charts SHIPPED (`c0fadd5`, pushed)
 
 - `/admin/[tenant]/analytics`: 30-day leads area chart, inventory-by-make
