@@ -5,6 +5,14 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-06: window.confirm eliminated (`1b0f944`, pushed)
+
+- Shared `components/confirm-action-dialog.tsx` (shadcn alert-dialog +
+  sonner toast, the vehicles/DeleteButton pattern) now guards: domains
+  remove, knowledge delete, team member remove (self-lockout warning),
+  pages archive (neutral button) and pages delete (destructive). Zero
+  `window.confirm` left in apps/admin. Jira: comment on SCRUM-81 (Epic A).
+
 ### 2026-07-06: CSV import modes + duplicate detection SHIPPED (`d553408`, pushed)
 
 - `/admin/[tenant]/vehicles/import` now offers **Add vs Replace** ("Replace
