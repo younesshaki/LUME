@@ -63,8 +63,9 @@ Result: tenant `efab59f0-c566-42dc-96d9-d40a6ad2a2f3`, owner membership,
    `/signup` creates the account and `/admin/onboarding` auto-provisions the
    tenant (name → unique slug → owner membership → persona → pages) via
    `provisionTenant()` in `@lume/db`. Invite redemption at `/invite/[token]`.
-   Remaining nicety: invite links for brand-new users should route through
-   /signup pre-filled.
+   _2026-07-06:_ invite links for brand-new users now route through
+   `/signup?invite=<token>` (no site-name step, no auto-provisioning) and
+   return to the invite after account creation. Item fully closed.
 4. **Provisioning is two scripts + hand-assembled env.** Needs a single
    `create-tenant` entrypoint (script now; admin/API surface later) that does
    tenant → membership → pages → (optional) sample data, idempotently.

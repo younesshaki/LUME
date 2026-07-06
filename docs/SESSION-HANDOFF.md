@@ -5,6 +5,15 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-06: invite → signup handoff SHIPPED (`9781dc7`, pushed)
+
+- `/invite/[token]` (signed out) now links to `/signup?invite=<token>`;
+  signup with an invite hides the site-name field, stashes no site_name
+  metadata, and returns to the invite after account creation (or via
+  `/login?next=` on the email-confirm path) — auto-provisioning skipped.
+  Pure token validation in `lib/signupDestination.ts` (+4 tests, 171
+  total). Jira: comment on SCRUM-107. Onboarding-backlog item 3 fully done.
+
 ### 2026-07-06: window.confirm eliminated (`1b0f944`, pushed)
 
 - Shared `components/confirm-action-dialog.tsx` (shadcn alert-dialog +
