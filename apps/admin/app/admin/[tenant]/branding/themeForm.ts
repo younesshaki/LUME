@@ -1,4 +1,4 @@
-import type { TenantDockVariant, TenantTheme } from "@lume/types";
+import { DEFAULT_TENANT_THEME, type TenantDockVariant, type TenantTheme } from "@lume/types";
 
 export type BrandingThemeForm = {
   colors: {
@@ -21,25 +21,12 @@ export type BrandingThemeForm = {
   cinematicIntensity: number;
 };
 
+// Canonical values live in @lume/types (provisioning seeds the same theme).
 export const BRANDING_THEME_DEFAULTS: BrandingThemeForm = {
-  colors: {
-    ink: "#fff8ec",
-    muted: "#c7bda8",
-    soft: "#8a806d",
-    line: "#3a3328",
-    gold: "#d9b76a",
-    background: "#000000",
-    panel: "#101011",
-    dockItemBackground: "#272727",
-    dockItemColor: "#efede6",
-    dockItemBorder: "#e9c31b",
-  },
-  fonts: {
-    experience: "var(--scene-font-moralana)",
-    body: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
-  },
-  dockVariant: "default",
-  cinematicIntensity: 1,
+  colors: { ...DEFAULT_TENANT_THEME.colors },
+  fonts: { ...DEFAULT_TENANT_THEME.fonts },
+  dockVariant: DEFAULT_TENANT_THEME.dockVariant,
+  cinematicIntensity: DEFAULT_TENANT_THEME.cinematicIntensity,
 };
 
 export function brandingFormFromTheme(theme: TenantTheme | null | undefined): BrandingThemeForm {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_TENANT_THEME } from "@lume/types";
 import {
   BRANDING_THEME_DEFAULTS,
   brandingFormFromTheme,
@@ -7,6 +8,13 @@ import {
 } from "./themeForm";
 
 describe("branding theme form helpers", () => {
+  it("stays in lockstep with the provisioning starter theme", () => {
+    // provisionTenant seeds DEFAULT_TENANT_THEME; the editor must read it
+    // back without falling back on any key, and serialize it unchanged.
+    expect(brandingFormFromTheme(DEFAULT_TENANT_THEME)).toEqual(BRANDING_THEME_DEFAULTS);
+    expect(themeFromBrandingForm(BRANDING_THEME_DEFAULTS)).toEqual(DEFAULT_TENANT_THEME);
+  });
+
   it("fills missing theme values from defaults", () => {
     expect(brandingFormFromTheme({ colors: { gold: "#f5c86a" } })).toMatchObject({
       colors: {

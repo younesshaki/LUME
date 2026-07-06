@@ -8,6 +8,7 @@
  * user only.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DEFAULT_TENANT_THEME } from "@lume/types";
 import type { Database } from "./schema";
 
 type DbClient = SupabaseClient<Database, "public">;
@@ -92,7 +93,9 @@ export async function provisionTenant(
     if (RESERVED_SLUGS.has(candidate)) continue;
     const { data, error } = await client
       .from("tenants")
-      .insert({ slug: candidate, name, status: "active" })
+      // Starter theme so a brand-new public site never renders unthemed;
+      // the owner customizes it later in the branding editor.
+      .insert({ slug: candidate, name, status: "active", theme: DEFAULT_TENANT_THEME })
       .select("id, slug, name")
       .maybeSingle();
     if (!error && data) {

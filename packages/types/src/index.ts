@@ -5,6 +5,7 @@ export type * from "./chat";
 export type * from "./bot-actions";
 export type * from "./page";
 export type * from "./tenantTheme";
+export { DEFAULT_TENANT_THEME } from "./tenantTheme";
 export type * from "./lead";
 export type * from "./tenantDomain";
 export type * from "./tenantInvite";
