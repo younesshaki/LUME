@@ -57,6 +57,11 @@ export default async function InvitePage({ params }: PageProps) {
             Sign in to continue
           </Link>
         </Button>
+        <Button asChild variant="outline" className="w-full">
+          <Link href={`/signup?invite=${encodeURIComponent(token)}`}>
+            New to LUME? Create an account
+          </Link>
+        </Button>
       </Shell>
     );
   }

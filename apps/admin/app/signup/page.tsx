@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
+import { isValidInviteToken, signupNextPath } from "@/lib/signupDestination";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,12 +18,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 /**
- * Self-serve signup. The site name is stashed in user_metadata so the
- * onboarding step can provision the tenant even when email confirmation
- * forces a round trip before the first authenticated session exists.
+ * Self-serve signup. Two flavors:
+ *
+ * - Plain /signup: the site name is stashed in user_metadata so
+ *   /admin/onboarding can provision the tenant even when email confirmation
+ *   forces a round trip before the first authenticated session exists.
+ * - /signup?invite=<token>: the visitor is joining an EXISTING site, so no
+ *   site name is collected, no metadata is stashed, and after the account
+ *   exists they return to /invite/<token> instead of auto-provisioning.
  */
 export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const rawInvite = params.get("invite");
+  const inviteToken = isValidInviteToken(rawInvite) ? rawInvite : null;
+  const nextPath = signupNextPath(rawInvite);
+
   const [siteName, setSiteName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +58,7 @@ export default function SignupPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { site_name: siteName.trim() } },
+      options: { data: inviteToken ? {} : { site_name: siteName.trim() } },
     });
     setPending(false);
     if (error) {
@@ -48,7 +67,7 @@ export default function SignupPage() {
     }
 
     if (data.session) {
-      router.push("/admin/onboarding");
+      router.push(nextPath);
       router.refresh();
       return;
     }
@@ -64,12 +83,15 @@ export default function SignupPage() {
             <CardTitle>Check your email</CardTitle>
             <CardDescription>
               We sent a confirmation link to <strong>{email}</strong>. After confirming,
-              sign in and your site will be created automatically.
+              sign in and{" "}
+              {inviteToken
+                ? "you'll be taken back to your invite."
+                : "your site will be created automatically."}
             </CardDescription>
           </CardHeader>
           <CardFooter>
             <Button variant="outline" asChild className="w-full">
-              <Link href="/login?next=/admin/onboarding">Go to sign in</Link>
+              <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Go to sign in</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -83,22 +105,28 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit}>
           <CardHeader className="pb-4">
             <p className="mb-2 text-sm font-semibold tracking-[0.2em] text-primary">LUME</p>
-            <CardTitle>Create your LUME site</CardTitle>
-            <CardDescription>One account, one website — live in your admin in seconds.</CardDescription>
+            <CardTitle>{inviteToken ? "Create your account" : "Create your LUME site"}</CardTitle>
+            <CardDescription>
+              {inviteToken
+                ? "You've been invited to join a team. Create an account with the email the invite was sent to."
+                : "One account, one website — live in your admin in seconds."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="siteName">Business / site name</Label>
-              <Input
-                id="siteName"
-                type="text"
-                value={siteName}
-                onChange={(e) => setSiteName(e.target.value)}
-                required
-                maxLength={80}
-                placeholder="Acme Motors"
-              />
-            </div>
+            {!inviteToken && (
+              <div className="space-y-2">
+                <Label htmlFor="siteName">Business / site name</Label>
+                <Input
+                  id="siteName"
+                  type="text"
+                  value={siteName}
+                  onChange={(e) => setSiteName(e.target.value)}
+                  required
+                  maxLength={80}
+                  placeholder="Acme Motors"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -130,7 +158,10 @@ export default function SignupPage() {
             </Button>
             <p className="text-xs text-muted-foreground">
               Already have an account?{" "}
-              <Link href="/login" className="underline underline-offset-2 hover:text-foreground">
+              <Link
+                href={inviteToken ? `/login?next=${encodeURIComponent(nextPath)}` : "/login"}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
                 Sign in
               </Link>
             </p>
