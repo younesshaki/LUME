@@ -27,6 +27,7 @@ export const RESERVED_PAGE_SLUGS = [
   "home",
   "products",
   "vehicles",
+  "showcase",
   "contact",
 ] as const;
 

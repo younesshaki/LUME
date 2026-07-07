@@ -9,6 +9,7 @@ describe("page slug helpers", () => {
   it("rejects reserved, blocked, duplicate, and empty slugs", () => {
     expect(validateNewPageSlug("")).toMatchObject({ ok: false });
     expect(validateNewPageSlug("vehicles")).toMatchObject({ ok: false });
+    expect(validateNewPageSlug("showcase")).toMatchObject({ ok: false });
     expect(validateNewPageSlug("admin")).toMatchObject({ ok: false });
     expect(validateNewPageSlug("Landing", ["landing"])).toMatchObject({ ok: false });
   });

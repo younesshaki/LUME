@@ -243,16 +243,24 @@ export default async function PlatformPage({ searchParams }: PageProps) {
             Page {page} of {totalPages} · {totalCount.toLocaleString()} tenants
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" asChild disabled={page <= 1}>
-              <Link href={href({ page: page - 1 })} aria-disabled={page <= 1}>
+            {page <= 1 ? (
+              <Button variant="outline" size="sm" disabled>
                 Previous
-              </Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild disabled={page >= totalPages}>
-              <Link href={href({ page: page + 1 })} aria-disabled={page >= totalPages}>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={href({ page: page - 1 })}>Previous</Link>
+              </Button>
+            )}
+            {page >= totalPages ? (
+              <Button variant="outline" size="sm" disabled>
                 Next
-              </Link>
-            </Button>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={href({ page: page + 1 })}>Next</Link>
+              </Button>
+            )}
           </div>
         </div>
       )}
