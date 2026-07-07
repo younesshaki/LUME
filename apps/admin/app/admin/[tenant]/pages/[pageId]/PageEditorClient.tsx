@@ -11,7 +11,7 @@ import type { BlockField, EditorBlockDescriptor } from "@lume/blocks";
 import { validatePageBlocksDocument } from "@lume/blocks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { listTenantMediaAssets, type TenantAsset } from "@/lib/assets";
-import { DraftPreviewPanel } from "./DraftPreviewPanel";
+import { LivePreviewPanel } from "./LivePreviewPanel";
 
 type EditorPage = {
   id: string;
@@ -36,6 +36,7 @@ type PublicationStatus = {
 type PageEditorClientProps = {
   tenantId: string;
   tenantSlug: string;
+  publicSiteBaseUrl: string;
   page: EditorPage;
   initialBlocks: PageBlocksDocument;
   initialRevisions: PageRevision[];
@@ -45,6 +46,7 @@ type PageEditorClientProps = {
 export default function PageEditorClient({
   tenantId,
   tenantSlug,
+  publicSiteBaseUrl,
   page,
   initialBlocks,
   initialRevisions,
@@ -363,11 +365,13 @@ export default function PageEditorClient({
               );
             })}
           </div>
-          <DraftPreviewPanel
-            pageSlug={page.slug}
-            pageTitle={page.title}
+          <LivePreviewPanel
+            publicSiteBaseUrl={publicSiteBaseUrl}
+            tenantSlug={tenantSlug}
+            slug={page.slug}
+            title={page.title}
             blocks={blocks}
-            blockDescriptors={blockDescriptors}
+            onSelectBlock={setSelectedBlockId}
           />
         </main>
 

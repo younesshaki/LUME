@@ -21,10 +21,14 @@ export default async function PageEditorPage({ params }: PageProps) {
   if (!draft || draft.page.tenantId !== tenant.id) notFound();
   const revisions = await listPageRevisions(supabase, pageId, tenant.id);
 
+  const publicSiteBaseUrl =
+    process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? "https://lume-jade-three.vercel.app";
+
   return (
     <PageEditorClient
       tenantId={tenant.id}
       tenantSlug={tenant.slug}
+      publicSiteBaseUrl={publicSiteBaseUrl}
       page={{
         id: draft.page.id,
         slug: draft.page.slug,

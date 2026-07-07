@@ -5,6 +5,40 @@ live state + in-flight work that isn't obvious from the code alone._
 
 ## TL;DR of current state
 
+### 2026-07-07: true-to-production live preview + admin Website hub (WORKING TREE, uncommitted)
+
+- **The admin page preview now renders the REAL site**, not a lookalike. The
+  old `DraftPreviewPanel` reimplemented each block as crude Next.js markup;
+  it's deleted. Replaced by `LivePreviewPanel` — an iframe of the actual
+  public site's new `/__preview` route, fed the editor's draft blocks over
+  `postMessage`. The bridge renders through the exact production block
+  components, so preview == production (verified: cinematic Hero with full
+  background art rendered from a posted doc).
+- **Architecture**: extracted `PageBlocksView` from `PageRenderer` (shared
+  render core); `PagePreviewBridge` (Vite, route `/__preview` via an early
+  return in `App.tsx` — kept out of the closed `AppRouteId` union on purpose;
+  underscore-prefixed so no tenant slug can ever collide). Wire protocol in
+  `@lume/blocks/previewProtocol.ts` (shared by both apps): `buildPreviewUrl`,
+  `isPreviewInboundMessage/Outbound`, `PREVIEW_CHANNEL`. `block-selected`
+  message + `onSelectBlock` are already wired — the substrate for drag-and-drop.
+- **New admin section `/admin/[tenant]/website`** (sidebar: Website): a hub with
+  a device-switchable (desktop/tablet/mobile) live preview of the real site,
+  plus cards into every editable surface (Pages, Navigation, Branding, Assets)
+  and a page list. `LivePreviewPanel` in the page editor also has device sizing.
+- **Config**: both read `NEXT_PUBLIC_PUBLIC_SITE_URL` (default = prod vercel).
+  For local dev set it to `http://localhost:5173` so the iframe embeds local
+  Vite. No frame-blocking headers on the public site, so cross-origin framing
+  works in prod as-is.
+- Verified: typecheck:all green; 189 unit tests (added 8 preview-protocol,
+  removed the fake-preview's); build + build:admin clean; 13/13 admin e2e
+  (incl. new Website-hub test); browser round-trip of the `/__preview` bridge
+  (render, live update, empty state) passed.
+- **NOT committed** — left in the working tree because a parallel Codex lane
+  was mid-edit on `main` (pagination `disabled` fix in leads/vehicles/platform
+  pages, `"showcase"` added to RESERVED_PAGE_SLUGS, a client-acquisition
+  strategy doc). Those files are untouched by this work; commit the preview
+  work separately from the lane's.
+
 ### 2026-07-06 (later): custom pages live in the public header (`d8ea67e`, pushed)
 
 - Root cause of "published page redirects to homepage": no public route for

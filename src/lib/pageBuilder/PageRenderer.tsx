@@ -140,6 +140,38 @@ export function PageRenderer({
   }
   if (renderableBlocks.length === 0) return <>{fallback}</>;
 
+  return (
+    <PageBlocksView slug={slug} blocks={state.page.blocks.blocks} footer={footer} context={context} />
+  );
+}
+
+type PageBlocksViewProps = {
+  slug: string;
+  blocks: PageBlock[];
+  footer?: ReactNode;
+  context?: Omit<PageBuilderRenderContextValue, "pageSlug">;
+  /** Override the ambient dual-mode value (the live preview forces a mode). */
+  mode?: BlockMode;
+};
+
+/**
+ * The pure block-rendering core: the cinematic shell, the per-slug page frame,
+ * and the validated blocks mapped through the real registered components. Both
+ * the published-page renderer and the admin live-preview bridge render through
+ * this so the preview is pixel-identical to production — never an approximation.
+ */
+export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverride }: PageBlocksViewProps) {
+  const { mode: ambientMode } = useDualMode();
+  const mode = modeOverride ?? ambientMode;
+
+  const renderableBlocks = useMemo(
+    () =>
+      blocks
+        .map((block) => toRenderableBlock(block, slug, mode))
+        .filter((block): block is RenderableBlock => Boolean(block)),
+    [blocks, slug, mode]
+  );
+
   // Custom published pages get a neutral frame (contact's padded dark page),
   // not the homepage frame with its background art.
   const frame = PAGE_FRAMES[slug] ?? PAGE_FRAMES.contact;

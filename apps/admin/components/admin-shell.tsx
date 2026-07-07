@@ -23,6 +23,7 @@ import {
   Image as ImageIcon,
   Inbox,
   LayoutDashboard,
+  LayoutTemplate,
   LogOut,
   Moon,
   Palette,
@@ -97,6 +98,7 @@ type AdminShellProps = {
 
 const SECTIONS = [
   { slug: "", label: "Overview", icon: LayoutDashboard },
+  { slug: "website", label: "Website", icon: LayoutTemplate },
   { slug: "vehicles", label: "Vehicles", icon: Car },
   { slug: "leads", label: "Leads", icon: Inbox },
   { slug: "analytics", label: "Analytics", icon: BarChart3 },

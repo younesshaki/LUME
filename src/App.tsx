@@ -56,6 +56,11 @@ const loadShowcasePage = () => import("./experience/ui/ShowcasePage");
 const loadShowcaseTitleCard = () => import("./experience/ui/ShowcaseTitleCard");
 const loadStoryHomePage = () => import("./experience/ui/StoryHomePage");
 const loadPageRendererRoutes = () => import("./lib/pageBuilder/PageRendererRoutes");
+const loadPagePreviewBridge = () => import("./lib/pageBuilder/PagePreviewBridge");
+
+// The admin embeds this route in an iframe and streams draft blocks in over
+// postMessage. It renders the real block components with no site chrome.
+const PAGE_PREVIEW_PATH = "/__preview";
 
 const AdminRouter = lazy(loadAdminRouter);
 const ContactPage = lazy(loadContactPage);
@@ -82,6 +87,7 @@ const HomePageRendererRoute = lazy(() =>
     default: module.HomePageRendererRoute,
   }))
 );
+const PagePreviewBridge = lazy(loadPagePreviewBridge);
 const ProductsPageRendererRoute = lazy(() =>
   loadPageRendererRoutes().then((module) => ({
     default: module.ProductsPageRendererRoute,
@@ -398,6 +404,18 @@ export default function App() {
 
   const showSiteHeader = currentRouteConfig.chrome.showHeader && !showGateOverlay;
   const showSiteDock = currentRouteConfig.chrome.showDock && !showGateOverlay;
+
+  // The live-preview iframe endpoint: no site chrome, no gate, no audio — just
+  // the block canvas the admin editor streams into. Kept out of the route-config
+  // union on purpose; it is an internal surface, not a navigable page.
+  if (location.pathname === PAGE_PREVIEW_PATH) {
+    return (
+      <Suspense fallback={null}>
+        <PagePreviewBridge />
+      </Suspense>
+    );
+  }
+
   return (
     <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>
       <MediaQualitySettings

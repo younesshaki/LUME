@@ -51,7 +51,7 @@ test("admin shell renders sidebar, tenant switcher, and no platform entry", asyn
   // Tenant switcher shows the provisioned site's name.
   await expect(page.getByRole("button", { name: new RegExp(E2E_SITE_NAME) })).toBeVisible();
   // Core nav sections exist.
-  for (const section of ["Vehicles", "Leads", "Pages", "Team"]) {
+  for (const section of ["Website", "Vehicles", "Leads", "Pages", "Team"]) {
     await expect(page.getByRole("link", { name: section, exact: true })).toBeVisible();
   }
   // Fresh signups are not platform admins — no Platform nav entry.
@@ -140,6 +140,17 @@ test("delete asks for confirmation and removes the vehicle", async () => {
 test("leads page renders its empty state", async () => {
   await page.goto(`/admin/${tenantSlug}/leads`);
   await expect(page.getByText("No leads yet")).toBeVisible();
+});
+
+test("website hub lists editable surfaces and the live preview", async () => {
+  await page.goto(`/admin/${tenantSlug}/website`);
+  await expect(page.getByRole("heading", { name: "Website", exact: true })).toBeVisible();
+  // Entry points into every editable surface.
+  await expect(page.getByRole("link", { name: /Pages & content/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Header & navigation/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Branding & theme/ })).toBeVisible();
+  // The true-to-production preview surface.
+  await expect(page.getByText("Live site preview")).toBeVisible();
 });
 
 test("navigation settings page previews the published header nav", async () => {
