@@ -4,6 +4,7 @@ import {
   extractInlineActions,
   isBotAction,
   parseBotActionLine,
+  validateBotActionEnvelope,
 } from "./botActions";
 
 describe("extractDeepseekTextDelta", () => {
@@ -63,5 +64,30 @@ describe("extractInlineActions", () => {
 
   it("returns empty for pure prose", () => {
     expect(extractInlineActions("No actions here.")).toEqual([]);
+  });
+});
+
+describe("validateBotActionEnvelope", () => {
+  it("accepts a valid action and strips unrelated envelope fields", () => {
+    expect(
+      validateBotActionEnvelope({
+        action: { type: "navigate", route: "/vehicles" },
+        tenantId: "untrusted-client-value",
+      })
+    ).toEqual({
+      ok: true,
+      value: { action: { type: "navigate", route: "/vehicles" } },
+    });
+  });
+
+  it("rejects malformed envelopes and actions", () => {
+    expect(validateBotActionEnvelope(null)).toEqual({
+      ok: false,
+      error: "Request body must be an object.",
+    });
+    expect(validateBotActionEnvelope({ action: { type: "navigate", route: 42 } })).toEqual({
+      ok: false,
+      error: "Action is missing or invalid.",
+    });
   });
 });

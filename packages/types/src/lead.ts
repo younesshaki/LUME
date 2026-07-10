@@ -38,6 +38,8 @@ export type LeadCaptureInput = {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+  /** Cloudflare Turnstile response token when bot protection is enabled. */
+  turnstileToken?: string;
 };
 
 export type LeadCaptureResponse = {

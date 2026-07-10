@@ -62,6 +62,8 @@ Two `.env.local` files:
 - **Repo root** — Vite reads `VITE_*` vars at build time. Required:
   `VITE_R2_PUBLIC_BASE_URL`, `VITE_OLLAMA_HOST`, and `VITE_LUME_TENANT`
   (slug of the tenant this build serves; defaults to `default`).
+  `VITE_TURNSTILE_SITE_KEY` enables bot verification on public lead forms;
+  pair it with `TURNSTILE_SECRET_KEY` in the admin environment.
   `VITE_DEEPSEEK_API_KEY` was removed — never put it back; the key must
   not ship to the browser.
 - **`apps/admin/.env.local`** — copy from `apps/admin/.env.example`.

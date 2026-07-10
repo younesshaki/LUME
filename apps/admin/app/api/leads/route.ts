@@ -11,7 +11,11 @@ import type { Database } from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
-import { normalizeLeadCaptureInput } from "@/lib/leads";
+import {
+  normalizeLeadCaptureInput,
+  verifyTurnstileToken,
+  type NormalizedLeadCapture,
+} from "@/lib/leads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +43,28 @@ export async function POST(request: Request): Promise<Response> {
   if (!validation.ok) return json({ error: validation.error }, 400, request);
 
   const lead = validation.value;
+  const ip = requestIp(request);
+  const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
+  if (
+    turnstileSecret &&
+    lead.source !== "chat" &&
+    !(await verifyTurnstileToken({
+      secret: turnstileSecret,
+      token: lead.turnstileToken ?? "",
+      remoteIp: ip,
+    }))
+  ) {
+    return json({ error: "Bot verification failed" }, 400, request);
+  }
+
+  // Return an existing lead for accidental retries in the same hour. This is
+  // deliberately checked after Turnstile because its tokens are single-use.
+  const duplicate = await findRecentDuplicate(tenant.tenantId, lead);
+  if (duplicate) {
+    const response: LeadCaptureResponse = { leadId: duplicate };
+    return json(response, 200, request);
+  }
+
   const insert: Database["public"]["Tables"]["leads"]["Insert"] = {
     tenant_id: tenant.tenantId,
     source: lead.source,
@@ -54,7 +80,7 @@ export async function POST(request: Request): Promise<Response> {
     utm_medium: lead.utmMedium,
     utm_campaign: lead.utmCampaign,
     referrer: request.headers.get("referer"),
-    ip_addr: requestIp(request),
+    ip_addr: ip,
     user_agent: request.headers.get("user-agent"),
     lost_reason: null,
   };
@@ -68,6 +94,30 @@ export async function POST(request: Request): Promise<Response> {
 
   const response: LeadCaptureResponse = { leadId: data.id };
   return json(response, 201, request);
+}
+
+async function findRecentDuplicate(
+  tenantId: string,
+  lead: NormalizedLeadCapture
+): Promise<string | null> {
+  const supabase = createServiceClient();
+  let query = supabase
+    .from("leads")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .gte("created_at", new Date(Date.now() - 60 * 60 * 1_000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  query = lead.email ? query.eq("email", lead.email) : query.eq("phone", lead.phone!);
+  query = lead.vehicleId ? query.eq("vehicle_id", lead.vehicleId) : query.is("vehicle_id", null);
+
+  const { data, error } = await query.maybeSingle();
+  if (error) {
+    console.error("[/api/leads] duplicate lookup failed:", error.message);
+    return null;
+  }
+  return data?.id ?? null;
 }
 
 function requestIp(request: Request): string | null {

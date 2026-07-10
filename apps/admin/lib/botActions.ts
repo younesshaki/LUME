@@ -8,6 +8,12 @@
  */
 import type { BotAction } from "@lume/types";
 
+export type BotActionEnvelope = { action: BotAction };
+
+export type BotActionEnvelopeValidation =
+  | { ok: true; value: BotActionEnvelope }
+  | { ok: false; error: string };
+
 type DeepseekStreamChunk = {
   choices?: Array<{ delta?: { content?: string } }>;
 };
@@ -49,6 +55,17 @@ export function parseBotActionLine(line: string): BotAction | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Validate the public /api/bot-actions request envelope. */
+export function validateBotActionEnvelope(value: unknown): BotActionEnvelopeValidation {
+  if (!isRecord(value)) {
+    return { ok: false, error: "Request body must be an object." };
+  }
+  if (!isBotAction(value.action)) {
+    return { ok: false, error: "Action is missing or invalid." };
+  }
+  return { ok: true, value: { action: value.action } };
 }
 
 export function isBotAction(value: unknown): value is BotAction {

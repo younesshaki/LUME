@@ -25,12 +25,10 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   LogOut,
-  Moon,
   Palette,
   PanelTop,
   Plus,
   Search,
-  Sun,
   Users,
 } from "lucide-react";
 import {
@@ -78,6 +76,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 
 export type ShellTenant = {
   id: string;
@@ -283,8 +282,6 @@ function UserMenu({
   flagshipUrl: string;
   signOutAction: () => Promise<void>;
 }) {
-  const { resolvedTheme, setTheme } = useTheme();
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -306,15 +303,6 @@ function UserMenu({
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-56" align="start" side="top">
-            <DropdownMenuItem
-              onSelect={(event) => {
-                event.preventDefault();
-                setTheme(resolvedTheme === "dark" ? "light" : "dark");
-              }}
-            >
-              {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-              {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
-            </DropdownMenuItem>
             {isPlatformAdmin && (
               <DropdownMenuItem asChild>
                 <a href={flagshipUrl} target="_blank" rel="noopener noreferrer">
@@ -351,6 +339,8 @@ function ShellHeader({
 }) {
   const pathname = usePathname();
   const [commandOpen, setCommandOpen] = React.useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const currentTheme = resolvedTheme === "light" ? "light" : "dark";
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -387,7 +377,14 @@ function ShellHeader({
           ))}
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-2">
+        <AnimatedThemeToggler
+          theme={currentTheme}
+          onThemeChange={setTheme}
+          variant="circle"
+          duration={350}
+          className="inline-flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-3.5"
+        />
         <Button
           variant="outline"
           size="sm"

@@ -11,6 +11,7 @@ export type NormalizedLeadCapture = {
   utmSource: string | null;
   utmMedium: string | null;
   utmCampaign: string | null;
+  turnstileToken: string | null;
 };
 
 export type LeadCaptureValidation =
@@ -45,8 +46,57 @@ export function normalizeLeadCaptureInput(input: unknown): LeadCaptureValidation
       utmSource: nullableTrimmed(input.utmSource, 120),
       utmMedium: nullableTrimmed(input.utmMedium, 120),
       utmCampaign: nullableTrimmed(input.utmCampaign, 120),
+      turnstileToken: nullableTrimmed(input.turnstileToken, 2_048),
     },
   };
+}
+
+type TurnstileVerification = {
+  success: boolean;
+  "error-codes"?: string[];
+};
+
+type VerifyTurnstileOptions = {
+  secret: string;
+  token: string;
+  remoteIp?: string | null;
+  fetcher?: typeof fetch;
+};
+
+/** Server-side Turnstile verification. Secrets never cross the API boundary. */
+export async function verifyTurnstileToken({
+  secret,
+  token,
+  remoteIp,
+  fetcher = fetch,
+}: VerifyTurnstileOptions): Promise<boolean> {
+  if (!secret || !token || token.length > 2_048) return false;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const response = await fetcher(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret,
+          response: token,
+          ...(remoteIp ? { remoteip: remoteIp } : {}),
+          idempotency_key: crypto.randomUUID(),
+        }),
+        signal: controller.signal,
+      }
+    );
+    if (!response.ok) return false;
+    const result = (await response.json()) as TurnstileVerification;
+    return result.success === true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function normalizeSource(value: unknown): NormalizedLeadCapture["source"] {
