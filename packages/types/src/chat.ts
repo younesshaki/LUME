@@ -26,3 +26,9 @@ export type ChatStreamError = {
   type: "error";
   message: string;
 };
+
+/** Operational activity only; never model reasoning or chain-of-thought. */
+export type ChatStreamThinking = {
+  type: "thinking";
+  text: string;
+};

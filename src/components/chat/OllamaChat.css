@@ -265,6 +265,39 @@
   font-size: var(--lc-font-size-base);
 }
 
+.ollamaChat__thinking {
+  display: grid;
+  gap: 0.24rem;
+  margin: 0.12rem 0 0.28rem;
+  padding: 0 0 0.42rem;
+  border-bottom: 1px solid var(--lc-gold-border-dim);
+  color: var(--lc-text-muted);
+  font-size: var(--lc-font-size-sm);
+  line-height: 1.35;
+  list-style: none;
+  white-space: normal;
+}
+
+.ollamaChat__thinking li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.42rem;
+}
+
+.ollamaChat__thinkingDot {
+  width: 0.34rem;
+  height: 0.34rem;
+  flex: 0 0 auto;
+  margin-top: 0.36rem;
+  border-radius: var(--lc-radius-pill);
+  background: var(--lc-gold);
+  opacity: 0.68;
+}
+
+.ollamaChat__thinking--pending .ollamaChat__thinkingDot {
+  animation: ollamaChatThinkingPulse 1.4s ease-in-out infinite;
+}
+
 .ollamaChat__error {
   padding: 0.72rem 0.78rem;
   border: 1px solid var(--lc-error-border);
@@ -477,6 +510,17 @@
 @keyframes ollamaChatBlink {
   0%, 100% { opacity: 0.7; }
   50%       { opacity: 0; }
+}
+
+@keyframes ollamaChatThinkingPulse {
+  0%, 100% { opacity: 0.38; transform: scale(0.84); }
+  50% { opacity: 0.9; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ollamaChat__thinking--pending .ollamaChat__thinkingDot {
+    animation: none;
+  }
 }
 
 /* ─── Mobile ─────────────────────────────────────────────────────────────── */

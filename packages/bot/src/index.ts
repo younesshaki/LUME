@@ -91,3 +91,11 @@ export {
   shouldLearnVisitorPreferences,
   visitorPreferencesSystemPrompt,
 } from "./visitorPreferences";
+export {
+  type ThinkingToolName,
+  DEFAULT_MAX_THINKING_STEPS,
+  MAX_SAFE_THINKING_COUNT,
+  MAX_THINKING_TEXT_LENGTH,
+  toolThinkingText,
+  turnThinkingSteps,
+} from "./thinkingSteps";

@@ -12,6 +12,7 @@ describe("streamChat", () => {
       start(controller) {
         controller.enqueue(encoder.encode('data: {"type":"meta","sourceCategories":["vehicles"],'));
         controller.enqueue(encoder.encode('"botName":"Ari","sessionId":"session-1"}\n\n'));
+        controller.enqueue(encoder.encode('data: {"type":"thinking","text":"Checking matching inventory..."}\n\n'));
         controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n'));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
@@ -40,6 +41,7 @@ describe("streamChat", () => {
         botName: "Ari",
         sessionId: "session-1",
       },
+      { kind: "thinking", text: "Checking matching inventory..." },
       { kind: "delta", text: "Hello" },
     ]);
     const [path, init] = fetcher.mock.calls[0];

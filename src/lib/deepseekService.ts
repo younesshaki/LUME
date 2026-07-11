@@ -6,7 +6,7 @@
  * The browser never sees the system prompt, the RAG chunks, or the Deepseek
  * API key. It only sends user/assistant turns and consumes deltas.
  */
-import type { BotAction } from "@lume/types";
+import type { BotAction, ChatStreamThinking } from "@lume/types";
 import { publicTenantSlug } from "./publicTenant";
 
 const CHAT_ENDPOINT = "/api/chat";
@@ -32,7 +32,8 @@ type ChatErrorEvent = { type: "error"; message: string };
 export type ChatStreamYield =
   | { kind: "meta"; sourceCategories: string[]; botName?: string; sessionId?: string }
   | { kind: "delta"; text: string }
-  | { kind: "action"; action: BotAction };
+  | { kind: "action"; action: BotAction }
+  | { kind: "thinking"; text: string };
 
 type DeepseekStreamChunk = {
   choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
@@ -122,6 +123,13 @@ export async function* streamChat(
           yield { kind: "action", action: parsed.action };
           continue;
         }
+        if (isThinkingEvent(parsed)) {
+          yield {
+            kind: "thinking",
+            text: Array.from(parsed.text.trim()).slice(0, 120).join(""),
+          };
+          continue;
+        }
         if (isErrorEvent(parsed)) {
           throw new Error(parsed.message);
         }
@@ -161,6 +169,15 @@ function isActionEvent(v: unknown): v is ChatActionEvent {
     v !== null &&
     (v as { type?: string }).type === "action" &&
     isBotAction((v as { action?: unknown }).action)
+  );
+}
+
+function isThinkingEvent(v: unknown): v is ChatStreamThinking {
+  return (
+    isRecord(v) &&
+    v.type === "thinking" &&
+    typeof v.text === "string" &&
+    v.text.trim().length > 0
   );
 }
 

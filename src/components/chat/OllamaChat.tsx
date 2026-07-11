@@ -1,5 +1,12 @@
 import "./OllamaChat.css";
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { streamChat, type DeepseekMessage } from "@/lib/deepseekService";
@@ -11,6 +18,11 @@ import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { messageVariants, panelVariants, toggleVariants } from "./OllamaChat.animations";
 import { chatSounds } from "./OllamaChat.sounds";
 import { useOllamaChatStateBridge } from "./OllamaChat.state";
+import {
+  appendThinkingStep,
+  snapshotThinkingSteps,
+  type ThinkingSteps,
+} from "./OllamaChat.thinking";
 import type { ChatMessage, ChatRole, OllamaApiMessage } from "./OllamaChat.types";
 
 const STORAGE_KEY = "lume-chat-v1";
@@ -76,6 +88,7 @@ export function OllamaChat() {
   const [ratings, setRatings] = useState<Record<string, "up" | "down" | null>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
+  const [pendingThinkingSteps, setPendingThinkingSteps] = useState<string[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(CHAT_SESSION_STORAGE_KEY);
@@ -114,7 +127,7 @@ export function OllamaChat() {
   useEffect(() => {
     if (!isOpen) return;
     messagesEndRef.current?.scrollIntoView({ block: "end" });
-  }, [isOpen, messages, isSending, isRetrieving, error]);
+  }, [isOpen, messages, isSending, isRetrieving, pendingThinkingSteps, error]);
 
   // cleanup on unmount
   useEffect(() => {
@@ -151,6 +164,7 @@ export function OllamaChat() {
     setRatings({});
     setCopiedId(null);
     setOpenSources({});
+    setPendingThinkingSteps([]);
     localStorage.removeItem(STORAGE_KEY);
     const nextSessionId = createChatSessionId();
     setSessionId(nextSessionId);
@@ -178,6 +192,7 @@ export function OllamaChat() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setError(null);
+    setPendingThinkingSteps([]);
     chatSounds.send();
 
     const abortController = new AbortController();
@@ -192,6 +207,7 @@ export function OllamaChat() {
     streamingMessageIdRef.current = assistantMessageId;
     let sourceCategories: string[] = [];
     let assistantInserted = false;
+    let turnThinkingSteps: string[] = [];
 
     try {
       const messages: DeepseekMessage[] = nextApiMessages.map((m) => ({
@@ -232,6 +248,11 @@ export function OllamaChat() {
           botActionBus.publish(event.action);
           continue;
         }
+        if (event.kind === "thinking") {
+          turnThinkingSteps = appendThinkingStep(turnThinkingSteps, event.text);
+          setPendingThinkingSteps(turnThinkingSteps);
+          continue;
+        }
         if (event.kind === "delta") {
           if (!assistantInserted) {
             setIsRetrieving(false);
@@ -244,6 +265,7 @@ export function OllamaChat() {
                 role: "assistant" as const,
                 content: event.text,
                 sourceCategories,
+                thinkingSteps: snapshotThinkingSteps(turnThinkingSteps),
               },
             ]);
             assistantInserted = true;
@@ -279,6 +301,7 @@ export function OllamaChat() {
       streamingMessageIdRef.current = null;
       setIsRetrieving(false);
       setIsSending(false);
+      setPendingThinkingSteps([]);
     }
   };
 
@@ -392,6 +415,11 @@ export function OllamaChat() {
                   <span className="ollamaChat__messageLabel">
                     {message.role === "user" ? "You" : botName}
                   </span>
+                  {message.role === "assistant" && (
+                    <ThinkingActivity
+                      steps={Array.isArray(message.thinkingSteps) ? message.thinkingSteps : []}
+                    />
+                  )}
                   <span
                     className={`ollamaChat__messageText${
                       isSending && message.id === streamingMessageIdRef.current && message.content
@@ -498,15 +526,19 @@ export function OllamaChat() {
                   transition={{ duration: 0.2 }}
                 >
                   <span className="ollamaChat__messageLabel">{botName}</span>
-                  <span className="ollamaChat__messageText">
-                    <EncryptedText
-                      key={retrievalKey}
-                      text="Searching knowledge base..."
-                      revealDelayMs={22}
-                      flipDelayMs={35}
-                      encryptedClassName="opacity-50"
-                    />
-                  </span>
+                  {pendingThinkingSteps.length > 0 ? (
+                    <ThinkingActivity steps={pendingThinkingSteps} pending />
+                  ) : (
+                    <span className="ollamaChat__messageText">
+                      <EncryptedText
+                        key={retrievalKey}
+                        text="Searching knowledge base..."
+                        revealDelayMs={22}
+                        flipDelayMs={35}
+                        encryptedClassName="opacity-50"
+                      />
+                    </span>
+                  )}
                 </motion.article>
               )}
 
@@ -561,6 +593,31 @@ export function OllamaChat() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function ThinkingActivity({
+  steps,
+  pending = false,
+}: {
+  steps: ThinkingSteps;
+  pending?: boolean;
+}) {
+  const visibleSteps = snapshotThinkingSteps(steps);
+  if (visibleSteps.length === 0) return null;
+
+  return (
+    <ol
+      className={`ollamaChat__thinking${pending ? " ollamaChat__thinking--pending" : ""}`}
+      aria-label="Assistant activity"
+    >
+      {visibleSteps.map((step, index) => (
+        <li key={`${index}-${step}`}>
+          <span className="ollamaChat__thinkingDot" aria-hidden="true" />
+          <span>{step}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 

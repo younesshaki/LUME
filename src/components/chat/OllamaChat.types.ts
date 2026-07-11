@@ -5,6 +5,8 @@ export type ChatMessage = {
   role: ChatRole;
   content: string;
   sourceCategories?: string[];
+  /** Public operational activity, never hidden model reasoning. */
+  thinkingSteps?: string[];
 };
 
 export type OllamaApiMessage = {

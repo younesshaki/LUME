@@ -137,3 +137,10 @@
 - Migration: 045_visitor_profiles.sql (NOT applied)
 - Env added: VISITOR_PREFERENCE_LEARNING_ENABLED=...
 - Review notes / open questions: The canonical chat route now creates real signed-in, tenant-owned sessions; the public client retains the opaque server session ID and Reset starts a new session. Only server-observed user turns from three or more completed sessions are eligible. Learning is deterministic and bounded to known tenant makes, canonical body styles, and clamped USD budgets; raw chat and visitor identity never enter the preference prompt. The feature is default-off pending product/legal consent review. Claude should review whether USD-only budget interpretation matches every tenant, extend the GDPR export path to include profiles/chat before enabling, apply migration 045, then explicitly set the flag only in approved environments.
+
+## SCRUM-153 Bot operational activity steps
+- Status: done
+- Files: packages/bot/src/{thinkingSteps,index}.ts, packages/types/src/chat.ts, apps/admin/app/api/chat/route.ts, src/lib/deepseekService.ts, src/components/chat/OllamaChat.{tsx,types.ts,thinking.ts,css}
+- Migration: none
+- Env added: none
+- Review notes / open questions: Every executed tool call produces one ordered, fixed operational status, bounded to five per turn. Only a validated aggregate inventory count may influence text; arguments, IDs, summaries, raw results, errors, prompts, and hidden reasoning are never exposed. The public UI presents the steps as an accessible activity list above the pending and completed assistant reply, with reduced-motion support. Status events are emitted after the bounded tool run completes and phase-two streaming is ready, before UI actions and prose; true during-execution progress would require a larger runner callback/route-stream refactor, which Claude can evaluate separately.

@@ -26,6 +26,7 @@ import {
   filterBotTools,
   parseToolCalls,
   runToolCalls,
+  turnThinkingSteps,
   toToolResultMessages,
   toToolSpecs,
   type BotToolContext,
@@ -331,6 +332,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const calls = parseToolCalls(phase1Message.tool_calls);
   const turn = await runToolCalls(calls, ctx, { allowedToolNames: enabledToolNames });
+  const thinkingSteps = turnThinkingSteps(turn.steps);
 
   const phase2 = await fetch(deepseekUrl, {
     method: "POST",
@@ -374,6 +376,11 @@ export async function POST(request: Request): Promise<Response> {
       const encoder = new TextEncoder();
       const decoder = new TextDecoder();
       controller.enqueue(encoder.encode(metaEvent));
+      // These are fixed operational summaries of completed tool calls, not
+      // model reasoning or chain-of-thought. Emit them before actions/prose.
+      for (const text of thinkingSteps) {
+        controller.enqueue(encoder.encode(sseEvent({ type: "thinking", text })));
+      }
       // Tool-emitted UI actions go out before the prose starts streaming so
       // the interface reacts (filters, highlights) while the model talks.
       for (const action of filterAllowedActions(turn.actions, persona.capabilities)) {
