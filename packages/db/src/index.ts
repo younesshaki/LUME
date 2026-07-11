@@ -8,4 +8,5 @@ export * from "./gdpr";
 export * from "./leadsCsv";
 export * from "./audit";
 export * from "./visitors";
+export * from "./loyalty";
 export type { Database } from "./schema";

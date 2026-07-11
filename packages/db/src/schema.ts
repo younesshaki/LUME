@@ -479,6 +479,30 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["loyalty_transactions"]["Insert"]>;
         Relationships: [];
       };
+      loyalty_accrual_events: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          account_id: string;
+          visitor_id: string | null;
+          event_type: "chat_session" | "saved_vehicle" | "submitted_lead" | "referral";
+          points_delta: number;
+          idempotency_key: string;
+          metadata: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["loyalty_accrual_events"]["Row"],
+          "id" | "visitor_id" | "metadata" | "created_at"
+        > & {
+          id?: string;
+          visitor_id?: string | null;
+          metadata?: Record<string, unknown>;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["loyalty_accrual_events"]["Insert"]>;
+        Relationships: [];
+      };
       loyalty_tiers: {
         Row: {
           id: string;
@@ -684,6 +708,22 @@ export type Database = {
           slug: string;
           title: string;
           nav_order: number;
+        }[];
+      };
+      accrue_loyalty_points: {
+        Args: {
+          p_tenant_id: string;
+          p_visitor_id: string;
+          p_event_type: "chat_session" | "saved_vehicle" | "submitted_lead" | "referral";
+          p_idempotency_key: string;
+          p_description?: string | null;
+          p_metadata?: Record<string, unknown>;
+        };
+        Returns: {
+          applied: boolean;
+          points_delta: number;
+          balance_after: number;
+          transaction_id: string | null;
         }[];
       };
     };

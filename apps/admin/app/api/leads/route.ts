@@ -7,7 +7,7 @@
  * policy.
  */
 import type { LeadCaptureResponse } from "@lume/types";
-import type { Database } from "@lume/db";
+import { accrueLoyaltyPoints, type Database } from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
@@ -95,6 +95,22 @@ export async function POST(request: Request): Promise<Response> {
   if (error || !data) {
     console.error("[/api/leads] insert failed:", error?.message ?? "no row");
     return json({ error: "Unable to capture lead" }, 500, request);
+  }
+
+  if (visitor) {
+    await accrueLoyaltyPoints(supabase, {
+      tenantId: tenant.tenantId,
+      visitorId: visitor.id,
+      eventType: "submitted_lead",
+      idempotencyKey: `lead:${data.id}`,
+      description: "Submitted an enquiry",
+      metadata: { leadId: data.id, source: lead.source },
+    }).catch((accrualError: unknown) => {
+      console.error(
+        "[/api/leads] loyalty accrual failed:",
+        accrualError instanceof Error ? accrualError.message : "unknown error",
+      );
+    });
   }
 
   const response: LeadCaptureResponse = { leadId: data.id };

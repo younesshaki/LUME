@@ -11,3 +11,10 @@
 - Migration: 031_tenant_bot_config.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: `allowed_tools` intentionally defaults to deny-all. Onboarding must create the tenant row explicitly after Claude applies the migration; no migration seed/backfill was added because data mutation is forbidden in this sweep.
+
+## SCRUM-133 Loyalty points schema and accrual engine
+- Status: done
+- Files: supabase/migrations/032_loyalty_accrual.sql, packages/types/src/loyalty.ts, packages/db/src/{schema,loyalty,index}.ts, apps/admin/app/api/{leads,visitor/chat-history}/route.ts
+- Migration: 032_loyalty_accrual.sql, 033_loyalty_account_linking.sql (NOT applied)
+- Env added: none
+- Review notes / open questions: Existing producers now award first persisted chat session (+5) and authenticated lead submission (+50), idempotently; existing email-linked accounts are reused. Saved-vehicle (+10) and referral (+100) need future producer routes. The current public chat UI does not yet post to `/api/visitor/chat-history`, so Claude should verify that integration before expecting chat-session awards in production.

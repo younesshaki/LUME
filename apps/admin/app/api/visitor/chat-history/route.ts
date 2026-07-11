@@ -9,6 +9,7 @@
  * chat_* tables are member-readable but service-role-written.
  */
 import type { VisitorChatMessage } from "@lume/types";
+import { accrueLoyaltyPoints } from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { isAllowedOrigin } from "@/lib/origin";
@@ -86,6 +87,7 @@ export async function POST(request: Request): Promise<Response> {
     .maybeSingle();
 
   let sessionId = existing?.id ?? null;
+  let createdSession = false;
   if (!sessionId) {
     const { data: created, error } = await supabase
       .from("chat_sessions")
@@ -94,6 +96,7 @@ export async function POST(request: Request): Promise<Response> {
       .single();
     if (error || !created) return json(request, { error: "Unable to start session" }, 500);
     sessionId = created.id;
+    createdSession = true;
   }
 
   const { error: msgError } = await supabase.from("chat_messages").insert({
@@ -103,6 +106,21 @@ export async function POST(request: Request): Promise<Response> {
     content: content.slice(0, 8_000),
   });
   if (msgError) return json(request, { error: "Unable to persist message" }, 500);
+
+  if (createdSession) {
+    await accrueLoyaltyPoints(supabase, {
+      tenantId: ctx.tenantId,
+      visitorId: ctx.visitorId,
+      eventType: "chat_session",
+      idempotencyKey: `chat-session:${sessionId}`,
+      description: "Started a chat session",
+    }).catch((error: unknown) => {
+      console.error(
+        "[visitor/chat-history] loyalty accrual failed:",
+        error instanceof Error ? error.message : "unknown error",
+      );
+    });
+  }
 
   return json(request, { sessionId }, 201);
 }

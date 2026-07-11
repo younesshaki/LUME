@@ -11,6 +11,12 @@ export type LoyaltyTransactionSource =
   | "adjustment"
   | "expiration";
 
+export type LoyaltyAccrualEventType =
+  | "chat_session"
+  | "saved_vehicle"
+  | "submitted_lead"
+  | "referral";
+
 export type LoyaltyAccount = {
   id: LoyaltyAccountId;
   tenantId: TenantId;
