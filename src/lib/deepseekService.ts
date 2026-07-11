@@ -20,12 +20,17 @@ export type DeepseekMessage = {
   content: string;
 };
 
-type ChatMetaEvent = { type: "meta"; sourceCategories: string[]; botName?: string };
+type ChatMetaEvent = {
+  type: "meta";
+  sourceCategories: string[];
+  botName?: string;
+  sessionId?: string;
+};
 type ChatActionEvent = { type: "action"; action: BotAction };
 type ChatErrorEvent = { type: "error"; message: string };
 
 export type ChatStreamYield =
-  | { kind: "meta"; sourceCategories: string[]; botName?: string }
+  | { kind: "meta"; sourceCategories: string[]; botName?: string; sessionId?: string }
   | { kind: "delta"; text: string }
   | { kind: "action"; action: BotAction };
 
@@ -41,7 +46,9 @@ type DeepseekStreamChunk = {
  */
 export async function* streamChat(
   messages: DeepseekMessage[],
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  sessionId?: string,
+  startNewSession = false,
 ): AsyncGenerator<ChatStreamYield, void, unknown> {
   const sanitized = messages
     .filter((m) => m.role === "user" || m.role === "assistant")
@@ -53,7 +60,12 @@ export async function* streamChat(
       "Content-Type": "application/json",
       "X-Lume-Tenant": TENANT_SLUG,
     },
-    body: JSON.stringify({ messages: sanitized, stream: true }),
+    body: JSON.stringify({
+      messages: sanitized,
+      stream: true,
+      ...(sessionId ? { sessionId } : {}),
+      ...(startNewSession ? { startNewSession: true } : {}),
+    }),
     credentials: "include",
     signal,
   });
@@ -99,6 +111,9 @@ export async function* streamChat(
             sourceCategories: parsed.sourceCategories,
             ...(typeof parsed.botName === "string" && parsed.botName.trim()
               ? { botName: parsed.botName.trim() }
+              : {}),
+            ...(typeof parsed.sessionId === "string" && parsed.sessionId.trim()
+              ? { sessionId: parsed.sessionId.trim() }
               : {}),
           };
           continue;

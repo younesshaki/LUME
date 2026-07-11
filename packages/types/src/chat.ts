@@ -8,12 +8,18 @@ export type ChatMessage = {
 export type ChatRequest = {
   /** Conversation history. Server prepends a tenant-scoped system prompt; do not send one from the client. */
   messages: ChatMessage[];
+  /** Opaque session ID used only after server ownership validation. */
+  sessionId?: string;
+  /** Explicitly begins a new browser conversation; retry-safe with sessionId. */
+  startNewSession?: boolean;
   stream?: boolean;
 };
 
 export type ChatStreamMeta = {
   type: "meta";
   sourceCategories: string[];
+  /** Present only for a signed-in visitor with persisted chat history. */
+  sessionId?: string;
 };
 
 export type ChatStreamError = {

@@ -807,6 +807,27 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["visitors"]["Insert"]>;
         Relationships: [];
       };
+      visitor_profiles: {
+        Row: {
+          visitor_id: string;
+          tenant_id: string;
+          preferences: Record<string, unknown>;
+          learned_session_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["visitor_profiles"]["Row"],
+          "preferences" | "learned_session_count" | "created_at" | "updated_at"
+        > & {
+          preferences?: Record<string, unknown>;
+          learned_session_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["visitor_profiles"]["Insert"]>;
+        Relationships: [];
+      };
       visitor_sessions: {
         Row: {
           id: string;
@@ -850,12 +871,13 @@ export type Database = {
           session_id: string;
           role: "user" | "assistant" | "system";
           content: string;
+          is_server_observed: boolean;
           created_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["chat_messages"]["Row"],
-          "id" | "created_at"
-        > & { id?: string; created_at?: string };
+          "id" | "is_server_observed" | "created_at"
+        > & { id?: string; is_server_observed?: boolean; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["chat_messages"]["Insert"]>;
         Relationships: [];
       };

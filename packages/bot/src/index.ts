@@ -77,3 +77,17 @@ export {
   DEFAULT_SUMMARY_TOKEN_LIMIT,
   fitConversationToBudget,
 } from "./conversationBudget";
+export {
+  type ExtractVisitorPreferencesOptions,
+  type VisitorPreferenceMessage,
+  type VisitorPreferenceSession,
+  MAX_VISITOR_BODY_STYLES,
+  MAX_VISITOR_BUDGET_USD,
+  MAX_VISITOR_PREFERRED_MAKES,
+  MIN_VISITOR_BUDGET_USD,
+  MIN_VISITOR_PREFERENCE_SESSIONS,
+  extractVisitorPreferences,
+  parseVisitorPreferences,
+  shouldLearnVisitorPreferences,
+  visitorPreferencesSystemPrompt,
+} from "./visitorPreferences";

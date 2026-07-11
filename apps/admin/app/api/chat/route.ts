@@ -56,6 +56,13 @@ import {
 import { buildToolRequestFields, loadTenantToolAllowlist } from "@/lib/chatTools";
 import { loadChatLoyaltyContext, loyaltySystemPrompt } from "@/lib/chatLoyalty";
 import { resolveVisitor } from "@/lib/visitorSession";
+import { isChatStreamCompletionLine } from "@/lib/chatStreamCompletion";
+import {
+  completeVisitorPreferenceTurn,
+  loadVisitorPreferenceContext,
+  openVisitorPreferenceTurn,
+  visitorPreferenceSystemPrompt,
+} from "@/lib/visitorPreferences";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -135,11 +142,22 @@ export async function POST(request: Request): Promise<Response> {
   const enabledToolNames = enabledTools.map((tool) => tool.name);
   const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
   const tenantName = tenant.name ?? tenant.slug;
+  const visitorTurn = visitor
+    ? await openVisitorPreferenceTurn(supabase, {
+        tenantId: tenant.tenantId,
+        visitorId: visitor.id,
+        requestedSessionId:
+          typeof body.sessionId === "string" ? body.sessionId : undefined,
+        startNewSession: body.startNewSession === true,
+        userContent: lastUser.content,
+      })
+    : null;
 
   let assembled;
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> = null;
+  let visitorPreferenceContext: Awaited<ReturnType<typeof loadVisitorPreferenceContext>> = null;
   try {
-    const [chunkResult, loadedLoyaltyContext] = await Promise.all([
+    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext] = await Promise.all([
       supabase
         .from("rag_chunks")
         .select("text, category")
@@ -147,8 +165,15 @@ export async function POST(request: Request): Promise<Response> {
       visitor
         ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
         : Promise.resolve(null),
+      visitor
+        ? loadVisitorPreferenceContext(supabase, {
+            tenantId: tenant.tenantId,
+            visitorId: visitor.id,
+          })
+        : Promise.resolve(null),
     ]);
     chatLoyaltyContext = loadedLoyaltyContext;
+    visitorPreferenceContext = loadedPreferenceContext;
     const { data: chunkRows, error: chunkErr } = chunkResult;
     if (chunkErr) throw new Error(`rag_chunks query failed: ${chunkErr.message}`);
 
@@ -203,7 +228,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const systemMessage = {
     role: "system" as const,
-    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
+    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
   };
 
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
@@ -258,13 +283,14 @@ export async function POST(request: Request): Promise<Response> {
     type: "meta",
     sourceCategories: assembled.sourceCategories,
     botName: persona.name,
+    ...(visitorTurn ? { sessionId: visitorTurn.sessionId } : {}),
   });
 
   // ── No tools requested: re-emit the prose as SSE ──────────────────────────
   if (!phase1Message.tool_calls?.length) {
     const content = phase1Message.content ?? "";
     const stream = new ReadableStream({
-      start(controller) {
+      async start(controller) {
         const encoder = new TextEncoder();
         controller.enqueue(encoder.encode(metaEvent));
         for (const action of filterAllowedActions(
@@ -277,6 +303,14 @@ export async function POST(request: Request): Promise<Response> {
           controller.enqueue(
             encoder.encode(sseEvent({ choices: [{ delta: { content } }] }))
           );
+        }
+        if (visitor && visitorTurn && content) {
+          await completeVisitorPreferenceTurn(supabase, {
+            tenantId: tenant.tenantId,
+            visitorId: visitor.id,
+            sessionId: visitorTurn.sessionId,
+            assistantContent: content,
+          });
         }
         controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
         controller.close();
@@ -350,6 +384,8 @@ export async function POST(request: Request): Promise<Response> {
       let sseLineBuffer = "";
       let actionLineBuffer = "";
       let pendingActions: BotAction[] = [];
+      let assistantContent = "";
+      let streamCompletionObserved = false;
 
       const flushActionEvents = () => {
         for (const action of pendingActions) {
@@ -360,6 +396,7 @@ export async function POST(request: Request): Promise<Response> {
 
       const processSseLine = (line: string) => {
         const trimmed = line.trim();
+        if (isChatStreamCompletionLine(line)) streamCompletionObserved = true;
 
         if (trimmed === "data: [DONE]") {
           const finalAction = parseBotActionLine(actionLineBuffer);
@@ -380,6 +417,7 @@ export async function POST(request: Request): Promise<Response> {
         const textDelta = extractDeepseekTextDelta(line);
         if (!textDelta) return;
 
+        assistantContent += textDelta;
         actionLineBuffer += textDelta;
         const actionLines = actionLineBuffer.split(/\r?\n/);
         actionLineBuffer = actionLines.pop() ?? "";
@@ -419,6 +457,14 @@ export async function POST(request: Request): Promise<Response> {
           encoder.encode(sseEvent({ type: "error", message }))
         );
       } finally {
+        if (streamCompletionObserved && visitor && visitorTurn && assistantContent.trim()) {
+          await completeVisitorPreferenceTurn(supabase, {
+            tenantId: tenant.tenantId,
+            visitorId: visitor.id,
+            sessionId: visitorTurn.sessionId,
+            assistantContent,
+          });
+        }
         reader.releaseLock();
         controller.close();
       }

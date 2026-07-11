@@ -32,3 +32,16 @@ export type VisitorChatMessage = {
   content: string;
   createdAt: string;
 };
+
+/** Normalized, non-identifying vehicle preferences learned server-side. */
+export type VisitorBudgetPreference = {
+  min: number | null;
+  max: number | null;
+  currency: "USD";
+};
+
+export type VisitorPreferences = {
+  preferredMakes: string[];
+  bodyStyles: string[];
+  budget: VisitorBudgetPreference | null;
+};

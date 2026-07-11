@@ -3,6 +3,7 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { streamChat, type DeepseekMessage } from "@/lib/deepseekService";
+import { publicTenantSlug } from "@/lib/publicTenant";
 import { botActionBus } from "@/lib/botActionBus";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
@@ -14,6 +15,7 @@ import type { ChatMessage, ChatRole, OllamaApiMessage } from "./OllamaChat.types
 
 const STORAGE_KEY = "lume-chat-v1";
 const BOT_NAME_STORAGE_KEY = "lume.chat.bot-name.v1";
+const CHAT_SESSION_STORAGE_KEY = `lume.chat.session.v1.${publicTenantSlug}`;
 
 const SUGGESTIONS = [
   "What is LUME?",
@@ -74,6 +76,14 @@ export function OllamaChat() {
   const [ratings, setRatings] = useState<Record<string, "up" | "down" | null>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>({});
+  const [sessionId, setSessionId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(CHAT_SESSION_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [startNewSession, setStartNewSession] = useState(false);
   // Persona display name; served in the chat stream's meta event so each
   // tenant's configured bot identity shows without a client rebuild.
   const [botName, setBotName] = useState(() => {
@@ -142,6 +152,15 @@ export function OllamaChat() {
     setCopiedId(null);
     setOpenSources({});
     localStorage.removeItem(STORAGE_KEY);
+    const nextSessionId = createChatSessionId();
+    setSessionId(nextSessionId);
+    setStartNewSession(true);
+    try {
+      if (nextSessionId) localStorage.setItem(CHAT_SESSION_STORAGE_KEY, nextSessionId);
+      else localStorage.removeItem(CHAT_SESSION_STORAGE_KEY);
+    } catch {
+      // quota exceeded or private mode
+    }
     chatSounds.reset();
   };
 
@@ -180,9 +199,23 @@ export function OllamaChat() {
         content: m.content,
       }));
 
-      for await (const event of streamChat(messages, abortController.signal)) {
+      for await (const event of streamChat(
+        messages,
+        abortController.signal,
+        sessionId ?? undefined,
+        startNewSession,
+      )) {
         if (event.kind === "meta") {
           sourceCategories = event.sourceCategories;
+          setStartNewSession(false);
+          if (event.sessionId && event.sessionId !== sessionId) {
+            setSessionId(event.sessionId);
+            try {
+              localStorage.setItem(CHAT_SESSION_STORAGE_KEY, event.sessionId);
+            } catch {
+              // quota exceeded or private mode
+            }
+          }
           if (event.botName && event.botName !== botName) {
             setBotName(event.botName);
             try {
@@ -529,4 +562,12 @@ export function OllamaChat() {
       </AnimatePresence>
     </div>
   );
+}
+
+function createChatSessionId(): string | null {
+  try {
+    return globalThis.crypto?.randomUUID?.() ?? null;
+  } catch {
+    return null;
+  }
 }
