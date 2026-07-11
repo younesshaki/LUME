@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { BOT_TOOLS, getBotTool, runBotTool, toToolSpecs } from "./registry";
+import {
+  BOT_TOOLS,
+  filterBotTools,
+  getBotTool,
+  runBotTool,
+  toToolSpecs,
+} from "./registry";
 import { fakeQueryVehicles, makeVehicle } from "./testFixtures";
 
 const baseCtx = (vehicles = [makeVehicle()]) => ({
@@ -32,6 +38,35 @@ describe("registry", () => {
       enum: ["New", "Used"],
       description: "Whether the vehicle is new or used.",
     });
+  });
+
+  it.each([undefined, null])(
+    "preserves the full legacy registry for a missing allowlist (%s)",
+    (allowlist) => {
+      const filtered = filterBotTools(allowlist);
+
+      expect(filtered.map((tool) => tool.name)).toEqual(BOT_TOOLS.map((tool) => tool.name));
+      expect(filtered).not.toBe(BOT_TOOLS);
+    }
+  );
+
+  it("returns no tools for an explicit empty allowlist", () => {
+    expect(filterBotTools([])).toEqual([]);
+  });
+
+  it("preserves registry order and ignores unknown or duplicate names", () => {
+    const filtered = filterBotTools([
+      "find_newest",
+      "not_registered",
+      "find_vehicles",
+      "find_newest",
+    ]);
+
+    expect(filtered.map((tool) => tool.name)).toEqual(["find_vehicles", "find_newest"]);
+    expect(toToolSpecs(filtered).map((spec) => spec.function.name)).toEqual([
+      "find_vehicles",
+      "find_newest",
+    ]);
   });
 });
 

@@ -111,7 +111,7 @@ const SECTIONS = [
   { slug: "branding", label: "Branding", icon: Palette },
   { slug: "domains", label: "Domains", icon: Globe },
   { slug: "team", label: "Team", icon: Users },
-  { slug: "persona", label: "Bot Persona", icon: Bot },
+  { slug: "persona", label: "Bot Config", icon: Bot },
   { slug: "knowledge", label: "Knowledge", icon: BookOpen },
 ] as const;
 

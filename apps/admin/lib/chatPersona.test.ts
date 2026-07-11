@@ -63,6 +63,16 @@ describe("actionSystemPrompt", () => {
     expect(prompt).not.toContain(`"type":"navigate"`);
     expect(prompt).toContain(`"type":"filter_inventory"`);
   });
+
+  it("advertises only the tenant's callable function tools", () => {
+    const prompt = actionSystemPrompt(DEFAULT_BOT_PERSONA_CAPABILITIES, ["find_vehicles"]);
+    expect(prompt).toContain("Callable function tools: find_vehicles.");
+    expect(prompt).not.toContain("find_best_deal");
+
+    const withoutTools = actionSystemPrompt(DEFAULT_BOT_PERSONA_CAPABILITIES, []);
+    expect(withoutTools).not.toContain("Callable function tools:");
+    expect(withoutTools).toContain("Structured actions:");
+  });
 });
 
 describe("isActionAllowed / filterAllowedActions", () => {

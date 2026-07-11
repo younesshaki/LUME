@@ -101,19 +101,34 @@ function capabilityEnabled(
 }
 
 /** The structured-actions prompt, advertising only capability-allowed shapes. */
-export function actionSystemPrompt(capabilities: BotPersonaCapabilities): string {
+export function actionSystemPrompt(
+  capabilities: BotPersonaCapabilities,
+  callableToolNames: readonly string[] = [
+    "find_vehicles",
+    "find_best_deal",
+    "get_vehicle_details",
+    "compare_vehicles",
+  ],
+): string {
   const shapes = Object.values(ACTION_SHAPES)
     .filter((shape) => capabilityEnabled(capabilities, shape.capability))
     .map((shape) => shape.example);
-  if (shapes.length === 0) return "";
-  return [
-    "",
-    "Structured actions:",
-    "When an action would help the user, you may emit exactly one JSON object on its own line. Keep normal helpful text streaming as usual. The JSON line must match one of these shapes:",
-    ...shapes,
-    "Only include fields that are useful. Do not wrap action JSON in markdown.",
-    "You also have function tools (find_vehicles, find_best_deal, get_vehicle_details, compare_vehicles) — prefer them for inventory questions; they query the live database.",
-  ].join("\n");
+  if (shapes.length === 0 && callableToolNames.length === 0) return "";
+  const sections: string[] = [];
+  if (shapes.length > 0) {
+    sections.push(
+      "Structured actions:",
+      "When an action would help the user, you may emit exactly one JSON object on its own line. Keep normal helpful text streaming as usual. The JSON line must match one of these shapes:",
+      ...shapes,
+      "Only include fields that are useful. Do not wrap action JSON in markdown.",
+    );
+  }
+  if (callableToolNames.length > 0) {
+    sections.push(
+      `Callable function tools: ${callableToolNames.join(", ")}. Prefer these for inventory questions; they query the live database.`,
+    );
+  }
+  return ["", ...sections].join("\n");
 }
 
 /**

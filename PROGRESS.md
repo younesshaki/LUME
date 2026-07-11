@@ -53,3 +53,10 @@
 - Migration: none (depends on unapplied 030_billing_schema.sql)
 - Env added: none
 - Review notes / open questions: Owner/admin-authorized manual plan changes use a single service-role mutation and refuse provider-managed subscriptions; no Stripe call is made. Lead usage is counted for the current period, while chat/storage meters explicitly remain unavailable until SCRUM-103 supplies counters. Invoice PDF controls are intentionally disabled because the schema has no provider PDF URL. The plan catalog remains empty until Claude provisions reviewed plan rows outside migrations.
+
+## SCRUM-154 Tenant bot tool whitelist
+- Status: done
+- Files: packages/bot/src/{registry,runner,types,index}.ts, apps/admin/lib/{chatTools,chatPersona}.ts, apps/admin/app/{api/chat,admin/[tenant]/persona}/**
+- Migration: none (depends on unapplied 031_tenant_bot_config.sql)
+- Env added: none
+- Review notes / open questions: Missing config preserves legacy access to all registered tools; explicit `[]` disables all; config read errors fail closed. The same filtered list controls DeepSeek advertisement, system-prompt disclosure, and runner execution. Jira mentions `schedule_test_drive`, but no such callable tool is registered, so the UI truthfully lists only the seven real inventory tools; Claude should add it only with a real implementation.

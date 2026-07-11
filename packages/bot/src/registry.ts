@@ -28,6 +28,25 @@ export function getBotTool(name: string): AnyBotTool | undefined {
 }
 
 /**
+ * Resolve the tools exposed to a tenant from its configured allowlist.
+ *
+ * A missing allowlist keeps the legacy behaviour (all registered tools).
+ * Once a tenant has an explicit list, only registered names in that list are
+ * retained. Filtering the registry rather than mapping the configured names
+ * keeps tool-spec ordering deterministic and naturally ignores duplicates and
+ * stale/unknown names.
+ */
+export function filterBotTools(
+  allowedToolNames: readonly string[] | null | undefined,
+  tools: readonly AnyBotTool[] = BOT_TOOLS
+): AnyBotTool[] {
+  if (allowedToolNames == null) return [...tools];
+
+  const allowedNames = new Set(allowedToolNames);
+  return tools.filter((tool) => allowedNames.has(tool.name));
+}
+
+/**
  * Convert the registry into the `tools` array DeepSeek/OpenAI expect on a
  * chat-completion request.
  */

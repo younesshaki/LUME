@@ -48,7 +48,7 @@ export {
   findNewestTool,
   superlativeVehicleSchema,
 } from "./tools/superlativeVehicles";
-export { BOT_TOOLS, getBotTool, runBotTool, toToolSpecs } from "./registry";
+export { BOT_TOOLS, filterBotTools, getBotTool, runBotTool, toToolSpecs } from "./registry";
 export {
   type BotTurnResult,
   type RunToolCallsOptions,

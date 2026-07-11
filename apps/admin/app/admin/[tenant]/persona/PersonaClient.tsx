@@ -117,10 +117,10 @@ export default function PersonaClient({
   }
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Bot Persona</h1>
+          <h1 className="text-2xl font-semibold">Bot Configuration</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Configure the active visitor-facing bot for {tenantName}{" "}
             <code>/{tenantSlug}</code>.

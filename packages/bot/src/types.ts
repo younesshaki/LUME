@@ -36,7 +36,7 @@ export type SuperlativeVehicle = {
 };
 
 export type BotToolError = {
-  code: "unknown_tool" | "invalid_args" | "execution_error";
+  code: "unknown_tool" | "tool_not_allowed" | "invalid_args" | "execution_error";
   message: string;
 };
 

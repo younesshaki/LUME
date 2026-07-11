@@ -23,6 +23,7 @@ import type { BotAction, ChatMessage, ChatRequest } from "@lume/types";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
 import { getTenantVehicle, queryTenantVehicles, rowToVehicle } from "@lume/db";
 import {
+  filterBotTools,
   parseToolCalls,
   runToolCalls,
   toToolResultMessages,
@@ -52,6 +53,7 @@ import {
   loadActivePersona,
   personaBasePrompt,
 } from "@/lib/chatPersona";
+import { buildToolRequestFields, loadTenantToolAllowlist } from "@/lib/chatTools";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -122,7 +124,13 @@ export async function POST(request: Request): Promise<Response> {
 
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.
-  const persona = await loadActivePersona(supabase, tenant.tenantId);
+  const [persona, toolAllowlist] = await Promise.all([
+    loadActivePersona(supabase, tenant.tenantId),
+    loadTenantToolAllowlist(supabase, tenant.tenantId),
+  ]);
+  const enabledTools = filterBotTools(toolAllowlist);
+  const enabledToolNames = enabledTools.map((tool) => tool.name);
+  const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
   const tenantName = tenant.name ?? tenant.slug;
 
   let assembled;
@@ -183,7 +191,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const systemMessage = {
     role: "system" as const,
-    content: `${assembled.prompt}\n${actionSystemPrompt(persona.capabilities)}`,
+    content: `${assembled.prompt}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
   };
 
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
@@ -200,8 +208,7 @@ export async function POST(request: Request): Promise<Response> {
       model: "deepseek-chat",
       stream: false,
       messages: [systemMessage, ...cleanMessages],
-      tools: toToolSpecs(),
-      tool_choice: "auto",
+      ...toolRequestFields,
     }),
   });
 
@@ -277,7 +284,7 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   const calls = parseToolCalls(phase1Message.tool_calls);
-  const turn = await runToolCalls(calls, ctx);
+  const turn = await runToolCalls(calls, ctx, { allowedToolNames: enabledToolNames });
 
   const phase2 = await fetch(deepseekUrl, {
     method: "POST",

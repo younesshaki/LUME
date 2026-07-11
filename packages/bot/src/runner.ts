@@ -1,6 +1,6 @@
 import type { BotAction } from "@lume/types";
 import type { BotToolContext, BotToolResult } from "./types";
-import { runBotTool } from "./registry";
+import { getBotTool, runBotTool } from "./registry";
 
 /** A single tool invocation as produced by the model. */
 export type ToolCall = {
@@ -34,7 +34,23 @@ export type RunToolCallsOptions = {
   maxSteps?: number;
   /** Stop after the first failing step instead of running the rest. */
   stopOnError?: boolean;
+  /**
+   * Tenant-configured tool names. Missing/null preserves legacy access to all
+   * registered tools; an explicit empty list disables every tool.
+   */
+  allowedToolNames?: readonly string[] | null;
 };
+
+function toolNotAllowedResult(name: string): BotToolResult {
+  return {
+    ok: false,
+    summary: `Tool unavailable: ${name}.`,
+    error: {
+      code: "tool_not_allowed",
+      message: `Tool "${name}" is not enabled for this tenant.`,
+    },
+  };
+}
 
 /**
  * Execute a sequence of tool calls in order within a single bot turn,
@@ -51,12 +67,20 @@ export async function runToolCalls(
   const maxSteps = Math.max(1, options.maxSteps ?? DEFAULT_MAX_STEPS);
   const truncated = calls.length > maxSteps;
   const planned = calls.slice(0, maxSteps);
+  const allowedNames =
+    options.allowedToolNames == null ? null : new Set(options.allowedToolNames);
 
   const steps: ToolRunStep[] = [];
   const actions: BotAction[] = [];
 
   for (const call of planned) {
-    const result = await runBotTool(call.name, call.args, ctx);
+    // Keep unknown tool calls distinguishable from registered-but-disabled
+    // calls, while ensuring neither can reach an executor.
+    const isRegistered = getBotTool(call.name) !== undefined;
+    const result =
+      isRegistered && allowedNames !== null && !allowedNames.has(call.name)
+        ? toolNotAllowedResult(call.name)
+        : await runBotTool(call.name, call.args, ctx);
     steps.push({ call, result });
     if (result.actions) actions.push(...result.actions);
     if (!result.ok && options.stopOnError) break;
