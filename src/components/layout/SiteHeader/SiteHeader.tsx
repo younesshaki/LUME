@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/app-shell/NavigationProvider";
 import { mediaUrl } from "@/config/cdn";
 import { loadHeaderConfig, type PublicHeaderConfig } from "@/lib/publicNav";
+import { useTenantTheme } from "@/lib/TenantThemeProvider";
 import { play } from "@/lib/sound";
 import { DesktopNav } from "../nav/DesktopNav";
 import { GooeyDesktopNav } from "../nav/GooeyDesktopNav";
@@ -59,6 +60,8 @@ export function SiteHeader() {
   const { hasOverlayPressure } = useSiteHeaderLayoutState();
   const items = useSiteNavItems();
   const headerConfig = useHeaderConfig();
+  const tenantTheme = useTenantTheme();
+  const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
 
   const activeKey = deriveActiveNavKey(currentPath, currentScreen, items);
 
@@ -90,8 +93,8 @@ export function SiteHeader() {
           focus-visible:ring-1 focus-visible:ring-[#C9A84C] rounded"
       >
         <img
-          src={lumeLogoImage}
-          alt="LUME"
+          src={logoImage}
+          alt="Site logo"
           className="h-8 md:h-9 w-auto object-contain"
           draggable={false}
         />

@@ -1,12 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ExternalLink, ImageIcon, LoaderCircle, Upload } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@lume/db";
 import type { TenantDockVariant, TenantTheme } from "@lume/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  BRANDING_ASSET_ACCEPT,
+  uploadTenantBrandingAsset,
+  type BrandingAssetKind,
+} from "@/lib/brandingAssets";
 import {
   BRANDING_THEME_DEFAULTS,
   brandingFormFromTheme,
@@ -27,6 +33,8 @@ type BrandingClientProps = {
   tenantName: string;
   initialTheme: TenantTheme;
   migrationWarning: string | null;
+  canManageBranding: boolean;
+  previewUrl: string;
 };
 
 const FONT_OPTIONS = [
@@ -50,10 +58,15 @@ export default function BrandingClient({
   tenantName,
   initialTheme,
   migrationWarning,
+  canManageBranding,
+  previewUrl,
 }: BrandingClientProps) {
   const router = useRouter();
   const [form, setForm] = useState<BrandingThemeForm>(() => brandingFormFromTheme(initialTheme));
+  const [currentTheme, setCurrentTheme] = useState<TenantTheme>(initialTheme);
   const [state, setState] = useState<SaveState>({ type: "idle", message: "" });
+  const [pendingAsset, setPendingAsset] = useState<BrandingAssetKind | null>(null);
+  const [previewRevision, setPreviewRevision] = useState(0);
   const previewStyle = useMemo(() => previewCssVariables(form), [form]);
 
   async function saveTheme() {
@@ -65,15 +78,57 @@ export default function BrandingClient({
     setState({ type: "saving", message: "Saving branding..." });
     try {
       const supabase = createTenantThemeClient();
+      const nextTheme = themeFromBrandingForm(form, currentTheme);
       const { error } = await supabase
         .from("tenants")
-        .update({ theme: themeFromBrandingForm(form, initialTheme) } as Database["public"]["Tables"]["tenants"]["Update"])
+        .update({ theme: nextTheme } as Database["public"]["Tables"]["tenants"]["Update"])
         .eq("id", tenantId);
       if (error) throw new Error(error.message);
+      setCurrentTheme(nextTheme);
       setState({ type: "success", message: "Branding saved." });
+      setPreviewRevision((revision) => revision + 1);
       router.refresh();
     } catch (error) {
       setState({ type: "error", message: brandingSaveError(error) });
+    }
+  }
+
+  async function uploadBrandAsset(kind: BrandingAssetKind, file: File) {
+    if (migrationWarning || !canManageBranding) {
+      setState({
+        type: "error",
+        message: migrationWarning ?? "Owner or admin access is required to update branding.",
+      });
+      return;
+    }
+
+    setPendingAsset(kind);
+    setState({ type: "saving", message: "Uploading brand image..." });
+    try {
+      const supabase = createTenantThemeClient();
+      const asset = await uploadTenantBrandingAsset(supabase, tenantId, kind, file);
+      const field = brandingThemeField(kind);
+      const nextTheme: TenantTheme = {
+        ...currentTheme,
+        branding: {
+          ...currentTheme.branding,
+          [field]: asset.url,
+        },
+      };
+      const { error } = await supabase
+        .from("tenants")
+        .update({ theme: nextTheme } as Database["public"]["Tables"]["tenants"]["Update"])
+        .eq("id", tenantId);
+      if (error) throw new Error(error.message);
+
+      setCurrentTheme(nextTheme);
+      setState({ type: "success", message: "Brand image uploaded and published." });
+      setPreviewRevision((revision) => revision + 1);
+      router.refresh();
+    } catch (error) {
+      setState({ type: "error", message: brandingSaveError(error) });
+    } finally {
+      setPendingAsset(null);
     }
   }
 
@@ -113,7 +168,7 @@ export default function BrandingClient({
           <button
             type="button"
             onClick={saveTheme}
-            disabled={state.type === "saving" || Boolean(migrationWarning)}
+            disabled={state.type === "saving" || Boolean(migrationWarning) || !canManageBranding}
             className="rounded-lg bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
           >
             Save Branding
@@ -125,9 +180,48 @@ export default function BrandingClient({
         <StatusBanner type="error" message={migrationWarning} />
       )}
       {state.message && <StatusBanner type={state.type} message={state.message} />}
+      {!canManageBranding && !migrationWarning ? (
+        <StatusBanner type="error" message="Owner or admin access is required to update branding." />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
         <section className="space-y-6">
+          <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+            <h2 className="text-sm font-semibold">Logo and favicons</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Files are published from the tenant-logos bucket and applied to the public site.
+            </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <BrandAssetControl
+                kind="logo"
+                title="Logo"
+                description="SVG, PNG, or WebP · max 2 MB"
+                currentUrl={currentTheme.branding?.logoUrl}
+                pending={pendingAsset === "logo"}
+                disabled={Boolean(pendingAsset) || !canManageBranding || Boolean(migrationWarning)}
+                onSelect={(file) => void uploadBrandAsset("logo", file)}
+              />
+              <BrandAssetControl
+                kind="favicon32"
+                title="Favicon 32"
+                description="PNG or WebP · exactly 32×32"
+                currentUrl={currentTheme.branding?.favicon32Url}
+                pending={pendingAsset === "favicon32"}
+                disabled={Boolean(pendingAsset) || !canManageBranding || Boolean(migrationWarning)}
+                onSelect={(file) => void uploadBrandAsset("favicon32", file)}
+              />
+              <BrandAssetControl
+                kind="favicon192"
+                title="Favicon 192"
+                description="PNG or WebP · exactly 192×192"
+                currentUrl={currentTheme.branding?.favicon192Url}
+                pending={pendingAsset === "favicon192"}
+                disabled={Boolean(pendingAsset) || !canManageBranding || Boolean(migrationWarning)}
+                onSelect={(file) => void uploadBrandAsset("favicon192", file)}
+              />
+            </div>
+          </div>
+
           <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
             <h2 className="text-sm font-semibold">Colors</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -221,6 +315,99 @@ export default function BrandingClient({
           </div>
         </aside>
       </div>
+
+      <section className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center justify-between gap-3 border-b border-neutral-200 p-3 dark:border-neutral-800">
+          <div>
+            <h2 className="text-sm font-semibold">Tenant site preview</h2>
+            <p className="text-xs text-muted-foreground">The actual public site reloads after each successful save.</p>
+          </div>
+          {previewUrl ? (
+            <a
+              href={previewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              Open site <ExternalLink className="size-3.5" />
+            </a>
+          ) : null}
+        </div>
+        {previewUrl ? (
+          <div className="bg-neutral-100 p-3 dark:bg-neutral-950">
+            <iframe
+              key={previewRevision}
+              src={previewUrl}
+              title={`${tenantName} public site preview`}
+              className="h-[36rem] w-full rounded-md border border-neutral-300 bg-black dark:border-neutral-700"
+              sandbox="allow-forms allow-popups allow-same-origin allow-scripts"
+            />
+          </div>
+        ) : (
+          <p className="p-6 text-sm text-muted-foreground">
+            Configure NEXT_PUBLIC_PUBLIC_SITE_URL to enable the live site preview.
+          </p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function BrandAssetControl({
+  kind,
+  title,
+  description,
+  currentUrl,
+  pending,
+  disabled,
+  onSelect,
+}: {
+  kind: BrandingAssetKind;
+  title: string;
+  description: string;
+  currentUrl: string | undefined;
+  pending: boolean;
+  disabled: boolean;
+  onSelect: (file: File) => void;
+}) {
+  const inputId = useId();
+  const descriptionId = `${inputId}-description`;
+
+  return (
+    <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+      <div className="flex h-24 items-center justify-center overflow-hidden rounded-md bg-neutral-100 dark:bg-neutral-900">
+        {currentUrl ? (
+          <img src={currentUrl} alt={`${title} preview`} className="max-h-20 max-w-full object-contain" />
+        ) : (
+          <ImageIcon className="size-7 text-muted-foreground" aria-hidden="true" />
+        )}
+      </div>
+      <p className="mt-3 text-sm font-medium">{title}</p>
+      <p id={descriptionId} className="mt-1 min-h-8 text-xs text-muted-foreground">{description}</p>
+      <label
+        htmlFor={inputId}
+        className={`mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-md border px-3 text-xs font-medium ${
+          disabled
+            ? "cursor-not-allowed opacity-50"
+            : "cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900"
+        }`}
+      >
+        {pending ? <LoaderCircle className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+        {pending ? "Uploading…" : currentUrl ? "Replace" : "Upload"}
+      </label>
+      <input
+        id={inputId}
+        type="file"
+        accept={BRANDING_ASSET_ACCEPT[kind]}
+        className="sr-only"
+        disabled={disabled}
+        aria-describedby={descriptionId}
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0];
+          event.currentTarget.value = "";
+          if (file) onSelect(file);
+        }}
+      />
     </div>
   );
 }
@@ -325,6 +512,13 @@ function brandingSaveError(error: unknown): string {
     return "Unable to save branding. Apply migration 019_tenant_theme.sql first.";
   }
   return message;
+}
+
+function brandingThemeField(
+  kind: BrandingAssetKind,
+): "logoUrl" | "favicon32Url" | "favicon192Url" {
+  if (kind === "logo") return "logoUrl";
+  return kind === "favicon32" ? "favicon32Url" : "favicon192Url";
 }
 
 function createTenantThemeClient(): SupabaseClient<Database> {

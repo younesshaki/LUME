@@ -102,3 +102,10 @@
 - Migration: 042_public_vehicle_price_signal.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: Admin history is bounded to the latest 200 records and uses deterministic UTC formatting. Public exposure is aggregate-only, limited to live vehicles on active tenants, and default-off through the tenant theme; raw history never crosses the public API. The owner/admin-only RPC toggles the setting atomically. Claude should decide whether the bot should consume this aggregate later when mentioning recent price drops.
+
+## SCRUM-166 Tenant logo and favicon upload UI
+- Status: done
+- Files: apps/admin/app/admin/[tenant]/branding/**, apps/admin/lib/brandingAssets.ts, apps/admin/.env.example, packages/types/src/tenantTheme.ts, src/lib/tenantTheme.ts, src/lib/TenantThemeProvider.tsx, src/components/layout/{SiteHeader,SiteFooter}/**
+- Migration: none (uses existing tenant-logos bucket from 013_storage_buckets.sql and theme JSON from 019_tenant_theme.sql)
+- Env added: NEXT_PUBLIC_PUBLIC_SITE_URL=...
+- Review notes / open questions: Owner/admin users can upload an SVG/PNG/WebP logo up to 2 MB plus exact 32×32 and 192×192 PNG/WebP favicons. Stable tenant-owned storage keys are upserted and cache-busted URLs are merged into `theme.branding`; the public header/footer and managed favicon links consume them. The iframe embeds the configured real public origin and reloads after saves. MIME checks remain browser-declared until SCRUM-164 adds server-side content sniffing.

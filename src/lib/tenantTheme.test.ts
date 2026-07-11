@@ -71,4 +71,32 @@ describe("tenant theme", () => {
       vehiclePricing: { showPriceReductionSignal: true },
     });
   });
+
+  it("normalizes tenant branding URLs and applies managed favicon links", async () => {
+    const client = {
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ theme: { branding: {
+          logoUrl: "https://cdn.example/logo.svg",
+          favicon32Url: "https://cdn.example/favicon-32.png",
+          favicon192Url: "javascript:alert(1)",
+        } } }],
+        error: null,
+      }),
+    };
+    const theme = await loadTenantTheme("branded", client as never);
+    expect(theme.branding).toEqual({
+      logoUrl: "https://cdn.example/logo.svg",
+      favicon32Url: "https://cdn.example/favicon-32.png",
+      favicon192Url: undefined,
+    });
+
+    applyTenantTheme(theme, document.documentElement);
+    const links = document.querySelectorAll<HTMLLinkElement>("link[data-lume-tenant-favicon]");
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute("sizes")).toBe("32x32");
+    expect(links[0]?.href).toBe("https://cdn.example/favicon-32.png");
+
+    applyTenantTheme({}, document.documentElement);
+    expect(document.querySelector("link[data-lume-tenant-favicon]")).toBeNull();
+  });
 });

@@ -44,6 +44,12 @@ export type TenantTheme = {
     /** Public vehicle detail may show an aggregate recent-reductions signal. */
     showPriceReductionSignal?: boolean;
   };
+  branding?: {
+    /** Public URLs in the tenant-logos bucket. */
+    logoUrl?: string;
+    favicon32Url?: string;
+    favicon192Url?: string;
+  };
 };
 
 /**

@@ -1,6 +1,7 @@
 import { mediaUrl } from "@/config/cdn";
 import { Separator } from "@/components/ui/separator";
 import { SITE_NAV_ITEMS, type SiteScreen } from "../siteNavigation";
+import { useTenantTheme } from "@/lib/TenantThemeProvider";
 
 const SOCIAL_LINKS = [
   {
@@ -41,6 +42,9 @@ type SiteFooterProps = {
 const lumeLogoImage = mediaUrl("LUMElogo.png");
 
 export function SiteFooter({ onNavigate }: SiteFooterProps) {
+  const tenantTheme = useTenantTheme();
+  const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
+
   return (
     <footer className="relative bg-black border-t border-white/10 mt-auto">
       {/* Top gradient bleed */}
@@ -54,8 +58,8 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
         {/* Brand */}
         <div className="flex flex-col items-center gap-3 mb-12">
           <img
-            src={lumeLogoImage}
-            alt="LUME"
+            src={logoImage}
+            alt="Site logo"
             className="h-10 w-auto object-contain opacity-90"
             draggable={false}
           />

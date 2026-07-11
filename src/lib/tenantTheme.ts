@@ -61,6 +61,25 @@ export function applyTenantTheme(
   } else {
     delete root.dataset.lumeDockVariant;
   }
+
+  applyTenantFavicons(theme, root.ownerDocument);
+}
+
+export function applyTenantFavicons(theme: TenantTheme, target: Document = document): void {
+  target.querySelectorAll("link[data-lume-tenant-favicon]").forEach((link) => link.remove());
+  for (const [size, href] of [
+    ["32x32", theme.branding?.favicon32Url],
+    ["192x192", theme.branding?.favicon192Url],
+  ] as const) {
+    const safeHref = safePublicAssetUrl(href);
+    if (!safeHref) continue;
+    const link = target.createElement("link");
+    link.rel = "icon";
+    link.setAttribute("sizes", size);
+    link.href = safeHref;
+    link.dataset.lumeTenantFavicon = "true";
+    target.head.append(link);
+  }
 }
 
 export function clearTenantThemeCacheForTests(): void {
@@ -108,6 +127,7 @@ function normalizeTenantTheme(value: unknown): TenantTheme {
   const dock = isRecord(value.dock) ? value.dock : {};
   const cinematic = isRecord(value.cinematic) ? value.cinematic : {};
   const vehiclePricing = isRecord(value.vehiclePricing) ? value.vehiclePricing : {};
+  const branding = isRecord(value.branding) ? value.branding : {};
 
   return {
     colors: {
@@ -137,6 +157,11 @@ function normalizeTenantTheme(value: unknown): TenantTheme {
     vehiclePricing: {
       showPriceReductionSignal: vehiclePricing.showPriceReductionSignal === true,
     },
+    branding: {
+      logoUrl: safePublicAssetUrl(branding.logoUrl),
+      favicon32Url: safePublicAssetUrl(branding.favicon32Url),
+      favicon192Url: safePublicAssetUrl(branding.favicon192Url),
+    },
   };
 }
 
@@ -150,6 +175,19 @@ function safeCssValue(value: unknown): string | undefined {
   const trimmed = value.trim();
   if (!trimmed || trimmed.length > 160 || /[;{}]/.test(trimmed)) return undefined;
   return trimmed;
+}
+
+function safePublicAssetUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 2_048) return undefined;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "https:" || url.protocol === "http:" ? trimmed : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function normalizeDockVariant(value: unknown): TenantDockVariant | undefined {

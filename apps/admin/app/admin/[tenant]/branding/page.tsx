@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { TenantTheme } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { buildBrandingPreviewUrl } from "@/lib/brandingAssets";
 import BrandingClient from "./BrandingClient";
 
 type PageProps = {
@@ -18,23 +19,33 @@ export default async function BrandingPage({ params }: PageProps) {
     .maybeSingle();
   if (!tenant) notFound();
 
-  const { data: themeRow, error: themeError } = await supabase
-    .from("tenants")
-    .select("theme")
-    .eq("id", tenant.id)
-    .maybeSingle();
+  const [themeResult, manageResult] = await Promise.all([
+    supabase
+      .from("tenants")
+      .select("theme")
+      .eq("id", tenant.id)
+      .maybeSingle(),
+    supabase.rpc("user_has_tenant_role", {
+      p_tenant_id: tenant.id,
+      p_roles: ["owner", "admin"],
+    }),
+  ]);
 
-  const migrationWarning = themeError
-    ? themeColumnError(themeError.message)
+  const migrationWarning = themeResult.error
+    ? themeColumnError(themeResult.error.message)
     : null;
+  const publicSiteBaseUrl =
+    process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? "https://lume-jade-three.vercel.app";
 
   return (
     <BrandingClient
       tenantId={tenant.id}
       tenantSlug={tenant.slug}
       tenantName={tenant.name}
-      initialTheme={(themeRow?.theme ?? {}) as TenantTheme}
+      initialTheme={(themeResult.data?.theme ?? {}) as TenantTheme}
       migrationWarning={migrationWarning}
+      canManageBranding={manageResult.data === true}
+      previewUrl={buildBrandingPreviewUrl(publicSiteBaseUrl, tenant.slug)}
     />
   );
 }
