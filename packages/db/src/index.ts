@@ -11,4 +11,5 @@ export * from "./visitors";
 export * from "./loyalty";
 export * from "./webhooks";
 export * from "./csvImports";
+export * from "./notifications";
 export type { Database } from "./schema";

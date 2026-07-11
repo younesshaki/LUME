@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AdminShell, type ShellTenant } from "@/components/admin-shell";
+import {
+  AdminShell,
+  type ShellNotification,
+  type ShellTenant,
+} from "@/components/admin-shell";
 
 /**
  * Admin layout. Middleware already redirects unauthenticated users to /login
@@ -33,12 +37,33 @@ export default async function AdminLayout({
   ]);
 
   const tenantIds = memberships?.map((membership) => membership.tenant_id) ?? [];
-  const { data: tenants } = tenantIds.length
-    ? await supabase
-        .from("tenants")
-        .select("id, slug, name, status")
-        .in("id", tenantIds)
-    : { data: [] };
+  const tenantQuery = supabase
+    .from("tenants")
+    .select("id, slug, name, status")
+    .in("id", tenantIds);
+  const notificationQuery = supabase
+    .from("admin_notifications")
+    .select("id, tenant_id, type, body, link, read_at, created_at")
+    .in("tenant_id", tenantIds)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  const unreadCountQueries = tenantIds.map((tenantId) =>
+    supabase
+      .from("admin_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .is("read_at", null),
+  );
+  const [tenantResult, notificationResult, unreadCountResults] = tenantIds.length
+    ? await Promise.all([tenantQuery, notificationQuery, Promise.all(unreadCountQueries)])
+    : [null, null, []];
+  const tenants = tenantResult?.data ?? [];
+  // Missing migration or an unavailable notification query must never block
+  // the admin shell during a staggered deployment.
+  const notifications: ShellNotification[] = notificationResult?.data ?? [];
+  const unreadCounts = new Map(
+    tenantIds.map((tenantId, index) => [tenantId, unreadCountResults[index]?.count ?? 0]),
+  );
   const tenantsById = new Map((tenants ?? []).map((tenant) => [tenant.id, tenant]));
 
   const publicSiteUrl =
@@ -60,6 +85,7 @@ export default async function AdminLayout({
       name: tenant.name,
       role: membership.role,
       siteUrl: tenantSiteUrl(tenant.slug),
+      unreadCount: unreadCounts.get(tenant.id) ?? 0,
     });
   }
   shellTenants.sort((a, b) => a.name.localeCompare(b.name));
@@ -68,6 +94,7 @@ export default async function AdminLayout({
     <AdminShell
       email={user.email ?? "account"}
       tenants={shellTenants}
+      notifications={notifications}
       isPlatformAdmin={Boolean(isPlatformAdmin)}
       flagshipUrl={publicSiteUrl}
       signOutAction={signOut}

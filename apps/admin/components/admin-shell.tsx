@@ -12,6 +12,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   BarChart3,
+  Bell,
   Bot,
   BookOpen,
   Building2,
@@ -31,6 +32,7 @@ import {
   PanelTop,
   Plus,
   Search,
+  CheckCheck,
   Users,
 } from "lucide-react";
 import {
@@ -79,6 +81,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import {
+  markAdminNotificationRead,
+  markAllAdminNotificationsRead,
+} from "@/app/admin/notification-actions";
 
 export type ShellTenant = {
   id: string;
@@ -86,11 +92,23 @@ export type ShellTenant = {
   name: string;
   role: string;
   siteUrl: string;
+  unreadCount: number;
+};
+
+export type ShellNotification = {
+  id: string;
+  tenant_id: string;
+  type: "lead.created" | "domain.verified" | "storage.quota_warning" | "csv_import.completed";
+  body: string;
+  link: string | null;
+  read_at: string | null;
+  created_at: string;
 };
 
 type AdminShellProps = {
   email: string;
   tenants: ShellTenant[];
+  notifications: ShellNotification[];
   isPlatformAdmin: boolean;
   flagshipUrl: string;
   signOutAction: () => Promise<void>;
@@ -123,6 +141,7 @@ function useActiveTenant(tenants: ShellTenant[], pathname: string): ShellTenant 
 export function AdminShell({
   email,
   tenants,
+  notifications,
   isPlatformAdmin,
   flagshipUrl,
   signOutAction,
@@ -208,7 +227,12 @@ export function AdminShell({
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
-        <ShellHeader tenants={tenants} activeTenant={activeTenant} isPlatformAdmin={isPlatformAdmin} />
+        <ShellHeader
+          tenants={tenants}
+          activeTenant={activeTenant}
+          notifications={notifications}
+          isPlatformAdmin={isPlatformAdmin}
+        />
         <div className="flex-1 p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
@@ -335,10 +359,12 @@ function UserMenu({
 function ShellHeader({
   tenants,
   activeTenant,
+  notifications,
   isPlatformAdmin,
 }: {
   tenants: ShellTenant[];
   activeTenant: ShellTenant | null;
+  notifications: ShellNotification[];
   isPlatformAdmin: boolean;
 }) {
   const pathname = usePathname();
@@ -382,6 +408,14 @@ function ShellHeader({
         </BreadcrumbList>
       </Breadcrumb>
       <div className="ml-auto flex items-center gap-2">
+        <NotificationMenu
+          tenant={activeTenant}
+          notifications={
+            activeTenant
+              ? notifications.filter((notification) => notification.tenant_id === activeTenant.id)
+              : []
+          }
+        />
         <AnimatedThemeToggler
           theme={currentTheme}
           onThemeChange={setTheme}
@@ -409,6 +443,133 @@ function ShellHeader({
         isPlatformAdmin={isPlatformAdmin}
       />
     </header>
+  );
+}
+
+const NOTIFICATION_DATE_FORMATTER = new Intl.DateTimeFormat("en", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
+
+function NotificationMenu({
+  tenant,
+  notifications,
+}: {
+  tenant: ShellTenant | null;
+  notifications: ShellNotification[];
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = React.useTransition();
+  const [error, setError] = React.useState<string | null>(null);
+  const unreadCount = tenant?.unreadCount ?? 0;
+
+  const visitNotification = (notification: ShellNotification) => {
+    if (!tenant) return;
+    setError(null);
+    startTransition(async () => {
+      if (!notification.read_at) {
+        const result = await markAdminNotificationRead(tenant.id, notification.id);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+      }
+      if (notification.link?.startsWith("/admin/")) router.push(notification.link);
+      router.refresh();
+    });
+  };
+
+  const markAllRead = () => {
+    if (!tenant || unreadCount === 0) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await markAllAdminNotificationsRead(tenant.id);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="relative text-muted-foreground"
+          aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
+          disabled={!tenant}
+        >
+          <Bell aria-hidden="true" />
+          {unreadCount > 0 ? (
+            <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          ) : null}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80 p-0">
+        <div className="flex items-center justify-between gap-3 px-3 py-2">
+          <div>
+            <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
+            <p className="text-xs text-muted-foreground">
+              {unreadCount ? `${unreadCount} unread` : "You're all caught up"}
+            </p>
+          </div>
+          {unreadCount > 0 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              disabled={pending}
+              onClick={markAllRead}
+            >
+              <CheckCheck aria-hidden="true" />
+              Mark all read
+            </Button>
+          ) : null}
+        </div>
+        <DropdownMenuSeparator className="m-0" />
+        {error && (
+          <p role="alert" className="px-3 py-2 text-xs text-destructive">
+            {error}
+          </p>
+        )}
+        {notifications.length === 0 ? (
+          <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+            No notifications yet.
+          </p>
+        ) : (
+          <div className="max-h-96 overflow-y-auto p-1">
+            {notifications.slice(0, 20).map((notification) => (
+              <DropdownMenuItem
+                key={notification.id}
+                className="items-start gap-2 p-2"
+                disabled={pending}
+                onSelect={() => visitNotification(notification)}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`mt-1.5 size-2 shrink-0 rounded-full ${
+                    notification.read_at ? "bg-muted-foreground/25" : "bg-primary"
+                  }`}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block whitespace-normal leading-snug">{notification.body}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {NOTIFICATION_DATE_FORMATTER.format(new Date(notification.created_at))} UTC
+                  </span>
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

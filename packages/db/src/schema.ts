@@ -66,6 +66,30 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["tenant_settings"]["Insert"]>;
         Relationships: [];
       };
+      admin_notifications: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          user_id: string | null;
+          type: "lead.created" | "domain.verified" | "storage.quota_warning" | "csv_import.completed";
+          body: string;
+          link: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["admin_notifications"]["Row"],
+          "id" | "user_id" | "link" | "read_at" | "created_at"
+        > & {
+          id?: string;
+          user_id?: string | null;
+          link?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["admin_notifications"]["Insert"]>;
+        Relationships: [];
+      };
       plans: {
         Row: {
           id: string;

@@ -67,3 +67,10 @@
 - Migration: 038_lead_assignment.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: Existing RBAC roles remain unchanged; `sales_enabled` and `out_of_office` are additive tenant-member flags. The database trigger locks `tenant_settings`, advances a persistent cursor, and leaves leads unassigned when every sales member is away. Manual assignment is tenant-membership constrained. Claude should confirm that orthogonal sales participation is preferable to replacing the existing role check with a new `sales` RBAC role.
+
+## SCRUM-204 Admin notification center
+- Status: done
+- Files: supabase/migrations/039_admin_notifications.sql, packages/db/src/{schema,notifications,index}.ts, apps/admin/app/admin/layout.tsx, apps/admin/app/admin/notification-actions.ts, apps/admin/components/admin-shell.tsx
+- Migration: 039_admin_notifications.sql (NOT applied)
+- Env added: none
+- Review notes / open questions: New-lead and terminal CSV-import notifications are database-triggered and deliberately best-effort so they cannot break producer writes. Domain verification and storage quota work can call the exported best-effort helper when those later tickets land. The dropdown refreshes after mutations/navigation; Supabase Realtime publication is intentionally not required, so Claude can opt in during provisioning without making current behavior depend on it.
