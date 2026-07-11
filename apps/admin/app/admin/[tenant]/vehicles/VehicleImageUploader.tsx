@@ -5,7 +5,10 @@ import { ImagePlus, LoaderCircle, UploadCloud } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { MAX_VEHICLE_IMAGES, MAX_VEHICLE_IMAGE_BYTES } from "@/lib/vehicleImages";
-import { uploadVehicleImage } from "@/lib/vehicleImageUploadClient";
+import {
+  uploadVehicleImage,
+  type ConfirmedVehicleImage,
+} from "@/lib/vehicleImageUploadClient";
 import {
   createVehicleImageUploadItems,
   vehicleImageUploadReducer,
@@ -21,16 +24,19 @@ const ACCEPTED_IMAGES = {
 export function VehicleImageUploader({
   tenantSlug,
   vehicleId,
-  initialImageCount,
+  imageCount,
   migrationWarning,
+  onUploaded,
+  managementDisabled = false,
 }: {
   tenantSlug: string;
   vehicleId: string;
-  initialImageCount: number;
+  imageCount: number;
   migrationWarning: string | null;
+  onUploaded: (image: ConfirmedVehicleImage) => void;
+  managementDisabled?: boolean;
 }) {
   const [items, dispatch] = useReducer(vehicleImageUploadReducer, []);
-  const [imageCount, setImageCount] = useState(initialImageCount);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(migrationWarning);
   const remainingSlots = Math.max(0, MAX_VEHICLE_IMAGES - imageCount);
@@ -63,18 +69,18 @@ export function VehicleImageUploader({
   async function uploadOne(item: VehicleImageUploadItem) {
     dispatch({ type: "progress", id: item.id, progress: 1 });
     try {
-      await uploadVehicleImage(vehicleId, tenantSlug, item.file, (progress) => {
+      const image = await uploadVehicleImage(vehicleId, tenantSlug, item.file, (progress) => {
         dispatch({ type: "progress", id: item.id, progress });
       });
       dispatch({ type: "complete", id: item.id });
-      setImageCount((count) => Math.min(MAX_VEHICLE_IMAGES, count + 1));
+      onUploaded(image);
     } catch (uploadError) {
       const message = uploadError instanceof Error ? uploadError.message : "Upload failed.";
       dispatch({ type: "error", id: item.id, error: message });
     }
   }
 
-  const disabled = uploading || remainingSlots === 0 || Boolean(migrationWarning);
+  const disabled = managementDisabled || uploading || remainingSlots === 0 || Boolean(migrationWarning);
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     accept: ACCEPTED_IMAGES,
     maxSize: MAX_VEHICLE_IMAGE_BYTES,

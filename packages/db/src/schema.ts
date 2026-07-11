@@ -1004,6 +1004,18 @@ export type Database = {
         Args: { p_tenant_id: string; p_vehicle_id: string };
         Returns: { enabled: boolean; reductions: number }[];
       };
+      reorder_vehicle_images: {
+        Args: { p_tenant_id: string; p_vehicle_id: string; p_image_ids: string[] };
+        Returns: boolean;
+      };
+      set_primary_vehicle_image: {
+        Args: { p_tenant_id: string; p_vehicle_id: string; p_image_id: string };
+        Returns: boolean;
+      };
+      delete_vehicle_image: {
+        Args: { p_tenant_id: string; p_vehicle_id: string; p_image_id: string };
+        Returns: { r2_key: string; promoted_image_id: string | null }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

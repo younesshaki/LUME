@@ -3,6 +3,9 @@ import {
   MAX_VEHICLE_IMAGE_BYTES,
   buildVehicleImageR2Key,
   isExpectedVehicleImageR2Key,
+  moveVehicleImage,
+  moveVehicleImageByOffset,
+  parseVehicleImageOrder,
   parseVehicleImageConfirmation,
   parseVehicleImageUploadRequest,
   vehicleImagePublicUrl,
@@ -60,5 +63,21 @@ describe("vehicle image metadata", () => {
     expect(vehicleImagePublicUrl("https://cdn.example/base", "atelier/vehicles/a b/front.jpg"))
       .toBe("https://cdn.example/base/atelier/vehicles/a%20b/front.jpg");
     expect(vehicleImagePublicUrl("not a url", "key")).toBeNull();
+  });
+
+  it("validates exact image order payloads and rejects duplicates", () => {
+    expect(parseVehicleImageOrder([vehicleId, imageId])).toEqual([vehicleId, imageId]);
+    expect(parseVehicleImageOrder([vehicleId, vehicleId])).toBeNull();
+    expect(parseVehicleImageOrder([])).toBeNull();
+  });
+
+  it("moves images by drag target or keyboard offset without mutating input", () => {
+    const images = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    expect(moveVehicleImage(images, "a", "c")?.map((image) => image.id))
+      .toEqual(["b", "c", "a"]);
+    expect(moveVehicleImageByOffset(images, "b", -1)?.map((image) => image.id))
+      .toEqual(["b", "a", "c"]);
+    expect(moveVehicleImageByOffset(images, "a", -1)).toBeNull();
+    expect(images.map((image) => image.id)).toEqual(["a", "b", "c"]);
   });
 });

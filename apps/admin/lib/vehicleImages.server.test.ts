@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { readR2VehicleImageConfig } from "./r2Config";
+import { readR2PublicBaseUrl, readR2VehicleImageConfig } from "./r2Config";
 
 describe("R2 vehicle image configuration", () => {
   it("returns a complete validated server-only configuration", () => {
@@ -18,6 +18,17 @@ describe("R2 vehicle image configuration", () => {
       accessKeyId: "access",
       secretAccessKey: "secret",
     });
+  });
+
+  it("allows public image URL resolution without server credentials", () => {
+    expect(readR2PublicBaseUrl({
+      NODE_ENV: "production",
+      R2_PUBLIC_BASE_URL: "https://cdn.example.com/vehicles/",
+    })).toBe("https://cdn.example.com/vehicles");
+    expect(readR2PublicBaseUrl({
+      NODE_ENV: "production",
+      R2_PUBLIC_BASE_URL: "http://cdn.example.com",
+    })).toBeNull();
   });
 
   it("fails closed when credentials or URLs are incomplete", () => {

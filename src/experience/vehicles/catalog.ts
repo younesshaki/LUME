@@ -22,6 +22,7 @@ export type Vehicle = {
   drivetrain: string;
   fuelType: string;
   imageSrc: string;
+  primaryImageSrc?: string;
   sellerCity: string;
   sellerState: string;
   isSpecial: boolean;
@@ -523,6 +524,7 @@ function normalizeApiVehicle(vehicle: Vehicle & { tenantId?: string; externalId?
     drivetrain: vehicle.drivetrain ? normalizeDrivetrain(vehicle.drivetrain) : "",
     fuelType: vehicle.fuelType ? normalizeFuelType(vehicle.fuelType) : "",
     imageSrc: vehicle.imageSrc || GENERATED_IMAGES[imageKey] || fallbackImage,
+    primaryImageSrc: vehicle.primaryImageSrc || undefined,
     sellerCity: vehicle.sellerCity || "",
     sellerState: vehicle.sellerState || "",
     isSpecial,
@@ -625,6 +627,12 @@ export function getVehicleById(vehicles: Vehicle[], id: string | null): Vehicle 
 
 export function formatVehiclePrice(price: number): string {
   return `Est. $${price.toLocaleString()}`;
+}
+
+export function vehicleDisplayImage(
+  vehicle: Pick<Vehicle, "primaryImageSrc" | "specialImageSrc" | "imageSrc">,
+): string {
+  return vehicle.primaryImageSrc || vehicle.specialImageSrc || vehicle.imageSrc;
 }
 
 export function countActiveFilters(filters: VehicleFilters): number {

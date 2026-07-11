@@ -25,6 +25,7 @@ import {
   countActiveFilters,
   formatVehiclePrice,
   loadVehicleResults,
+  vehicleDisplayImage,
   type Vehicle,
   type VehicleFacets,
   type VehicleFilters,
@@ -211,9 +212,9 @@ function VehicleCard({
       onMouseMove={handleMouseMove}
     >
       <div className="vehiclesPage__cardImage">
-        {vehicle.imageSrc ? (
+        {vehicleDisplayImage(vehicle) ? (
           <img
-            src={vehicle.specialImageSrc ?? vehicle.imageSrc}
+            src={vehicleDisplayImage(vehicle)}
             alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
           />
         ) : (
@@ -755,7 +756,7 @@ function CompareModal({
         <div className="vehiclesPage__compareGrid">
           {vehicles.map((vehicle) => (
             <article key={vehicle.id} className="vehiclesPage__compareColumn">
-              <img src={vehicle.imageSrc} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} />
+              <img src={vehicleDisplayImage(vehicle)} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} />
               <h3>{vehicle.year} {vehicle.make} {vehicle.model}</h3>
               <dl>
                 <div><dt>Price</dt><dd>{formatVehiclePrice(vehicle.price)}</dd></div>

@@ -107,6 +107,43 @@ export function vehicleImagePublicUrl(baseUrl: string, r2Key: string): string | 
   }
 }
 
+export function parseVehicleImageOrder(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_VEHICLE_IMAGES) return null;
+  const ids = value.filter((id): id is string => typeof id === "string" && UUID_PATTERN.test(id));
+  return ids.length === value.length && new Set(ids).size === ids.length ? ids : null;
+}
+
+export function isVehicleImageId(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
+export function moveVehicleImage<T extends { id: string }>(
+  images: readonly T[],
+  movedId: string,
+  targetId: string,
+): T[] | null {
+  const from = images.findIndex((image) => image.id === movedId);
+  const to = images.findIndex((image) => image.id === targetId);
+  if (from < 0 || to < 0) return null;
+  if (from === to) return [...images];
+  const next = [...images];
+  const [moved] = next.splice(from, 1);
+  if (!moved) return null;
+  next.splice(to, 0, moved);
+  return next;
+}
+
+export function moveVehicleImageByOffset<T extends { id: string }>(
+  images: readonly T[],
+  imageId: string,
+  offset: -1 | 1,
+): T[] | null {
+  const index = images.findIndex((image) => image.id === imageId);
+  const target = index + offset;
+  if (index < 0 || target < 0 || target >= images.length) return null;
+  return moveVehicleImage(images, imageId, images[target]?.id ?? "");
+}
+
 function parseContentType(value: unknown): VehicleImageContentType | null {
   return value === "image/jpeg" || value === "image/png" || value === "image/webp"
     ? value

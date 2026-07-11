@@ -21,7 +21,7 @@ export function readR2VehicleImageConfig(
 ): R2VehicleImageConfig | null {
   const endpoint = environment.R2_ENDPOINT?.replace(/\/$/, "");
   const bucket = environment.R2_BUCKET_NAME?.trim();
-  const publicBaseUrl = environment.R2_PUBLIC_BASE_URL?.replace(/\/$/, "");
+  const publicBaseUrl = readR2PublicBaseUrl(environment);
   const accessKeyId = environment.R2_ACCESS_KEY_ID?.trim();
   const secretAccessKey = environment.R2_SECRET_ACCESS_KEY?.trim();
   if (!endpoint || !bucket || !publicBaseUrl || !accessKeyId || !secretAccessKey) return null;
@@ -44,6 +44,22 @@ export function readR2VehicleImageConfig(
   }
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/i.test(bucket)) return null;
   return { endpoint, bucket, publicBaseUrl, accessKeyId, secretAccessKey };
+}
+
+export function readR2PublicBaseUrl(
+  environment: R2VehicleImageEnvironment = process.env,
+): string | null {
+  const value = environment.R2_PUBLIC_BASE_URL?.replace(/\/$/, "");
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (!isHttpProtocol(url.protocol, environment.NODE_ENV) || url.username || url.password) {
+      return null;
+    }
+    return value;
+  } catch {
+    return null;
+  }
 }
 
 function isHttpProtocol(protocol: string, nodeEnv: string | undefined): boolean {

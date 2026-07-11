@@ -1,8 +1,8 @@
 import { presignR2Request } from "@/lib/r2Signing";
 import {
   readR2VehicleImageConfig,
-  type R2VehicleImageConfig,
 } from "@/lib/r2Config";
+import { deleteR2Object } from "@/lib/r2Objects.server";
 import {
   isExpectedVehicleImageR2Key,
   parseVehicleImageConfirmation,
@@ -75,7 +75,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
     return json({ error: "The uploaded R2 object was not found." }, 409);
   }
   if (!storedMetadataMatches(storedObject.headers, payload.contentType, payload.byteSize)) {
-    await bestEffortDelete(config, payload.r2Key);
+    await deleteR2Object(config, payload.r2Key);
     return json({ error: "Uploaded object metadata does not match the confirmation." }, 409);
   }
 
@@ -101,7 +101,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
       );
       if (racedImage) return imageResponse(racedImage, config.publicBaseUrl, 200);
     }
-    await bestEffortDelete(config, payload.r2Key);
+    await deleteR2Object(config, payload.r2Key);
     const status = error?.message.includes("at most 20") ? 409 : 500;
     return json({ error: status === 409 ? error?.message : "Unable to save vehicle image metadata." }, status);
   }
@@ -144,27 +144,6 @@ function imageResponse(image: ImageRow, publicBaseUrl: string, status: number): 
   const publicUrl = vehicleImagePublicUrl(publicBaseUrl, image.r2_key);
   if (!publicUrl) return json({ error: "R2 public URL is not configured." }, 503);
   return json({ image: { ...image, url: publicUrl } }, status);
-}
-
-async function bestEffortDelete(config: R2VehicleImageConfig, r2Key: string): Promise<void> {
-  try {
-    const request = presignR2Request({
-      endpoint: config.endpoint,
-      bucket: config.bucket,
-      key: r2Key,
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-      method: "DELETE",
-      expiresInSeconds: 60,
-    });
-    await fetch(request.url, {
-      method: request.method,
-      cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
-    });
-  } catch {
-    // A reconciliation job can remove the orphan; never mask the original failure.
-  }
 }
 
 function storedMetadataMatches(

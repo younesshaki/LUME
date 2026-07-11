@@ -19,6 +19,7 @@ import {
   getUniqueMakes,
   loadVehicles,
   sortVehicles,
+  vehicleDisplayImage,
   type Vehicle,
   type VehicleFilters,
   type VehicleSort,
@@ -120,9 +121,9 @@ function VehicleCard({
       onMouseMove={handleMouseMove}
     >
       <div className="vehiclesPage__cardImage">
-        {vehicle.imageSrc ? (
+        {vehicleDisplayImage(vehicle) ? (
           <img
-            src={vehicle.specialImageSrc ?? vehicle.imageSrc}
+            src={vehicleDisplayImage(vehicle)}
             alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
           />
         ) : (

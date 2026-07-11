@@ -11,6 +11,8 @@ import { rowToVehicle } from "@lume/db";
 import { createAnonServerClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
+import { readR2PublicBaseUrl } from "@/lib/r2Config";
+import { vehicleImagePublicUrl } from "@/lib/vehicleImages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,8 +59,15 @@ export async function GET(request: Request): Promise<Response> {
     return json({ error: error.message }, 500, request);
   }
 
-  const facets = await loadVehicleFacets(supabase, tenant.tenantId, sp);
-  const vehicles = (data ?? []).map(rowToVehicle);
+  const rows = data ?? [];
+  const [facets, primaryImages] = await Promise.all([
+    loadVehicleFacets(supabase, tenant.tenantId, sp),
+    loadPrimaryVehicleImages(supabase, tenant.tenantId, rows.map((row) => row.id)),
+  ]);
+  const vehicles = rows.map((row) => ({
+    ...rowToVehicle(row),
+    primaryImageSrc: primaryImages.get(row.id),
+  }));
   const totalCount = count ?? vehicles.length;
   const response: VehicleListResponse = {
     vehicles,
@@ -67,6 +76,32 @@ export async function GET(request: Request): Promise<Response> {
     facets,
   };
   return json(response, 200, request);
+}
+
+async function loadPrimaryVehicleImages(
+  supabase: ReturnType<typeof createAnonServerClient>,
+  tenantId: string,
+  vehicleIds: string[],
+): Promise<Map<string, string>> {
+  const publicBaseUrl = readR2PublicBaseUrl();
+  if (!publicBaseUrl || vehicleIds.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from("vehicle_images")
+    .select("vehicle_id, r2_key")
+    .eq("tenant_id", tenantId)
+    .eq("is_primary", true)
+    .in("vehicle_id", vehicleIds);
+  if (error) {
+    // Migration 043 may roll out after the API; legacy image_src remains valid.
+    console.warn("[/api/vehicles] primary image query unavailable:", error.message);
+    return new Map();
+  }
+  const images = new Map<string, string>();
+  for (const image of data ?? []) {
+    const url = vehicleImagePublicUrl(publicBaseUrl, image.r2_key);
+    if (url) images.set(image.vehicle_id, url);
+  }
+  return images;
 }
 
 function buildVehicleQuery(

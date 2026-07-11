@@ -20,6 +20,8 @@ export type Vehicle = {
   drivetrain: string;
   fuelType: string;
   imageSrc: string;
+  /** Managed vehicle_images primary image, preferred over legacy imagery. */
+  primaryImageSrc?: string;
   sellerCity: string;
   sellerState: string;
   isSpecial: boolean;

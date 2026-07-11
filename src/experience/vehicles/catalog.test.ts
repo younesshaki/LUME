@@ -14,6 +14,7 @@ import {
   sortVehicles,
   vehicleFacetsFromVehicles,
   vehicleFiltersToApiSearchParams,
+  vehicleDisplayImage,
   type Vehicle,
 } from "./catalog";
 import { encodeVehicleUrlState, readVehicleUrlState } from "./urlState";
@@ -150,6 +151,18 @@ describe("vehicle catalog", () => {
     expect(getVehicleById(vehicles, "toyota-ca")?.model).toBe("RAV4");
     expect(getVehicleById(vehicles, "missing")).toBeUndefined();
     expect(formatVehiclePrice(72000)).toBe("Est. $72,000");
+  });
+
+  it("prefers a managed primary image over special and legacy imagery", () => {
+    expect(vehicleDisplayImage({
+      primaryImageSrc: "https://cdn.example/primary.webp",
+      specialImageSrc: "https://cdn.example/special.webp",
+      imageSrc: "https://cdn.example/legacy.webp",
+    })).toBe("https://cdn.example/primary.webp");
+    expect(vehicleDisplayImage({
+      specialImageSrc: "https://cdn.example/special.webp",
+      imageSrc: "https://cdn.example/legacy.webp",
+    })).toBe("https://cdn.example/special.webp");
   });
 
   it("builds API search params for server-side vehicle queries", () => {

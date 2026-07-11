@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import type { TenantTheme } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { readR2PublicBaseUrl } from "@/lib/r2Config";
+import { vehicleImagePublicUrl } from "@/lib/vehicleImages";
 import VehicleForm from "../VehicleForm";
-import { VehicleImageUploader } from "../VehicleImageUploader";
+import { VehicleImageManager } from "../VehicleImageManager";
 import { VehiclePriceHistory } from "../VehiclePriceHistory";
 
 type PageProps = { params: Promise<{ tenant: string; id: string }> };
@@ -19,7 +21,7 @@ export default async function EditVehiclePage({ params }: PageProps) {
 
   if (!tenant) notFound();
 
-  const [vehicleResult, historyResult, imageCountResult, manageResult] = await Promise.all([
+  const [vehicleResult, historyResult, imagesResult, manageResult] = await Promise.all([
     supabase
       .from("vehicles")
       .select("*")
@@ -35,9 +37,10 @@ export default async function EditVehiclePage({ params }: PageProps) {
       .limit(200),
     supabase
       .from("vehicle_images")
-      .select("id", { count: "exact", head: true })
+      .select("id, r2_key, content_type, byte_size, width, height, sort_order, is_primary, created_at")
       .eq("tenant_id", tenant.id)
-      .eq("vehicle_id", id),
+      .eq("vehicle_id", id)
+      .order("sort_order", { ascending: true }),
     supabase.rpc("user_has_tenant_role", {
       p_tenant_id: tenant.id,
       p_roles: ["owner", "admin"],
@@ -48,6 +51,7 @@ export default async function EditVehiclePage({ params }: PageProps) {
   if (!vehicle) notFound();
   if (historyResult.error) throw new Error(`Unable to load price history: ${historyResult.error.message}`);
   const theme = tenant.theme as TenantTheme;
+  const r2PublicBaseUrl = readR2PublicBaseUrl();
 
   return (
     <div className="space-y-8">
@@ -75,11 +79,14 @@ export default async function EditVehiclePage({ params }: PageProps) {
           sold_price: vehicle.sold_price,
         }}
       />
-      <VehicleImageUploader
+      <VehicleImageManager
         tenantSlug={tenant.slug}
         vehicleId={vehicle.id}
-        initialImageCount={imageCountResult.count ?? 0}
-        migrationWarning={imageCountResult.error
+        initialImages={(imagesResult.data ?? []).map((image) => ({
+          ...image,
+          url: r2PublicBaseUrl ? vehicleImagePublicUrl(r2PublicBaseUrl, image.r2_key) ?? "" : "",
+        }))}
+        migrationWarning={imagesResult.error
           ? "Vehicle image metadata is not configured. Apply migration 043_vehicle_images.sql first."
           : null}
       />
