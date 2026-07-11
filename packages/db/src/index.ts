@@ -13,4 +13,5 @@ export * from "./webhooks";
 export * from "./csvImports";
 export * from "./notifications";
 export * from "./vehicleStatus";
+export * from "./usage";
 export type { Database } from "./schema";

@@ -58,6 +58,7 @@ import { buildToolRequestFields, loadTenantToolAllowlist } from "@/lib/chatTools
 import { loadChatLoyaltyContext, loyaltySystemPrompt } from "@/lib/chatLoyalty";
 import { resolveVisitor } from "@/lib/visitorSession";
 import { isChatStreamCompletionLine } from "@/lib/chatStreamCompletion";
+import { recordPublicApiUsage } from "@/lib/usage.server";
 import {
   completeVisitorPreferenceTurn,
   loadVisitorPreferenceContext,
@@ -131,6 +132,7 @@ export async function POST(request: Request): Promise<Response> {
   // in-memory scoring (~thousands of chunks), swap retrieveByKeywords()
   // for retrieveContext() from @lume/rag/server + an embedder.
   const supabase = createServiceClient();
+  await recordPublicApiUsage(tenant.tenantId, "chat_requests", supabase);
 
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.

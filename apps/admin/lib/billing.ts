@@ -110,6 +110,28 @@ export function buildBillingUsageMeter(
   };
 }
 
+export function billingUsagePeriodStart(
+  subscriptionStart: string | null | undefined,
+  now = new Date(),
+): string {
+  if (subscriptionStart) {
+    const parsed = new Date(subscriptionStart);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+  }
+  if (Number.isNaN(now.getTime())) throw new TypeError("now must be a valid date");
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${now.getUTCFullYear()}-${month}-01`;
+}
+
+export function isUsageTrackedSubscriptionStatus(
+  status: BillingSubscriptionSummary["status"] | null | undefined,
+): boolean {
+  return status === "active" ||
+    status === "trialing" ||
+    status === "past_due" ||
+    status === "incomplete";
+}
+
 export function normalizeInvoicePage(value: string | undefined): number {
   const parsed = Number.parseInt(value ?? "1", 10);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;

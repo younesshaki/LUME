@@ -167,6 +167,55 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["invoices"]["Insert"]>;
         Relationships: [];
       };
+      usage_events: {
+        Row: {
+          tenant_id: string;
+          event_type:
+            | "chat_requests"
+            | "vehicle_requests"
+            | "bot_action_requests"
+            | "lead_requests";
+          period_start: string;
+          count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["usage_events"]["Row"],
+          "count" | "created_at" | "updated_at"
+        > & {
+          count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["usage_events"]["Insert"]>;
+        Relationships: [];
+      };
+      usage_snapshots: {
+        Row: {
+          tenant_id: string;
+          metric: "r2_storage_bytes";
+          captured_on: string;
+          value: number;
+          object_count: number;
+          source: string;
+          metadata: Record<string, unknown>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["usage_snapshots"]["Row"],
+          "captured_on" | "object_count" | "metadata" | "created_at" | "updated_at"
+        > & {
+          captured_on?: string;
+          object_count?: number;
+          metadata?: Record<string, unknown>;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["usage_snapshots"]["Insert"]>;
+        Relationships: [];
+      };
       tenant_webhooks: {
         Row: {
           id: string;
@@ -1037,6 +1086,19 @@ export type Database = {
       delete_vehicle_image: {
         Args: { p_tenant_id: string; p_vehicle_id: string; p_image_id: string };
         Returns: { r2_key: string; promoted_image_id: string | null }[];
+      };
+      increment_usage_event: {
+        Args: {
+          p_tenant_id: string;
+          p_event_type:
+            | "chat_requests"
+            | "vehicle_requests"
+            | "bot_action_requests"
+            | "lead_requests";
+          p_period_start?: string | null;
+          p_increment?: number;
+        };
+        Returns: number;
       };
     };
     Enums: Record<string, never>;

@@ -17,6 +17,7 @@ import {
   verifyTurnstileToken,
   type NormalizedLeadCapture,
 } from "@/lib/leads";
+import { recordPublicApiUsage } from "@/lib/usage.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,6 +59,9 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "Bot verification failed" }, 400, request);
   }
 
+  const supabase = createServiceClient();
+  await recordPublicApiUsage(tenant.tenantId, "lead_requests", supabase);
+
   // Return an existing lead for accidental retries in the same hour. This is
   // deliberately checked after Turnstile because its tokens are single-use.
   const duplicate = await findRecentDuplicate(tenant.tenantId, lead);
@@ -67,7 +71,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // SCRUM-178: attribute the lead to a signed-in visitor when one is present.
-  const visitor = await resolveVisitor(request, tenant.tenantId).catch(() => null);
+  const visitor = await resolveVisitor(request, tenant.tenantId, supabase).catch(() => null);
 
   const insert: Database["public"]["Tables"]["leads"]["Insert"] = {
     tenant_id: tenant.tenantId,
@@ -92,7 +96,6 @@ export async function POST(request: Request): Promise<Response> {
     lost_reason: null,
   };
 
-  const supabase = createServiceClient();
   const { data, error } = await supabase.from("leads").insert(insert).select("id").single();
   if (error || !data) {
     console.error("[/api/leads] insert failed:", error?.message ?? "no row");

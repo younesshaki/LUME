@@ -4,9 +4,11 @@ import { CalendarDays, CreditCard, FileDown, FileText } from "lucide-react";
 import type { Database } from "@lume/db";
 import {
   buildBillingUsageMeter,
+  billingUsagePeriodStart,
   findPlanAllowance,
   formatBillingAmount,
   invoicePageCount,
+  isUsageTrackedSubscriptionStatus,
   normalizeInvoicePage,
   planLimitEntries,
   selectPrimarySubscription,
@@ -85,6 +87,11 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
   const currentSubscription = primary
     ? subscriptions.find((subscription) => subscription.id === primary.id) ?? null
     : null;
+  const usagePeriodStart = billingUsagePeriodStart(
+    isUsageTrackedSubscriptionStatus(currentSubscription?.status)
+      ? currentSubscription?.current_period_start
+      : null,
+  );
   const currentPlanLimits = currentPlan ? planLimitEntries(currentPlan.limits) : [];
   let leadUsageQuery = supabase
     .from("leads")
@@ -96,17 +103,37 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
   if (currentSubscription?.current_period_end) {
     leadUsageQuery = leadUsageQuery.lt("created_at", currentSubscription.current_period_end);
   }
-  const leadUsageResult = await leadUsageQuery;
+  const [leadUsageResult, chatUsageResult, r2StorageResult] = await Promise.all([
+    leadUsageQuery,
+    supabase
+      .from("usage_events")
+      .select("count")
+      .eq("tenant_id", tenant.id)
+      .eq("event_type", "chat_requests")
+      .eq("period_start", usagePeriodStart)
+      .maybeSingle(),
+    supabase
+      .from("usage_snapshots")
+      .select("value, captured_on")
+      .eq("tenant_id", tenant.id)
+      .eq("metric", "r2_storage_bytes")
+      .order("captured_on", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
   const limits = currentPlan?.limits ?? {};
   const usageMeters = [
     {
       label: "Chat requests",
       detail: "Current billing period",
-      meter: buildBillingUsageMeter(null, findPlanAllowance(limits, [
+      meter: buildBillingUsageMeter(
+        chatUsageResult.error ? null : (chatUsageResult.data?.count ?? 0),
+        findPlanAllowance(limits, [
         "chat_requests",
         "monthly_chat_requests",
         "chat_requests_per_month",
-      ])),
+        ]),
+      ),
     },
     {
       label: "Leads",
@@ -117,13 +144,14 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
       ),
     },
     {
-      label: "Storage",
-      detail: "Tenant media",
-      meter: buildBillingUsageMeter(null, findPlanAllowance(limits, [
-        "storage_bytes",
-        "storage",
-        "storage_limit_bytes",
-      ])),
+      label: "R2 vehicle images",
+      detail: r2StorageResult.data?.captured_on
+        ? `Partial storage snapshot · ${formatDate(r2StorageResult.data.captured_on)}`
+        : "Partial tenant storage",
+      meter: buildBillingUsageMeter(
+        r2StorageResult.error ? null : (r2StorageResult.data?.value ?? null),
+        null,
+      ),
     },
   ];
   const invoiceCount = invoicesResult.count ?? 0;
@@ -216,7 +244,8 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
         <div>
           <h2 className="text-lg font-semibold">Usage</h2>
           <p className="text-sm text-muted-foreground">
-            Chat and storage metering will populate after SCRUM-103 usage tracking is provisioned.
+            Request counters are scoped to the current billing period. Vehicle image storage is
+            shown separately until every tenant media bucket is metered.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">

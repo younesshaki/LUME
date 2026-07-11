@@ -1,6 +1,6 @@
 import { createHash, createHmac } from "node:crypto";
 
-export type R2PresignMethod = "PUT" | "HEAD" | "DELETE";
+export type R2PresignMethod = "GET" | "PUT" | "HEAD" | "DELETE";
 
 export type R2SignedUploadHeaders = {
   contentType: string;
@@ -15,6 +15,7 @@ export type R2PresignOptions = {
   secretAccessKey: string;
   method: R2PresignMethod;
   uploadHeaders?: R2SignedUploadHeaders;
+  queryParameters?: ReadonlyArray<readonly [string, string]>;
   expiresInSeconds?: number;
   now?: Date;
 };
@@ -40,15 +41,21 @@ const SIGNING_ALGORITHM = "AWS4-HMAC-SHA256";
 export function presignR2Request(options: R2PresignOptions): R2PresignedRequest {
   const endpoint = parseEndpoint(options.endpoint);
   const bucket = requireNonEmpty(options.bucket, "bucket");
-  const key = requireNonEmpty(options.key, "key");
+  const key = options.key;
   const accessKeyId = requireNonEmpty(options.accessKeyId, "accessKeyId");
   const secretAccessKey = requireNonEmpty(options.secretAccessKey, "secretAccessKey");
   const expiresInSeconds = options.expiresInSeconds ?? DEFAULT_EXPIRY_SECONDS;
   const now = options.now ? new Date(options.now.getTime()) : new Date();
 
-  if (options.method !== "PUT" && options.method !== "HEAD" && options.method !== "DELETE") {
-    throw new TypeError("method must be PUT, HEAD, or DELETE");
+  if (
+    options.method !== "GET" &&
+    options.method !== "PUT" &&
+    options.method !== "HEAD" &&
+    options.method !== "DELETE"
+  ) {
+    throw new TypeError("method must be GET, PUT, HEAD, or DELETE");
   }
+  if (!key && options.method !== "GET") throw new TypeError("key must not be empty");
   if (bucket.includes("/")) {
     throw new TypeError("bucket must not contain a slash");
   }
@@ -85,8 +92,12 @@ export function presignR2Request(options: R2PresignOptions): R2PresignedRequest 
   }
   canonicalHeaderEntries.sort(([left], [right]) => compareEncoded(left, right));
   const signedHeaders = canonicalHeaderEntries.map(([name]) => name).join(";");
-  const canonicalUri = `/${awsEncode(bucket)}/${encodeObjectKey(key)}`;
+  const canonicalUri = key
+    ? `/${awsEncode(bucket)}/${encodeObjectKey(key)}`
+    : `/${awsEncode(bucket)}`;
+  const requestQuery = validateQueryParameters(options.queryParameters ?? []);
   const canonicalQuery = canonicalQueryString([
+    ...requestQuery,
     ["X-Amz-Algorithm", SIGNING_ALGORITHM],
     ["X-Amz-Credential", `${accessKeyId}/${credentialScope}`],
     ["X-Amz-Date", amzDate],
@@ -150,6 +161,26 @@ function requireNonEmpty(value: string, name: string): string {
 function normalizeHeaderValue(value: string): string {
   if (/[\r\n]/.test(value)) throw new TypeError("header values must not contain newlines");
   return value.trim().replace(/\s+/g, " ");
+}
+
+function validateQueryParameters(
+  values: ReadonlyArray<readonly [string, string]>,
+): Array<readonly [string, string]> {
+  const output: Array<readonly [string, string]> = [];
+  const seen = new Set<string>();
+  for (const [rawName, rawValue] of values) {
+    const name = rawName.trim();
+    if (!name || /[\r\n]/.test(name) || /[\r\n]/.test(rawValue)) {
+      throw new TypeError("query parameters must have safe names and values");
+    }
+    const normalizedName = name.toLocaleLowerCase("en");
+    if (normalizedName.startsWith("x-amz-") || seen.has(normalizedName)) {
+      throw new TypeError("query parameters must not override signing fields or repeat");
+    }
+    seen.add(normalizedName);
+    output.push([name, rawValue]);
+  }
+  return output;
 }
 
 function formatAmzDate(value: Date): string {

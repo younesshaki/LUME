@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { readR2PublicBaseUrl, readR2VehicleImageConfig } from "./r2Config";
+import {
+  readR2PublicBaseUrl,
+  readR2StorageConfig,
+  readR2VehicleImageConfig,
+} from "./r2Config";
 
 describe("R2 vehicle image configuration", () => {
   it("returns a complete validated server-only configuration", () => {
@@ -29,6 +33,20 @@ describe("R2 vehicle image configuration", () => {
       NODE_ENV: "production",
       R2_PUBLIC_BASE_URL: "http://cdn.example.com",
     })).toBeNull();
+  });
+
+  it("allows private storage jobs without a public delivery URL", () => {
+    expect(readR2StorageConfig({
+      R2_ENDPOINT: "https://account.r2.cloudflarestorage.com/",
+      R2_BUCKET_NAME: "lume-media",
+      R2_ACCESS_KEY_ID: "access",
+      R2_SECRET_ACCESS_KEY: "secret",
+    })).toEqual({
+      endpoint: "https://account.r2.cloudflarestorage.com",
+      bucket: "lume-media",
+      accessKeyId: "access",
+      secretAccessKey: "secret",
+    });
   });
 
   it("fails closed when credentials or URLs are incomplete", () => {

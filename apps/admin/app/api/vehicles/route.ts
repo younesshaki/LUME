@@ -13,6 +13,7 @@ import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { readR2PublicBaseUrl } from "@/lib/r2Config";
 import { vehicleImagePublicUrl } from "@/lib/vehicleImages";
+import { recordPublicApiUsage } from "@/lib/usage.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const tenant = await getTenantFromRequest(request);
   if (!tenant) return json({ error: "Unknown or inactive tenant" }, 404, request);
+  await recordPublicApiUsage(tenant.tenantId, "vehicle_requests");
 
   const url = new URL(request.url);
   const sp = url.searchParams;

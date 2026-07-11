@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { recordPublicUsage, type UsageRpc } from "./usage";
 
 /**
  * POST /api/leads — public lead capture for the Vite site (same-origin).
@@ -74,6 +75,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return json(req, res, { error: validation.error }, 400);
   }
   const lead = validation.value;
+
+  await recordPublicUsage(
+    (name, args) => supabase.rpc(name, args) as ReturnType<UsageRpc>,
+    tenant.tenantId,
+    "lead_requests",
+  );
 
   const { data, error } = await supabase
     .from("leads")

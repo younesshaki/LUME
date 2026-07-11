@@ -56,6 +56,54 @@ describe("presignR2Request", () => {
     expect(new URL(head.url).searchParams.get("X-Amz-Expires")).toBe("900");
   });
 
+  it("signs bucket-level GET queries for paginated object listing", () => {
+    const request = presignR2Request({
+      ...BASE_OPTIONS,
+      method: "GET",
+      key: "",
+      queryParameters: [
+        ["list-type", "2"],
+        ["prefix", "tenant-slug/"],
+        ["continuation-token", "next+/="],
+      ],
+    });
+    const url = new URL(request.url);
+    expect(request.method).toBe("GET");
+    expect(url.pathname).toBe("/tenant-assets");
+    expect(url.searchParams.get("list-type")).toBe("2");
+    expect(url.searchParams.get("prefix")).toBe("tenant-slug/");
+    expect(url.searchParams.get("continuation-token")).toBe("next+/=");
+    expect(url.searchParams.get("X-Amz-Signature")).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("matches the fixed SigV4 vector for an R2 ListObjectsV2 request", () => {
+    const request = presignR2Request({
+      ...BASE_OPTIONS,
+      method: "GET",
+      key: "",
+      expiresInSeconds: 60,
+      queryParameters: [
+        ["encoding-type", "url"],
+        ["list-type", "2"],
+        ["max-keys", "1000"],
+        ["prefix", "tenant-slug/"],
+      ],
+    });
+    expect(request.url).toBe(
+      "https://account-id.r2.cloudflarestorage.com/tenant-assets" +
+      "?X-Amz-Algorithm=AWS4-HMAC-SHA256" +
+      "&X-Amz-Credential=EXAMPLEACCESSKEY%2F20260203%2Fauto%2Fs3%2Faws4_request" +
+      "&X-Amz-Date=20260203T040506Z" +
+      "&X-Amz-Expires=60" +
+      "&X-Amz-SignedHeaders=host" +
+      "&encoding-type=url" +
+      "&list-type=2" +
+      "&max-keys=1000" +
+      "&prefix=tenant-slug%2F" +
+      "&X-Amz-Signature=bd2dfa7fd287b0f62e10583f00d6870e5ea51077cb3ddb2eedeb272bcbc64181",
+    );
+  });
+
   it("binds browser PUT content type and length into the signature", () => {
     const request = presignR2Request({
       ...BASE_OPTIONS,
@@ -128,6 +176,12 @@ describe("presignR2Request", () => {
       ...BASE_OPTIONS,
         method: "PATCH" as "PUT",
         key: "vehicle.jpg",
-    })).toThrow("method must be PUT, HEAD, or DELETE");
+    })).toThrow("method must be GET, PUT, HEAD, or DELETE");
+    expect(() => presignR2Request({
+      ...BASE_OPTIONS,
+      method: "GET",
+      key: "",
+      queryParameters: [["X-Amz-Date", "override"]],
+    })).toThrow("must not override signing fields");
   });
 });

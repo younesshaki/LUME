@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBillingUsageMeter,
+  billingUsagePeriodStart,
   canManageBilling,
   findPlanAllowance,
   formatBillingAmount,
   isBillingPlanId,
   isManualPlanChangeAllowed,
   invoicePageCount,
+  isUsageTrackedSubscriptionStatus,
   normalizeInvoicePage,
   planLimitEntries,
   selectPrimarySubscription,
@@ -79,6 +81,19 @@ describe("billing presentation", () => {
     });
     expect(buildBillingUsageMeter(null, 10).state).toBe("untracked");
     expect(buildBillingUsageMeter(4, null).state).toBe("unconfigured");
+  });
+
+  it("uses the subscription period date with a UTC-month fallback", () => {
+    expect(billingUsagePeriodStart(
+      "2026-07-15T23:00:00-02:00",
+      new Date("2026-08-20T00:00:00Z"),
+    )).toBe("2026-07-16");
+    expect(billingUsagePeriodStart(null, new Date("2026-08-20T00:00:00Z")))
+      .toBe("2026-08-01");
+    expect(isUsageTrackedSubscriptionStatus("active")).toBe(true);
+    expect(isUsageTrackedSubscriptionStatus("past_due")).toBe(true);
+    expect(isUsageTrackedSubscriptionStatus("canceled")).toBe(false);
+    expect(isUsageTrackedSubscriptionStatus("inactive")).toBe(false);
   });
 
   it("normalizes invoice pages and billing roles", () => {

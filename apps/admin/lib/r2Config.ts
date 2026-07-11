@@ -1,9 +1,12 @@
-export type R2VehicleImageConfig = {
+export type R2StorageConfig = {
   endpoint: string;
   bucket: string;
-  publicBaseUrl: string;
   accessKeyId: string;
   secretAccessKey: string;
+};
+
+export type R2VehicleImageConfig = R2StorageConfig & {
+  publicBaseUrl: string;
 };
 
 type R2VehicleImageEnvironment = Partial<Record<
@@ -19,22 +22,12 @@ type R2VehicleImageEnvironment = Partial<Record<
 export function readR2VehicleImageConfig(
   environment: R2VehicleImageEnvironment = process.env,
 ): R2VehicleImageConfig | null {
-  const endpoint = environment.R2_ENDPOINT?.replace(/\/$/, "");
-  const bucket = environment.R2_BUCKET_NAME?.trim();
+  const storage = readR2StorageConfig(environment);
   const publicBaseUrl = readR2PublicBaseUrl(environment);
-  const accessKeyId = environment.R2_ACCESS_KEY_ID?.trim();
-  const secretAccessKey = environment.R2_SECRET_ACCESS_KEY?.trim();
-  if (!endpoint || !bucket || !publicBaseUrl || !accessKeyId || !secretAccessKey) return null;
+  if (!storage || !publicBaseUrl) return null;
   try {
-    const endpointUrl = new URL(endpoint);
     const publicUrl = new URL(publicBaseUrl);
     if (
-      endpointUrl.protocol !== "https:" ||
-      endpointUrl.pathname !== "/" ||
-      endpointUrl.username ||
-      endpointUrl.password ||
-      endpointUrl.search ||
-      endpointUrl.hash ||
       !isHttpProtocol(publicUrl.protocol, environment.NODE_ENV) ||
       publicUrl.username ||
       publicUrl.password
@@ -42,8 +35,32 @@ export function readR2VehicleImageConfig(
   } catch {
     return null;
   }
+  return { ...storage, publicBaseUrl };
+}
+
+export function readR2StorageConfig(
+  environment: R2VehicleImageEnvironment = process.env,
+): R2StorageConfig | null {
+  const endpoint = environment.R2_ENDPOINT?.replace(/\/$/, "");
+  const bucket = environment.R2_BUCKET_NAME?.trim();
+  const accessKeyId = environment.R2_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = environment.R2_SECRET_ACCESS_KEY?.trim();
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
+  try {
+    const endpointUrl = new URL(endpoint);
+    if (
+      endpointUrl.protocol !== "https:" ||
+      endpointUrl.pathname !== "/" ||
+      endpointUrl.username ||
+      endpointUrl.password ||
+      endpointUrl.search ||
+      endpointUrl.hash
+    ) return null;
+  } catch {
+    return null;
+  }
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/i.test(bucket)) return null;
-  return { endpoint, bucket, publicBaseUrl, accessKeyId, secretAccessKey };
+  return { endpoint, bucket, accessKeyId, secretAccessKey };
 }
 
 export function readR2PublicBaseUrl(

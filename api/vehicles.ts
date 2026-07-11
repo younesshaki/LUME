@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { recordPublicUsage, type UsageRpc } from "./usage";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -80,6 +81,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const tenant = await getTenantFromRequest(req, supabase);
   if (!tenant) {
     return json(req, res, { error: "Unknown or inactive tenant" }, 404);
+  }
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (serviceRoleKey) {
+    const usageClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    await recordPublicUsage(
+      (name, args) => usageClient.rpc(name, args) as ReturnType<UsageRpc>,
+      tenant.tenantId,
+      "vehicle_requests",
+    );
   }
 
   const limit = clamp(parseInt(query(req, "limit") || "") || DEFAULT_LIMIT, 1, MAX_LIMIT);

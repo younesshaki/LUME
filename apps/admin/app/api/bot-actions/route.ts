@@ -9,6 +9,7 @@ import type { BotActionResponse } from "@lume/types";
 import { validateBotActionEnvelope } from "@/lib/botActions";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { getTenantFromRequest } from "@/lib/tenant";
+import { recordPublicApiUsage } from "@/lib/usage.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!validation.ok) {
     return json(failure("INVALID_ACTION", validation.error), 400, request);
   }
+  await recordPublicApiUsage(tenant.tenantId, "bot_action_requests");
 
   const response: BotActionResponse = {
     action: validation.value.action,
