@@ -17,7 +17,7 @@ describe("routeConfig", () => {
   });
 
   it("keeps public secondary pages compatible with the current back-button behavior", () => {
-    for (const routeId of ["products", "vehicles", "showcase", "contact"] as const) {
+    for (const routeId of ["products", "vehicles", "showcase", "contact", "account"] as const) {
       const config = getRouteConfig(routeId);
 
       expect(config.chrome.showBackButton).toBe(true);

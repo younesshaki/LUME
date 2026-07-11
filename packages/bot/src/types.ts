@@ -21,6 +21,18 @@ export type BotToolContext = {
   tenantId: TenantId;
   queryVehicles: (query: VehicleQuery) => Promise<VehicleListResponse>;
   getVehicleById?: (id: string) => Promise<Vehicle | null>;
+  /**
+   * TODO(contract): Add a shared inventory projection/query that includes
+   * listing createdAt, then have the admin chat route wire it here.
+   */
+  getSuperlativeVehicles?: () => Promise<readonly SuperlativeVehicle[]>;
+};
+
+export type SuperlativeVehicle = {
+  id: string;
+  price: number | null;
+  year: number | null;
+  createdAt: string | null;
 };
 
 export type BotToolError = {

@@ -12,6 +12,9 @@ describe("registry", () => {
     expect(BOT_TOOLS.map((t) => t.name).sort()).toEqual([
       "compare_vehicles",
       "find_best_deal",
+      "find_cheapest",
+      "find_most_recent",
+      "find_newest",
       "find_vehicles",
       "get_vehicle_details",
     ]);

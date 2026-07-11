@@ -1,0 +1,408 @@
+.visitorAccount {
+  --visitor-ink: var(--theme-lume-ink, #fff8ec);
+  --visitor-muted: var(--theme-lume-muted, rgba(255, 248, 236, 0.64));
+  --visitor-soft: var(--theme-lume-soft, rgba(255, 248, 236, 0.42));
+  --visitor-line: var(--theme-lume-line, rgba(255, 248, 236, 0.12));
+  --visitor-accent: var(--theme-lume-gold, #d9b76a);
+  --visitor-panel: var(--theme-lume-panel, rgba(8, 8, 9, 0.82));
+  height: 100%;
+  overflow-y: auto;
+  color: var(--visitor-ink);
+  background:
+    radial-gradient(circle at 80% 12%, color-mix(in srgb, var(--visitor-accent) 12%, transparent), transparent 34rem),
+    var(--theme-lume-background, #000);
+  scrollbar-width: thin;
+  scrollbar-color: var(--visitor-line) transparent;
+}
+
+.visitorAccount__main {
+  width: min(100%, 1040px);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(7rem, 12vw, 10rem) clamp(1.25rem, 5vw, 3rem) 6rem;
+}
+
+.visitorAccount__hero {
+  max-width: 700px;
+  margin-bottom: clamp(2rem, 6vw, 4rem);
+}
+
+.visitorAccount__eyebrow {
+  margin: 0;
+  color: var(--visitor-accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.visitorAccount__hero h1,
+.visitorAuth__intro h2,
+.visitorLoyalty h2,
+.visitorAccount__profile h2 {
+  margin: 0.7rem 0 0;
+  font-family: var(--theme-experience-font-family, var(--experience-font-family));
+  font-weight: 400;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.visitorAccount__hero h1 {
+  font-size: clamp(2.5rem, 7vw, 5.8rem);
+  line-height: 0.98;
+}
+
+.visitorAccount__hero > p:last-child,
+.visitorAuth__intro > p:last-child,
+.visitorAccount__profileHeader > div > p:last-child {
+  max-width: 42rem;
+  margin: 1rem 0 0;
+  color: var(--visitor-muted);
+  line-height: 1.75;
+}
+
+.visitorAccount__loading,
+.visitorAuth,
+.visitorAccount__profile,
+.visitorLoyalty {
+  border: 1px solid var(--visitor-line);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--visitor-panel) 92%, transparent);
+  box-shadow: 0 24px 70px color-mix(in srgb, #000 28%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.visitorAccount__loading {
+  padding: 2rem;
+  color: var(--visitor-muted);
+}
+
+.visitorAuth {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: clamp(1.5rem, 5vw, 4rem);
+  padding: clamp(1.4rem, 4vw, 2.5rem);
+}
+
+.visitorAuth__mode {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  justify-self: start;
+  padding: 0.25rem;
+  border: 1px solid var(--visitor-line);
+  border-radius: 999px;
+}
+
+.visitorAuth__modeButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 0.9rem;
+  color: var(--visitor-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.visitorAuth__modeButton--active {
+  color: #17130d;
+  background: var(--visitor-accent);
+}
+
+.visitorAuth__intro h2,
+.visitorLoyalty h2,
+.visitorAccount__profile h2 {
+  font-size: clamp(1.7rem, 4vw, 3rem);
+  line-height: 1.04;
+}
+
+.visitorAuth__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.visitorAuth__nameGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.visitorAuth__form label {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--visitor-soft);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.visitorAuth__form label small {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.visitorAuth__form input {
+  width: 100%;
+  min-height: 2.9rem;
+  border: 1px solid var(--visitor-line);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  color: var(--visitor-ink);
+  background: color-mix(in srgb, var(--visitor-ink) 4%, transparent);
+  outline: none;
+}
+
+.visitorAuth__form input:focus-visible {
+  border-color: color-mix(in srgb, var(--visitor-accent) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--visitor-accent) 14%, transparent);
+}
+
+.visitorAccount__primaryButton,
+.visitorAccount__secondaryButton {
+  border-radius: 999px;
+  padding: 0.8rem 1.1rem;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.visitorAccount__primaryButton {
+  justify-self: start;
+  border: 1px solid var(--visitor-accent);
+  color: #17130d;
+  background: var(--visitor-accent);
+}
+
+.visitorAccount__secondaryButton {
+  border: 1px solid var(--visitor-line);
+  color: var(--visitor-ink);
+  background: transparent;
+}
+
+.visitorAccount__primaryButton:disabled,
+.visitorAccount__secondaryButton:disabled {
+  cursor: wait;
+  opacity: 0.56;
+}
+
+.visitorAccount__primaryButton:focus-visible,
+.visitorAccount__secondaryButton:focus-visible,
+.visitorAuth__modeButton:focus-visible {
+  outline: 2px solid var(--visitor-accent);
+  outline-offset: 2px;
+}
+
+.visitorAccount__status {
+  margin: 0;
+  color: var(--visitor-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.visitorAccount__status--error {
+  color: #e88b7b;
+}
+
+.visitorAccount__dashboard {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.visitorAccount__profile,
+.visitorLoyalty {
+  padding: clamp(1.4rem, 4vw, 2.4rem);
+}
+
+.visitorAccount__profileHeader,
+.visitorLoyalty__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.visitorAccount__details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 2rem 0 0;
+}
+
+.visitorAccount__details div {
+  padding-top: 1rem;
+  border-top: 1px solid var(--visitor-line);
+}
+
+.visitorAccount__details dt,
+.visitorLoyalty__tierCopy span,
+.visitorLoyalty__progressCopy span:first-child,
+.visitorLoyalty__balance span {
+  color: var(--visitor-soft);
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.visitorAccount__details dd {
+  margin: 0.5rem 0 0;
+  overflow-wrap: anywhere;
+  color: var(--visitor-ink);
+}
+
+.visitorLoyalty--state {
+  min-height: 12rem;
+}
+
+.visitorLoyalty__balance {
+  display: grid;
+  justify-items: end;
+}
+
+.visitorLoyalty__balance strong {
+  color: var(--visitor-accent);
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1;
+}
+
+.visitorLoyalty__tier {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  border: 1px solid var(--visitor-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--visitor-ink) 3%, transparent);
+}
+
+.visitorLoyalty__tierCopy,
+.visitorLoyalty__progressCopy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.visitorLoyalty__tierCopy strong {
+  color: var(--visitor-accent);
+  font-size: 1.1rem;
+}
+
+.visitorLoyalty__progressCopy {
+  margin-top: 1.2rem;
+  color: var(--visitor-muted);
+  font-size: 0.75rem;
+}
+
+.visitorLoyalty progress {
+  width: 100%;
+  height: 0.45rem;
+  margin-top: 0.55rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--visitor-ink) 8%, transparent);
+}
+
+.visitorLoyalty progress::-webkit-progress-bar {
+  background: color-mix(in srgb, var(--visitor-ink) 8%, transparent);
+}
+
+.visitorLoyalty progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--visitor-accent);
+}
+
+.visitorLoyalty progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--visitor-accent);
+}
+
+.visitorLoyalty__tier > p,
+.visitorLoyalty__empty {
+  margin: 0.55rem 0 0;
+  color: var(--visitor-muted);
+  font-size: 0.82rem;
+}
+
+.visitorLoyalty__transactions {
+  margin-top: 2rem;
+}
+
+.visitorLoyalty__transactions h3 {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.visitorLoyalty__transactions ul {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.visitorLoyalty__transactions li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--visitor-line);
+}
+
+.visitorLoyalty__transactions li > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.visitorLoyalty__transactions strong {
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.visitorLoyalty__transactions time {
+  color: var(--visitor-soft);
+  font-size: 0.72rem;
+}
+
+.visitorLoyalty__delta {
+  color: var(--visitor-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.visitorLoyalty__delta--positive {
+  color: var(--visitor-accent);
+}
+
+@media (max-width: 720px) {
+  .visitorAuth,
+  .visitorAuth__nameGrid,
+  .visitorAccount__details {
+    grid-template-columns: 1fr;
+  }
+
+  .visitorAccount__profileHeader,
+  .visitorLoyalty__heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .visitorLoyalty__balance {
+    justify-items: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visitorAccount *,
+  .visitorAccount *::before,
+  .visitorAccount *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

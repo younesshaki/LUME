@@ -4,6 +4,7 @@ export type {
   BotToolContext,
   BotToolError,
   BotToolResult,
+  SuperlativeVehicle,
   ToolSpec,
 } from "./types";
 export type { JsonSchema } from "./jsonSchema";
@@ -37,6 +38,16 @@ export {
   compareVehiclesSchema,
   compareVehiclesTool,
 } from "./tools/compareVehicles";
+export {
+  type SuperlativeVehicleArgs,
+  findCheapest,
+  findCheapestTool,
+  findMostRecent,
+  findMostRecentTool,
+  findNewest,
+  findNewestTool,
+  superlativeVehicleSchema,
+} from "./tools/superlativeVehicles";
 export { BOT_TOOLS, getBotTool, runBotTool, toToolSpecs } from "./registry";
 export {
   type BotTurnResult,
@@ -52,3 +63,17 @@ export {
   parseToolCalls,
   toToolResultMessages,
 } from "./llmAdapter";
+export {
+  type ClassifiedIntent,
+  type SuperlativeDirection,
+  type SuperlativeMetric,
+  classifyIntent,
+} from "./intentClassifier";
+export {
+  type BudgetMessage,
+  type ConversationBudgetOptions,
+  type ConversationBudgetResult,
+  type ConversationRole,
+  DEFAULT_SUMMARY_TOKEN_LIMIT,
+  fitConversationToBudget,
+} from "./conversationBudget";

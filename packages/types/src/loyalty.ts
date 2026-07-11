@@ -24,6 +24,34 @@ export type LoyaltyAccount = {
   updatedAt: string;
 };
 
+export type LoyaltyTierId = string;
+
+/** A per-tenant loyalty tier definition (SCRUM-134). */
+export type LoyaltyTier = {
+  id: LoyaltyTierId;
+  tenantId: TenantId;
+  name: string;
+  threshold: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/**
+ * Shape returned by GET /api/visitor/loyalty — the visitor account page reads
+ * this. `tier` is the highest tier the balance qualifies for, or null.
+ */
+export type VisitorLoyaltyView = {
+  points: number;
+  tier: { name: string; threshold: number } | null;
+  transactions: Array<{
+    id: LoyaltyTransactionId;
+    delta: number;
+    reason: string | null;
+    createdAt: string;
+  }>;
+};
+
 export type LoyaltyTransaction = {
   id: LoyaltyTransactionId;
   tenantId: TenantId;

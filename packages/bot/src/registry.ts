@@ -4,6 +4,11 @@ import { findVehiclesTool } from "./tools/findVehicles";
 import { findBestDealTool } from "./tools/findBestDeal";
 import { getVehicleDetailsTool } from "./tools/getVehicleDetails";
 import { compareVehiclesTool } from "./tools/compareVehicles";
+import {
+  findCheapestTool,
+  findMostRecentTool,
+  findNewestTool,
+} from "./tools/superlativeVehicles";
 
 /** All tools the bot may call, keyed by their LLM-facing name. */
 export const BOT_TOOLS: readonly AnyBotTool[] = [
@@ -11,6 +16,9 @@ export const BOT_TOOLS: readonly AnyBotTool[] = [
   findBestDealTool,
   getVehicleDetailsTool,
   compareVehiclesTool,
+  findCheapestTool,
+  findNewestTool,
+  findMostRecentTool,
 ];
 
 const TOOLS_BY_NAME = new Map<string, AnyBotTool>(BOT_TOOLS.map((tool) => [tool.name, tool]));

@@ -1,7 +1,8 @@
 import { useCurrentRoute } from "@/app-shell/useCurrentRoute";
 import type { SiteScreen } from "../siteNavigation";
 
-export function routeSectionToSiteScreen(section: string): SiteScreen {
+export function routeSectionToSiteScreen(section: string): SiteScreen | "account" {
+  if (section === "account") return "account";
   return section === "products" ||
     section === "vehicles" ||
     section === "showcase" ||

@@ -160,6 +160,18 @@ export const ROUTE_CONFIG = {
     dockVariant: "default",
     backFallback: "home",
   },
+  account: {
+    id: "account",
+    path: ROUTE_PATHS.account,
+    label: "Visitor Account",
+    section: "account",
+    chrome: {
+      ...publicBackChrome,
+      showDock: false,
+    },
+    dockVariant: "hidden",
+    backFallback: "home",
+  },
   admin: {
     id: "admin",
     path: ROUTE_PATHS.admin,

@@ -130,13 +130,14 @@ export type Database = {
           ip_addr: string | null;
           user_agent: string | null;
           lost_reason: string | null;
+          visitor_id: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["leads"]["Row"],
-          "id" | "created_at" | "updated_at"
-        > & { id?: string };
+          "id" | "created_at" | "updated_at" | "visitor_id"
+        > & { id?: string; visitor_id?: string | null };
         Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
         Relationships: [];
       };
@@ -295,6 +296,7 @@ export type Database = {
           id: string;
           tenant_id: string;
           lead_id: string | null;
+          visitor_id: string | null;
           external_customer_id: string | null;
           email: string | null;
           phone: string | null;
@@ -307,6 +309,7 @@ export type Database = {
           Database["public"]["Tables"]["loyalty_accounts"]["Row"],
           | "id"
           | "lead_id"
+          | "visitor_id"
           | "external_customer_id"
           | "email"
           | "phone"
@@ -317,6 +320,7 @@ export type Database = {
         > & {
           id?: string;
           lead_id?: string | null;
+          visitor_id?: string | null;
           external_customer_id?: string | null;
           email?: string | null;
           phone?: string | null;
@@ -361,6 +365,105 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["loyalty_transactions"]["Insert"]>;
+        Relationships: [];
+      };
+      loyalty_tiers: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string;
+          threshold: number;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["loyalty_tiers"]["Row"],
+          "id" | "threshold" | "sort_order" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          threshold?: number;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["loyalty_tiers"]["Insert"]>;
+        Relationships: [];
+      };
+      visitors: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          email: string;
+          password_hash: string;
+          first_name: string;
+          last_name: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["visitors"]["Row"],
+          "id" | "first_name" | "last_name" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          first_name?: string;
+          last_name?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["visitors"]["Insert"]>;
+        Relationships: [];
+      };
+      visitor_sessions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          visitor_id: string;
+          token_hash: string;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["visitor_sessions"]["Row"],
+          "id" | "created_at"
+        > & { id?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["visitor_sessions"]["Insert"]>;
+        Relationships: [];
+      };
+      chat_sessions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          visitor_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["chat_sessions"]["Row"],
+          "id" | "visitor_id" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          visitor_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["chat_sessions"]["Insert"]>;
+        Relationships: [];
+      };
+      chat_messages: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          session_id: string;
+          role: "user" | "assistant" | "system";
+          content: string;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["chat_messages"]["Row"],
+          "id" | "created_at"
+        > & { id?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["chat_messages"]["Insert"]>;
         Relationships: [];
       };
       tenant_invites: {

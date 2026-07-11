@@ -11,6 +11,7 @@ import type { Database } from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
+import { resolveVisitor } from "@/lib/visitorSession";
 import {
   normalizeLeadCaptureInput,
   verifyTurnstileToken,
@@ -65,11 +66,15 @@ export async function POST(request: Request): Promise<Response> {
     return json(response, 200, request);
   }
 
+  // SCRUM-178: attribute the lead to a signed-in visitor when one is present.
+  const visitor = await resolveVisitor(request, tenant.tenantId).catch(() => null);
+
   const insert: Database["public"]["Tables"]["leads"]["Insert"] = {
     tenant_id: tenant.tenantId,
     source: lead.source,
     status: "new",
     assigned_to: null,
+    visitor_id: visitor?.id ?? null,
     first_name: lead.firstName,
     last_name: lead.lastName,
     email: lead.email,

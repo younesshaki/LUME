@@ -7,4 +7,5 @@ export * from "./provisioning";
 export * from "./gdpr";
 export * from "./leadsCsv";
 export * from "./audit";
+export * from "./visitors";
 export type { Database } from "./schema";

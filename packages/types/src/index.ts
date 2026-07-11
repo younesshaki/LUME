@@ -13,3 +13,4 @@ export type * from "./tenantDomain";
 export type * from "./tenantInvite";
 export type * from "./botPersona";
 export type * from "./loyalty";
+export type * from "./visitor";

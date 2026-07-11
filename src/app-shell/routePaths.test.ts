@@ -16,6 +16,7 @@ describe("routePaths", () => {
     expect(ROUTE_PATHS.vehicleDetail).toBe("/vehicles/:vehicleId");
     expect(ROUTE_PATHS.showcaseExperience).toBe("/showcase/experience");
     expect(ROUTE_PATHS.contact).toBe("/contact");
+    expect(ROUTE_PATHS.account).toBe("/account");
     expect(ROUTE_PATHS.admin).toBe("/admin");
     expect(ROUTE_PATHS.adminDashboard).toBe("/admin/dashboard");
   });
@@ -61,6 +62,7 @@ describe("routePaths", () => {
     );
     expect(pathToRouteId("/admin")).toBe("admin");
     expect(pathToRouteId("/admin/dashboard")).toBe("adminDashboard");
+    expect(pathToRouteId("/account")).toBe("account");
     expect(matchRoutePath("/products/red-bull")).toEqual({
       routeId: "productDetail",
       params: { productId: "red-bull" },

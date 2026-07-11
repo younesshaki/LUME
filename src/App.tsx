@@ -45,6 +45,7 @@ import {
 } from "./components/CookieBanner/CookieBanner";
 import { SeoProvider } from "./lib/seo/SeoProvider";
 import { ThemeProvider } from "./lib/theme/ThemeContext";
+import { VisitorAuthProvider } from "./lib/visitor/VisitorAuthContext";
 
 if (isPageRendererEnabled) {
   void import("./lib/pageBuilder/registerBlocks").then(({ registerBlocks }) => {
@@ -53,6 +54,7 @@ if (isPageRendererEnabled) {
 }
 
 const loadAdminRouter = () => import("./admin/AdminRouter");
+const loadAccountPage = () => import("./experience/ui/AccountPage");
 const loadContactPage = () => import("./experience/ui/ContactPage");
 const loadExperience = () => import("./experience/Experience");
 const loadProductDetailPage = () => import("./experience/ui/ProductDetailPage");
@@ -70,6 +72,7 @@ const loadPagePreviewBridge = () => import("./lib/pageBuilder/PagePreviewBridge"
 const PAGE_PREVIEW_PATH = "/__preview";
 
 const AdminRouter = lazy(loadAdminRouter);
+const AccountPage = lazy(loadAccountPage);
 const ContactPage = lazy(loadContactPage);
 const Experience = lazy(loadExperience);
 const ProductDetailPage = lazy(loadProductDetailPage);
@@ -259,6 +262,7 @@ export default function App() {
   );
 
   useEffect(() => {
+    void loadAccountPage();
     void loadStoryHomePage();
     void loadProductsPage();
     void loadVehiclesPage();
@@ -428,7 +432,8 @@ export default function App() {
 
   return (
     <ThemeProvider enabled={!isAdminPath}>
-      <SeoProvider pathname={location.pathname} enabled={!isAdminPath}>
+      <VisitorAuthProvider enabled={!isAdminPath}>
+        <SeoProvider pathname={location.pathname} enabled={!isAdminPath}>
       <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>
       <MediaQualitySettings
         quality={mediaQuality}
@@ -627,6 +632,7 @@ export default function App() {
               </StoryProvider>
             }
           />
+          <Route path={ROUTE_PATHS.account} element={<AccountPage />} />
           <Route path={`${ROUTE_PATHS.admin}/*`} element={<AdminRouter onExit={handleGoHome} />} />
           {/* Tenant-created pages published from the admin (static routes above
               always win over this dynamic segment). Unknown slugs still land
@@ -643,7 +649,8 @@ export default function App() {
       )}
       {cookieConsent === "accepted" && <Analytics />}
       </div>
-      </SeoProvider>
+        </SeoProvider>
+      </VisitorAuthProvider>
     </ThemeProvider>
   );
 }

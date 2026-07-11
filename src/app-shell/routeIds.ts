@@ -8,7 +8,8 @@ export type PublicRouteId =
   | "showcase"
   | "showcaseIntro"
   | "showcaseExperience"
-  | "contact";
+  | "contact"
+  | "account";
 
 export type AdminRouteId = "admin" | "adminLogin" | "adminDashboard";
 
@@ -20,7 +21,8 @@ export type PublicSection =
   | "products"
   | "vehicles"
   | "showcase"
-  | "contact";
+  | "contact"
+  | "account";
 
 export type AppSection = PublicSection | "admin";
 
@@ -35,6 +37,7 @@ export const PUBLIC_ROUTE_IDS = [
   "showcaseIntro",
   "showcaseExperience",
   "contact",
+  "account",
 ] as const satisfies readonly PublicRouteId[];
 
 export const ADMIN_ROUTE_IDS = [
@@ -42,4 +45,3 @@ export const ADMIN_ROUTE_IDS = [
   "adminLogin",
   "adminDashboard",
 ] as const satisfies readonly AdminRouteId[];
-

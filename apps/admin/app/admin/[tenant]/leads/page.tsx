@@ -1,42 +1,30 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, Download, Inbox, Search } from "lucide-react";
+import { Download, Inbox, Search } from "lucide-react";
 import { rowToLead } from "@lume/db";
+import type { LeadSource, LeadStatus } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
-import { StatusBadge } from "@/components/status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { LeadsTable, type LeadCard } from "./LeadsTable";
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
-  searchParams: Promise<{ q?: string; sort?: string; dir?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; source?: string; page?: string }>;
 };
 
 const PAGE_SIZE = 25;
-
-const SORTABLE: Record<string, string> = {
-  created: "created_at",
-  status: "status",
-  source: "source",
-};
+const STATUSES: LeadStatus[] = ["new", "contacted", "qualified", "won", "lost"];
+const SOURCES: LeadSource[] = ["chat", "contact-form", "test-drive", "csv-import", "api"];
 
 export default async function LeadsPage({ params, searchParams }: PageProps) {
   const { tenant: slug } = await params;
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
-  const sort = SORTABLE[sp.sort ?? ""] ? sp.sort! : "created";
-  const dir = sp.dir === "asc" ? "asc" : "desc";
+  const status = STATUSES.includes(sp.status as LeadStatus) ? (sp.status as LeadStatus) : null;
+  const source = SOURCES.includes(sp.source as LeadSource) ? (sp.source as LeadSource) : null;
   const page = Math.max(1, parseInt(sp.page ?? "1") || 1);
 
   const supabase = await createSupabaseServerClient();
@@ -59,48 +47,47 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
       `first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`
     );
   }
+  if (status) query = query.eq("status", status);
+  if (source) query = query.eq("source", source);
 
   const from = (page - 1) * PAGE_SIZE;
   const { data, count, error } = await query
-    .order(SORTABLE[sort], { ascending: dir === "asc", nullsFirst: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
     .range(from, from + PAGE_SIZE - 1);
 
-  if (error) {
-    throw new Error(`Unable to load leads: ${error.message}`);
-  }
+  if (error) throw new Error(`Unable to load leads: ${error.message}`);
 
-  const leads = (data ?? []).map(rowToLead);
+  const cards: LeadCard[] = (data ?? []).map(rowToLead).map((lead) => ({
+    id: lead.id,
+    name: `${lead.firstName} ${lead.lastName}`.trim() || "Anonymous lead",
+    email: lead.email,
+    phone: lead.phone,
+    message: lead.message,
+    source: lead.source,
+    status: lead.status,
+    createdAt: lead.createdAt,
+  }));
   const totalCount = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const href = (overrides: Record<string, string | number | undefined>) => {
+    const merged = { q, status: status ?? undefined, source: source ?? undefined, page, ...overrides };
     const params = new URLSearchParams();
-    const merged = { q, sort, dir, page, ...overrides };
     if (merged.q) params.set("q", String(merged.q));
-    if (merged.sort && merged.sort !== "created") params.set("sort", String(merged.sort));
-    if (merged.dir && merged.dir !== "desc") params.set("dir", String(merged.dir));
+    if (merged.status) params.set("status", String(merged.status));
+    if (merged.source) params.set("source", String(merged.source));
     if (merged.page && Number(merged.page) > 1) params.set("page", String(merged.page));
     const qs = params.toString();
     return `/admin/${slug}/leads${qs ? `?${qs}` : ""}`;
   };
 
-  const sortHref = (column: string) =>
-    href({ sort: column, dir: sort === column && dir === "desc" ? "asc" : "desc", page: 1 });
-
-  const SortIcon = ({ column }: { column: string }) =>
-    sort !== column ? (
-      <ArrowUpDown className="size-3.5 text-muted-foreground/50" />
-    ) : dir === "asc" ? (
-      <ArrowUp className="size-3.5 text-primary" />
-    ) : (
-      <ArrowDown className="size-3.5 text-primary" />
-    );
+  const hasFilters = Boolean(q || status || source);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Leads"
-        description={`${totalCount.toLocaleString()} lead${totalCount === 1 ? "" : "s"} for ${tenant.name}${q ? ` matching “${q}”` : ""}`}
+        description={`${totalCount.toLocaleString()} lead${totalCount === 1 ? "" : "s"} for ${tenant.name}${hasFilters ? " (filtered)" : ""}`}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -113,8 +100,8 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
             placeholder="Search name, email, phone…"
             className="pl-8"
           />
-          {sort !== "created" && <input type="hidden" name="sort" value={sort} />}
-          {dir !== "desc" && <input type="hidden" name="dir" value={dir} />}
+          {status && <input type="hidden" name="status" value={status} />}
+          {source && <input type="hidden" name="source" value={source} />}
         </form>
         {totalCount > 0 && (
           <Button variant="outline" size="sm" asChild>
@@ -128,85 +115,36 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
         )}
       </div>
 
-      {totalCount === 0 && !q ? (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <FilterChip label="All statuses" href={href({ status: undefined, page: 1 })} active={!status} />
+        {STATUSES.map((s) => (
+          <FilterChip
+            key={s}
+            label={s}
+            href={href({ status: s, page: 1 })}
+            active={status === s}
+          />
+        ))}
+        <span className="mx-1 h-4 w-px bg-border" />
+        <FilterChip label="All sources" href={href({ source: undefined, page: 1 })} active={!source} />
+        {SOURCES.map((s) => (
+          <FilterChip
+            key={s}
+            label={s}
+            href={href({ source: s, page: 1 })}
+            active={source === s}
+          />
+        ))}
+      </div>
+
+      {totalCount === 0 && !hasFilters ? (
         <EmptyState
           icon={Inbox}
           title="No leads yet"
           description="Leads captured by your website's contact forms and AI concierge will appear here, ready to work."
         />
       ) : (
-        <div className="rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Lead</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>
-                  <Link href={sortHref("source")} className="inline-flex items-center gap-1 hover:text-foreground">
-                    Source
-                    <SortIcon column="source" />
-                  </Link>
-                </TableHead>
-                <TableHead>
-                  <Link href={sortHref("status")} className="inline-flex items-center gap-1 hover:text-foreground">
-                    Status
-                    <SortIcon column="status" />
-                  </Link>
-                </TableHead>
-                <TableHead>
-                  <Link href={sortHref("created")} className="inline-flex items-center gap-1 hover:text-foreground">
-                    Created
-                    <SortIcon column="created" />
-                  </Link>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {leads.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    No leads match “{q}”.{" "}
-                    <Link href={href({ q: undefined, page: 1 })} className="underline underline-offset-2">
-                      Clear search
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              )}
-              {leads.map((lead) => (
-                <TableRow key={lead.id}>
-                  <TableCell>
-                    <Link
-                      href={`/admin/${tenant.slug}/leads/${lead.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {leadName(lead.firstName, lead.lastName)}
-                    </Link>
-                    {lead.message && (
-                      <p className="mt-1 max-w-md truncate text-xs text-muted-foreground">
-                        {lead.message}
-                      </p>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {lead.email && <p>{lead.email}</p>}
-                    {lead.phone && <p>{lead.phone}</p>}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-muted-foreground">
-                      {lead.source}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={lead.status} />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(lead.createdAt)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <LeadsTable slug={slug} leads={cards} />
       )}
 
       {totalPages > 1 && (
@@ -240,16 +178,18 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
   );
 }
 
-function leadName(firstName: string, lastName: string): string {
-  const name = `${firstName} ${lastName}`.trim();
-  return name || "Anonymous lead";
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+function FilterChip({ label, href, active }: { label: string; href: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={
+        "rounded-full border px-2.5 py-1 text-xs capitalize transition-colors " +
+        (active
+          ? "border-primary bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-muted")
+      }
+    >
+      {label}
+    </Link>
+  );
 }

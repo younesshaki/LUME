@@ -9,6 +9,7 @@ import { GooeyDesktopNav } from "../nav/GooeyDesktopNav";
 import { MobileNav } from "../nav/MobileNav";
 import { InvitationCTA } from "../nav/InvitationCTA";
 import { ThemeToggle } from "../ThemeToggle";
+import { VisitorAccountButton } from "../VisitorAccountButton";
 import { isSiteScreen, useSiteNavItems, type SiteNavItem } from "../siteNavigation";
 import { useSiteHeaderLayoutState } from "./SiteHeader.animations";
 import { getHeaderNavigationSound } from "./SiteHeader.sounds";
@@ -105,6 +106,7 @@ export function SiteHeader() {
 
       {/* Right slot */}
       <div className="flex items-center gap-3 md:gap-4">
+        <VisitorAccountButton />
         <ThemeToggle />
         {headerConfig.showCta && (
           <InvitationCTA

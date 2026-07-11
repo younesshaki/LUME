@@ -13,6 +13,7 @@ export const ROUTE_PATHS = {
   showcaseIntro: "/showcase/intro",
   showcaseExperience: "/showcase/experience",
   contact: "/contact",
+  account: "/account",
   admin: "/admin",
   adminLogin: "/admin/login",
   adminDashboard: "/admin/dashboard",
@@ -38,6 +39,7 @@ export type LegacyAppScreen =
   | "vehicleDetail"
   | "showcase"
   | "contact"
+  | "account"
   | "titlecard"
   | "experience"
   | "admin";
@@ -69,6 +71,7 @@ const ROUTE_MATCH_ORDER: AppRouteId[] = [
   "vehicles",
   "showcase",
   "contact",
+  "account",
   "home",
   "admin",
   "gate",
