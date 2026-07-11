@@ -1100,6 +1100,23 @@ export type Database = {
         };
         Returns: number;
       };
+      consume_usage_event: {
+        Args: {
+          p_tenant_id: string;
+          p_event_type:
+            | "chat_requests"
+            | "vehicle_requests"
+            | "bot_action_requests"
+            | "lead_requests";
+          p_limit: number | null;
+          p_period_start?: string | null;
+        };
+        Returns: {
+          allowed: boolean;
+          usage_count: number;
+          period_start: string;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

@@ -32,6 +32,7 @@ export function corsHeadersFor(request: Request): Record<string, string> {
     "Access-Control-Allow-Headers": "Content-Type, X-Lume-Tenant",
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
     "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Expose-Headers": "X-Lume-Quota-Warning",
     Vary: "Origin",
   };
 }

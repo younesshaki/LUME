@@ -7,13 +7,13 @@
  * Returns: { vehicles: Vehicle[], totalCount: number, hasMore: boolean, facets }
  */
 import type { VehicleFacets, VehicleListResponse } from "@lume/types";
-import { rowToVehicle } from "@lume/db";
+import { quotaExceededPayload, quotaResponseHeaders, rowToVehicle } from "@lume/db";
 import { createAnonServerClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { readR2PublicBaseUrl } from "@/lib/r2Config";
 import { vehicleImagePublicUrl } from "@/lib/vehicleImages";
-import { recordPublicApiUsage } from "@/lib/usage.server";
+import { checkPublicApiQuota } from "@/lib/quota.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +32,9 @@ export async function GET(request: Request): Promise<Response> {
 
   const tenant = await getTenantFromRequest(request);
   if (!tenant) return json({ error: "Unknown or inactive tenant" }, 404, request);
-  await recordPublicApiUsage(tenant.tenantId, "vehicle_requests");
+  const quota = await checkPublicApiQuota(tenant.tenantId, "vehicle_requests");
+  if (!quota.allowed) return json(quotaExceededPayload(quota), 429, request);
+  const quotaHeaders = quotaResponseHeaders(quota);
 
   const url = new URL(request.url);
   const sp = url.searchParams;
@@ -58,7 +60,7 @@ export async function GET(request: Request): Promise<Response> {
 
   if (error) {
     console.error("[/api/vehicles] query error:", error.message);
-    return json({ error: error.message }, 500, request);
+    return json({ error: error.message }, 500, request, quotaHeaders);
   }
 
   const rows = data ?? [];
@@ -77,7 +79,7 @@ export async function GET(request: Request): Promise<Response> {
     hasMore: offset + vehicles.length < totalCount,
     facets,
   };
-  return json(response, 200, request);
+  return json(response, 200, request, quotaHeaders);
 }
 
 async function loadPrimaryVehicleImages(
@@ -255,12 +257,18 @@ function uniqueSorted(values: Array<string | null>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
 }
 
-function json(payload: unknown, status: number, request?: Request): Response {
+function json(
+  payload: unknown,
+  status: number,
+  request?: Request,
+  responseHeaders: Readonly<Record<string, string>> = {},
+): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
       "Content-Type": "application/json",
       ...(request ? corsHeadersFor(request) : {}),
+      ...responseHeaders,
     },
   });
 }

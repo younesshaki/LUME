@@ -21,7 +21,13 @@
  */
 import type { BotAction, ChatMessage, ChatRequest } from "@lume/types";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
-import { getTenantVehicle, queryTenantVehicles, rowToVehicle } from "@lume/db";
+import {
+  getTenantVehicle,
+  queryTenantVehicles,
+  quotaExceededPayload,
+  quotaResponseHeaders,
+  rowToVehicle,
+} from "@lume/db";
 import {
   filterBotTools,
   parseToolCalls,
@@ -58,7 +64,7 @@ import { buildToolRequestFields, loadTenantToolAllowlist } from "@/lib/chatTools
 import { loadChatLoyaltyContext, loyaltySystemPrompt } from "@/lib/chatLoyalty";
 import { resolveVisitor } from "@/lib/visitorSession";
 import { isChatStreamCompletionLine } from "@/lib/chatStreamCompletion";
-import { recordPublicApiUsage } from "@/lib/usage.server";
+import { checkPublicApiQuota } from "@/lib/quota.server";
 import {
   completeVisitorPreferenceTurn,
   loadVisitorPreferenceContext,
@@ -132,7 +138,11 @@ export async function POST(request: Request): Promise<Response> {
   // in-memory scoring (~thousands of chunks), swap retrieveByKeywords()
   // for retrieveContext() from @lume/rag/server + an embedder.
   const supabase = createServiceClient();
-  await recordPublicApiUsage(tenant.tenantId, "chat_requests", supabase);
+  const quota = await checkPublicApiQuota(tenant.tenantId, "chat_requests", supabase);
+  if (!quota.allowed) {
+    return json(quotaExceededPayload(quota), 429, request);
+  }
+  const quotaHeaders = quotaResponseHeaders(quota);
 
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.
@@ -219,14 +229,14 @@ export async function POST(request: Request): Promise<Response> {
   } catch (err) {
     const message = err instanceof Error ? err.message : "RAG failure";
     console.error("[/api/chat] RAG error:", message);
-    return json({ error: "Failed to build context" }, 500, request);
+    return json({ error: "Failed to build context" }, 500, request, quotaHeaders);
   }
 
   const deepseekUrl =
     process.env.DEEPSEEK_API_URL ?? "https://api.deepseek.com/v1/chat/completions";
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
   if (!deepseekKey) {
-    return json({ error: "DEEPSEEK_API_KEY not configured" }, 500, request);
+    return json({ error: "DEEPSEEK_API_KEY not configured" }, 500, request, quotaHeaders);
   }
 
   const systemMessage = {
@@ -257,7 +267,8 @@ export async function POST(request: Request): Promise<Response> {
     return json(
       { error: `Deepseek error ${phase1.status}: ${text}` },
       phase1.status,
-      request
+      request,
+      quotaHeaders,
     );
   }
 
@@ -270,7 +281,7 @@ export async function POST(request: Request): Promise<Response> {
   } catch (err) {
     const message = err instanceof Error ? err.message : "bad completion";
     console.error("[/api/chat] completion parse error:", message);
-    return json({ error: "Malformed model response" }, 502, request);
+    return json({ error: "Malformed model response" }, 502, request, quotaHeaders);
   }
 
   const cors = corsHeadersFor(request);
@@ -279,6 +290,7 @@ export async function POST(request: Request): Promise<Response> {
     "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive",
     "X-Source-Categories": assembled.sourceCategories.join(","),
+    ...quotaHeaders,
     ...cors,
   });
 
@@ -365,11 +377,12 @@ export async function POST(request: Request): Promise<Response> {
     return json(
       { error: `Deepseek error ${phase2.status}: ${text}` },
       phase2.status,
-      request
+      request,
+      quotaHeaders,
     );
   }
   if (!phase2.body) {
-    return json({ error: "No upstream body" }, 502, request);
+    return json({ error: "No upstream body" }, 502, request, quotaHeaders);
   }
 
   const upstreamBody = phase2.body;
@@ -483,12 +496,18 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(stream, { headers: sseHeaders });
 }
 
-function json(payload: unknown, status: number, request?: Request): Response {
+function json(
+  payload: unknown,
+  status: number,
+  request?: Request,
+  responseHeaders: Readonly<Record<string, string>> = {},
+): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
       "Content-Type": "application/json",
       ...(request ? corsHeadersFor(request) : {}),
+      ...responseHeaders,
     },
   });
 }

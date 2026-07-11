@@ -41,6 +41,8 @@ const FORWARDED_RESPONSE_HEADERS = [
   "access-control-allow-origin",
   "access-control-allow-headers",
   "access-control-allow-methods",
+  "access-control-expose-headers",
+  "x-lume-quota-warning",
   "vary",
 ] as const;
 

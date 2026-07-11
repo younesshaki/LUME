@@ -7,7 +7,12 @@
  * policy.
  */
 import type { LeadCaptureResponse } from "@lume/types";
-import { accrueLoyaltyPoints, type Database } from "@lume/db";
+import {
+  accrueLoyaltyPoints,
+  quotaExceededPayload,
+  quotaResponseHeaders,
+  type Database,
+} from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
@@ -17,7 +22,7 @@ import {
   verifyTurnstileToken,
   type NormalizedLeadCapture,
 } from "@/lib/leads";
-import { recordPublicApiUsage } from "@/lib/usage.server";
+import { checkPublicApiQuota } from "@/lib/quota.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,14 +65,16 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const supabase = createServiceClient();
-  await recordPublicApiUsage(tenant.tenantId, "lead_requests", supabase);
+  const quota = await checkPublicApiQuota(tenant.tenantId, "lead_requests", supabase);
+  if (!quota.allowed) return json(quotaExceededPayload(quota), 429, request);
+  const quotaHeaders = quotaResponseHeaders(quota);
 
   // Return an existing lead for accidental retries in the same hour. This is
   // deliberately checked after Turnstile because its tokens are single-use.
   const duplicate = await findRecentDuplicate(tenant.tenantId, lead);
   if (duplicate) {
     const response: LeadCaptureResponse = { leadId: duplicate };
-    return json(response, 200, request);
+    return json(response, 200, request, quotaHeaders);
   }
 
   // SCRUM-178: attribute the lead to a signed-in visitor when one is present.
@@ -99,7 +106,7 @@ export async function POST(request: Request): Promise<Response> {
   const { data, error } = await supabase.from("leads").insert(insert).select("id").single();
   if (error || !data) {
     console.error("[/api/leads] insert failed:", error?.message ?? "no row");
-    return json({ error: "Unable to capture lead" }, 500, request);
+    return json({ error: "Unable to capture lead" }, 500, request, quotaHeaders);
   }
 
   if (visitor) {
@@ -119,7 +126,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const response: LeadCaptureResponse = { leadId: data.id };
-  return json(response, 201, request);
+  return json(response, 201, request, quotaHeaders);
 }
 
 function boundedHeader(value: string | null, maxLength: number): string | null {
@@ -159,12 +166,18 @@ function requestIp(request: Request): string | null {
   );
 }
 
-function json(payload: unknown, status: number, request?: Request): Response {
+function json(
+  payload: unknown,
+  status: number,
+  request?: Request,
+  responseHeaders: Readonly<Record<string, string>> = {},
+): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
       "Content-Type": "application/json",
       ...(request ? corsHeadersFor(request) : {}),
+      ...responseHeaders,
     },
   });
 }

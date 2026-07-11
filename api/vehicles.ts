@@ -1,5 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
-import { recordPublicUsage, type UsageRpc } from "./usage";
+import {
+  checkQuota,
+  quotaExceededPayload,
+  quotaWarningHeader,
+  type Database,
+} from "@lume/db";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -74,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return json(req, res, { error: "Supabase server env not configured" }, 500);
   }
 
-  const supabase = createClient(supabaseUrl, anonKey, {
+  const supabase = createClient<Database>(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -85,14 +90,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (serviceRoleKey) {
-    const usageClient = createClient(supabaseUrl, serviceRoleKey, {
+    const usageClient = createClient<Database>(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    await recordPublicUsage(
-      (name, args) => usageClient.rpc(name, args) as ReturnType<UsageRpc>,
-      tenant.tenantId,
-      "vehicle_requests",
-    );
+    const quota = await checkQuota(usageClient, {
+      tenantId: tenant.tenantId,
+      eventType: "vehicle_requests",
+    });
+    if (!quota.allowed) {
+      return json(req, res, quotaExceededPayload(quota), 429);
+    }
+    const warning = quotaWarningHeader(quota);
+    if (warning) res.setHeader("X-Lume-Quota-Warning", warning);
   }
 
   const limit = clamp(parseInt(query(req, "limit") || "") || DEFAULT_LIMIT, 1, MAX_LIMIT);
@@ -226,6 +235,7 @@ function setCorsHeaders(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Lume-Tenant");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Expose-Headers", "X-Lume-Quota-Warning");
   res.setHeader("Vary", "Origin");
 }
 
