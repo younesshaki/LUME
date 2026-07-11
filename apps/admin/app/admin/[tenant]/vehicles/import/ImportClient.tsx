@@ -4,6 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+  mergeCsvImportErrors,
+  resolveCsvImportProgress,
+  type CsvImportCounts,
+  type CsvImportError,
+  type CsvImportProgress,
+  type Database,
+} from "@lume/db";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   findDuplicates,
@@ -27,7 +35,23 @@ import {
 type ImportClientProps = {
   tenantId: string;
   tenantSlug: string;
+  recentImports: RecentCsvImport[];
 };
+
+type CsvImportRow = Database["public"]["Tables"]["csv_imports"]["Row"];
+type CsvImportUpdate = Database["public"]["Tables"]["csv_imports"]["Update"];
+type RecentCsvImport = Pick<
+  CsvImportRow,
+  | "id"
+  | "source_file_name"
+  | "mode"
+  | "status"
+  | "total_rows"
+  | "succeeded_rows"
+  | "failed_rows"
+  | "skipped_rows"
+  | "created_at"
+>;
 
 type ImportMode = "add" | "replace";
 
@@ -49,7 +73,7 @@ const BATCH_SIZE = 500;
 const PREVIEW_ROWS = 8;
 const FINGERPRINT_PAGE = 1000;
 
-export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps) {
+export default function ImportClient({ tenantId, tenantSlug, recentImports }: ImportClientProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<ImportPhase>({ step: "pick" });
   const [mode, setMode] = useState<ImportMode>("add");
@@ -82,6 +106,7 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
   };
 
   const runImport = async (
+    fileName: string,
     parsed: VehicleImportResult,
     importMode: ImportMode,
     existingCount: number
@@ -92,8 +117,59 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
         ? parsed.rows
         : parsed.rows.filter((_, index) => !skipped.has(index));
     const total = rows.length;
+    const skippedRows = parsed.rows.length - rows.length;
+    const failedRows = new Set(
+      parsed.errors.filter((error) => error.line > 1).map((error) => error.line)
+    ).size;
+    const trackedErrors: CsvImportError[] = parsed.errors.map((error) => ({
+      line: error.line,
+      message: error.message,
+    }));
+    const baseCounts: CsvImportCounts = {
+      totalRows: total + skippedRows + failedRows,
+      succeededRows: 0,
+      failedRows,
+      skippedRows,
+    };
     let done = 0;
     setPhase({ step: "importing", done, total });
+
+    const startedAt = new Date().toISOString();
+    const initialProgress = resolveCsvImportProgress(baseCounts, "running");
+    const { data: importRecord, error: trackingError } = await supabase
+      .from("csv_imports")
+      .insert({
+        tenant_id: tenantId,
+        mode: importMode,
+        status: initialProgress.status,
+        source_file_name: fileName,
+        total_rows: initialProgress.totalRows,
+        processed_rows: initialProgress.processedRows,
+        succeeded_rows: initialProgress.succeededRows,
+        failed_rows: initialProgress.failedRows,
+        skipped_rows: initialProgress.skippedRows,
+        errors: trackedErrors,
+        attempt_count: 1,
+        started_at: startedAt,
+      })
+      .select("id")
+      .maybeSingle();
+    const importId = importRecord?.id ?? null;
+    if (trackingError) {
+      toast.warning("Import tracking is unavailable; the inventory import will continue.");
+    }
+
+    const persistProgress = async (
+      progress: CsvImportProgress,
+      update: CsvImportUpdate = {},
+    ) => {
+      if (!importId) return;
+      await supabase
+        .from("csv_imports")
+        .update({ ...csvImportProgressUpdate(progress), ...update })
+        .eq("id", importId)
+        .eq("tenant_id", tenantId);
+    };
 
     let deleted = 0;
     if (importMode === "replace") {
@@ -101,6 +177,12 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
       // old and new inventories mixed together.
       const { error } = await supabase.from("vehicles").delete().eq("tenant_id", tenantId);
       if (error) {
+        await persistProgress(resolveCsvImportProgress(baseCounts, "failed"), {
+          errors: mergeCsvImportErrors(trackedErrors, [
+            { line: null, message: `Could not clear inventory: ${error.message}` },
+          ]),
+          completed_at: new Date().toISOString(),
+        });
         setPhase({ step: "failed", message: `Could not clear inventory: ${error.message}`, imported: 0 });
         return;
       }
@@ -111,12 +193,31 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
       const batch = rows.slice(i, i + BATCH_SIZE).map((row) => ({ ...row, tenant_id: tenantId }));
       const { error } = await supabase.from("vehicles").insert(batch);
       if (error) {
+        const failedProgress = resolveCsvImportProgress(
+          { ...baseCounts, succeededRows: done },
+          "failed",
+        );
+        await persistProgress(failedProgress, {
+          errors: mergeCsvImportErrors(trackedErrors, [
+            { line: null, message: `Vehicle batch failed: ${error.message}` },
+          ]),
+          completed_at: new Date().toISOString(),
+        });
         setPhase({ step: "failed", message: error.message, imported: done });
         return;
       }
       done = Math.min(i + BATCH_SIZE, total);
+      await persistProgress(resolveCsvImportProgress(
+        { ...baseCounts, succeededRows: done },
+        "running",
+      ));
       setPhase({ step: "importing", done, total });
     }
+
+    await persistProgress(resolveCsvImportProgress(
+      { ...baseCounts, succeededRows: total },
+      "completed",
+    ), { completed_at: new Date().toISOString() });
 
     toast.success(
       importMode === "replace"
@@ -182,7 +283,12 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
             })
           }
           onBack={() => setPhase({ step: "pick" })}
-          onImport={() => void runImport(phase.parsed, mode, phase.existingCount)}
+          onImport={() => void runImport(
+            phase.fileName,
+            phase.parsed,
+            mode,
+            phase.existingCount,
+          )}
         />
       )}
 
@@ -222,8 +328,71 @@ export default function ImportClient({ tenantId, tenantSlug }: ImportClientProps
           </button>
         </div>
       )}
+
+      {recentImports.length > 0 && <RecentImports imports={recentImports} />}
     </div>
   );
+}
+
+function csvImportProgressUpdate(progress: CsvImportProgress): CsvImportUpdate {
+  return {
+    status: progress.status,
+    total_rows: progress.totalRows,
+    processed_rows: progress.processedRows,
+    succeeded_rows: progress.succeededRows,
+    failed_rows: progress.failedRows,
+    skipped_rows: progress.skippedRows,
+  };
+}
+
+function RecentImports({ imports }: { imports: RecentCsvImport[] }) {
+  return (
+    <section className="space-y-3 border-t pt-6" aria-labelledby="recent-imports-heading">
+      <h2 id="recent-imports-heading" className="text-lg font-semibold">Recent imports</h2>
+      <div className="overflow-x-auto rounded-xl border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+              <th className="px-3 py-2 font-medium">File</th>
+              <th className="px-3 py-2 font-medium">Status</th>
+              <th className="px-3 py-2 font-medium">Rows</th>
+              <th className="px-3 py-2 font-medium">Started</th>
+            </tr>
+          </thead>
+          <tbody>
+            {imports.map((item) => (
+              <tr key={item.id} className="border-b last:border-0">
+                <td className="px-3 py-2">
+                  <span className="font-medium">{item.source_file_name}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{item.mode}</span>
+                </td>
+                <td className="px-3 py-2 capitalize">{item.status.replace("_", " ")}</td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  {item.succeeded_rows} imported
+                  {item.failed_rows > 0 ? `, ${item.failed_rows} failed` : ""}
+                  {item.skipped_rows > 0 ? `, ${item.skipped_rows} skipped` : ""}
+                  {` / ${item.total_rows}`}
+                </td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  <time dateTime={item.created_at}>{formatImportTimestamp(item.created_at)}</time>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+const importTimestampFormatter = new Intl.DateTimeFormat("en", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
+
+function formatImportTimestamp(value: string): string {
+  return `${importTimestampFormatter.format(new Date(value))} UTC`;
 }
 
 /** Page through the tenant's inventory; RLS scopes it, tenant_id is belt-and-braces. */

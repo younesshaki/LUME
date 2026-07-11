@@ -25,3 +25,10 @@
 - Migration: 034_tenant_webhooks.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: Network I/O is impossible unless trusted server code injects both a decrypted signing secret and transport. Credential rows are RLS deny-all. Retry semantics use five delayed retries (1m, 5m, 30m, 1h, 6h), then dead-letter on the next failure; Claude should confirm this interpretation of Jira's ambiguous “five failures” wording and choose an encryption/KMS mechanism before storing credentials.
+
+## SCRUM-162 CSV import lifecycle and status tracking
+- Status: done
+- Files: supabase/migrations/035_csv_imports.sql, packages/db/src/{schema,csvImports,index}.ts, apps/admin/app/admin/[tenant]/vehicles/import/{page,ImportClient}.tsx
+- Migration: 035_csv_imports.sql (NOT applied)
+- Env added: none
+- Review notes / open questions: The existing browser-side importer now records durable counters, bounded diagnostics, and recent status, while continuing safely if tracking is unavailable during a staggered rollout. `source_object_path` is reserved for a future private-file/background worker; this ticket does not claim crash-resumable processing, and the existing destructive replace mode remains a review risk because it is not transactional.

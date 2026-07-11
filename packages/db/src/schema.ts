@@ -200,6 +200,69 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["webhook_deliveries"]["Insert"]>;
         Relationships: [];
       };
+      csv_imports: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          import_type: "vehicle_inventory";
+          mode: "add" | "replace";
+          status: "pending" | "running" | "succeeded" | "failed" | "partial";
+          source_file_name: string;
+          source_object_path: string | null;
+          total_rows: number;
+          processed_rows: number;
+          succeeded_rows: number;
+          failed_rows: number;
+          skipped_rows: number;
+          errors: Array<{ line: number | null; message: string }>;
+          attempt_count: number;
+          created_by: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["csv_imports"]["Row"],
+          | "id"
+          | "import_type"
+          | "mode"
+          | "status"
+          | "source_object_path"
+          | "total_rows"
+          | "processed_rows"
+          | "succeeded_rows"
+          | "failed_rows"
+          | "skipped_rows"
+          | "errors"
+          | "attempt_count"
+          | "created_by"
+          | "started_at"
+          | "completed_at"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          import_type?: "vehicle_inventory";
+          mode?: "add" | "replace";
+          status?: "pending" | "running" | "succeeded" | "failed" | "partial";
+          source_object_path?: string | null;
+          total_rows?: number;
+          processed_rows?: number;
+          succeeded_rows?: number;
+          failed_rows?: number;
+          skipped_rows?: number;
+          errors?: Array<{ line: number | null; message: string }>;
+          attempt_count?: number;
+          created_by?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["csv_imports"]["Insert"]>;
+        Relationships: [];
+      };
       vehicles: {
         Row: {
           id: string;

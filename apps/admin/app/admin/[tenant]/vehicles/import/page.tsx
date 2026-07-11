@@ -15,5 +15,20 @@ export default async function VehicleImportPage({ params }: PageProps) {
     .maybeSingle();
   if (!tenant) notFound();
 
-  return <ImportClient tenantId={tenant.id} tenantSlug={tenant.slug} />;
+  const { data: recentImports } = await supabase
+    .from("csv_imports")
+    .select(
+      "id, source_file_name, mode, status, total_rows, succeeded_rows, failed_rows, skipped_rows, created_at"
+    )
+    .eq("tenant_id", tenant.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  return (
+    <ImportClient
+      tenantId={tenant.id}
+      tenantSlug={tenant.slug}
+      recentImports={recentImports ?? []}
+    />
+  );
 }

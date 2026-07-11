@@ -10,4 +10,5 @@ export * from "./audit";
 export * from "./visitors";
 export * from "./loyalty";
 export * from "./webhooks";
+export * from "./csvImports";
 export type { Database } from "./schema";
