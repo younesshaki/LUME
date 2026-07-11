@@ -74,16 +74,18 @@ export type Database = {
           type: "lead.created" | "domain.verified" | "storage.quota_warning" | "csv_import.completed";
           body: string;
           link: string | null;
+          dedupe_key: string | null;
           read_at: string | null;
           created_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["admin_notifications"]["Row"],
-          "id" | "user_id" | "link" | "read_at" | "created_at"
+          "id" | "user_id" | "link" | "dedupe_key" | "read_at" | "created_at"
         > & {
           id?: string;
           user_id?: string | null;
           link?: string | null;
+          dedupe_key?: string | null;
           read_at?: string | null;
           created_at?: string;
         };
@@ -214,6 +216,53 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["usage_snapshots"]["Insert"]>;
+        Relationships: [];
+      };
+      tenant_storage_usage: {
+        Row: {
+          tenant_id: string;
+          captured_on: string;
+          captured_at: string;
+          total_bytes: number;
+          supabase_bytes: number;
+          r2_bytes: number;
+          total_object_count: number;
+          supabase_object_count: number;
+          r2_object_count: number;
+          metadata: Record<string, unknown>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_storage_usage"]["Row"],
+          "captured_on" | "captured_at" | "metadata" | "created_at" | "updated_at"
+        > & {
+          captured_on?: string;
+          captured_at?: string;
+          metadata?: Record<string, unknown>;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_storage_usage"]["Insert"]>;
+        Relationships: [];
+      };
+      storage_upload_reservations: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          reservation_key: string;
+          byte_size: number;
+          upload_expires_at: string;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["storage_upload_reservations"]["Row"],
+          "id" | "created_at"
+        > & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["storage_upload_reservations"]["Insert"]>;
         Relationships: [];
       };
       tenant_webhooks: {
@@ -1116,6 +1165,44 @@ export type Database = {
           usage_count: number;
           period_start: string;
         }[];
+      };
+      measure_tenant_supabase_storage: {
+        Args: { p_tenant_id: string };
+        Returns: {
+          bucket_id: "tenant-logos" | "tenant-media" | "tenant-csvs" | "tenant-3d-models";
+          bytes: number;
+          object_count: number;
+          invalid_object_count: number;
+        }[];
+      };
+      tenant_storage_limit_bytes: {
+        Args: { p_tenant_id: string };
+        Returns: number | null;
+      };
+      reserve_tenant_storage_upload: {
+        Args: {
+          p_tenant_id: string;
+          p_reservation_key: string;
+          p_byte_size: number;
+          p_upload_expires_at: string;
+        };
+        Returns: {
+          allowed: boolean;
+          reason: string;
+          current_bytes: number | null;
+          projected_bytes: number | null;
+          limit_bytes: number | null;
+          warning: boolean;
+        }[];
+      };
+      tenant_storage_upload_allowed: {
+        Args: {
+          p_tenant_id_text: string;
+          p_bucket_id: string;
+          p_object_name: string;
+          p_candidate_bytes_text: string;
+        };
+        Returns: boolean;
       };
     };
     Enums: Record<string, never>;

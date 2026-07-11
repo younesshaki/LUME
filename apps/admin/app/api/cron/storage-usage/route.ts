@@ -1,5 +1,16 @@
 import { timingSafeEqual } from "node:crypto";
-import { writeStorageUsageSnapshot } from "@lume/db";
+import {
+  combineStorageMeasurements,
+  createAdminNotification,
+  formatStorageBytes,
+  loadTenantStorageAllowance,
+  measureTenantSupabaseStorage,
+  reconcileStorageReservations,
+  storageQuotaState,
+  storageWarningDedupeKey,
+  writeStorageUsageSnapshot,
+  writeTenantStorageUsage,
+} from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { readR2StorageConfig } from "@/lib/r2Config";
 import { measureTenantR2Storage, r2TenantPrefix } from "@/lib/r2StorageUsage.server";
@@ -44,15 +55,21 @@ export async function GET(request: Request): Promise<Response> {
   const results = await mapWithConcurrency(
     tenants,
     METERING_CONCURRENCY,
-    async (tenant): Promise<boolean> => {
+    async (tenant): Promise<TenantMeteringResult> => {
+      const meteringStartedAt = new Date().toISOString();
       const prefix = r2TenantPrefix(tenant.slug);
-      if (!prefix) return false;
-      const measurement = await measureTenantR2Storage(r2, tenant.slug, { deadlineAt });
-      if (!measurement) return false;
-      return writeStorageUsageSnapshot(service, {
+      if (!prefix) return { r2Metered: false, totalMetered: false, warningDelivered: false };
+      const [r2Measurement, supabaseMeasurement] = await Promise.all([
+        measureTenantR2Storage(r2, tenant.slug, { deadlineAt }),
+        measureTenantSupabaseStorage(service, tenant.id),
+      ]);
+      if (!r2Measurement) {
+        return { r2Metered: false, totalMetered: false, warningDelivered: false };
+      }
+      const r2Metered = await writeStorageUsageSnapshot(service, {
         tenantId: tenant.id,
-        bytes: measurement.bytes,
-        objectCount: measurement.objectCount,
+        bytes: r2Measurement.bytes,
+        objectCount: r2Measurement.objectCount,
         source: "cloudflare-r2-list-v2",
         capturedOn,
         metadata: {
@@ -60,12 +77,69 @@ export async function GET(request: Request): Promise<Response> {
           prefix,
         },
       });
+      if (!r2Metered || !supabaseMeasurement) {
+        return { r2Metered, totalMetered: false, warningDelivered: false };
+      }
+
+      const combined = combineStorageMeasurements(
+        supabaseMeasurement,
+        r2Measurement,
+        new Date().toISOString(),
+      );
+      if (!combined) {
+        return { r2Metered, totalMetered: false, warningDelivered: false };
+      }
+      const totalMetered = await writeTenantStorageUsage(service, tenant.id, combined, {
+        scope: "complete",
+        r2Prefix: prefix,
+        supabaseBuckets: supabaseMeasurement.buckets,
+      });
+      if (!totalMetered) {
+        return { r2Metered, totalMetered: false, warningDelivered: false };
+      }
+
+      await reconcileStorageReservations(service, tenant.id, meteringStartedAt);
+      const allowance = await loadTenantStorageAllowance(service, tenant.id);
+      const limitBytes = allowance?.limitBytes ?? null;
+      const state = storageQuotaState(combined.bytes, limitBytes);
+      let warningDelivered = false;
+      if (
+        allowance &&
+        limitBytes !== null &&
+        limitBytes > 0 &&
+        (state === "warning" || state === "exceeded")
+      ) {
+        const dedupeKey = storageWarningDedupeKey(allowance.planId, limitBytes);
+        const percentage = Math.floor((combined.bytes / limitBytes) * 100);
+        warningDelivered = await createAdminNotification(service, {
+          tenantId: tenant.id,
+          type: "storage.quota_warning",
+          body: `Storage is at ${percentage}% (${formatStorageBytes(combined.bytes)} of ${formatStorageBytes(limitBytes)}). Review storage or upgrade your plan.`,
+          link: `/admin/${tenant.slug}/settings/billing`,
+          dedupeKey,
+        });
+      }
+      return { r2Metered, totalMetered, warningDelivered };
     },
   );
-  const metered = results.filter(Boolean).length;
+  const metered = results.filter((result) => result.r2Metered).length;
   const failed = results.length - metered;
-  return cronJson({ metered, failed }, failed > 0 ? 500 : 200);
+  const totalMetered = results.filter((result) => result.totalMetered).length;
+  const warnings = results.filter((result) => result.warningDelivered).length;
+  return cronJson({
+    metered,
+    failed,
+    total_metered: totalMetered,
+    total_failed: results.length - totalMetered,
+    warnings,
+  }, failed > 0 ? 500 : 200);
 }
+
+type TenantMeteringResult = {
+  r2Metered: boolean;
+  totalMetered: boolean;
+  warningDelivered: boolean;
+};
 
 function cronJson(payload: unknown, status: number): Response {
   return Response.json(payload, {

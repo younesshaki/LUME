@@ -15,4 +15,5 @@ export * from "./notifications";
 export * from "./vehicleStatus";
 export * from "./usage";
 export * from "./quota";
+export * from "./storageQuota";
 export type { Database } from "./schema";

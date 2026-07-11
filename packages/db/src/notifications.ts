@@ -10,6 +10,7 @@ export type AdminNotificationInput = {
   type: NotificationInsert["type"];
   body: string;
   link?: string | null;
+  dedupeKey?: string | null;
 };
 
 export function buildAdminNotificationInsert(
@@ -18,7 +19,13 @@ export function buildAdminNotificationInsert(
   const tenantId = input.tenantId.trim();
   const body = input.body.trim().replace(/\s+/g, " ").slice(0, 500);
   const link = input.link?.trim() || null;
-  if (!tenantId || !body || (link !== null && !isSafeAdminNotificationLink(link))) {
+  const dedupeKey = input.dedupeKey?.trim() || null;
+  if (
+    !tenantId ||
+    !body ||
+    (link !== null && !isSafeAdminNotificationLink(link)) ||
+    (dedupeKey !== null && !isSafeNotificationDedupeKey(dedupeKey))
+  ) {
     return null;
   }
   return {
@@ -27,11 +34,16 @@ export function buildAdminNotificationInsert(
     type: input.type,
     body,
     link,
+    dedupe_key: dedupeKey,
   };
 }
 
 export function isSafeAdminNotificationLink(link: string): boolean {
   return link.startsWith("/admin/") && link.length <= 2_048 && !link.startsWith("//");
+}
+
+export function isSafeNotificationDedupeKey(value: string): boolean {
+  return value.length <= 200 && /^[a-zA-Z0-9:._-]+$/.test(value);
 }
 
 /** Best-effort producer for future domain/quota integrations. */
@@ -43,7 +55,7 @@ export async function createAdminNotification(
   if (!insert) return false;
   try {
     const { error } = await client.from("admin_notifications").insert(insert);
-    return !error;
+    return !error || (insert.dedupe_key !== null && error.code === "23505");
   } catch {
     return false;
   }
