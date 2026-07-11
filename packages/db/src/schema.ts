@@ -271,6 +271,58 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["storage_upload_reservations"]["Insert"]>;
         Relationships: [];
       };
+      tenant_email_events: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          provider: "resend";
+          provider_event_id: string;
+          provider_email_id: string;
+          event_type: "email.delivered" | "email.bounced" | "email.complained";
+          recipients: string[];
+          template_key: string | null;
+          bounce_type: string | null;
+          bounce_subtype: string | null;
+          bounce_message: string | null;
+          occurred_at: string;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_email_events"]["Row"],
+          "id" | "provider" | "template_key" | "bounce_type" | "bounce_subtype" |
+          "bounce_message" | "created_at"
+        > & {
+          id?: string;
+          provider?: "resend";
+          template_key?: string | null;
+          bounce_type?: string | null;
+          bounce_subtype?: string | null;
+          bounce_message?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_email_events"]["Insert"]>;
+        Relationships: [];
+      };
+      tenant_email_suppressions: {
+        Row: {
+          tenant_id: string;
+          recipient_email: string;
+          reason: "hard_bounce";
+          source_event_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_email_suppressions"]["Row"],
+          "reason" | "created_at" | "updated_at"
+        > & {
+          reason?: "hard_bounce";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_email_suppressions"]["Insert"]>;
+        Relationships: [];
+      };
       tenant_webhooks: {
         Row: {
           id: string;
@@ -1251,6 +1303,21 @@ export type Database = {
           p_candidate_bytes_text: string;
         };
         Returns: boolean;
+      };
+      record_resend_email_event: {
+        Args: {
+          p_tenant_id: string;
+          p_provider_event_id: string;
+          p_provider_email_id: string;
+          p_event_type: "email.delivered" | "email.bounced" | "email.complained";
+          p_recipients: string[];
+          p_template_key: string | null;
+          p_bounce_type: string | null;
+          p_bounce_subtype: string | null;
+          p_bounce_message: string | null;
+          p_occurred_at: string;
+        };
+        Returns: "recorded" | "duplicate" | "unknown_tenant";
       };
     };
     Enums: Record<string, never>;

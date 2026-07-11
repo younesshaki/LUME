@@ -18,6 +18,7 @@
     "@base-ui/react": "^1.6.0",
     "@lume/blocks": "*",
     "@lume/db": "*",
+    "@lume/email": "*",
     "@lume/rag": "*",
     "@lume/types": "*",
     "@supabase/ssr": "^0.5.2",

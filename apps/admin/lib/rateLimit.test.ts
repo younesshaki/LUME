@@ -87,6 +87,12 @@ describe("checkPublicRouteRateLimit (SCRUM-112)", () => {
     expect(checkPublicRouteRateLimit("leads", req("3.3.3.3"), () => limit).allowed).toBe(false);
     expect(checkPublicRouteRateLimit("leads", req("4.4.4.4"), () => limit).allowed).toBe(true);
   });
+
+  it("keeps signed provider webhook bursts on a separate high-volume budget", () => {
+    expect(PUBLIC_ROUTE_LIMITS["resend-webhook"]).toBe(600);
+    expect(checkPublicRouteRateLimit("resend-webhook", req("5.5.5.5"), () => 0).allowed)
+      .toBe(true);
+  });
 });
 
 describe("rateLimitedResponse", () => {

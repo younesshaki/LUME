@@ -118,6 +118,8 @@ export const PUBLIC_ROUTE_LIMITS = {
   "bot-actions": 30,
   /** Anonymous consent ledger writes — at most a few per visit. */
   consent: 10,
+  /** Signed provider delivery callbacks can arrive in large campaign bursts. */
+  "resend-webhook": 600,
 } as const;
 
 export type PublicRouteScope = keyof typeof PUBLIC_ROUTE_LIMITS;

@@ -210,7 +210,14 @@
 
 ## SCRUM-195 Welcome, password reset, and tenant invitation email templates
 - Status: needs-provisioning(SUPABASE_AUTH_HOOK)
-- Files: packages/email/src/templates/**, packages/email/src/index.ts, packages/email/package.json
+- Files: packages/email/src/templates/**, packages/email/package.json
 - Migration: none
 - Env added: none
 - Review notes / open questions: Three pure, dark LUME-branded React email templates now expose stable descriptors (`welcome`, `password-reset`, `tenant-invited`) from `@lume/email/templates`, accessible CTA links plus plaintext fallbacks, and strict HTTPS action-URL validation with loopback-only HTTP for development. Welcome mirrors the existing five-step onboarding checklist; invites use the real tenant roles, ISO expiry timestamps, and current `/invite/<token>` flow; reset copy never exposes a token outside its CTA URL. Actual sends are deliberately not wired here: welcome should run only when tenant provisioning returns `created=true`, team invites currently originate in a client component and need a server action, and the repo has no forgot/reset landing flow or Supabase Send Email hook. Claude must not enable a recovery-only hook because a custom hook replaces Supabase's built-in confirmation delivery for every auth email action; provision a complete hook/fallback flow first.
+
+## SCRUM-196 Email DKIM and bounce/complaint webhook handling
+- Status: needs-provisioning(RESEND_DNS+WEBHOOK)
+- Files: supabase/migrations/052_email_delivery_events.sql, packages/email/{README.md,src/{config,server,webhook}*}, packages/db/src/{schema,emailEvents,emailEvents.test,index}.ts, apps/admin/app/api/resend-webhook/route.ts, apps/admin/lib/{boundedRequestBody,boundedRequestBody.test,rateLimit,rateLimit.test}.ts, apps/admin/{package.json,.env.example}, package-lock.json
+- Migration: 052_email_delivery_events.sql (NOT applied)
+- Env added: RESEND_WEBHOOK_SECRET=...
+- Review notes / open questions: The signed Node route reads the raw body once, verifies Resend's `svix-*` headers locally, accepts only delivered/bounced/complained events carrying the outbound tenant tag, and atomically deduplicates by provider event ID. Only case-insensitive `Permanent` bounces enter the service-only suppression ledger; transient/undetermined bounces and complaints are logged without suppressing, matching Jira's hard-bounce policy. Missing configuration is a safe 503, invalid signatures never reach storage, unknown tenants are acknowledged without retry, and persistence failures return 500 so Resend retries. DNS is deliberately manual: publish the exact SPF/DKIM records Resend supplies and begin DMARC at `p=none`; never reuse website `tenant_domains.verified`. Claude must apply migration 052, decide root `lume.app` versus a dedicated sending subdomain, provision the three-event webhook, store its signing secret, and only then populate tenant sender overrides for a Resend-verified domain. SCRUM-172 must inject the exported fail-closed `isEmailRecipientSuppressed` lookup when constructing its sender; otherwise the ledger is recorded but not enforced.
