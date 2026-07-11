@@ -368,6 +368,41 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["bot_personas"]["Insert"]>;
         Relationships: [];
       };
+      tenant_bot_config: {
+        Row: {
+          tenant_id: string;
+          persona: Record<string, unknown>;
+          allowed_tools: string[];
+          model: string;
+          temperature: number;
+          max_iterations: number;
+          system_prompt_override: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_bot_config"]["Row"],
+          | "persona"
+          | "allowed_tools"
+          | "model"
+          | "temperature"
+          | "max_iterations"
+          | "system_prompt_override"
+          | "created_at"
+          | "updated_at"
+        > & {
+          persona?: Record<string, unknown>;
+          allowed_tools?: string[];
+          model?: string;
+          temperature?: number;
+          max_iterations?: number;
+          system_prompt_override?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_bot_config"]["Insert"]>;
+        Relationships: [];
+      };
       loyalty_accounts: {
         Row: {
           id: string;
