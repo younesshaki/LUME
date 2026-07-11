@@ -18,3 +18,10 @@
 - Migration: 032_loyalty_accrual.sql, 033_loyalty_account_linking.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: Existing producers now award first persisted chat session (+5) and authenticated lead submission (+50), idempotently; existing email-linked accounts are reused. Saved-vehicle (+10) and referral (+100) need future producer routes. The current public chat UI does not yet post to `/api/visitor/chat-history`, so Claude should verify that integration before expecting chat-session awards in production.
+
+## SCRUM-201 Tenant webhooks table and delivery worker interface
+- Status: done
+- Files: supabase/migrations/034_tenant_webhooks.sql, packages/db/src/{schema,webhooks,index}.ts
+- Migration: 034_tenant_webhooks.sql (NOT applied)
+- Env added: none
+- Review notes / open questions: Network I/O is impossible unless trusted server code injects both a decrypted signing secret and transport. Credential rows are RLS deny-all. Retry semantics use five delayed retries (1m, 5m, 30m, 1h, 6h), then dead-letter on the next failure; Claude should confirm this interpretation of Jira's ambiguous “five failures” wording and choose an encryption/KMS mechanism before storing credentials.

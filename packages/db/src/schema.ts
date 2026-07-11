@@ -119,6 +119,87 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["invoices"]["Insert"]>;
         Relationships: [];
       };
+      tenant_webhooks: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string;
+          endpoint_url: string;
+          events: string[];
+          enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_webhooks"]["Row"],
+          "id" | "events" | "enabled" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          events?: string[];
+          enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_webhooks"]["Insert"]>;
+        Relationships: [];
+      };
+      tenant_webhook_credentials: {
+        Row: {
+          webhook_id: string;
+          tenant_id: string;
+          signing_secret_ciphertext: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_webhook_credentials"]["Row"],
+          "created_at" | "updated_at"
+        > & { created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["tenant_webhook_credentials"]["Insert"]>;
+        Relationships: [];
+      };
+      webhook_deliveries: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          webhook_id: string;
+          event_type: "lead.created" | "lead.status_changed" | "vehicle.sold" | "test_drive.scheduled";
+          event_id: string;
+          payload: Record<string, unknown>;
+          status: "pending" | "delivering" | "retrying" | "succeeded" | "dead_letter";
+          attempt_count: number;
+          next_attempt_at: string;
+          response_status: number | null;
+          last_error: string | null;
+          delivered_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["webhook_deliveries"]["Row"],
+          | "id"
+          | "status"
+          | "attempt_count"
+          | "next_attempt_at"
+          | "response_status"
+          | "last_error"
+          | "delivered_at"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          status?: "pending" | "delivering" | "retrying" | "succeeded" | "dead_letter";
+          attempt_count?: number;
+          next_attempt_at?: string;
+          response_status?: number | null;
+          last_error?: string | null;
+          delivered_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["webhook_deliveries"]["Insert"]>;
+        Relationships: [];
+      };
       vehicles: {
         Row: {
           id: string;

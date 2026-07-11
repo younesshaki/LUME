@@ -9,4 +9,5 @@ export * from "./leadsCsv";
 export * from "./audit";
 export * from "./visitors";
 export * from "./loyalty";
+export * from "./webhooks";
 export type { Database } from "./schema";
