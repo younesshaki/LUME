@@ -3,8 +3,10 @@ import { Check, GitCompare, Heart, Send, X } from "lucide-react";
 import {
   formatVehiclePrice,
   getVehicleById,
+  loadVehiclePriceSignal,
   loadVehicles,
   type Vehicle,
+  type VehiclePriceSignal,
 } from "@/experience/vehicles/catalog";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
@@ -202,7 +204,14 @@ export default function VehicleDetailPage({
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>(() => readStoredIds(SAVED_STORAGE_KEY));
   const [compareIds, setCompareIds] = useState<string[]>(() => readStoredIds(COMPARE_STORAGE_KEY).slice(0, 3));
+  const [loadedPriceSignal, setLoadedPriceSignal] = useState<{
+    vehicleId: string;
+    signal: VehiclePriceSignal | null;
+  } | null>(null);
   const vehicle = getVehicleById(vehicles, vehicleId);
+  const priceSignal = loadedPriceSignal?.vehicleId === vehicleId
+    ? loadedPriceSignal.signal
+    : null;
 
   useEffect(() => {
     loadVehicles()
@@ -216,6 +225,17 @@ export default function VehicleDetailPage({
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!vehicleId) return;
+    let cancelled = false;
+    void loadVehiclePriceSignal(vehicleId).then((signal) => {
+      if (!cancelled) setLoadedPriceSignal({ vehicleId, signal });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [vehicleId]);
 
   useEffect(() => {
     if (!vehicle) return;
@@ -292,6 +312,11 @@ export default function VehicleDetailPage({
                   <h1>{vehicle.year} {vehicle.make} {vehicle.model}</h1>
                   {vehicle.trim && <p className="vehicleDetail__trim">{vehicle.trim}</p>}
                   <p className="vehicleDetail__price">{formatVehiclePrice(vehicle.price)}</p>
+                  {priceSignal?.enabled && priceSignal.reductions > 0 ? (
+                    <p className="vehicleDetail__priceSignal">
+                      Price reduced {priceSignal.reductions} {priceSignal.reductions === 1 ? "time" : "times"} in the last 30 days
+                    </p>
+                  ) : null}
                   <p className="vehicleDetail__notice">
                     Concept demo: price and imagery are representative until verified listing data is connected.
                   </p>

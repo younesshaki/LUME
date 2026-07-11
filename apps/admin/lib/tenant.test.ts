@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { extractTenantSlugFromRequest } from "./tenant";
+import { extractTenantSlugFromRequest, hasConflictingTenantSelectors } from "./tenant";
 
 describe("extractTenantSlugFromRequest", () => {
   it("prefers the explicit tenant header", () => {
@@ -35,5 +35,22 @@ describe("extractTenantSlugFromRequest", () => {
     expect(
       extractTenantSlugFromRequest(new Request("https://admin.lume.example/chat"))
     ).toBeNull();
+  });
+});
+
+describe("hasConflictingTenantSelectors", () => {
+  it("rejects disagreement between the tenant header and query", () => {
+    expect(hasConflictingTenantSelectors(new Request("https://lume.example/api?tenant=acme", {
+      headers: { "x-lume-tenant": "other" },
+    }))).toBe(true);
+  });
+
+  it("accepts matching or single tenant selectors", () => {
+    expect(hasConflictingTenantSelectors(new Request("https://lume.example/api?tenant=acme", {
+      headers: { "x-lume-tenant": "acme" },
+    }))).toBe(false);
+    expect(hasConflictingTenantSelectors(
+      new Request("https://lume.example/api?tenant=acme"),
+    )).toBe(false);
   });
 });

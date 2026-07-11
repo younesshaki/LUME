@@ -50,6 +50,11 @@ export type VehicleResults = {
   source: "api" | "fallback";
 };
 
+export type VehiclePriceSignal = {
+  enabled: boolean;
+  reductions: number;
+};
+
 export type VehicleFilters = {
   query: string;
   stockType: string;
@@ -329,6 +334,46 @@ export async function loadVehicleResults(
     facets: vehicleFacetsFromVehicles(vehicles, filters),
     source: "fallback",
   };
+}
+
+export function normalizeVehiclePriceSignalPayload(
+  value: unknown,
+): VehiclePriceSignal | null {
+  if (!value || typeof value !== "object") return null;
+  const payload = value as Record<string, unknown>;
+  if (typeof payload.enabled !== "boolean") return null;
+  if (!payload.enabled) return { enabled: false, reductions: 0 };
+  if (
+    typeof payload.reductions !== "number" ||
+    !Number.isFinite(payload.reductions) ||
+    payload.reductions < 0
+  ) {
+    return null;
+  }
+  return { enabled: true, reductions: Math.floor(payload.reductions) };
+}
+
+export async function loadVehiclePriceSignal(
+  vehicleId: string,
+): Promise<VehiclePriceSignal | null> {
+  try {
+    const params = new URLSearchParams({ tenant: TENANT_SLUG });
+    const origin =
+      typeof window !== "undefined" && window.location?.origin
+        ? window.location.origin
+        : "http://localhost";
+    const path = `${VEHICLES_API_PATH}/${encodeURIComponent(vehicleId)}/price-signal`;
+    const url = new URL(`${ADMIN_API_HOST ?? ""}${path}`, origin);
+    params.forEach((value, key) => url.searchParams.set(key, value));
+    const response = await fetch(
+      ADMIN_API_HOST ? url.toString() : `${url.pathname}${url.search}`,
+      { headers: { "X-Lume-Tenant": TENANT_SLUG } },
+    );
+    if (!response.ok) return null;
+    return normalizeVehiclePriceSignalPayload(await response.json());
+  } catch {
+    return null;
+  }
 }
 
 async function loadVehiclesFromApi(): Promise<Vehicle[]> {

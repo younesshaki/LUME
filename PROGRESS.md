@@ -95,3 +95,10 @@
 - Migration: 041_bulk_vehicle_price_update.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: Selection is intentionally current-page scoped (25 rows) while server actions accept at most 200 unique UUIDs. Editor+ authorization and tenant ownership are rechecked inside every action. Mark-inactive maps to `archived`; generic status updates honor terminal sale rules; sold rows cannot be repriced or deleted. Price rules run atomically in a service-only RPC so existing price-history triggers capture every row, and every successful bulk commit attempts one audit-log entry.
+
+## SCRUM-212 Vehicle price history and public trust signal
+- Status: done
+- Files: supabase/migrations/042_public_vehicle_price_signal.sql, packages/{types,db}/src/**, apps/admin/lib/priceHistory.ts, apps/admin/app/admin/[tenant]/vehicles/**, apps/admin/app/api/vehicles/[id]/price-signal/route.ts, src/{lib,experience}/**
+- Migration: 042_public_vehicle_price_signal.sql (NOT applied)
+- Env added: none
+- Review notes / open questions: Admin history is bounded to the latest 200 records and uses deterministic UTC formatting. Public exposure is aggregate-only, limited to live vehicles on active tenants, and default-off through the tenant theme; raw history never crosses the public API. The owner/admin-only RPC toggles the setting atomically. Claude should decide whether the bot should consume this aggregate later when mentioning recent price drops.

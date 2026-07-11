@@ -59,4 +59,16 @@ describe("tenant theme", () => {
     await expect(loadTenantTheme("default", client as never)).resolves.toEqual({});
     expect(client.rpc).toHaveBeenCalledWith("get_tenant_theme", { p_slug: "default" });
   });
+
+  it("keeps the public vehicle price-signal opt-in boolean", async () => {
+    const client = {
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ theme: { vehiclePricing: { showPriceReductionSignal: true } } }],
+        error: null,
+      }),
+    };
+    await expect(loadTenantTheme("price-signal", client as never)).resolves.toMatchObject({
+      vehiclePricing: { showPriceReductionSignal: true },
+    });
+  });
 });

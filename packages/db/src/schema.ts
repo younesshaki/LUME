@@ -968,6 +968,14 @@ export type Database = {
         };
         Returns: number;
       };
+      set_public_vehicle_price_signal: {
+        Args: { p_tenant_id: string; p_enabled: boolean };
+        Returns: boolean;
+      };
+      get_public_vehicle_price_signal: {
+        Args: { p_tenant_id: string; p_vehicle_id: string };
+        Returns: { enabled: boolean; reductions: number }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

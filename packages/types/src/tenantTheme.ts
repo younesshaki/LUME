@@ -40,6 +40,10 @@ export type TenantTheme = {
   cinematic?: {
     intensity?: number;
   };
+  vehiclePricing?: {
+    /** Public vehicle detail may show an aggregate recent-reductions signal. */
+    showPriceReductionSignal?: boolean;
+  };
 };
 
 /**
@@ -72,4 +76,7 @@ export const DEFAULT_TENANT_THEME = {
   },
   dockVariant: "default",
   cinematicIntensity: 1,
+  vehiclePricing: {
+    showPriceReductionSignal: false,
+  },
 } as const satisfies TenantTheme;

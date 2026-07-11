@@ -107,6 +107,7 @@ function normalizeTenantTheme(value: unknown): TenantTheme {
   const fonts = isRecord(value.fonts) ? value.fonts : {};
   const dock = isRecord(value.dock) ? value.dock : {};
   const cinematic = isRecord(value.cinematic) ? value.cinematic : {};
+  const vehiclePricing = isRecord(value.vehiclePricing) ? value.vehiclePricing : {};
 
   return {
     colors: {
@@ -132,6 +133,9 @@ function normalizeTenantTheme(value: unknown): TenantTheme {
     cinematicIntensity: normalizeIntensity(value.cinematicIntensity) ?? undefined,
     cinematic: {
       intensity: normalizeIntensity(cinematic.intensity) ?? undefined,
+    },
+    vehiclePricing: {
+      showPriceReductionSignal: vehiclePricing.showPriceReductionSignal === true,
     },
   };
 }

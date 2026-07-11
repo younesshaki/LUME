@@ -62,6 +62,13 @@ export function extractTenantSlugFromRequest(request: Request): string | null {
   return sub || null;
 }
 
+/** Reject ambiguous requests before a header-selected tenant is cached under a query URL. */
+export function hasConflictingTenantSelectors(request: Request): boolean {
+  const headerSlug = request.headers.get("x-lume-tenant")?.trim();
+  const querySlug = new URL(request.url).searchParams.get("tenant")?.trim();
+  return Boolean(headerSlug && querySlug && headerSlug !== querySlug);
+}
+
 /**
  * Convenience: extract + resolve in one step. Returns null if no slug found
  * or the tenant doesn't exist / is suspended.

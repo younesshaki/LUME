@@ -10,6 +10,7 @@ import {
   getCitiesForState,
   getUniqueStates,
   getVehicleById,
+  normalizeVehiclePriceSignalPayload,
   sortVehicles,
   vehicleFacetsFromVehicles,
   vehicleFiltersToApiSearchParams,
@@ -181,6 +182,19 @@ describe("vehicle catalog", () => {
       states: ["CA", "FL"],
       cities: ["Los Angeles", "San Diego"],
     });
+  });
+
+  it("normalizes the aggregate public price-reduction signal defensively", () => {
+    expect(normalizeVehiclePriceSignalPayload({ enabled: true, reductions: 3 })).toEqual({
+      enabled: true,
+      reductions: 3,
+    });
+    expect(normalizeVehiclePriceSignalPayload({ enabled: false, reductions: 99 })).toEqual({
+      enabled: false,
+      reductions: 0,
+    });
+    expect(normalizeVehiclePriceSignalPayload({ enabled: true, reductions: -1 })).toBeNull();
+    expect(normalizeVehiclePriceSignalPayload({ reductions: 2 })).toBeNull();
   });
 
   it("encodes only non-default URL state", () => {
