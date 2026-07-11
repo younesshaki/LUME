@@ -5,6 +5,11 @@
  * trusted server route validates origin + tenant, then writes through the
  * service-role client because the leads table intentionally has no anon insert
  * policy.
+ *
+ * Two caller classes (SCRUM-106): browsers pass the origin allowlist +
+ * Turnstile; server-to-server integrations authenticate with a tenant API key
+ * (`Authorization: Bearer lume_sk_…`, scope `leads:write`), which pins the
+ * tenant to the key, forces source "api", and skips the browser-only checks.
  */
 import type { LeadCaptureResponse } from "@lume/types";
 import {
@@ -24,6 +29,7 @@ import {
 } from "@/lib/leads";
 import { checkPublicApiQuota } from "@/lib/quota.server";
 import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
+import { apiKeyFromRequest, verifyTenantApiKey } from "@/lib/apiKeys";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,14 +39,24 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  if (!isAllowedOrigin(request)) {
+  // SCRUM-106: a presented API key is authoritative — it must verify, and it
+  // binds the tenant. Browser callers (no key) keep the origin gate.
+  const presentedKey = apiKeyFromRequest(request);
+  const apiKey = presentedKey ? await verifyTenantApiKey(presentedKey, "leads:write") : null;
+  if (presentedKey && !apiKey) {
+    return json({ error: "Invalid or revoked API key" }, 401, request);
+  }
+
+  if (!apiKey && !isAllowedOrigin(request)) {
     return json({ error: "Forbidden origin" }, 403);
   }
 
   const rateLimit = checkPublicRouteRateLimit("leads", request);
   if (!rateLimit.allowed) return rateLimitedResponse(rateLimit, corsHeadersFor(request));
 
-  const tenant = await getTenantFromRequest(request);
+  const tenant = apiKey
+    ? { tenantId: apiKey.tenantId }
+    : await getTenantFromRequest(request);
   if (!tenant) return json({ error: "Unknown or inactive tenant" }, 404, request);
 
   let body: unknown;
@@ -54,9 +70,11 @@ export async function POST(request: Request): Promise<Response> {
   if (!validation.ok) return json({ error: validation.error }, 400, request);
 
   const lead = validation.value;
+  if (apiKey) lead.source = "api";
   const ip = requestIp(request);
   const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (
+    !apiKey &&
     turnstileSecret &&
     lead.source !== "chat" &&
     !(await verifyTurnstileToken({

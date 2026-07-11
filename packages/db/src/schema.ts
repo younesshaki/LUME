@@ -1024,6 +1024,33 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["platform_admins"]["Insert"]>;
         Relationships: [];
       };
+      tenant_api_keys: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string;
+          key_hash: string;
+          key_prefix: string;
+          scopes: string[];
+          created_by: string | null;
+          last_used_at: string | null;
+          revoked_at: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_api_keys"]["Row"],
+          "id" | "scopes" | "created_by" | "last_used_at" | "revoked_at" | "created_at"
+        > & {
+          id?: string;
+          scopes?: string[];
+          created_by?: string | null;
+          last_used_at?: string | null;
+          revoked_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_api_keys"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
