@@ -10,6 +10,7 @@ import { validateBotActionEnvelope } from "@/lib/botActions";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { recordPublicApiUsage } from "@/lib/usage.server";
+import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,9 @@ export async function POST(request: Request): Promise<Response> {
   if (!isAllowedOrigin(request)) {
     return json(failure("FORBIDDEN_ORIGIN", "Forbidden origin"), 403);
   }
+
+  const rateLimit = checkPublicRouteRateLimit("bot-actions", request);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit, corsHeadersFor(request));
 
   const tenant = await getTenantFromRequest(request);
   if (!tenant) {

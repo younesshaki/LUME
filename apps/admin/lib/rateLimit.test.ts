@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   checkChatRateLimit,
+  checkPublicRouteRateLimit,
   checkRateLimit,
   clientIpFromRequest,
+  PUBLIC_ROUTE_LIMITS,
+  rateLimitedResponse,
   resetRateLimits,
 } from "./rateLimit";
 
@@ -41,6 +44,62 @@ describe("checkRateLimit", () => {
     }
     expect(checkChatRateLimit("ip1", () => 10_000).allowed).toBe(false);
     expect(checkChatRateLimit("ip2", () => 10_000).allowed).toBe(true);
+  });
+});
+
+describe("checkPublicRouteRateLimit (SCRUM-112)", () => {
+  beforeEach(() => resetRateLimits());
+
+  const req = (ip: string) =>
+    new Request("https://x.test/api/y", { headers: { "x-forwarded-for": ip } });
+
+  it("enforces the per-scope budget within a one-minute window", () => {
+    const limit = PUBLIC_ROUTE_LIMITS["visitor-signup"];
+    for (let i = 0; i < limit; i++) {
+      expect(checkPublicRouteRateLimit("visitor-signup", req("1.1.1.1"), () => i).allowed).toBe(
+        true,
+      );
+    }
+    expect(checkPublicRouteRateLimit("visitor-signup", req("1.1.1.1"), () => limit).allowed).toBe(
+      false,
+    );
+  });
+
+  it("scopes are independent for the same client IP", () => {
+    const limit = PUBLIC_ROUTE_LIMITS["gdpr-export"];
+    for (let i = 0; i < limit; i++) {
+      checkPublicRouteRateLimit("gdpr-export", req("2.2.2.2"), () => i);
+    }
+    expect(checkPublicRouteRateLimit("gdpr-export", req("2.2.2.2"), () => limit).allowed).toBe(
+      false,
+    );
+    // A different scope from the same IP still has budget.
+    expect(checkPublicRouteRateLimit("gdpr-delete", req("2.2.2.2"), () => limit).allowed).toBe(
+      true,
+    );
+  });
+
+  it("clients are independent within a scope", () => {
+    const limit = PUBLIC_ROUTE_LIMITS.leads;
+    for (let i = 0; i < limit; i++) {
+      checkPublicRouteRateLimit("leads", req("3.3.3.3"), () => i);
+    }
+    expect(checkPublicRouteRateLimit("leads", req("3.3.3.3"), () => limit).allowed).toBe(false);
+    expect(checkPublicRouteRateLimit("leads", req("4.4.4.4"), () => limit).allowed).toBe(true);
+  });
+});
+
+describe("rateLimitedResponse", () => {
+  it("returns a 429 with Retry-After and merged CORS headers", async () => {
+    const response = rateLimitedResponse(
+      { allowed: false, retryAfterSeconds: 42, remaining: 0 },
+      { "Access-Control-Allow-Origin": "https://site.test" },
+    );
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("42");
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://site.test");
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain("Too many requests");
   });
 });
 

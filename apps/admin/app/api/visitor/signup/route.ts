@@ -9,6 +9,7 @@ import { isAllowedOrigin } from "@/lib/origin";
 import { parseSignupInput } from "@/lib/visitorInput";
 import { hashPassword, createSessionToken } from "@/lib/visitorAuth";
 import { buildSessionCookie, visitorCorsHeaders } from "@/lib/visitorSession";
+import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,9 @@ export async function OPTIONS(request: Request) {
 
 export async function POST(request: Request): Promise<Response> {
   if (!isAllowedOrigin(request)) return json(request, { error: "Forbidden origin" }, 403);
+
+  const rateLimit = checkPublicRouteRateLimit("visitor-signup", request);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit, visitorCorsHeaders(request));
 
   const tenant = await getTenantFromRequest(request);
   if (!tenant) return json(request, { error: "Unknown or inactive tenant" }, 404);

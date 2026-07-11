@@ -11,6 +11,7 @@ import {
   readSessionToken,
   visitorCorsHeaders,
 } from "@/lib/visitorSession";
+import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,9 @@ export async function POST(request: Request): Promise<Response> {
   if (!isAllowedOrigin(request)) {
     return new Response(null, { status: 403, headers: visitorCorsHeaders(request) });
   }
+
+  const rateLimit = checkPublicRouteRateLimit("visitor-logout", request);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit, visitorCorsHeaders(request));
 
   const token = readSessionToken(request);
   const tenant = await getTenantFromRequest(request);

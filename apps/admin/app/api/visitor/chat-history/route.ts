@@ -14,6 +14,7 @@ import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { isAllowedOrigin } from "@/lib/origin";
 import { resolveVisitor, visitorCorsHeaders } from "@/lib/visitorSession";
+import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +27,9 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function GET(request: Request): Promise<Response> {
+  const rateLimit = checkPublicRouteRateLimit("visitor-chat-history", request);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit, visitorCorsHeaders(request));
+
   const ctx = await requireVisitor(request);
   if ("error" in ctx) return json(request, { error: ctx.error }, ctx.status);
 
@@ -59,6 +63,9 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const rateLimit = checkPublicRouteRateLimit("visitor-chat-history", request);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit, visitorCorsHeaders(request));
+
   const ctx = await requireVisitor(request);
   if ("error" in ctx) return json(request, { error: ctx.error }, ctx.status);
 

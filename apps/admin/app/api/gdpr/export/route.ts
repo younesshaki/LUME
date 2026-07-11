@@ -12,6 +12,7 @@ import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { parseGdprRequest } from "@/lib/gdpr";
+import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export async function POST(request: Request): Promise<Response> {
   if (!isAllowedOrigin(request)) {
     return json({ error: "Forbidden origin" }, 403);
   }
+
+  const rateLimit = checkPublicRouteRateLimit("gdpr-export", request);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit, corsHeadersFor(request));
 
   const tenant = await getTenantFromRequest(request);
   if (!tenant) return json({ error: "Unknown or inactive tenant" }, 404, request);

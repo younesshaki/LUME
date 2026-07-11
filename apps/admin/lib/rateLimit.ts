@@ -92,3 +92,61 @@ export function clientIpFromRequest(request: Request): string {
   }
   return request.headers.get("x-real-ip")?.trim() || "unknown";
 }
+
+/**
+ * Per-route abuse budgets for the remaining public endpoints (SCRUM-112).
+ * Sensitive/credential endpoints are tightest; cheap authenticated reads are
+ * loosest. All windows are one minute — simple to reason about, matching the
+ * chat policy above.
+ */
+export const PUBLIC_ROUTE_LIMITS = {
+  /** Account creation — also throttles email enumeration via the 409 path. */
+  "visitor-signup": 5,
+  /** Credential guessing. */
+  "visitor-login": 10,
+  "visitor-logout": 30,
+  /** Authenticated session reads. */
+  "visitor-me": 60,
+  "visitor-loyalty": 30,
+  "visitor-chat-history": 60,
+  /** PII-heavy and unauthenticated by design. */
+  "gdpr-export": 5,
+  "gdpr-delete": 5,
+  /** Public lead capture (Turnstile already guards non-chat sources). */
+  leads: 10,
+  /** UI action validation — a chat turn can emit several. */
+  "bot-actions": 30,
+} as const;
+
+export type PublicRouteScope = keyof typeof PUBLIC_ROUTE_LIMITS;
+
+/** One call per route handler: keys by scope + client IP, 1-minute window. */
+export function checkPublicRouteRateLimit(
+  scope: PublicRouteScope,
+  request: Request,
+  now?: () => number,
+): RateLimitResult {
+  return checkRateLimit(`${scope}:${clientIpFromRequest(request)}`, {
+    limit: PUBLIC_ROUTE_LIMITS[scope],
+    windowMs: 60_000,
+    now,
+  });
+}
+
+/** Standard 429 for rate-limited public routes, with CORS headers merged in. */
+export function rateLimitedResponse(
+  result: RateLimitResult,
+  corsHeaders: Record<string, string> = {},
+): Response {
+  return new Response(
+    JSON.stringify({ error: "Too many requests. Please retry shortly." }),
+    {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(result.retryAfterSeconds),
+        ...corsHeaders,
+      },
+    },
+  );
+}
