@@ -116,6 +116,8 @@ export const PUBLIC_ROUTE_LIMITS = {
   leads: 10,
   /** UI action validation — a chat turn can emit several. */
   "bot-actions": 30,
+  /** Anonymous consent ledger writes — at most a few per visit. */
+  consent: 10,
 } as const;
 
 export type PublicRouteScope = keyof typeof PUBLIC_ROUTE_LIMITS;

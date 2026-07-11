@@ -1,4 +1,5 @@
 import { mediaUrl } from "@/config/cdn";
+import { openCookiePreferences } from "@/components/CookieBanner/CookieBanner";
 import { Separator } from "@/components/ui/separator";
 import { SITE_NAV_ITEMS, type SiteScreen } from "../siteNavigation";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
@@ -128,6 +129,13 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
                 {label}
               </button>
             ))}
+            <button
+              onClick={openCookiePreferences}
+              className="text-[11px] text-white/30 hover:text-white/60 transition-colors duration-200
+                tracking-wide cursor-pointer"
+            >
+              Cookie preferences
+            </button>
           </div>
         </div>
       </div>

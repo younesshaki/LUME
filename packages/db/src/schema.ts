@@ -1024,6 +1024,21 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["platform_admins"]["Insert"]>;
         Relationships: [];
       };
+      consent_events: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          choice: "accepted" | "rejected";
+          consent_version: number;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["consent_events"]["Row"],
+          "id" | "consent_version" | "created_at"
+        > & { id?: string; consent_version?: number; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["consent_events"]["Insert"]>;
+        Relationships: [];
+      };
       tenant_api_keys: {
         Row: {
           id: string;
