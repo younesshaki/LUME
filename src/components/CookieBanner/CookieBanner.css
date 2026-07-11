@@ -1,0 +1,183 @@
+.cookieBanner {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: max(1rem, env(safe-area-inset-left));
+  z-index: 2147482990;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 1.25rem;
+  width: min(100% - 2rem, 760px);
+  margin-left: auto;
+  padding: 1.2rem 1.25rem;
+  border: 1px solid var(--theme-lume-line, rgba(255, 248, 236, 0.14));
+  border-radius: 18px;
+  color: var(--theme-lume-ink, #fff8ec);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-lume-panel, #080809) 96%, transparent), color-mix(in srgb, var(--theme-lume-background, #000) 92%, transparent));
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  font-family: var(--theme-body-font-family, var(--experience-font-family));
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  animation: cookieBanner-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cookieBanner--standard {
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.cookieBanner__copy {
+  min-width: 0;
+}
+
+.cookieBanner__eyebrow,
+.cookieBanner__title,
+.cookieBanner__description {
+  margin: 0;
+}
+
+.cookieBanner__eyebrow {
+  color: var(--theme-lume-gold, #d9b76a);
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.cookieBanner__title {
+  margin-top: 0.35rem;
+  font-size: clamp(1rem, 2vw, 1.18rem);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.cookieBanner__description {
+  max-width: 53ch;
+  margin-top: 0.4rem;
+  color: var(--theme-lume-muted, rgba(255, 248, 236, 0.68));
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.cookieBanner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.cookieBanner__button,
+.cookieBanner__dismiss {
+  border: 0;
+  cursor: pointer;
+}
+
+.cookieBanner__button {
+  min-height: 2.4rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--theme-lume-line, rgba(255, 248, 236, 0.14));
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.cookieBanner__button:hover {
+  transform: translateY(-1px);
+}
+
+.cookieBanner__button--secondary {
+  color: var(--theme-lume-ink, #fff8ec);
+  background: color-mix(in srgb, var(--theme-lume-ink, #fff8ec) 6%, transparent);
+}
+
+.cookieBanner__button--primary {
+  border-color: color-mix(in srgb, var(--theme-lume-gold, #d9b76a) 72%, transparent);
+  color: #11100d;
+  background: var(--theme-lume-gold, #d9b76a);
+}
+
+.cookieBanner__dismiss {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  color: var(--theme-lume-soft, rgba(255, 248, 236, 0.5));
+  background: transparent;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.cookieBanner__dismiss:hover {
+  color: var(--theme-lume-ink, #fff8ec);
+  background: color-mix(in srgb, var(--theme-lume-ink, #fff8ec) 7%, transparent);
+}
+
+.cookieBanner__button:focus-visible,
+.cookieBanner__dismiss:focus-visible {
+  outline: 2px solid var(--theme-lume-gold, #d9b76a);
+  outline-offset: 2px;
+}
+
+.cookieBanner:focus-visible {
+  outline: 2px solid var(--theme-lume-gold, #d9b76a);
+  outline-offset: 3px;
+}
+
+@keyframes cookieBanner-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 700px) {
+  .cookieBanner {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 1.1rem;
+  }
+
+  .cookieBanner__copy {
+    padding-right: 2rem;
+  }
+
+  .cookieBanner__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .cookieBanner__actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cookieBanner {
+    animation: none;
+  }
+
+  .cookieBanner__button,
+  .cookieBanner__dismiss {
+    transition: none;
+  }
+}

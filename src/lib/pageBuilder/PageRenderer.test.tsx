@@ -19,15 +19,23 @@ vi.mock("@/lib/publicTenant", async (importOriginal) => {
     ...actual,
     publicTenantSlug: "default",
     resolveTenantId: resolveTenantIdMock,
+    resolvePublicTenant: vi.fn().mockResolvedValue({
+      id: "tenant-1",
+      slug: "default",
+      name: "Default Motors",
+    }),
   };
 });
 
-function publishedPage(blocks: PublishedPage["blocks"]["blocks"]): PublishedPage {
+function publishedPage(
+  blocks: PublishedPage["blocks"]["blocks"],
+  seoMeta: PublishedPage["seoMeta"] = {}
+): PublishedPage {
   return {
     id: "page-1",
     slug: "contact",
     title: "Contact",
-    seoMeta: {},
+    seoMeta,
     publishedRevisionId: "revision-1",
     blocks: { version: 1, blocks },
   };
@@ -40,14 +48,17 @@ async function loadRenderer(enabled: boolean) {
 }
 
 async function renderPageRenderer(enabled = true) {
-  const [{ PageRenderer }, { DualModeProvider }] = await Promise.all([
+  const [{ PageRenderer }, { DualModeProvider }, { SeoProvider }] = await Promise.all([
     loadRenderer(enabled),
     import("@/lib/DualModeContext"),
+    import("@/lib/seo/SeoProvider"),
   ]);
   return render(
-    <DualModeProvider>
-      <PageRenderer slug="contact" fallback={<div>Fallback contact</div>} />
-    </DualModeProvider>
+    <SeoProvider pathname="/contact">
+      <DualModeProvider>
+        <PageRenderer slug="contact" fallback={<div>Fallback contact</div>} />
+      </DualModeProvider>
+    </SeoProvider>
   );
 }
 
@@ -107,6 +118,36 @@ describe("PageRenderer", () => {
 
     await screen.findByRole("heading", { name: "Rendered from DB" });
     expect(screen.queryByText("Fallback contact")).not.toBeInTheDocument();
+  });
+
+  it("applies SEO returned with the published page", async () => {
+    resolveTenantIdMock.mockResolvedValue("tenant-1");
+    fetchPublishedPageMock.mockResolvedValue(
+      publishedPage(
+        [
+          {
+            id: "hero-1",
+            type: "hero",
+            props: { eyebrow: "Access", title: "Contact us", subtitle: "Say hello." },
+          },
+        ],
+        {
+          title: "Contact — Default Motors",
+          description: "Contact the Default Motors team.",
+          ogImage: "/contact.jpg",
+        }
+      )
+    );
+
+    await renderPageRenderer(true);
+    await screen.findByRole("heading", { name: "Contact us" });
+
+    await vi.waitFor(() => {
+      expect(document.title).toBe("Contact — Default Motors");
+      expect(document.head.querySelector('meta[name="description"]')?.getAttribute("content")).toBe(
+        "Contact the Default Motors team."
+      );
+    });
   });
 
   it("filters experience-only blocks out of standard mode", async () => {

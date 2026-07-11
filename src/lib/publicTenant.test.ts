@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearTenantIdCacheForTests, resolveTenantId } from "./publicTenant";
+import {
+  clearTenantIdCacheForTests,
+  resolvePublicTenant,
+  resolveTenantId,
+} from "./publicTenant";
 
 type FakeTenantRow = {
   id: string;
@@ -29,6 +33,21 @@ describe("resolveTenantId", () => {
 
     expect(client.rpc).toHaveBeenCalledTimes(1);
     expect(client.rpc).toHaveBeenCalledWith("tenant_by_slug", { p_slug: "default" });
+  });
+
+  it("exposes the tenant name from the same cached resolution", async () => {
+    const client = fakeClient([
+      { id: "tenant-1", slug: "atelier", name: "Atelier Motors", status: "active" },
+    ]);
+
+    await expect(resolvePublicTenant("ATELIER", client)).resolves.toEqual({
+      id: "tenant-1",
+      slug: "atelier",
+      name: "Atelier Motors",
+    });
+    await expect(resolveTenantId("atelier", client)).resolves.toBe("tenant-1");
+
+    expect(client.rpc).toHaveBeenCalledTimes(1);
   });
 
   it("returns null for inactive tenants", async () => {

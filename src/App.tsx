@@ -38,6 +38,12 @@ import {
   storePendingLeadFormPrefill,
 } from "./lib/botActionConsumers";
 import { isPageRendererEnabled } from "./lib/pageBuilder/featureFlag";
+import {
+  CookieBanner,
+  readCookieConsent,
+  type CookieConsent,
+} from "./components/CookieBanner/CookieBanner";
+import { SeoProvider } from "./lib/seo/SeoProvider";
 
 if (isPageRendererEnabled) {
   void import("./lib/pageBuilder/registerBlocks").then(({ registerBlocks }) => {
@@ -247,6 +253,9 @@ export default function App() {
   const [mediaQuality, setMediaQuality] = useState<ShowcaseVideoQuality>(
     readInitialMediaQuality
   );
+  const [cookieConsent, setCookieConsent] = useState<CookieConsent | null>(
+    readCookieConsent
+  );
 
   useEffect(() => {
     void loadStoryHomePage();
@@ -417,7 +426,8 @@ export default function App() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>
+    <SeoProvider pathname={location.pathname} enabled={!isAdminPath}>
+      <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>
       <MediaQualitySettings
         quality={mediaQuality}
         visible={!isShowcaseExperience}
@@ -440,6 +450,7 @@ export default function App() {
         </Suspense>
       )}
       <LeadCaptureBridge />
+      {!isAdminPath && <CookieBanner onConsentChange={setCookieConsent} />}
       <Suspense fallback={null}>
         {/* Phase 3: pages now render from real URLs instead of the old screen ternary. */}
         <Routes>
@@ -628,7 +639,8 @@ export default function App() {
           <PreloadGate onStart={handleGateStart} />
         </>
       )}
-      <Analytics />
-    </div>
+      {cookieConsent === "accepted" && <Analytics />}
+      </div>
+    </SeoProvider>
   );
 }

@@ -11,6 +11,7 @@ import { getBlockComponent, getBlockDescriptor } from "./registry";
 import { PageBuilderRenderProvider, type PageBuilderRenderContextValue } from "./renderContext";
 import { registerBlocks } from "./registerBlocks";
 import { isPageRendererEnabled } from "./featureFlag";
+import { usePublishedPageSeo } from "@/lib/seo/SeoProvider";
 
 // Always register: custom tenant pages render regardless of the feature flag
 // (force prop), and this module only loads via the lazy renderer chunk anyway.
@@ -133,6 +134,7 @@ export function PageRenderer({
         : [],
     [mode, state]
   );
+  usePublishedPageSeo(state.status === "ready" ? state.page : null);
 
   if (!enabled || state.status === "fallback") return <>{fallback}</>;
   if (state.status === "loading") {

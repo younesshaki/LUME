@@ -4,4 +4,5 @@ export * from "./storage";
 export * from "./pages";
 export * from "./vehicleQuery";
 export * from "./provisioning";
+export * from "./gdpr";
 export type { Database } from "./schema";

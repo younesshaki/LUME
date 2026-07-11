@@ -54,7 +54,32 @@ export const publicTenantSlug = computePublicTenantSlug();
 
 type TenantLookupClient = Pick<SupabaseClient<Database>, "rpc">;
 
-const tenantIdCache = new Map<string, Promise<string | null>>();
+export type PublicTenant = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+const tenantCache = new Map<string, Promise<PublicTenant | null>>();
+
+/** Resolve the active public tenant using the existing anon-safe RPC. */
+export async function resolvePublicTenant(
+  slug = publicTenantSlug,
+  client: TenantLookupClient = supabase
+): Promise<PublicTenant | null> {
+  const normalizedSlug = normalizeTenantSlug(slug);
+  if (!normalizedSlug) return null;
+
+  const cached = tenantCache.get(normalizedSlug);
+  if (cached) return cached;
+
+  const lookup = lookupTenant(normalizedSlug, client);
+  tenantCache.set(normalizedSlug, lookup);
+
+  const tenant = await lookup;
+  if (!tenant) tenantCache.delete(normalizedSlug);
+  return tenant;
+}
 
 /**
  * Resolve the public tenant slug to a tenant UUID using the anon-safe
@@ -65,32 +90,21 @@ export async function resolveTenantId(
   slug = publicTenantSlug,
   client: TenantLookupClient = supabase
 ): Promise<string | null> {
-  const normalizedSlug = normalizeTenantSlug(slug);
-  if (!normalizedSlug) return null;
-
-  const cached = tenantIdCache.get(normalizedSlug);
-  if (cached) return cached;
-
-  const lookup = lookupTenantId(normalizedSlug, client);
-  tenantIdCache.set(normalizedSlug, lookup);
-
-  const tenantId = await lookup;
-  if (!tenantId) tenantIdCache.delete(normalizedSlug);
-  return tenantId;
+  return (await resolvePublicTenant(slug, client))?.id ?? null;
 }
 
 export function clearTenantIdCacheForTests(): void {
-  tenantIdCache.clear();
+  tenantCache.clear();
 }
 
 function normalizeTenantSlug(slug: string): string {
   return slug.trim().toLowerCase();
 }
 
-async function lookupTenantId(
+async function lookupTenant(
   slug: string,
   client: TenantLookupClient
-): Promise<string | null> {
+): Promise<PublicTenant | null> {
   if (!isSupabaseConfigured && client === supabase) return null;
 
   const { data, error } = await client.rpc("tenant_by_slug", { p_slug: slug });
@@ -101,5 +115,5 @@ async function lookupTenantId(
 
   const row = data?.[0];
   if (!row || row.status !== "active") return null;
-  return row.id;
+  return { id: row.id, slug: row.slug, name: row.name };
 }
