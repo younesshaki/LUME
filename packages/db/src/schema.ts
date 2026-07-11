@@ -334,13 +334,22 @@ export type Database = {
           is_special: boolean;
           special_image_src: string | null;
           search_vector: string | null;
+          status: "draft" | "live" | "sold" | "archived";
+          sold_at: string | null;
+          sold_price: number | null;
           created_at: string;
           updated_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["vehicles"]["Row"],
-          "id" | "search_vector" | "created_at" | "updated_at"
-        > & { id?: string };
+          | "id"
+          | "search_vector"
+          | "status"
+          | "sold_at"
+          | "sold_price"
+          | "created_at"
+          | "updated_at"
+        > & { id?: string; status?: "draft" | "live" | "sold" | "archived" };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
         Relationships: [];
       };
@@ -945,6 +954,10 @@ export type Database = {
           balance_after: number;
           transaction_id: string | null;
         }[];
+      };
+      archive_due_sold_vehicles: {
+        Args: { p_cutoff: string; p_limit?: number };
+        Returns: { vehicle_id: string }[];
       };
     };
     Enums: Record<string, never>;

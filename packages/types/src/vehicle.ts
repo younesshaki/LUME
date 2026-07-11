@@ -1,6 +1,7 @@
 import type { TenantId } from "./tenant";
 
 export type StockType = "New" | "Used";
+export type VehicleStatus = "draft" | "live" | "sold" | "archived";
 
 export type Vehicle = {
   id: string;
@@ -23,6 +24,9 @@ export type Vehicle = {
   sellerState: string;
   isSpecial: boolean;
   specialImageSrc?: string;
+  status: VehicleStatus;
+  soldAt: string | null;
+  soldPrice: number | null;
 };
 
 export type VehicleQuery = {

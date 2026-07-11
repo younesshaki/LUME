@@ -81,3 +81,10 @@
 - Migration: none
 - Env added: none
 - Review notes / open questions: The five steps derive from tenant theme/logo storage, inventory, non-default persona state, members/invites, and a verified domain or active published page. Dismissal is tenant-keyed browser-local storage and is honored only while every step remains complete; Claude should decide whether cross-device, per-user dismissal is worth a future persisted preference. Logo detection already recognizes likely theme keys so SCRUM-166 can wire its eventual URL without changing this widget.
+
+## SCRUM-211 Vehicle status workflow
+- Status: needs-provisioning(VERCEL_CRON)
+- Files: supabase/migrations/040_vehicle_status_workflow.sql, packages/{types,db}/src/**, apps/admin/app/{api,admin}/**, apps/admin/lib/vehicleStatus.ts, apps/admin/components/status-badge.tsx
+- Migration: 040_vehicle_status_workflow.sql (NOT applied)
+- Env added: CRON_SECRET=...
+- Review notes / open questions: Public API, bot queries, and a restrictive anon RLS policy expose only live vehicles; tenant members retain all-status visibility. Database triggers own immutable sold_at/sold_price facts, freeze price permanently after sale, permit sold→archived only, and prevent reopening archived sold rows. CSV replace now preserves sold/archived history. The protected bounded archival endpoint is implemented, but Claude must provision `CRON_SECRET` and schedule `/api/cron/archive-sold-vehicles` at least daily for the 90-day transition to run automatically.

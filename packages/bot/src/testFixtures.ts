@@ -21,6 +21,9 @@ export function makeVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
     sellerCity: overrides.sellerCity ?? "Miami",
     sellerState: overrides.sellerState ?? "FL",
     isSpecial: overrides.isSpecial ?? false,
+    status: overrides.status ?? "live",
+    soldAt: overrides.soldAt ?? null,
+    soldPrice: overrides.soldPrice ?? null,
     ...overrides,
   };
 }

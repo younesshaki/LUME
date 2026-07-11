@@ -78,7 +78,8 @@ function buildVehicleQuery(
   let query = supabase
     .from("vehicles")
     .select("*", { count: "exact" })
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+    .eq("status", "live");
 
   const search = searchTerm(sp);
   if (search) {
@@ -170,7 +171,8 @@ async function loadVehicleFacets(
   const { data, error } = await supabase
     .from("vehicles")
     .select("make, model, seller_state, seller_city")
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+    .eq("status", "live");
 
   if (error) {
     console.warn("[/api/vehicles] facet query error:", error.message);

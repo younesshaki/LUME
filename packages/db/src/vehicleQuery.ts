@@ -27,7 +27,8 @@ export async function queryTenantVehicles(
   let query = client
     .from("vehicles")
     .select("*", { count: "exact" })
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+    .eq("status", "live");
 
   if (q.make) query = query.ilike("make", escapeLike(q.make));
   if (q.model) query = query.ilike("model", `%${escapeLike(q.model)}%`);
@@ -71,6 +72,7 @@ export async function getTenantVehicle(
     .select("*")
     .eq("tenant_id", tenantId)
     .eq("id", vehicleId)
+    .eq("status", "live")
     .maybeSingle();
   if (error) throw new Error(`vehicle lookup failed: ${error.message}`);
   return data ? rowToVehicle(data) : null;

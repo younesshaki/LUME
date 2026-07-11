@@ -20,6 +20,11 @@ type PageProps = {
 
 const LEADS_WINDOW_DAYS = 30;
 const VEHICLE_PAGE = 1000;
+const CURRENCY_FORMATTER = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
 
 /** Page through the tenant's vehicles; only the three columns the charts need. */
 async function fetchVehicleFacts(
@@ -74,6 +79,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
     windowLeadsResult,
     recentLeadsResult,
     priceHistoryResult,
+    soldVehiclesResult,
     vehicleFacts,
     lostReasonOptionsResult,
   ] = await Promise.all([
@@ -101,6 +107,11 @@ export default async function AnalyticsPage({ params }: PageProps) {
       .from("price_history")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenant.id),
+    supabase
+      .from("vehicles")
+      .select("sold_price")
+      .eq("tenant_id", tenant.id)
+      .not("sold_at", "is", null),
     fetchVehicleFacts(supabase, tenant.id),
     supabase
       .from("lead_lost_reason_options")
@@ -113,6 +124,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
   if (windowLeadsResult.error) throw new Error(`Unable to load lead history: ${windowLeadsResult.error.message}`);
   if (recentLeadsResult.error) throw new Error(`Unable to load recent leads: ${recentLeadsResult.error.message}`);
   if (priceHistoryResult.error) throw new Error(`Unable to load price history count: ${priceHistoryResult.error.message}`);
+  if (soldVehiclesResult.error) throw new Error(`Unable to load sold vehicle facts: ${soldVehiclesResult.error.message}`);
 
   const leadsByStatus = countLeadStatuses(
     ((leadsResult.data ?? []) as Array<{ status: LeadStatus }>).map((row) => row.status)
@@ -137,6 +149,10 @@ export default async function AnalyticsPage({ params }: PageProps) {
     8,
   );
   const recentLeads = (recentLeadsResult.data ?? []) as LeadSummaryRow[];
+  const soldVehicleRevenue = (soldVehiclesResult.data ?? []).reduce(
+    (total, vehicle) => total + (vehicle.sold_price ?? 0),
+    0,
+  );
 
   const leadsSeries = leadsPerDay(
     (windowLeadsResult.data ?? []).map((row) => row.created_at),
@@ -157,10 +173,15 @@ export default async function AnalyticsPage({ params }: PageProps) {
         </p>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Vehicles" value={vehiclesResult.count ?? 0} />
         <MetricCard label="Recent leads" value={recentLeads.length} helper="Last 7 days" />
         <MetricCard label="Price changes" value={priceHistoryResult.count ?? 0} />
+        <MetricCard
+          label="Sold vehicles"
+          value={soldVehiclesResult.data?.length ?? 0}
+          helper={`${formatCurrency(soldVehicleRevenue)} recorded value`}
+        />
       </section>
 
       <LeadsOverTimeChart data={leadsSeries} />
@@ -337,4 +358,8 @@ function formatDate(value: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function formatCurrency(value: number): string {
+  return CURRENCY_FORMATTER.format(value);
 }

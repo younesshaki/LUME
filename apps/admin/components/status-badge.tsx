@@ -27,6 +27,11 @@ const STATUS_STYLES: Record<string, string> = {
   admin: "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-transparent",
   editor: "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-transparent",
   viewer: "bg-muted text-muted-foreground border-transparent",
+  // vehicle inventory
+  draft: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-transparent",
+  live: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-transparent",
+  sold: "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-transparent",
+  archived: "bg-muted text-muted-foreground border-transparent",
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {

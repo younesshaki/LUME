@@ -45,6 +45,9 @@ export default async function EditVehiclePage({ params }: PageProps) {
         stock_type: vehicle.stock_type ?? "Used",
         seller_city: vehicle.seller_city,
         seller_state: vehicle.seller_state,
+        status: vehicle.status,
+        sold_at: vehicle.sold_at,
+        sold_price: vehicle.sold_price,
       }}
     />
   );

@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  VEHICLE_STATUSES,
+  isVehicleStatusTransitionAllowed,
+} from "@/lib/vehicleStatus";
 import type { Database } from "@lume/db";
+import type { VehicleStatus } from "@lume/types";
 import { useState } from "react";
 
 const BODY_STYLES = ["SUV", "Sedan", "Coupe", "Truck", "Convertible", "Hatchback", "Wagon"];
@@ -26,6 +31,9 @@ type FormState = {
   stock_type: string;
   seller_city: string;
   seller_state: string;
+  status: VehicleStatus;
+  sold_at: string | null;
+  sold_price: number | null;
 };
 
 type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
@@ -36,6 +44,7 @@ const EMPTY: FormState = {
   body_style: "SUV", exterior_color: "", interior_color: "",
   drivetrain: "AWD", fuel_type: "Gasoline", stock_type: "Used",
   seller_city: "", seller_state: "",
+  status: "live", sold_at: null, sold_price: null,
 };
 
 export default function VehicleForm({
@@ -54,6 +63,8 @@ export default function VehicleForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isNew = !vehicleId;
+  const originalStatus = initial?.status ?? "live";
+  const hasRecordedSale = Boolean(initial?.sold_at);
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setData((d) => ({ ...d, [k]: v }));
@@ -76,6 +87,7 @@ export default function VehicleForm({
       tenant_id: tenantId,
       external_id: null,
       stock_type: data.stock_type,
+      status: data.status,
       year: data.year,
       make: data.make,
       model: data.model,
@@ -139,6 +151,28 @@ export default function VehicleForm({
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Lifecycle status</span>
+            <select
+              value={data.status}
+              onChange={(e) => set("status", e.target.value as VehicleStatus)}
+              className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+            >
+              {VEHICLE_STATUSES.map((status) => (
+                <option
+                  key={status.value}
+                  value={status.value}
+                  disabled={!isVehicleStatusTransitionAllowed(
+                    originalStatus,
+                    hasRecordedSale,
+                    status.value,
+                  )}
+                >
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-muted-foreground">Make *</span>
             <input value={data.make} onChange={(e) => set("make", e.target.value)} required
               className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
@@ -156,8 +190,14 @@ export default function VehicleForm({
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-muted-foreground">Price ($) *</span>
             <input type="number" value={data.price} onChange={(e) => set("price", +e.target.value)}
-              required min={1}
-              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent" />
+              required min={1} disabled={hasRecordedSale}
+              className="w-full rounded-lg border border-input px-3 py-2 text-sm bg-transparent disabled:cursor-not-allowed disabled:opacity-60" />
+            {hasRecordedSale ? (
+              <span className="text-xs text-muted-foreground">
+                Frozen at ${(data.sold_price ?? data.price).toLocaleString()} after sale
+                {data.sold_at ? ` on ${formatSaleDate(data.sold_at)}` : ""}.
+              </span>
+            ) : null}
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-muted-foreground">Mileage</span>
@@ -235,4 +275,14 @@ export default function VehicleForm({
       </div>
     </form>
   );
+}
+
+const SALE_DATE_FORMATTER = new Intl.DateTimeFormat("en", {
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
+
+function formatSaleDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : `${SALE_DATE_FORMATTER.format(date)} UTC`;
 }

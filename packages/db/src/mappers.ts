@@ -42,6 +42,9 @@ export function rowToVehicle(row: VehicleRow): Vehicle {
     sellerState: row.seller_state,
     isSpecial: row.is_special,
     specialImageSrc: row.special_image_src ?? undefined,
+    status: row.status,
+    soldAt: row.sold_at,
+    soldPrice: row.sold_price,
   };
 }
 

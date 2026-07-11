@@ -48,6 +48,9 @@ const vehicleRow = {
   is_special: false,
   special_image_src: null,
   search_vector: null,
+  status: "live",
+  sold_at: null,
+  sold_price: null,
   created_at: "2026-01-01",
   updated_at: "2026-01-01",
 };
@@ -64,6 +67,7 @@ describe("queryTenantVehicles", () => {
     });
 
     expect(calls).toContainEqual(["eq", "tenant_id", "t1"]);
+    expect(calls).toContainEqual(["eq", "status", "live"]);
     expect(calls).toContainEqual(["ilike", "make", "Porsche"]);
     expect(calls).toContainEqual(["lte", "price", 150000]);
     expect(calls).toContainEqual(["gte", "year", 2020]);
@@ -73,6 +77,7 @@ describe("queryTenantVehicles", () => {
     expect(result.totalCount).toBe(3);
     expect(result.hasMore).toBe(true);
     expect(result.vehicles[0]?.make).toBe("Porsche");
+    expect(result.vehicles[0]?.status).toBe("live");
   });
 
   it("escapes LIKE wildcards in model terms", async () => {
@@ -95,6 +100,7 @@ describe("getTenantVehicle", () => {
     const vehicle = await getTenantVehicle(client, "t1", "v1");
     expect(calls).toContainEqual(["eq", "tenant_id", "t1"]);
     expect(calls).toContainEqual(["eq", "id", "v1"]);
+    expect(calls).toContainEqual(["eq", "status", "live"]);
     expect(vehicle?.id).toBe("v1");
   });
 });

@@ -175,7 +175,11 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
     if (importMode === "replace") {
       // Order matters: wipe first so a mid-import failure never leaves the
       // old and new inventories mixed together.
-      const { error } = await supabase.from("vehicles").delete().eq("tenant_id", tenantId);
+      const { error } = await supabase
+        .from("vehicles")
+        .delete()
+        .eq("tenant_id", tenantId)
+        .in("status", ["draft", "live"]);
       if (error) {
         await persistProgress(resolveCsvImportProgress(baseCounts, "failed"), {
           errors: mergeCsvImportErrors(trackedErrors, [
@@ -404,6 +408,7 @@ async function fetchExistingFingerprints(tenantId: string): Promise<VehicleFinge
       .from("vehicles")
       .select("external_id, year, make, model, trim, mileage")
       .eq("tenant_id", tenantId)
+      .in("status", ["draft", "live"])
       .range(from, from + FINGERPRINT_PAGE - 1);
     if (error) throw new Error(error.message);
     fingerprints.push(...(data ?? []));

@@ -159,7 +159,8 @@ export async function POST(request: Request): Promise<Response> {
       const { data: vehicleRows } = await supabase
         .from("vehicles")
         .select("*")
-        .eq("tenant_id", tenant.tenantId);
+        .eq("tenant_id", tenant.tenantId)
+        .eq("status", "live");
       const vehicles = (vehicleRows ?? []).map(rowToVehicle);
       filters = extractVehicleFilters(lastUser.content, vehicles);
       const match = matchVehicles(vehicles, filters, lastUser.content);

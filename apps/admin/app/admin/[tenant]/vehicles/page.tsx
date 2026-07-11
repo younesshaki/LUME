@@ -2,8 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, Car, Plus, Search, Upload } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  VEHICLE_STATUS_FILTERS,
+  normalizeVehicleStatusFilter,
+  vehicleStatusFilterLabel,
+} from "@/lib/vehicleStatus";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,7 +24,13 @@ import DeleteButton from "./DeleteButton";
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
-  searchParams: Promise<{ q?: string; sort?: string; dir?: string; page?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    sort?: string;
+    dir?: string;
+    page?: string;
+    status?: string;
+  }>;
 };
 
 const PAGE_SIZE = 25;
@@ -38,6 +50,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
   const sort = SORTABLE[sp.sort ?? ""] ? sp.sort! : "year";
   const dir = sp.dir === "asc" ? "asc" : "desc";
   const page = Math.max(1, parseInt(sp.page ?? "1") || 1);
+  const status = normalizeVehicleStatusFilter(sp.status);
 
   const supabase = await createSupabaseServerClient();
 
@@ -50,10 +63,14 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
 
   let query = supabase
     .from("vehicles")
-    .select("id, year, make, model, trim, price, mileage, body_style, exterior_color, stock_type", {
-      count: "exact",
-    })
+    .select(
+      "id, year, make, model, trim, price, mileage, body_style, exterior_color, stock_type, status, sold_at, sold_price",
+      { count: "exact" },
+    )
     .eq("tenant_id", tenant.id);
+
+  if (status === "active") query = query.neq("status", "archived");
+  else if (status !== "all") query = query.eq("status", status);
 
   if (q) {
     const term = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
@@ -67,14 +84,16 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
 
   const totalCount = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const statusDescriptor = status === "all" ? "" : `${vehicleStatusFilterLabel(status).toLowerCase()} `;
 
   const href = (overrides: Record<string, string | number | undefined>) => {
     const params = new URLSearchParams();
-    const merged = { q, sort, dir, page, ...overrides };
+    const merged = { q, sort, dir, page, status, ...overrides };
     if (merged.q) params.set("q", String(merged.q));
     if (merged.sort && merged.sort !== "year") params.set("sort", String(merged.sort));
     if (merged.dir && merged.dir !== "desc") params.set("dir", String(merged.dir));
     if (merged.page && Number(merged.page) > 1) params.set("page", String(merged.page));
+    if (merged.status && merged.status !== "active") params.set("status", String(merged.status));
     const qs = params.toString();
     return `/admin/${slug}/vehicles${qs ? `?${qs}` : ""}`;
   };
@@ -98,7 +117,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         description={
           error
             ? "Error loading vehicles"
-            : `${totalCount.toLocaleString()} vehicle${totalCount === 1 ? "" : "s"} in inventory${q ? ` matching “${q}”` : ""}`
+            : `${totalCount.toLocaleString()} ${statusDescriptor}vehicle${totalCount === 1 ? "" : "s"}${q ? ` matching “${q}”` : ""}`
         }
         actions={
           <>
@@ -118,24 +137,57 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         }
       />
 
+      <nav className="flex flex-wrap gap-2" aria-label="Filter vehicles by status">
+        {VEHICLE_STATUS_FILTERS.map((filter) => (
+          <Button
+            key={filter.value}
+            variant={status === filter.value ? "secondary" : "outline"}
+            size="sm"
+            asChild
+          >
+            <Link
+              href={href({ status: filter.value, page: 1 })}
+              aria-current={status === filter.value ? "page" : undefined}
+            >
+              {filter.label}
+            </Link>
+          </Button>
+        ))}
+      </nav>
+
       <form method="get" className="relative max-w-sm">
-        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Search
+          className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
         <Input
           type="search"
           name="q"
+          aria-label="Search vehicles"
           defaultValue={q}
           placeholder="Search make, model, trim…"
           className="pl-8"
         />
         {sort !== "year" && <input type="hidden" name="sort" value={sort} />}
         {dir !== "desc" && <input type="hidden" name="dir" value={dir} />}
+        {status !== "active" && <input type="hidden" name="status" value={status} />}
       </form>
 
       {totalCount === 0 && !q && !error ? (
         <EmptyState
           icon={Car}
-          title="No vehicles yet"
-          description="Add vehicles one at a time, or import your whole inventory from a CSV file in one go."
+          title={
+            status === "active"
+              ? "No current vehicles yet"
+              : status === "all"
+                ? "No vehicles yet"
+                : `No ${vehicleStatusFilterLabel(status).toLowerCase()} vehicles`
+          }
+          description={
+            status === "active"
+              ? "Add vehicles one at a time, or import your whole inventory from a CSV file in one go."
+              : "Choose another status filter or add a vehicle."
+          }
           action={
             <div className="flex gap-2">
               <Button variant="outline" asChild>
@@ -187,20 +239,21 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
                 </TableHead>
                 <TableHead>Body</TableHead>
                 <TableHead>Color</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {error && (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center text-destructive">
+                  <TableCell colSpan={10} className="h-24 text-center text-destructive">
                     Failed to load vehicles
                   </TableCell>
                 </TableRow>
               )}
               {!error && vehicles?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                     No vehicles match “{q}”.{" "}
                     <Link href={href({ q: undefined, page: 1 })} className="underline underline-offset-2">
                       Clear search
@@ -234,6 +287,9 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
                       {v.exterior_color || "—"}
                     </span>
                   </TableCell>
+                  <TableCell>
+                    <StatusBadge status={v.status} />
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" asChild>
@@ -244,11 +300,13 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
                           Edit
                         </Link>
                       </Button>
-                      <DeleteButton
-                        tenantId={tenant.id}
-                        vehicleId={v.id}
-                        vehicleLabel={`${v.year} ${v.make} ${v.model}`}
-                      />
+                      {!v.sold_at ? (
+                        <DeleteButton
+                          tenantId={tenant.id}
+                          vehicleId={v.id}
+                          vehicleLabel={`${v.year} ${v.make} ${v.model}`}
+                        />
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>
