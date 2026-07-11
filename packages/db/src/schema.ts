@@ -959,6 +959,15 @@ export type Database = {
         Args: { p_cutoff: string; p_limit?: number };
         Returns: { vehicle_id: string }[];
       };
+      bulk_update_vehicle_prices: {
+        Args: {
+          p_tenant_id: string;
+          p_vehicle_ids: string[];
+          p_rule: "percent" | "fixed" | "set";
+          p_value: number;
+        };
+        Returns: number;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

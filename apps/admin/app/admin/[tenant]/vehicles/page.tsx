@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowDown, ArrowUp, ArrowUpDown, Car, Plus, Search, Upload } from "lucide-react";
+import { Car, Plus, Search, Upload } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   VEHICLE_STATUS_FILTERS,
@@ -9,18 +9,9 @@ import {
 } from "@/lib/vehicleStatus";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
-import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import DeleteButton from "./DeleteButton";
+import { VehiclesTableClient } from "./VehiclesTableClient";
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
@@ -64,7 +55,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
   let query = supabase
     .from("vehicles")
     .select(
-      "id, year, make, model, trim, price, mileage, body_style, exterior_color, stock_type, status, sold_at, sold_price",
+      "id, year, make, model, trim, price, mileage, body_style, exterior_color, status, sold_at",
       { count: "exact" },
     )
     .eq("tenant_id", tenant.id);
@@ -100,15 +91,13 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
 
   const sortHref = (column: string) =>
     href({ sort: column, dir: sort === column && dir === "desc" ? "asc" : "desc", page: 1 });
-
-  const SortIcon = ({ column }: { column: string }) =>
-    sort !== column ? (
-      <ArrowUpDown className="size-3.5 text-muted-foreground/50" />
-    ) : dir === "asc" ? (
-      <ArrowUp className="size-3.5 text-primary" />
-    ) : (
-      <ArrowDown className="size-3.5 text-primary" />
-    );
+  const sortHrefs = {
+    year: sortHref("year"),
+    make: sortHref("make"),
+    model: sortHref("model"),
+    price: sortHref("price"),
+    mileage: sortHref("mileage"),
+  };
 
   return (
     <div className="space-y-6">
@@ -206,114 +195,17 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
           }
         />
       ) : (
-        <div className="rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {(
-                  [
-                    ["year", "Year"],
-                    ["make", "Make"],
-                    ["model", "Model"],
-                  ] as const
-                ).map(([column, label]) => (
-                  <TableHead key={column}>
-                    <Link href={sortHref(column)} className="inline-flex items-center gap-1 hover:text-foreground">
-                      {label}
-                      <SortIcon column={column} />
-                    </Link>
-                  </TableHead>
-                ))}
-                <TableHead>Trim</TableHead>
-                <TableHead className="text-right">
-                  <Link href={sortHref("price")} className="inline-flex items-center gap-1 hover:text-foreground">
-                    Price
-                    <SortIcon column="price" />
-                  </Link>
-                </TableHead>
-                <TableHead>
-                  <Link href={sortHref("mileage")} className="inline-flex items-center gap-1 hover:text-foreground">
-                    Mileage
-                    <SortIcon column="mileage" />
-                  </Link>
-                </TableHead>
-                <TableHead>Body</TableHead>
-                <TableHead>Color</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {error && (
-                <TableRow>
-                  <TableCell colSpan={10} className="h-24 text-center text-destructive">
-                    Failed to load vehicles
-                  </TableCell>
-                </TableRow>
-              )}
-              {!error && vehicles?.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
-                    No vehicles match “{q}”.{" "}
-                    <Link href={href({ q: undefined, page: 1 })} className="underline underline-offset-2">
-                      Clear search
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              )}
-              {vehicles?.map((v) => (
-                <TableRow key={v.id}>
-                  <TableCell>{v.year}</TableCell>
-                  <TableCell className="font-medium">{v.make}</TableCell>
-                  <TableCell>{v.model}</TableCell>
-                  <TableCell className="text-muted-foreground">{v.trim || "—"}</TableCell>
-                  <TableCell className="text-right font-mono text-sm">
-                    ${v.price?.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {v.mileage !== null ? `${v.mileage.toLocaleString()} mi` : "—"}
-                  </TableCell>
-                  <TableCell>{v.body_style || "—"}</TableCell>
-                  <TableCell>
-                    <span className="flex items-center gap-2">
-                      {v.exterior_color && (
-                        <span
-                          className="inline-block size-3 shrink-0 rounded-full border"
-                          style={{ backgroundColor: colorToHex(v.exterior_color) }}
-                          title={v.exterior_color}
-                          aria-hidden="true"
-                        />
-                      )}
-                      {v.exterior_color || "—"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={v.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link
-                          href={`/admin/${slug}/vehicles/${v.id}`}
-                          aria-label={`Edit ${v.year} ${v.make} ${v.model}`}
-                        >
-                          Edit
-                        </Link>
-                      </Button>
-                      {!v.sold_at ? (
-                        <DeleteButton
-                          tenantId={tenant.id}
-                          vehicleId={v.id}
-                          vehicleLabel={`${v.year} ${v.make} ${v.model}`}
-                        />
-                      ) : null}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <VehiclesTableClient
+          tenantId={tenant.id}
+          tenantSlug={tenant.slug}
+          vehicles={vehicles ?? []}
+          query={q}
+          errorMessage={error ? "Failed to load vehicles" : null}
+          clearSearchHref={href({ q: undefined, page: 1 })}
+          sort={sort}
+          direction={dir}
+          sortHrefs={sortHrefs}
+        />
       )}
 
       {totalPages > 1 && (
@@ -345,14 +237,4 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
       )}
     </div>
   );
-}
-
-function colorToHex(color: string): string {
-  const map: Record<string, string> = {
-    black: "#000000", white: "#ffffff", silver: "#c0c0c0", gray: "#808080", grey: "#808080",
-    blue: "#0000ff", red: "#ff0000", green: "#008000", burgundy: "#800020",
-    tan: "#d2b48c", brown: "#a52a2a", orange: "#ffa500", yellow: "#ffff00",
-    purple: "#800080", gold: "#ffd700", beige: "#f5f5dc",
-  };
-  return map[color.toLowerCase()] || "#cccccc";
 }

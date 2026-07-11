@@ -88,3 +88,10 @@
 - Migration: 040_vehicle_status_workflow.sql (NOT applied)
 - Env added: CRON_SECRET=...
 - Review notes / open questions: Public API, bot queries, and a restrictive anon RLS policy expose only live vehicles; tenant members retain all-status visibility. Database triggers own immutable sold_at/sold_price facts, freeze price permanently after sale, permit sold→archived only, and prevent reopening archived sold rows. CSV replace now preserves sold/archived history. The protected bounded archival endpoint is implemented, but Claude must provision `CRON_SECRET` and schedule `/api/cron/archive-sold-vehicles` at least daily for the 90-day transition to run automatically.
+
+## SCRUM-209 Bulk vehicle operations
+- Status: done
+- Files: supabase/migrations/041_bulk_vehicle_price_update.sql, packages/db/src/schema.ts, apps/admin/lib/bulkVehicles.ts, apps/admin/app/admin/[tenant]/vehicles/page.tsx, apps/admin/app/admin/[tenant]/vehicles/{VehiclesTableClient,VehicleBulkToolbar}.tsx, apps/admin/app/admin/[tenant]/vehicles/bulk-actions.ts
+- Migration: 041_bulk_vehicle_price_update.sql (NOT applied)
+- Env added: none
+- Review notes / open questions: Selection is intentionally current-page scoped (25 rows) while server actions accept at most 200 unique UUIDs. Editor+ authorization and tenant ownership are rechecked inside every action. Mark-inactive maps to `archived`; generic status updates honor terminal sale rules; sold rows cannot be repriced or deleted. Price rules run atomically in a service-only RPC so existing price-history triggers capture every row, and every successful bulk commit attempts one audit-log entry.
