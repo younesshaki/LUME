@@ -42,6 +42,83 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["tenant_members"]["Insert"]>;
         Relationships: [];
       };
+      plans: {
+        Row: {
+          id: string;
+          name: string;
+          monthly_price_cents: number;
+          limits: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["plans"]["Row"],
+          "id" | "monthly_price_cents" | "limits" | "created_at"
+        > & {
+          id?: string;
+          monthly_price_cents?: number;
+          limits?: Record<string, unknown>;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["plans"]["Insert"]>;
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          plan_id: string;
+          status: "inactive" | "trialing" | "active" | "past_due" | "canceled" | "incomplete";
+          current_period_start: string | null;
+          current_period_end: string | null;
+          stripe_subscription_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["subscriptions"]["Row"],
+          | "id"
+          | "status"
+          | "current_period_start"
+          | "current_period_end"
+          | "stripe_subscription_id"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          status?: "inactive" | "trialing" | "active" | "past_due" | "canceled" | "incomplete";
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          stripe_subscription_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["subscriptions"]["Insert"]>;
+        Relationships: [];
+      };
+      invoices: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          subscription_id: string;
+          amount_cents: number;
+          status: "draft" | "open" | "paid" | "void" | "uncollectible";
+          stripe_invoice_id: string | null;
+          paid_at: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["invoices"]["Row"],
+          "id" | "status" | "stripe_invoice_id" | "paid_at" | "created_at"
+        > & {
+          id?: string;
+          status?: "draft" | "open" | "paid" | "void" | "uncollectible";
+          stripe_invoice_id?: string | null;
+          paid_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["invoices"]["Insert"]>;
+        Relationships: [];
+      };
       vehicles: {
         Row: {
           id: string;
