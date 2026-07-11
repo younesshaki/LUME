@@ -60,6 +60,7 @@ describe("corsHeadersFor", () => {
       "Access-Control-Allow-Origin": "https://allowed.example",
       "Access-Control-Allow-Headers": "Content-Type, X-Lume-Tenant",
       "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+      "Access-Control-Allow-Credentials": "true",
       Vary: "Origin",
     });
 

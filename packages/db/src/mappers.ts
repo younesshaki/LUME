@@ -2,7 +2,7 @@
  * Map between snake_case DB rows and the camelCase domain types in @lume/types.
  * Centralized here so consumers don't reinvent this everywhere.
  */
-import type { Lead, RagChunk, Tenant, Vehicle } from "@lume/types";
+import type { Lead, LeadSourceContext, RagChunk, Tenant, Vehicle } from "@lume/types";
 import type { Database } from "./schema";
 
 type TenantRow = Database["public"]["Tables"]["tenants"]["Row"];
@@ -72,11 +72,23 @@ export function rowToLead(row: LeadRow): Lead {
     utmSource: row.utm_source,
     utmMedium: row.utm_medium,
     utmCampaign: row.utm_campaign,
+    utmContent: row.utm_content,
     referrer: row.referrer,
+    sourceContext: rowToLeadSourceContext(row.source_context),
     ipAddr: row.ip_addr,
     userAgent: row.user_agent,
     lostReason: row.lost_reason,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function rowToLeadSourceContext(value: Record<string, unknown> | null): LeadSourceContext | null {
+  if (value?.trigger !== "bot-action") return null;
+  if (value.actionType !== "capture_lead" && value.actionType !== "open-lead-form") return null;
+  return {
+    trigger: "bot-action",
+    actionType: value.actionType,
+    ...(typeof value.vehicleId === "string" ? { vehicleId: value.vehicleId } : {}),
   };
 }

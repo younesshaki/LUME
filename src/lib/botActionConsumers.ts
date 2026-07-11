@@ -1,6 +1,7 @@
 import type {
   BotInventoryFilterAction,
   BotOpenLeadFormAction,
+  LeadSourceContext,
 } from "@lume/types";
 import {
   DEFAULT_FILTERS,
@@ -18,10 +19,12 @@ export type LeadFormPrefill = Partial<{
 
 const PENDING_INVENTORY_FILTER_KEY = "lume.bot.pending-inventory-filter.v1";
 const PENDING_LEAD_FORM_PREFILL_KEY = "lume.bot.pending-lead-form-prefill.v1";
+const PENDING_LEAD_FORM_CONTEXT_KEY = "lume.bot.pending-lead-form-context.v1";
 const LEAD_FORM_FIELDS = ["firstName", "lastName", "email", "phone", "message"] as const;
 
 let pendingInventoryFilterFallback: VehicleFilters | null = null;
 let pendingLeadFormPrefillFallback: LeadFormPrefill | null = null;
+let pendingLeadFormContextFallback: LeadSourceContext | null = null;
 
 /**
  * Maps free-form bot route strings to public app routes. Admin routes are
@@ -121,8 +124,11 @@ export function mergeLeadFormPrefill<T extends LeadFormPrefill>(
 /** Stores lead-form prefill so the contact route can focus and populate after navigation. */
 export function storePendingLeadFormPrefill(action: BotOpenLeadFormAction): void {
   const prefill = leadFormPrefillFromAction(action) ?? {};
+  const context = botLeadFormSourceContext();
   pendingLeadFormPrefillFallback = prefill;
+  pendingLeadFormContextFallback = context;
   writeSessionJson(PENDING_LEAD_FORM_PREFILL_KEY, prefill);
+  writeSessionJson(PENDING_LEAD_FORM_CONTEXT_KEY, context);
 }
 
 /** Reads and clears one pending bot lead-form prefill. */
@@ -132,6 +138,19 @@ export function consumePendingLeadFormPrefill(): LeadFormPrefill | null {
   const fallback = pendingLeadFormPrefillFallback;
   pendingLeadFormPrefillFallback = null;
   return stored ?? fallback;
+}
+
+/** Reads and clears bot attribution captured before contact-page navigation. */
+export function consumePendingLeadFormSourceContext(): LeadSourceContext | null {
+  const stored = readSessionJson<LeadSourceContext>(PENDING_LEAD_FORM_CONTEXT_KEY);
+  removeSessionItem(PENDING_LEAD_FORM_CONTEXT_KEY);
+  const fallback = pendingLeadFormContextFallback;
+  pendingLeadFormContextFallback = null;
+  return isLeadFormSourceContext(stored) ? stored : fallback;
+}
+
+export function botLeadFormSourceContext(): LeadSourceContext {
+  return { trigger: "bot-action", actionType: "open-lead-form" };
 }
 
 function normalizeRouteInput(route: string): string {
@@ -183,4 +202,13 @@ function removeSessionItem(key: string): void {
   } catch {
     // Ignore unavailable storage.
   }
+}
+
+function isLeadFormSourceContext(value: unknown): value is LeadSourceContext {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { trigger?: unknown }).trigger === "bot-action" &&
+    (value as { actionType?: unknown }).actionType === "open-lead-form"
+  );
 }

@@ -38,9 +38,52 @@ describe("normalizeLeadCaptureInput", () => {
         utmSource: null,
         utmMedium: null,
         utmCampaign: null,
+        utmContent: null,
+        referrer: null,
+        sourceContext: null,
         turnstileToken: null,
       },
     });
+  });
+
+  it("bounds attribution and keeps only safe bot trigger context", () => {
+    const result = normalizeLeadCaptureInput({
+      email: "visitor@example.com",
+      source: "chat",
+      utmContent: `  ${"x".repeat(140)}  `,
+      referrer: "https://publisher.example/article",
+      sourceContext: {
+        trigger: "bot-action",
+        actionType: "capture_lead",
+        vehicleId: " vehicle-1 ",
+        rawConversation: "must not persist",
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.utmContent).toHaveLength(120);
+    expect(result.value.referrer).toBe("https://publisher.example/article");
+    expect(result.value.sourceContext).toEqual({
+      trigger: "bot-action",
+      actionType: "capture_lead",
+      vehicleId: "vehicle-1",
+    });
+  });
+
+  it("drops source context for non-chat or malformed submissions", () => {
+    const nonChat = normalizeLeadCaptureInput({
+      phone: "123",
+      source: "contact-form",
+      sourceContext: { trigger: "bot-action", actionType: "open-lead-form" },
+    });
+    const malformed = normalizeLeadCaptureInput({
+      phone: "123",
+      source: "chat",
+      sourceContext: { trigger: "bot-action", actionType: "delete_lead" },
+    });
+    expect(nonChat.ok && nonChat.value.sourceContext).toBeNull();
+    expect(malformed.ok && malformed.value.sourceContext).toBeNull();
   });
 
   it("accepts a bounded Turnstile token without persisting it as lead data", () => {

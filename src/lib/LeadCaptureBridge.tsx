@@ -7,6 +7,11 @@ export function LeadCaptureBridge() {
       ...action.contact,
       vehicleId: action.vehicleId,
       source: "chat",
+      sourceContext: {
+        trigger: "bot-action",
+        actionType: "capture_lead",
+        ...(action.vehicleId ? { vehicleId: action.vehicleId } : {}),
+      },
     }).catch((error) => {
       console.warn("[leads] bot capture_lead failed", error);
     });

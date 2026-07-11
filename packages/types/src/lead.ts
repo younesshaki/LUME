@@ -4,6 +4,12 @@ export type LeadSource = "chat" | "contact-form" | "test-drive" | "csv-import" |
 export type LeadStatus = "new" | "contacted" | "qualified" | "won" | "lost";
 export type LeadActivityType = "note" | "call" | "email" | "status_change" | "assignment";
 
+export type LeadSourceContext = {
+  trigger: "bot-action";
+  actionType: "capture_lead" | "open-lead-form";
+  vehicleId?: string;
+};
+
 export type Lead = {
   id: string;
   tenantId: TenantId;
@@ -19,7 +25,9 @@ export type Lead = {
   utmSource: string | null;
   utmMedium: string | null;
   utmCampaign: string | null;
+  utmContent: string | null;
   referrer: string | null;
+  sourceContext: LeadSourceContext | null;
   ipAddr: string | null;
   userAgent: string | null;
   lostReason: string | null;
@@ -38,6 +46,9 @@ export type LeadCaptureInput = {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+  utmContent?: string;
+  referrer?: string;
+  sourceContext?: LeadSourceContext;
   /** Cloudflare Turnstile response token when bot protection is enabled. */
   turnstileToken?: string;
 };

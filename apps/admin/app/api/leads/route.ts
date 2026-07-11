@@ -84,7 +84,9 @@ export async function POST(request: Request): Promise<Response> {
     utm_source: lead.utmSource,
     utm_medium: lead.utmMedium,
     utm_campaign: lead.utmCampaign,
-    referrer: request.headers.get("referer"),
+    utm_content: lead.utmContent,
+    referrer: lead.referrer ?? boundedHeader(request.headers.get("referer"), 2_048),
+    source_context: lead.sourceContext,
     ip_addr: ip,
     user_agent: request.headers.get("user-agent"),
     lost_reason: null,
@@ -115,6 +117,11 @@ export async function POST(request: Request): Promise<Response> {
 
   const response: LeadCaptureResponse = { leadId: data.id };
   return json(response, 201, request);
+}
+
+function boundedHeader(value: string | null, maxLength: number): string | null {
+  if (!value) return null;
+  return value.slice(0, maxLength);
 }
 
 async function findRecentDuplicate(

@@ -20,10 +20,13 @@ function lead(overrides: Partial<LeadRow> = {}): LeadRow {
     utm_source: null,
     utm_medium: null,
     utm_campaign: null,
+    utm_content: null,
     referrer: null,
+    source_context: null,
     ip_addr: null,
     user_agent: null,
     lost_reason: null,
+    visitor_id: null,
     created_at: "2026-07-11T10:00:00.000Z",
     updated_at: "2026-07-11T10:00:00.000Z",
     ...overrides,
@@ -63,5 +66,18 @@ describe("leadsToCsv", () => {
     const row = csv.split("\r\n")[1];
     expect(row).toContain("'=SUM(A1:A9)");
     expect(row).toContain("'@cmd");
+  });
+
+  it("exports UTM content and serialized source context", () => {
+    expect(LEAD_CSV_HEADERS).toContain("utm_content");
+    expect(LEAD_CSV_HEADERS).toContain("source_context");
+    const csv = leadsToCsv([lead({
+      utm_content: "hero-cta",
+      source_context: { trigger: "bot-action", actionType: "capture_lead" },
+    })]);
+    expect(csv).toContain("hero-cta");
+    expect(csv).toContain(
+      '"{""trigger"":""bot-action"",""actionType"":""capture_lead""}"',
+    );
   });
 });

@@ -209,6 +209,13 @@ export default function LeadDetailClient({
             <p>UTM source: {currentLead.utmSource || "N/A"}</p>
             <p>UTM medium: {currentLead.utmMedium || "N/A"}</p>
             <p>UTM campaign: {currentLead.utmCampaign || "N/A"}</p>
+            <p>UTM content: {currentLead.utmContent || "N/A"}</p>
+            <p className="break-all">First referrer: {currentLead.referrer || "N/A"}</p>
+            <p>
+              Trigger: {currentLead.sourceContext
+                ? `${currentLead.sourceContext.trigger} / ${currentLead.sourceContext.actionType}`
+                : "N/A"}
+            </p>
           </div>
         </aside>
 

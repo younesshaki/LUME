@@ -83,7 +83,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
       .eq("tenant_id", tenant.id),
     supabase
       .from("leads")
-      .select("status, lost_reason")
+      .select("status, lost_reason, source")
       .eq("tenant_id", tenant.id),
     supabase
       .from("leads")
@@ -132,6 +132,10 @@ export default async function AnalyticsPage({ params }: PageProps) {
     lostReasonTaxonomy,
   );
   const lostLeadCount = lostReasonSummary.reduce((sum, reason) => sum + reason.count, 0);
+  const leadsBySource = countByValue(
+    (leadsResult.data ?? []).map((row) => row.source),
+    8,
+  );
   const recentLeads = (recentLeadsResult.data ?? []) as LeadSummaryRow[];
 
   const leadsSeries = leadsPerDay(
@@ -168,7 +172,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
 
       <PriceDistributionChart data={priceBuckets} />
 
-      <section className="grid gap-6 lg:grid-cols-2">
+      <section className="grid gap-6 lg:grid-cols-3">
         <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Leads by Status</h2>
           <div className="mt-4 space-y-3">
@@ -209,6 +213,22 @@ export default async function AnalyticsPage({ params }: PageProps) {
                       style={{ width: `${statusPercent(reason.count, lostLeadCount)}%` }}
                     />
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+          <h2 className="text-sm font-semibold">Leads by Source</h2>
+          {leadsBySource.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">No lead sources recorded.</p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {leadsBySource.map((source) => (
+                <div key={source.name} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-neutral-600 dark:text-neutral-300">{source.name}</span>
+                  <span className="font-medium">{source.count}</span>
                 </div>
               ))}
             </div>

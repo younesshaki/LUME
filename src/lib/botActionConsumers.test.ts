@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   consumePendingInventoryFilter,
   consumePendingLeadFormPrefill,
+  consumePendingLeadFormSourceContext,
   leadFormPrefillFromAction,
   resolveBotNavigationRoute,
   storePendingInventoryFilter,
@@ -77,6 +78,11 @@ describe("bot action consumers", () => {
       email: "ada@example.com",
     });
     expect(consumePendingLeadFormPrefill()).toBeNull();
+    expect(consumePendingLeadFormSourceContext()).toEqual({
+      trigger: "bot-action",
+      actionType: "open-lead-form",
+    });
+    expect(consumePendingLeadFormSourceContext()).toBeNull();
   });
 
   it("stores open lead-form actions even without prefill", () => {
@@ -84,5 +90,9 @@ describe("bot action consumers", () => {
 
     expect(consumePendingLeadFormPrefill()).toEqual({});
     expect(consumePendingLeadFormPrefill()).toBeNull();
+    expect(consumePendingLeadFormSourceContext()).toEqual({
+      trigger: "bot-action",
+      actionType: "open-lead-form",
+    });
   });
 });

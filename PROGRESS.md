@@ -39,3 +39,10 @@
 - Migration: 036_lead_lost_reason_options.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: The six defaults remain code-owned to respect the no-data-mutation rule; tenant rows are overrides/custom options and deactivation is soft so history still reports. The trigger enforces active reasons on new lost transitions/reason changes while deliberately allowing unrelated edits to legacy lost rows with no reason. Claude should review that compatibility tradeoff before applying the migration.
+
+## SCRUM-174 First-touch lead source attribution
+- Status: done
+- Files: supabase/migrations/037_lead_source_attribution.sql, packages/{types,db}/src/**, src/lib/{leadAttribution,leads,botActionConsumers}.ts, src/experience/ui/ContactPage/ContactPage.tsx, apps/admin/{lib,app}/**
+- Migration: 037_lead_source_attribution.sql (NOT applied)
+- Env added: none
+- Review notes / open questions: Public boot now captures first-touch UTM source/medium/campaign/content plus document referrer in bounded session storage; explicit submission values win. Lead calls use credentialed CORS so visitor association can work, and only sanitized bot trigger/action/vehicle context is stored. Claude should verify visitor cookie SameSite/domain settings for the final public/admin deployment topology; `credentials: include` cannot override a cross-site cookie policy.

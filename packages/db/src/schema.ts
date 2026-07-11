@@ -347,7 +347,9 @@ export type Database = {
           utm_source: string | null;
           utm_medium: string | null;
           utm_campaign: string | null;
+          utm_content: string | null;
           referrer: string | null;
+          source_context: Record<string, unknown> | null;
           ip_addr: string | null;
           user_agent: string | null;
           lost_reason: string | null;

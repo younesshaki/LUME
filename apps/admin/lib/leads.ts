@@ -1,4 +1,4 @@
-import type { LeadCaptureInput, LeadSource } from "@lume/types";
+import type { LeadSource, LeadSourceContext } from "@lume/types";
 
 export type NormalizedLeadCapture = {
   firstName: string;
@@ -11,6 +11,9 @@ export type NormalizedLeadCapture = {
   utmSource: string | null;
   utmMedium: string | null;
   utmCampaign: string | null;
+  utmContent: string | null;
+  referrer: string | null;
+  sourceContext: LeadSourceContext | null;
   turnstileToken: string | null;
 };
 
@@ -46,6 +49,9 @@ export function normalizeLeadCaptureInput(input: unknown): LeadCaptureValidation
       utmSource: nullableTrimmed(input.utmSource, 120),
       utmMedium: nullableTrimmed(input.utmMedium, 120),
       utmCampaign: nullableTrimmed(input.utmCampaign, 120),
+      utmContent: nullableTrimmed(input.utmContent, 120),
+      referrer: nullableTrimmed(input.referrer, 2_048),
+      sourceContext: normalizeSourceContext(input.sourceContext, source),
       turnstileToken: nullableTrimmed(input.turnstileToken, 2_048),
     },
   };
@@ -105,12 +111,30 @@ function normalizeSource(value: unknown): NormalizedLeadCapture["source"] {
     : "contact-form";
 }
 
+function normalizeSourceContext(
+  value: unknown,
+  source: NormalizedLeadCapture["source"],
+): LeadSourceContext | null {
+  if (source !== "chat" || !isRecord(value)) return null;
+  if (value.trigger !== "bot-action") return null;
+  if (value.actionType !== "capture_lead" && value.actionType !== "open-lead-form") {
+    return null;
+  }
+
+  const vehicleId = nullableTrimmed(value.vehicleId, 80);
+  return {
+    trigger: "bot-action",
+    actionType: value.actionType,
+    ...(vehicleId ? { vehicleId } : {}),
+  };
+}
+
 function nullableTrimmed(value: unknown, maxLength: number): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim().slice(0, maxLength);
   return trimmed || null;
 }
 
-function isRecord(value: unknown): value is LeadCaptureInput {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

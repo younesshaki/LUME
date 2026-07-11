@@ -33,7 +33,10 @@ const LEAD_CSV_COLUMNS: ReadonlyArray<{
   { header: "utm_source", value: (l) => l.utm_source },
   { header: "utm_medium", value: (l) => l.utm_medium },
   { header: "utm_campaign", value: (l) => l.utm_campaign },
+  { header: "utm_content", value: (l) => l.utm_content },
   { header: "referrer", value: (l) => l.referrer },
+  { header: "source_context", value: (l) =>
+    l.source_context === null ? null : JSON.stringify(l.source_context) },
   { header: "ip_addr", value: (l) => l.ip_addr },
   { header: "user_agent", value: (l) => l.user_agent },
   { header: "lost_reason", value: (l) => l.lost_reason },

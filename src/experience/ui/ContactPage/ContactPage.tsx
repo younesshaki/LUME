@@ -3,6 +3,8 @@ import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import {
   consumePendingLeadFormPrefill,
+  consumePendingLeadFormSourceContext,
+  botLeadFormSourceContext,
   leadFormPrefillFromAction,
   mergeLeadFormPrefill,
 } from "@/lib/botActionConsumers";
@@ -40,6 +42,9 @@ export default function ContactPage({
   const [form, setForm] = useState<ContactFormState>(() =>
     mergeLeadFormPrefill(createEmptyContactForm(), initialBotPrefill)
   );
+  const [botSourceContext, setBotSourceContext] = useState(() =>
+    consumePendingLeadFormSourceContext()
+  );
   const [focusRequestCount, setFocusRequestCount] = useState(() =>
     initialBotPrefill ? 1 : 0
   );
@@ -57,6 +62,7 @@ export default function ContactPage({
       mergeLeadFormPrefill(current, leadFormPrefillFromAction(action))
     );
     setStatus({ type: "idle", message: "" });
+    setBotSourceContext(botLeadFormSourceContext());
     setFocusRequestCount((count) => count + 1);
   });
 
@@ -80,10 +86,12 @@ export default function ContactPage({
     try {
       await submitLead({
         ...form,
-        source: "contact-form",
+        source: botSourceContext ? "chat" : "contact-form",
+        ...(botSourceContext ? { sourceContext: botSourceContext } : {}),
         ...(turnstileToken ? { turnstileToken } : {}),
       });
       setForm(createEmptyContactForm());
+      setBotSourceContext(null);
       setStatus({
         type: "success",
         message: "Request received. The LUME team will review it discreetly.",
