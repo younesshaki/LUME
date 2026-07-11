@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BookOpen, Car, CheckCircle2, Circle, FileText, Inbox, Rocket } from "lucide-react";
+import { ArrowRight, BookOpen, Car, FileText, Inbox } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  isBotPersonaConfigured,
+  tenantThemeHasLogo,
+  type OnboardingChecklistItem,
+} from "@/lib/onboardingChecklist";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NumberTicker } from "@/components/ui/number-ticker";
-import { Progress } from "@/components/ui/progress";
+import { OnboardingChecklist } from "./OnboardingChecklist";
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
@@ -19,19 +24,58 @@ export default async function TenantOverviewPage({ params }: PageProps) {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, slug, name, status")
+    .select("id, slug, name, status, theme")
     .eq("slug", slug)
     .maybeSingle();
 
   if (!tenant) notFound();
 
-  const [{ count: vehicleCount }, { count: ragCount }, { count: leadCount }, { count: pageCount }] =
-    await Promise.all([
-      supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
-      supabase.from("rag_chunks").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
-      supabase.from("leads").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
-      supabase.from("pages").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
-    ]);
+  const [
+    { count: vehicleCount },
+    { count: ragCount },
+    { count: leadCount },
+    { count: pageCount },
+    { count: publishedPageCount },
+    personaResult,
+    { count: memberCount },
+    { count: inviteCount },
+    { count: verifiedDomainCount },
+    rootLogoResult,
+    nestedLogoResult,
+  ] = await Promise.all([
+    supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+    supabase.from("rag_chunks").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+    supabase.from("pages").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+    supabase
+      .from("pages")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenant.id)
+      .not("published_revision_id", "is", null)
+      .is("archived_at", null),
+    supabase
+      .from("bot_personas")
+      .select("name, tone, system_prompt, created_at, updated_at")
+      .eq("tenant_id", tenant.id)
+      .eq("is_active", true)
+      .maybeSingle(),
+    supabase
+      .from("tenant_members")
+      .select("user_id", { count: "exact", head: true })
+      .eq("tenant_id", tenant.id),
+    supabase
+      .from("tenant_invites")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenant.id)
+      .in("status", ["pending", "accepted"]),
+    supabase
+      .from("tenant_domains")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenant.id)
+      .eq("verified", true),
+    supabase.storage.from("tenant-logos").list(tenant.id, { limit: 100 }),
+    supabase.storage.from("tenant-logos").list(`${tenant.id}/logos`, { limit: 100 }),
+  ]);
 
   const stats = [
     { label: "Vehicles", value: vehicleCount ?? 0, href: `/admin/${slug}/vehicles`, icon: Car },
@@ -39,14 +83,38 @@ export default async function TenantOverviewPage({ params }: PageProps) {
     { label: "Pages", value: pageCount ?? 0, href: `/admin/${slug}/pages`, icon: FileText },
     { label: "Knowledge chunks", value: ragCount ?? 0, href: `/admin/${slug}/knowledge`, icon: BookOpen },
   ];
-  const setupItems = [
-    { label: "Add inventory", complete: (vehicleCount ?? 0) > 0, href: `/admin/${slug}/vehicles` },
-    { label: "Create site pages", complete: (pageCount ?? 0) > 0, href: `/admin/${slug}/pages` },
-    { label: "Build AI knowledge", complete: (ragCount ?? 0) > 0, href: `/admin/${slug}/knowledge` },
-    { label: "Capture your first lead", complete: (leadCount ?? 0) > 0, href: `/admin/${slug}/leads` },
+  const logoObjects = [...(rootLogoResult.data ?? []), ...(nestedLogoResult.data ?? [])];
+  const hasLogo =
+    tenantThemeHasLogo(tenant.theme) || logoObjects.some((object) => Boolean(object.id));
+  const setupItems: OnboardingChecklistItem[] = [
+    { id: "logo", label: "Upload logo", complete: hasLogo, href: `/admin/${slug}/branding` },
+    {
+      id: "inventory",
+      label: "Import first vehicles",
+      complete: (vehicleCount ?? 0) > 0,
+      href: `/admin/${slug}/vehicles`,
+    },
+    {
+      id: "persona",
+      label: "Configure bot persona",
+      complete: isBotPersonaConfigured(personaResult.data),
+      href: `/admin/${slug}/persona`,
+    },
+    {
+      id: "team",
+      label: "Invite a team member",
+      complete: (memberCount ?? 0) > 1 || (inviteCount ?? 0) > 0,
+      href: `/admin/${slug}/team`,
+    },
+    {
+      id: "domain",
+      label: "Connect domain or publish",
+      complete:
+        (verifiedDomainCount ?? 0) > 0 ||
+        (tenant.status === "active" && (publishedPageCount ?? 0) > 0),
+      href: `/admin/${slug}/domains`,
+    },
   ];
-  const completedSetupItems = setupItems.filter((item) => item.complete).length;
-  const setupProgress = Math.round((completedSetupItems / setupItems.length) * 100);
 
   return (
     <div className="space-y-6">
@@ -84,42 +152,7 @@ export default async function TenantOverviewPage({ params }: PageProps) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
-        <Card>
-          <CardHeader className="gap-3">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Rocket className="size-4 text-primary" />
-                  Launch checklist
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {completedSetupItems} of {setupItems.length} foundations are in place.
-                </CardDescription>
-              </div>
-              <span className="text-sm font-semibold tabular-nums text-primary">{setupProgress}%</span>
-            </div>
-            <Progress value={setupProgress} aria-label={`${setupProgress}% of site setup complete`} />
-          </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-2">
-            {setupItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="flex items-center gap-2 rounded-lg border p-3 text-sm transition-colors hover:border-primary/40 hover:bg-muted/40"
-              >
-                {item.complete ? (
-                  <CheckCircle2 className="size-4 text-emerald-500" />
-                ) : (
-                  <Circle className="size-4 text-muted-foreground" />
-                )}
-                <span className={item.complete ? "text-muted-foreground line-through" : "font-medium"}>
-                  {item.label}
-                </span>
-                <ArrowRight className="ml-auto size-3.5 text-muted-foreground" />
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
+        <OnboardingChecklist tenantId={tenant.id} items={setupItems} />
 
         <Card>
           <CardHeader>

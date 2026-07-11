@@ -74,3 +74,10 @@
 - Migration: 039_admin_notifications.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: New-lead and terminal CSV-import notifications are database-triggered and deliberately best-effort so they cannot break producer writes. Domain verification and storage quota work can call the exported best-effort helper when those later tickets land. The dropdown refreshes after mutations/navigation; Supabase Realtime publication is intentionally not required, so Claude can opt in during provisioning without making current behavior depend on it.
+
+## SCRUM-205 Tenant onboarding checklist
+- Status: done
+- Files: apps/admin/app/admin/[tenant]/{page,OnboardingChecklist}.tsx, apps/admin/lib/onboardingChecklist.ts
+- Migration: none
+- Env added: none
+- Review notes / open questions: The five steps derive from tenant theme/logo storage, inventory, non-default persona state, members/invites, and a verified domain or active published page. Dismissal is tenant-keyed browser-local storage and is honored only while every step remains complete; Claude should decide whether cross-device, per-user dismissal is worth a future persisted preference. Logo detection already recognizes likely theme keys so SCRUM-166 can wire its eventual URL without changing this widget.
