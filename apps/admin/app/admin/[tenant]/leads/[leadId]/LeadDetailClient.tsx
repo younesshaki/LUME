@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { Lead, LeadActivity, LeadStatus } from "@lume/types";
+import type { LeadLostReason } from "@/lib/leadLostReasons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { rowToLeadActivity } from "@/lib/leadActivities";
+import { Button } from "@/components/ui/button";
 
 type LeadDetailClientProps = {
   tenantId: string;
@@ -12,6 +14,7 @@ type LeadDetailClientProps = {
   tenantName: string;
   lead: Lead;
   initialActivities: LeadActivity[];
+  lostReasons: LeadLostReason[];
 };
 
 type StatusState =
@@ -28,26 +31,41 @@ export default function LeadDetailClient({
   tenantName,
   lead,
   initialActivities,
+  lostReasons,
 }: LeadDetailClientProps) {
   const [currentLead, setCurrentLead] = useState(lead);
   const [activities, setActivities] = useState(initialActivities);
   const [state, setState] = useState<StatusState>({ type: "idle", message: "" });
+  const [draftStatus, setDraftStatus] = useState<LeadStatus>(lead.status);
+  const [draftLostReason, setDraftLostReason] = useState(lead.lostReason ?? "");
 
-  async function updateStatus(nextStatus: LeadStatus) {
-    if (nextStatus === currentLead.status) return;
+  async function updateStatus() {
+    const nextStatus = draftStatus;
+    const nextLostReason = nextStatus === "lost" ? draftLostReason : null;
+    if (nextStatus === "lost" && !nextLostReason) {
+      setState({ type: "error", message: "Choose a lost reason." });
+      return;
+    }
+    if (nextStatus === currentLead.status && nextLostReason === currentLead.lostReason) return;
 
     const previousStatus = currentLead.status;
+    const previousReason = currentLead.lostReason;
     setState({ type: "saving", message: "Updating lead status..." });
     try {
       const supabase = createSupabaseBrowserClient();
       const { error: updateError } = await supabase
         .from("leads")
-        .update({ status: nextStatus })
+        .update({ status: nextStatus, lost_reason: nextLostReason })
         .eq("tenant_id", tenantId)
         .eq("id", currentLead.id);
       if (updateError) throw new Error(updateError.message);
 
-      const body = `Status changed from ${previousStatus} to ${nextStatus}.`;
+      const reasonLabel = lostReasons.find((reason) => reason.key === nextLostReason)?.label;
+      const body = previousStatus === nextStatus
+        ? `Lost reason changed from ${previousReason || "unspecified"} to ${reasonLabel ?? nextLostReason}.`
+        : `Status changed from ${previousStatus} to ${nextStatus}.${
+            reasonLabel ? ` Lost reason: ${reasonLabel}.` : ""
+          }`;
       const { data: activityRow, error: activityError } = await supabase
         .from("lead_activities")
         .insert({
@@ -59,14 +77,21 @@ export default function LeadDetailClient({
         })
         .select("*")
         .single();
-      if (activityError) throw new Error(activityError.message);
 
-      setCurrentLead((current) => ({ ...current, status: nextStatus }));
-      setActivities((current) => [
-        rowToLeadActivity(activityRow),
+      setCurrentLead((current) => ({
         ...current,
-      ]);
-      setState({ type: "success", message: "Lead status updated." });
+        status: nextStatus,
+        lostReason: nextLostReason,
+      }));
+      if (!activityError && activityRow) {
+        setActivities((current) => [rowToLeadActivity(activityRow), ...current]);
+      }
+      setState({
+        type: "success",
+        message: activityError
+          ? "Lead status updated, but its timeline entry could not be recorded."
+          : "Lead status updated.",
+      });
     } catch (error) {
       setState({
         type: "error",
@@ -90,21 +115,63 @@ export default function LeadDetailClient({
             Lead for {tenantName} captured from {currentLead.source}.
           </p>
         </div>
-        <label className="block text-sm font-medium">
-          Status
-          <select
-            value={currentLead.status}
-            disabled={state.type === "saving"}
-            onChange={(event) => void updateStatus(event.target.value as LeadStatus)}
-            className="mt-1 block rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="block text-sm font-medium">
+            Status
+            <select
+              value={draftStatus}
+              disabled={state.type === "saving"}
+              onChange={(event) => {
+                const nextStatus = event.target.value as LeadStatus;
+                setDraftStatus(nextStatus);
+                if (nextStatus !== "lost") setDraftLostReason("");
+              }}
+              className="mt-1 block rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+            >
+              {LEAD_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </label>
+          {draftStatus === "lost" ? (
+            <label className="block text-sm font-medium">
+              Lost reason
+              <select
+                value={draftLostReason}
+                disabled={state.type === "saving"}
+                required
+                onChange={(event) => setDraftLostReason(event.target.value)}
+                className="mt-1 block max-w-64 rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+              >
+                <option value="">Choose a reason…</option>
+                {lostReasons.map((reason) => (
+                  <option
+                    key={reason.key}
+                    value={reason.key}
+                    disabled={!reason.isActive && reason.key !== currentLead.lostReason}
+                  >
+                    {reason.label}{reason.isActive ? "" : " (inactive)"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            disabled={
+              state.type === "saving" ||
+              (draftStatus === "lost" && !draftLostReason) ||
+              (draftStatus === currentLead.status &&
+                (draftStatus !== "lost" || draftLostReason === currentLead.lostReason))
+            }
+            onClick={() => void updateStatus()}
           >
-            {LEAD_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </select>
-        </label>
+            {state.type === "saving" ? "Saving…" : "Save status"}
+          </Button>
+        </div>
       </header>
 
       {state.message && <StatusBanner type={state.type} message={state.message} />}
@@ -117,6 +184,15 @@ export default function LeadDetailClient({
               <InfoRow label="Email" value={currentLead.email} />
               <InfoRow label="Phone" value={currentLead.phone} />
               <InfoRow label="Vehicle" value={currentLead.vehicleId} />
+              {currentLead.status === "lost" ? (
+                <InfoRow
+                  label="Lost reason"
+                  value={
+                    lostReasons.find((reason) => reason.key === currentLead.lostReason)?.label ??
+                    currentLead.lostReason
+                  }
+                />
+              ) : null}
               <InfoRow label="Created" value={formatDate(currentLead.createdAt)} />
               <InfoRow label="Updated" value={formatDate(currentLead.updatedAt)} />
             </dl>

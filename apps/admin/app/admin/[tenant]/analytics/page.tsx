@@ -2,6 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { LeadStatus } from "@lume/types";
 import { countByValue, leadsPerDay, priceHistogram } from "@/lib/analytics";
+import {
+  mergeLeadLostReasons,
+  summarizeLeadLostReasons,
+} from "@/lib/leadLostReasons";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   InventoryByBodyStyleChart,
@@ -71,6 +75,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
     recentLeadsResult,
     priceHistoryResult,
     vehicleFacts,
+    lostReasonOptionsResult,
   ] = await Promise.all([
     supabase
       .from("vehicles")
@@ -78,7 +83,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
       .eq("tenant_id", tenant.id),
     supabase
       .from("leads")
-      .select("status")
+      .select("status, lost_reason")
       .eq("tenant_id", tenant.id),
     supabase
       .from("leads")
@@ -97,6 +102,10 @@ export default async function AnalyticsPage({ params }: PageProps) {
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenant.id),
     fetchVehicleFacts(supabase, tenant.id),
+    supabase
+      .from("lead_lost_reason_options")
+      .select("key, label, sort_order, is_active")
+      .eq("tenant_id", tenant.id),
   ]);
 
   if (vehiclesResult.error) throw new Error(`Unable to load vehicles count: ${vehiclesResult.error.message}`);
@@ -108,6 +117,21 @@ export default async function AnalyticsPage({ params }: PageProps) {
   const leadsByStatus = countLeadStatuses(
     ((leadsResult.data ?? []) as Array<{ status: LeadStatus }>).map((row) => row.status)
   );
+  const lostReasonTaxonomy = mergeLeadLostReasons(
+    (lostReasonOptionsResult.data ?? []).map((row) => ({
+      key: row.key,
+      label: row.label,
+      sortOrder: row.sort_order,
+      isActive: row.is_active,
+    }))
+  );
+  const lostReasonSummary = summarizeLeadLostReasons(
+    (leadsResult.data ?? [])
+      .filter((row) => row.status === "lost")
+      .map((row) => row.lost_reason),
+    lostReasonTaxonomy,
+  );
+  const lostLeadCount = lostReasonSummary.reduce((sum, reason) => sum + reason.count, 0);
   const recentLeads = (recentLeadsResult.data ?? []) as LeadSummaryRow[];
 
   const leadsSeries = leadsPerDay(
@@ -144,7 +168,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
 
       <PriceDistributionChart data={priceBuckets} />
 
-      <section className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+      <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Leads by Status</h2>
           <div className="mt-4 space-y-3">
@@ -165,6 +189,34 @@ export default async function AnalyticsPage({ params }: PageProps) {
           </div>
         </div>
 
+        <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+          <h2 className="text-sm font-semibold">Lost Leads by Reason</h2>
+          {lostReasonSummary.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">No lost leads have been recorded.</p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {lostReasonSummary.map((reason) => (
+                <div key={reason.key}>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-neutral-600 dark:text-neutral-300">
+                      {reason.label}{reason.isLegacy ? " (historical)" : ""}
+                    </span>
+                    <span className="font-medium">{reason.count}</span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-900">
+                    <div
+                      className="h-full rounded-full bg-amber-500"
+                      style={{ width: `${statusPercent(reason.count, lostLeadCount)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section>
         <div className="overflow-hidden rounded-xl border">
           <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
             <h2 className="text-sm font-semibold">Recent Leads</h2>

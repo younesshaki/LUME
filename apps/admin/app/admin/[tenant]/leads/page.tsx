@@ -3,12 +3,18 @@ import Link from "next/link";
 import { Download, Inbox, Search } from "lucide-react";
 import { rowToLead } from "@lume/db";
 import type { LeadSource, LeadStatus } from "@lume/types";
+import {
+  mergeLeadLostReasons,
+  selectableLeadLostReasons,
+  type TenantLeadLostReasonOverride,
+} from "@/lib/leadLostReasons";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LeadsTable, type LeadCard } from "./LeadsTable";
+import { LostReasonManager } from "./LostReasonManager";
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
@@ -51,11 +57,38 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
   if (source) query = query.eq("source", source);
 
   const from = (page - 1) * PAGE_SIZE;
-  const { data, count, error } = await query
-    .order("created_at", { ascending: false, nullsFirst: false })
-    .range(from, from + PAGE_SIZE - 1);
-
+  const [leadsResult, reasonResult, userResult] = await Promise.all([
+    query
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .range(from, from + PAGE_SIZE - 1),
+    supabase
+      .from("lead_lost_reason_options")
+      .select("key, label, sort_order, is_active")
+      .eq("tenant_id", tenant.id),
+    supabase.auth.getUser(),
+  ]);
+  const { data, count, error } = leadsResult;
   if (error) throw new Error(`Unable to load leads: ${error.message}`);
+
+  const userId = userResult.data.user?.id;
+  const { data: membership } = userId
+    ? await supabase
+        .from("tenant_members")
+        .select("role")
+        .eq("tenant_id", tenant.id)
+        .eq("user_id", userId)
+        .maybeSingle()
+    : { data: null };
+  const reasonOverrides: TenantLeadLostReasonOverride[] = (reasonResult.data ?? []).map((row) => ({
+    key: row.key,
+    label: row.label,
+    sortOrder: row.sort_order,
+    isActive: row.is_active,
+  }));
+  const lostReasons = selectableLeadLostReasons(mergeLeadLostReasons(reasonOverrides));
+  const canManageReasons = membership?.role === "owner" ||
+    membership?.role === "admin" ||
+    membership?.role === "editor";
 
   const cards: LeadCard[] = (data ?? []).map(rowToLead).map((lead) => ({
     id: lead.id,
@@ -89,6 +122,10 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
         title="Leads"
         description={`${totalCount.toLocaleString()} lead${totalCount === 1 ? "" : "s"} for ${tenant.name}${hasFilters ? " (filtered)" : ""}`}
       />
+
+      {canManageReasons ? (
+        <LostReasonManager tenantId={tenant.id} initialOverrides={reasonOverrides} />
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <form method="get" className="relative max-w-sm flex-1">
@@ -144,7 +181,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
           description="Leads captured by your website's contact forms and AI concierge will appear here, ready to work."
         />
       ) : (
-        <LeadsTable slug={slug} leads={cards} />
+        <LeadsTable slug={slug} leads={cards} lostReasons={lostReasons} />
       )}
 
       {totalPages > 1 && (

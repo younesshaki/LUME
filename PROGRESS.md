@@ -32,3 +32,10 @@
 - Migration: 035_csv_imports.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: The existing browser-side importer now records durable counters, bounded diagnostics, and recent status, while continuing safely if tracking is unavailable during a staggered rollout. `source_object_path` is reserved for a future private-file/background worker; this ticket does not claim crash-resumable processing, and the existing destructive replace mode remains a review risk because it is not transactional.
+
+## SCRUM-177 Tenant-editable lost-reason taxonomy and reporting
+- Status: done
+- Files: supabase/migrations/036_lead_lost_reason_options.sql, packages/db/src/schema.ts, apps/admin/lib/leadLostReasons.ts, apps/admin/app/admin/[tenant]/{leads,analytics}/**
+- Migration: 036_lead_lost_reason_options.sql (NOT applied)
+- Env added: none
+- Review notes / open questions: The six defaults remain code-owned to respect the no-data-mutation rule; tenant rows are overrides/custom options and deactivation is soft so history still reports. The trigger enforces active reasons on new lost transitions/reason changes while deliberately allowing unrelated edits to legacy lost rows with no reason. Claude should review that compatibility tradeoff before applying the migration.

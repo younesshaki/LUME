@@ -362,6 +362,32 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
         Relationships: [];
       };
+      lead_lost_reason_options: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          key: string;
+          label: string;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["lead_lost_reason_options"]["Row"],
+          "id" | "sort_order" | "is_active" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["lead_lost_reason_options"]["Insert"]
+        >;
+        Relationships: [];
+      };
       lead_activities: {
         Row: {
           id: string;

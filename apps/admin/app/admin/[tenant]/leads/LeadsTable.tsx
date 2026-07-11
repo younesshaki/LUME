@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import type { LeadStatus } from "@lume/types";
+import type { LeadLostReason } from "@/lib/leadLostReasons";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,9 +38,18 @@ export type LeadCard = {
 
 const STATUSES: LeadStatus[] = ["new", "contacted", "qualified", "won", "lost"];
 
-export function LeadsTable({ slug, leads }: { slug: string; leads: LeadCard[] }) {
+export function LeadsTable({
+  slug,
+  leads,
+  lostReasons,
+}: {
+  slug: string;
+  leads: LeadCard[];
+  lostReasons: LeadLostReason[];
+}) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<LeadStatus | "">("");
+  const [bulkLostReason, setBulkLostReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -62,11 +72,17 @@ export function LeadsTable({ slug, leads }: { slug: string; leads: LeadCard[] })
     if (!bulkStatus) return;
     setError(null);
     startTransition(async () => {
-      const result = await bulkUpdateLeadStatus(slug, selectedIds, bulkStatus);
+      const result = await bulkUpdateLeadStatus(
+        slug,
+        selectedIds,
+        bulkStatus,
+        bulkStatus === "lost" ? bulkLostReason : null,
+      );
       if (result.error) setError(result.error);
       else {
         setSelected(new Set());
         setBulkStatus("");
+        setBulkLostReason("");
       }
     });
   }
@@ -76,7 +92,13 @@ export function LeadsTable({ slug, leads }: { slug: string; leads: LeadCard[] })
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2">
           <span className="text-sm font-medium">{selected.size} selected</span>
-          <Select value={bulkStatus} onValueChange={(v) => setBulkStatus(v as LeadStatus)}>
+          <Select
+            value={bulkStatus}
+            onValueChange={(value) => {
+              setBulkStatus(value as LeadStatus);
+              if (value !== "lost") setBulkLostReason("");
+            }}
+          >
             <SelectTrigger className="h-8 w-40">
               <SelectValue placeholder="Set status…" />
             </SelectTrigger>
@@ -88,10 +110,30 @@ export function LeadsTable({ slug, leads }: { slug: string; leads: LeadCard[] })
               ))}
             </SelectContent>
           </Select>
-          <Button size="sm" disabled={!bulkStatus || pending} onClick={applyBulk}>
+          {bulkStatus === "lost" ? (
+            <Select value={bulkLostReason} onValueChange={setBulkLostReason}>
+              <SelectTrigger className="h-8 w-52" aria-label="Lost reason">
+                <SelectValue placeholder="Choose lost reason…" />
+              </SelectTrigger>
+              <SelectContent>
+                {lostReasons.map((reason) => (
+                  <SelectItem key={reason.key} value={reason.key}>
+                    {reason.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+          <Button
+            size="sm"
+            disabled={!bulkStatus || (bulkStatus === "lost" && !bulkLostReason) || pending}
+            onClick={applyBulk}
+          >
             Apply
           </Button>
-          {error && <span className="text-sm text-destructive">{error}</span>}
+          {error ? (
+            <span className="text-sm text-destructive" role="alert">{error}</span>
+          ) : null}
         </div>
       )}
 
