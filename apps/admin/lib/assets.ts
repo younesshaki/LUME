@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { publicUrl, TENANT_BUCKETS, tenantPath, type Database } from "@lume/db";
+import {
+  publicUrl,
+  TENANT_BUCKETS,
+  tenantPath,
+  validateUploadWithBytes,
+  type Database,
+} from "@lume/db";
 
 export type TenantAsset = {
   name: string;
@@ -38,6 +44,16 @@ export async function uploadTenantMediaAsset(
   tenantId: string,
   file: File
 ): Promise<TenantAsset> {
+  // SCRUM-164: per-bucket MIME + size whitelist with magic-byte sniffing, so a
+  // renamed binary can't land in the public media bucket as an "image".
+  const leadingBytes = new Uint8Array(await file.slice(0, 512).arrayBuffer());
+  const validation = validateUploadWithBytes(
+    TENANT_BUCKETS.media,
+    { type: file.type, size: file.size },
+    leadingBytes
+  );
+  if (!validation.ok) throw new Error(validation.error);
+
   const name = sanitizeAssetFileName(file.name);
   const objectKey = tenantPath(tenantId, name);
   const { error } = await client.storage.from(TENANT_BUCKETS.media).upload(objectKey, file, {

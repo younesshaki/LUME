@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   publicUrl,
+  sniffContentType,
   TENANT_BUCKETS,
   tenantPath,
   type Database,
@@ -90,6 +91,13 @@ export async function uploadTenantBrandingAsset(
     ...dimensions,
   }, kind);
   if (validationError) throw new Error(validationError);
+
+  // SCRUM-164: the declared MIME above is browser-supplied; verify the actual
+  // bytes carry the matching signature before the file reaches the bucket.
+  const leadingBytes = new Uint8Array(await file.slice(0, 512).arrayBuffer());
+  if (sniffContentType(leadingBytes) !== file.type) {
+    throw new Error("File content does not match its declared image type.");
+  }
 
   const objectKey = brandingAssetObjectKey(tenantId, kind);
   const { error } = await client.storage.from(TENANT_BUCKETS.logos).upload(objectKey, file, {

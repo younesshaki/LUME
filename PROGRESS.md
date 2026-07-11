@@ -172,3 +172,10 @@
 - Migration: none
 - Env added: none
 - Review notes / open questions: Extends the existing in-memory sliding-window limiter (chat + upload already covered) to every remaining public route with per-scope one-minute budgets: signup 5, login 10, gdpr export/delete 5, leads 10, bot-actions 30, logout/loyalty 30, me/chat-history 60. Guards run after the origin check (cheap rejection first) and before tenant resolution, returning a standard 429 with Retry-After + route-appropriate CORS headers. Limits are keyed by scope + first x-forwarded-for hop. Still per-instance in-memory by design — the Redis/Upstash shared store remains the documented upgrade path (SCRUM-151's infrastructure could host it later). Implemented by Claude, not Codex.
+
+## SCRUM-164 Per-bucket MIME and size whitelist with content sniffing
+- Status: done
+- Files: packages/db/src/{uploadPolicy,uploadPolicy.test,index}.ts, apps/admin/lib/{assets,brandingAssets}.ts
+- Migration: none
+- Env added: none
+- Review notes / open questions: One shared policy table (`BUCKET_UPLOAD_POLICIES`) covers all four tenant buckets (logos 2 MB images, media 10 MB images, csvs 20 MB text, 3d-models 100 MB glTF/octet-stream). `validateUploadWithBytes` enforces declared MIME + size AND magic-byte agreement (PNG/JPEG/WebP/GIF/SVG/glTF signatures); non-sniffable text types get a negative check so a binary can't be smuggled under a CSV label. Wired into the two Supabase-direct upload paths: tenant media (previously ZERO validation) and branding assets (previously declared-type only — closes the gap SCRUM-166's notes flagged). Vehicle-image R2 uploads keep their existing declared-type binding + post-upload HEAD verification; true byte sniffing there would require proxying the upload through the server, which SCRUM-108's signed-PUT design intentionally avoids. Validation runs in the browser client before upload; a malicious API-level actor bypassing the admin UI is still constrained by storage RLS but not by sniffing — server-side enforcement would need an Edge Function (SCRUM-165's ClamAV hook is the natural place). Implemented by Claude, not Codex.
