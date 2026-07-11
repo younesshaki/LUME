@@ -109,3 +109,10 @@
 - Migration: none (uses existing tenant-logos bucket from 013_storage_buckets.sql and theme JSON from 019_tenant_theme.sql)
 - Env added: NEXT_PUBLIC_PUBLIC_SITE_URL=...
 - Review notes / open questions: Owner/admin users can upload an SVG/PNG/WebP logo up to 2 MB plus exact 32×32 and 192×192 PNG/WebP favicons. Stable tenant-owned storage keys are upserted and cache-busted URLs are merged into `theme.branding`; the public header/footer and managed favicon links consume them. The iframe embeds the configured real public origin and reloads after saves. MIME checks remain browser-declared until SCRUM-164 adds server-side content sniffing.
+
+## SCRUM-108 Multi-image vehicle upload to R2
+- Status: needs-provisioning(CLOUDFLARE_R2)
+- Files: supabase/migrations/043_vehicle_images.sql, packages/db/src/schema.ts, apps/admin/lib/{r2Config,r2Signing,vehicleImages,vehicleImages.server,vehicleImageUploadClient,vehicleImageUploadState}.ts, apps/admin/app/api/vehicles/[id]/images/**, apps/admin/app/admin/[tenant]/vehicles/{VehicleImageUploader.tsx,[id]/page.tsx}, apps/admin/.env.example
+- Migration: 043_vehicle_images.sql (NOT applied)
+- Env added: R2_ENDPOINT=..., R2_BUCKET_NAME=..., R2_PUBLIC_BASE_URL=..., R2_ACCESS_KEY_ID=..., R2_SECRET_ACCESS_KEY=...
+- Review notes / open questions: Authenticated editor+ users can select up to 20 JPEG/PNG/WebP images per vehicle, with three concurrent XHR PUTs and per-file progress. Short-lived SigV4 URLs bind content type and browser-sent content length; confirmation HEAD-verifies R2 metadata before the tenant-scoped row is inserted. Database locking enforces the cap, append order, first primary, vehicle ownership, and canonical key path. Claude must provision a private R2 S3 endpoint, public custom domain, and bucket CORS allowing the admin origin's PUT/Content-Type. Best-effort cleanup handles failed confirmations, but periodic orphan reconciliation is still recommended for abandoned signed uploads and cascade-deleted vehicles; SCRUM-163 must include both confirmed bytes and unconfirmed R2 objects in quota accounting.

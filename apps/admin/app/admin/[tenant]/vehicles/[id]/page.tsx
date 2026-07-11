@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { TenantTheme } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import VehicleForm from "../VehicleForm";
+import { VehicleImageUploader } from "../VehicleImageUploader";
 import { VehiclePriceHistory } from "../VehiclePriceHistory";
 
 type PageProps = { params: Promise<{ tenant: string; id: string }> };
@@ -18,7 +19,7 @@ export default async function EditVehiclePage({ params }: PageProps) {
 
   if (!tenant) notFound();
 
-  const [vehicleResult, historyResult, manageResult] = await Promise.all([
+  const [vehicleResult, historyResult, imageCountResult, manageResult] = await Promise.all([
     supabase
       .from("vehicles")
       .select("*")
@@ -32,6 +33,11 @@ export default async function EditVehiclePage({ params }: PageProps) {
       .eq("vehicle_id", id)
       .order("changed_at", { ascending: false })
       .limit(200),
+    supabase
+      .from("vehicle_images")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenant.id)
+      .eq("vehicle_id", id),
     supabase.rpc("user_has_tenant_role", {
       p_tenant_id: tenant.id,
       p_roles: ["owner", "admin"],
@@ -68,6 +74,14 @@ export default async function EditVehiclePage({ params }: PageProps) {
           sold_at: vehicle.sold_at,
           sold_price: vehicle.sold_price,
         }}
+      />
+      <VehicleImageUploader
+        tenantSlug={tenant.slug}
+        vehicleId={vehicle.id}
+        initialImageCount={imageCountResult.count ?? 0}
+        migrationWarning={imageCountResult.error
+          ? "Vehicle image metadata is not configured. Apply migration 043_vehicle_images.sql first."
+          : null}
       />
       <VehiclePriceHistory
         tenantSlug={tenant.slug}

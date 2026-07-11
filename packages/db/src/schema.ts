@@ -353,6 +353,34 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
         Relationships: [];
       };
+      vehicle_images: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          vehicle_id: string;
+          r2_key: string;
+          content_type: "image/jpeg" | "image/png" | "image/webp";
+          byte_size: number;
+          width: number | null;
+          height: number | null;
+          sort_order: number;
+          is_primary: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["vehicle_images"]["Row"],
+          "id" | "sort_order" | "is_primary" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          sort_order?: number;
+          is_primary?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["vehicle_images"]["Insert"]>;
+        Relationships: [];
+      };
       rag_documents: {
         Row: {
           id: string;
