@@ -157,6 +157,25 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["lead_activities"]["Insert"]>;
         Relationships: [];
       };
+      audit_log: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          actor_user_id: string | null;
+          action: string;
+          resource_type: string;
+          resource_id: string | null;
+          metadata: Record<string, unknown>;
+          ip_addr: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["audit_log"]["Row"],
+          "id" | "created_at" | "metadata"
+        > & { id?: string; metadata?: Record<string, unknown> };
+        Update: Partial<Database["public"]["Tables"]["audit_log"]["Insert"]>;
+        Relationships: [];
+      };
       price_history: {
         Row: {
           id: string;

@@ -8,6 +8,7 @@ import { DesktopNav } from "../nav/DesktopNav";
 import { GooeyDesktopNav } from "../nav/GooeyDesktopNav";
 import { MobileNav } from "../nav/MobileNav";
 import { InvitationCTA } from "../nav/InvitationCTA";
+import { ThemeToggle } from "../ThemeToggle";
 import { isSiteScreen, useSiteNavItems, type SiteNavItem } from "../siteNavigation";
 import { useSiteHeaderLayoutState } from "./SiteHeader.animations";
 import { getHeaderNavigationSound } from "./SiteHeader.sounds";
@@ -103,7 +104,8 @@ export function SiteHeader() {
       </div>
 
       {/* Right slot */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4">
+        <ThemeToggle />
         {headerConfig.showCta && (
           <InvitationCTA
             onClick={() => onNavigate("contact")}

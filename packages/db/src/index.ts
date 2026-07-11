@@ -5,4 +5,6 @@ export * from "./pages";
 export * from "./vehicleQuery";
 export * from "./provisioning";
 export * from "./gdpr";
+export * from "./leadsCsv";
+export * from "./audit";
 export type { Database } from "./schema";

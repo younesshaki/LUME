@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, Inbox, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Inbox, Search } from "lucide-react";
 import { rowToLead } from "@lume/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
@@ -103,18 +103,30 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
         description={`${totalCount.toLocaleString()} lead${totalCount === 1 ? "" : "s"} for ${tenant.name}${q ? ` matching “${q}”` : ""}`}
       />
 
-      <form method="get" className="relative max-w-sm">
-        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Search name, email, phone…"
-          className="pl-8"
-        />
-        {sort !== "created" && <input type="hidden" name="sort" value={sort} />}
-        {dir !== "desc" && <input type="hidden" name="dir" value={dir} />}
-      </form>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <form method="get" className="relative max-w-sm flex-1">
+          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search name, email, phone…"
+            className="pl-8"
+          />
+          {sort !== "created" && <input type="hidden" name="sort" value={sort} />}
+          {dir !== "desc" && <input type="hidden" name="dir" value={dir} />}
+        </form>
+        {totalCount > 0 && (
+          <Button variant="outline" size="sm" asChild>
+            <a
+              href={`/api/leads/export?tenant=${encodeURIComponent(slug)}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+            >
+              <Download className="size-4" />
+              Export CSV
+            </a>
+          </Button>
+        )}
+      </div>
 
       {totalCount === 0 && !q ? (
         <EmptyState

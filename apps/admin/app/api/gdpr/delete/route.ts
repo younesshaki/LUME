@@ -12,6 +12,7 @@ import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { parseGdprRequest } from "@/lib/gdpr";
+import { auditWrite, requestIp } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +45,18 @@ export async function POST(request: Request): Promise<Response> {
       tenant.tenantId,
       validation.identifier,
     );
+    // Erasure is exactly the kind of irreversible write the audit log exists for.
+    await auditWrite({
+      tenantId: tenant.tenantId,
+      action: "gdpr.delete",
+      resourceType: "visitor",
+      resourceId: validation.identifier.email ?? validation.identifier.phone ?? null,
+      metadata: {
+        deletedLeads: result.deletedLeads,
+        deletedLeadActivities: result.deletedLeadActivities,
+      },
+      ipAddr: requestIp(request),
+    });
     return json(result, 200, request);
   } catch (error) {
     console.error("[gdpr/delete] failed", error);

@@ -44,6 +44,7 @@ import {
   type CookieConsent,
 } from "./components/CookieBanner/CookieBanner";
 import { SeoProvider } from "./lib/seo/SeoProvider";
+import { ThemeProvider } from "./lib/theme/ThemeContext";
 
 if (isPageRendererEnabled) {
   void import("./lib/pageBuilder/registerBlocks").then(({ registerBlocks }) => {
@@ -426,7 +427,8 @@ export default function App() {
   }
 
   return (
-    <SeoProvider pathname={location.pathname} enabled={!isAdminPath}>
+    <ThemeProvider enabled={!isAdminPath}>
+      <SeoProvider pathname={location.pathname} enabled={!isAdminPath}>
       <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>
       <MediaQualitySettings
         quality={mediaQuality}
@@ -641,6 +643,7 @@ export default function App() {
       )}
       {cookieConsent === "accepted" && <Analytics />}
       </div>
-    </SeoProvider>
+      </SeoProvider>
+    </ThemeProvider>
   );
 }
