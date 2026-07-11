@@ -46,3 +46,10 @@
 - Migration: 037_lead_source_attribution.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: Public boot now captures first-touch UTM source/medium/campaign/content plus document referrer in bounded session storage; explicit submission values win. Lead calls use credentialed CORS so visitor association can work, and only sanitized bot trigger/action/vehicle context is stored. Claude should verify visitor cookie SameSite/domain settings for the final public/admin deployment topology; `credentials: include` cannot override a cross-site cookie policy.
+
+## SCRUM-110 Billing and plan administration UI
+- Status: done
+- Files: apps/admin/app/admin/[tenant]/settings/billing/**, apps/admin/lib/billing.ts, apps/admin/components/admin-shell.tsx
+- Migration: none (depends on unapplied 030_billing_schema.sql)
+- Env added: none
+- Review notes / open questions: Owner/admin-authorized manual plan changes use a single service-role mutation and refuse provider-managed subscriptions; no Stripe call is made. Lead usage is counted for the current period, while chat/storage meters explicitly remain unavailable until SCRUM-103 supplies counters. Invoice PDF controls are intentionally disabled because the schema has no provider PDF URL. The plan catalog remains empty until Claude provisions reviewed plan rows outside migrations.
