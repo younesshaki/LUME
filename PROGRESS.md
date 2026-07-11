@@ -200,3 +200,10 @@
 - Migration: none
 - Env added: ERROR_WEBHOOK_URL= (optional)
 - Review notes / open questions: Provider-agnostic by design — no vendor SDK. captureError emits one structured JSON line to stderr (Vercel log drains + `vercel logs` consume it directly) and optionally forwards to any JSON webhook (ERROR_WEBHOOK_URL, 3s timeout, best-effort). Identical signatures (scope+message) dedupe for 60s with a suppressed-count carried on the next emission, so a hot failure loop can't flood collectors. withRouteErrorCapture wraps a handler: unhandled throws are captured and answered with a generic 500 that never leaks stack details. Wired into the gdpr export/delete and consent routes as the reference pattern; remaining routes keep their existing targeted console.error calls and can adopt captureError incrementally — swapping in Sentry later is one new transport function. Implemented by Claude, not Codex.
+
+## SCRUM-194 Resend integration and @lume/email package
+- Status: needs-provisioning(RESEND)
+- Files: packages/email/**, supabase/migrations/051_tenant_email_sender.sql, packages/db/src/schema.ts, apps/admin/.env.example, package-lock.json
+- Migration: 051_tenant_email_sender.sql (NOT applied)
+- Env added: RESEND_API_KEY=..., RESEND_FROM_EMAIL=...
+- Review notes / open questions: The new package keeps validation and shared contracts in `@lume/email` while all provider, rendering, and environment access stays behind the server-only `@lume/email/server` export. Missing credentials return a typed no-op before rendering or network access; sends require a tenant-scoped idempotency key and include non-PII tenant/template tags. Migration 051 adds an optional owner/admin-protected sender address to existing tenant settings; Claude must apply it and ensure only a Resend-verified domain is saved before enabling an override. Template content is intentionally SCRUM-195, and webhook event persistence, DKIM provisioning, and suppression lookup storage remain SCRUM-196. Deployment must use Node 20+ for the pinned Resend and React Email renderer versions.
