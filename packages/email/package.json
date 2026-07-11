@@ -13,6 +13,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./templates": "./src/templates/index.ts",
     "./server": "./src/server.ts"
   },
   "dependencies": {
