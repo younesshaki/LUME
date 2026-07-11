@@ -193,3 +193,10 @@
 - Migration: 050_consent_events.sql (NOT applied)
 - Env added: none
 - Review notes / open questions: Completes the ops half of the banner SCRUM-207 shipped. (1) Consent versioning: choices persist as {choice, version, at}; bumping COOKIE_CONSENT_VERSION re-prompts returning visitors; legacy bare-string values still honored at v1. (2) "Cookie preferences" footer link re-opens the banner via a window event so visitors can change their mind (a GDPR requirement the banner previously lacked). (3) Anonymous tenant-scoped consent ledger: fire-and-forget POST /api/consent inserts {choice, version} only — deliberately NO ip/user-agent/visitor linkage so the compliance record can't become tracking; member-read RLS, service-role write, rate-limited 10/min. Analytics gating itself was already in App.tsx (accepted → <Vercel Analytics>). No admin UI for accept/reject rates yet — one query away when wanted. Implemented by Claude, not Codex.
+
+## SCRUM-113 Error monitoring & observability
+- Status: done
+- Files: apps/admin/lib/{observability,observability.test}.ts, apps/admin/app/api/{gdpr/export,gdpr/delete,consent}/route.ts, apps/admin/.env.example
+- Migration: none
+- Env added: ERROR_WEBHOOK_URL= (optional)
+- Review notes / open questions: Provider-agnostic by design — no vendor SDK. captureError emits one structured JSON line to stderr (Vercel log drains + `vercel logs` consume it directly) and optionally forwards to any JSON webhook (ERROR_WEBHOOK_URL, 3s timeout, best-effort). Identical signatures (scope+message) dedupe for 60s with a suppressed-count carried on the next emission, so a hot failure loop can't flood collectors. withRouteErrorCapture wraps a handler: unhandled throws are captured and answered with a generic 500 that never leaks stack details. Wired into the gdpr export/delete and consent routes as the reference pattern; remaining routes keep their existing targeted console.error calls and can adopt captureError incrementally — swapping in Sentry later is one new transport function. Implemented by Claude, not Codex.

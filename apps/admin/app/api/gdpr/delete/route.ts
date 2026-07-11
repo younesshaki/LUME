@@ -14,6 +14,7 @@ import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { parseGdprRequest } from "@/lib/gdpr";
 import { auditWrite, requestIp } from "@/lib/audit";
 import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
+import { captureError, withRouteErrorCapture } from "@/lib/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +23,9 @@ export async function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeadersFor(request) });
 }
 
-export async function POST(request: Request): Promise<Response> {
+export const POST = withRouteErrorCapture("api/gdpr/delete", handlePost);
+
+async function handlePost(request: Request): Promise<Response> {
   if (!isAllowedOrigin(request)) {
     return json({ error: "Forbidden origin" }, 403);
   }
@@ -63,7 +66,7 @@ export async function POST(request: Request): Promise<Response> {
     });
     return json(result, 200, request);
   } catch (error) {
-    console.error("[gdpr/delete] failed", error);
+    captureError("api/gdpr/delete", error);
     return json({ error: "Unable to delete visitor data" }, 500, request);
   }
 }

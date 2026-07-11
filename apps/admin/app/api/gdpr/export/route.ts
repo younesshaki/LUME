@@ -13,6 +13,7 @@ import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { parseGdprRequest } from "@/lib/gdpr";
 import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
+import { captureError, withRouteErrorCapture } from "@/lib/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +22,9 @@ export async function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeadersFor(request) });
 }
 
-export async function POST(request: Request): Promise<Response> {
+export const POST = withRouteErrorCapture("api/gdpr/export", handlePost);
+
+async function handlePost(request: Request): Promise<Response> {
   if (!isAllowedOrigin(request)) {
     return json({ error: "Forbidden origin" }, 403);
   }
@@ -50,7 +53,7 @@ export async function POST(request: Request): Promise<Response> {
     );
     return json(bundle, 200, request);
   } catch (error) {
-    console.error("[gdpr/export] failed", error);
+    captureError("api/gdpr/export", error);
     return json({ error: "Unable to export visitor data" }, 500, request);
   }
 }

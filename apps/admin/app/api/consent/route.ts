@@ -11,6 +11,7 @@ import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
+import { captureError, withRouteErrorCapture } from "@/lib/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +20,9 @@ export async function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeadersFor(request) });
 }
 
-export async function POST(request: Request): Promise<Response> {
+export const POST = withRouteErrorCapture("api/consent", handlePost);
+
+async function handlePost(request: Request): Promise<Response> {
   if (!isAllowedOrigin(request)) return json({ error: "Forbidden origin" }, 403);
 
   const rateLimit = checkPublicRouteRateLimit("consent", request);
@@ -51,7 +54,7 @@ export async function POST(request: Request): Promise<Response> {
     consent_version: version,
   });
   if (error) {
-    console.error("[/api/consent] insert failed:", error.message);
+    captureError("api/consent", new Error(error.message));
     return json({ error: "Unable to record consent" }, 500, request);
   }
 
