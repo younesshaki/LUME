@@ -19,6 +19,8 @@
  * (SCRUM-115) it only needs to exist on the admin project.
  */
 
+import { visitorSessionCookieHeader } from "./visitorSessionCookie";
+
 const UPSTREAM_URL = process.env.LUME_CHAT_UPSTREAM_URL;
 const BYPASS_SECRET = process.env.LUME_CHAT_BYPASS_SECRET;
 
@@ -29,6 +31,7 @@ const FORWARDED_REQUEST_HEADERS = [
   "origin",
   "x-lume-tenant",
   "x-forwarded-for",
+  "cookie",
 ] as const;
 const FORWARDED_RESPONSE_HEADERS = [
   "content-type",
@@ -69,7 +72,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const headers: Record<string, string> = {};
   for (const name of FORWARDED_REQUEST_HEADERS) {
-    const value = header(req, name);
+    const rawValue = header(req, name);
+    const value = name === "cookie" ? visitorSessionCookieHeader(rawValue) : rawValue;
     if (value) headers[name] = value;
   }
   if (BYPASS_SECRET) headers["x-vercel-protection-bypass"] = BYPASS_SECRET;

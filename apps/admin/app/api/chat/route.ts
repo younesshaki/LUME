@@ -54,6 +54,8 @@ import {
   personaBasePrompt,
 } from "@/lib/chatPersona";
 import { buildToolRequestFields, loadTenantToolAllowlist } from "@/lib/chatTools";
+import { loadChatLoyaltyContext, loyaltySystemPrompt } from "@/lib/chatLoyalty";
+import { resolveVisitor } from "@/lib/visitorSession";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -124,9 +126,10 @@ export async function POST(request: Request): Promise<Response> {
 
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.
-  const [persona, toolAllowlist] = await Promise.all([
+  const [persona, toolAllowlist, visitor] = await Promise.all([
     loadActivePersona(supabase, tenant.tenantId),
     loadTenantToolAllowlist(supabase, tenant.tenantId),
+    resolveVisitor(request, tenant.tenantId, supabase).catch(() => null),
   ]);
   const enabledTools = filterBotTools(toolAllowlist);
   const enabledToolNames = enabledTools.map((tool) => tool.name);
@@ -134,11 +137,19 @@ export async function POST(request: Request): Promise<Response> {
   const tenantName = tenant.name ?? tenant.slug;
 
   let assembled;
+  let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> = null;
   try {
-    const { data: chunkRows, error: chunkErr } = await supabase
-      .from("rag_chunks")
-      .select("text, category")
-      .eq("tenant_id", tenant.tenantId);
+    const [chunkResult, loadedLoyaltyContext] = await Promise.all([
+      supabase
+        .from("rag_chunks")
+        .select("text, category")
+        .eq("tenant_id", tenant.tenantId),
+      visitor
+        ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
+        : Promise.resolve(null),
+    ]);
+    chatLoyaltyContext = loadedLoyaltyContext;
+    const { data: chunkRows, error: chunkErr } = chunkResult;
     if (chunkErr) throw new Error(`rag_chunks query failed: ${chunkErr.message}`);
 
     const contextChunks = retrieveByKeywords(
@@ -192,7 +203,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const systemMessage = {
     role: "system" as const,
-    content: `${assembled.prompt}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
+    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
   };
 
   // ── Phase 1: non-streaming call with tools ────────────────────────────────

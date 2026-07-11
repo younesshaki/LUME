@@ -53,11 +53,11 @@ export function readSessionToken(request: Request): string | null {
 export async function resolveVisitor(
   request: Request,
   tenantId: string,
+  supabase = createServiceClient(),
 ): Promise<Visitor | null> {
   const token = readSessionToken(request);
   if (!token) return null;
 
-  const supabase = createServiceClient();
   const { data: session } = await supabase
     .from("visitor_sessions")
     .select("visitor_id, expires_at")

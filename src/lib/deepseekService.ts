@@ -54,6 +54,7 @@ export async function* streamChat(
       "X-Lume-Tenant": TENANT_SLUG,
     },
     body: JSON.stringify({ messages: sanitized, stream: true }),
+    credentials: "include",
     signal,
   });
 

@@ -1,0 +1,105 @@
+/** Credential-preserving proxy from the public Vite deployment to admin visitor APIs. */
+import { visitorSessionCookieHeader } from "../visitorSessionCookie";
+
+const CHAT_UPSTREAM_URL = process.env.LUME_CHAT_UPSTREAM_URL;
+const BYPASS_SECRET = process.env.LUME_CHAT_BYPASS_SECRET;
+const ALLOWED_PATHS = new Set(["signup", "login", "logout", "me", "loyalty", "chat-history"]);
+const REQUEST_HEADERS = [
+  "content-type",
+  "origin",
+  "x-lume-tenant",
+  "x-forwarded-for",
+  "cookie",
+] as const;
+const RESPONSE_HEADERS = [
+  "content-type",
+  "cache-control",
+  "set-cookie",
+  "access-control-allow-origin",
+  "access-control-allow-headers",
+  "access-control-allow-methods",
+  "access-control-allow-credentials",
+  "vary",
+] as const;
+
+type VercelRequest = {
+  method?: string;
+  body?: unknown;
+  headers: Record<string, string | string[] | undefined>;
+  query: Record<string, string | string[] | undefined>;
+};
+
+type VercelResponse = {
+  status: (statusCode: number) => VercelResponse;
+  setHeader: (name: string, value: string) => void;
+  json: (payload: unknown) => void;
+  write: (chunk: Uint8Array | string) => void;
+  end: () => void;
+};
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!req.method || !["GET", "POST", "OPTIONS"].includes(req.method)) {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+  const path = query(req, "path")?.replace(/^\/+|\/+$/g, "");
+  if (!path || !ALLOWED_PATHS.has(path)) {
+    return res.status(404).json({ error: "Visitor endpoint not found" });
+  }
+  if (!CHAT_UPSTREAM_URL) {
+    return res.status(503).json({ error: "Visitor API upstream not configured" });
+  }
+
+  const headers: Record<string, string> = {};
+  for (const name of REQUEST_HEADERS) {
+    const rawValue = header(req, name);
+    const value = name === "cookie" ? visitorSessionCookieHeader(rawValue) : rawValue;
+    if (value) headers[name] = value;
+  }
+  if (BYPASS_SECRET) headers["x-vercel-protection-bypass"] = BYPASS_SECRET;
+
+  const upstream = new URL(`/api/visitor/${path}`, CHAT_UPSTREAM_URL);
+  const tenant = query(req, "tenant");
+  if (tenant) upstream.searchParams.set("tenant", tenant);
+
+  let response: Response;
+  try {
+    response = await fetch(upstream, {
+      method: req.method,
+      headers,
+      body: req.method === "POST"
+        ? typeof req.body === "string" ? req.body : JSON.stringify(req.body ?? {})
+        : undefined,
+    });
+  } catch {
+    return res.status(502).json({ error: "Visitor API upstream unreachable" });
+  }
+
+  res.status(response.status);
+  for (const name of RESPONSE_HEADERS) {
+    const value = response.headers.get(name);
+    if (value) res.setHeader(name, value);
+  }
+  if (!response.body) return res.end();
+
+  const reader = response.body.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+  } finally {
+    reader.releaseLock();
+    res.end();
+  }
+}
+
+function header(req: VercelRequest, name: string): string | undefined {
+  const value = req.headers[name] ?? req.headers[name.toLowerCase()];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function query(req: VercelRequest, name: string): string | undefined {
+  const value = req.query[name];
+  return Array.isArray(value) ? value[0] : value;
+}

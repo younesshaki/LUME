@@ -123,3 +123,10 @@
 - Migration: 044_vehicle_image_management.sql (NOT applied)
 - Env added: none (uses SCRUM-108 R2_* names)
 - Review notes / open questions: Reorder validates the exact full image set and uses collision-safe two-phase ordering; primary selection and delete/promotion are atomic editor-authorized RPCs. The gallery supports drag ordering plus keyboard-accessible move buttons, a distinct primary control, and confirmed deletion. Metadata is removed before the server attempts R2 deletion so public state stays consistent; failures surface a reconciliation warning. `/api/vehicles` bulk-loads primary rows once per page and degrades to legacy imagery when migration 043 or `R2_PUBLIC_BASE_URL` is unavailable. Vehicle cards, compare, builder inventory, and detail now use managed-primary → special → legacy precedence. Claude should provision an orphan-reconciliation job and ensure vehicle deletion queues all related R2 keys before the metadata cascade.
+
+## SCRUM-136 Bot loyalty acknowledgement
+- Status: done
+- Files: apps/admin/lib/chatLoyalty.ts, apps/admin/lib/visitorSession.ts, apps/admin/app/api/chat/route.ts, api/{chat.ts,visitor/[...path].ts,visitorSessionCookie.ts}, src/lib/deepseekService.ts
+- Migration: none (depends on unapplied loyalty migrations 029, 032, and 033)
+- Env added: none (visitor proxy derives the admin origin from existing LUME_CHAT_UPSTREAM_URL)
+- Review notes / open questions: The public visitor proxy now keeps the HttpOnly session cookie on the public origin, chat sends credentials, and both proxies forward only `lume_visitor_session` upstream so server-side visitor resolution works without exposing unrelated cookies. Signed-in prompts receive only derived balance/tier and the currently wired inquiry award—never email, IDs, or transactions. Missing sessions or loyalty storage degrade to the anonymous prompt. Gold/Platinum may be acknowledged naturally, but the model is explicitly forbidden from inventing unconfigured benefits; Claude should add benefit metadata before promising priority scheduling or other tier entitlements and connect the saved/referral/chat-session producers before advertising those awards.
