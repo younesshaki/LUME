@@ -60,3 +60,10 @@
 - Migration: none (depends on unapplied 031_tenant_bot_config.sql)
 - Env added: none
 - Review notes / open questions: Missing config preserves legacy access to all registered tools; explicit `[]` disables all; config read errors fail closed. The same filtered list controls DeepSeek advertisement, system-prompt disclosure, and runner execution. Jira mentions `schedule_test_drive`, but no such callable tool is registered, so the UI truthfully lists only the seven real inventory tools; Claude should add it only with a real implementation.
+
+## SCRUM-173 Manual and round-robin lead assignment
+- Status: done
+- Files: supabase/migrations/038_lead_assignment.sql, packages/db/src/schema.ts, apps/admin/lib/{leadAssignment,team}.ts, apps/admin/app/admin/[tenant]/{team,leads/[leadId]}/**
+- Migration: 038_lead_assignment.sql (NOT applied)
+- Env added: none
+- Review notes / open questions: Existing RBAC roles remain unchanged; `sales_enabled` and `out_of_office` are additive tenant-member flags. The database trigger locks `tenant_settings`, advances a persistent cursor, and leaves leads unassigned when every sales member is away. Manual assignment is tenant-membership constrained. Claude should confirm that orthogonal sales participation is preferable to replacing the existing role check with a new `sales` RBAC role.

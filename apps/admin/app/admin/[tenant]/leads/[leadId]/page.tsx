@@ -28,7 +28,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
     .maybeSingle();
   if (!tenant) notFound();
 
-  const [leadResult, activityResult, reasonResult] = await Promise.all([
+  const [leadResult, activityResult, reasonResult, membersResult] = await Promise.all([
     supabase
       .from("leads")
       .select("*")
@@ -45,6 +45,11 @@ export default async function LeadDetailPage({ params }: PageProps) {
       .from("lead_lost_reason_options")
       .select("key, label, sort_order, is_active")
       .eq("tenant_id", tenant.id),
+    supabase
+      .from("tenant_members")
+      .select("user_id, role, sales_enabled, out_of_office")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: true }),
   ]);
   const { data: leadRow, error: leadError } = leadResult;
 
@@ -55,6 +60,9 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
   if (activityResult.error) {
     throw new Error(`Unable to load lead activities: ${activityResult.error.message}`);
+  }
+  if (membersResult.error) {
+    throw new Error(`Unable to load assignable team members: ${membersResult.error.message}`);
   }
 
   const reasonOverrides: TenantLeadLostReasonOverride[] = (reasonResult.data ?? []).map((row) => ({
@@ -77,6 +85,12 @@ export default async function LeadDetailPage({ params }: PageProps) {
       lead={rowToLead(leadRow as LeadRow)}
       initialActivities={((activityResult.data ?? []) as LeadActivityRow[]).map(rowToLeadActivity)}
       lostReasons={lostReasons}
+      teamMembers={(membersResult.data ?? []).map((member) => ({
+        userId: member.user_id,
+        role: member.role,
+        salesEnabled: member.sales_enabled,
+        outOfOffice: member.out_of_office,
+      }))}
     />
   );
 }

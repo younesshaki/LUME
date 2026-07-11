@@ -30,12 +30,16 @@ describe("team helpers", () => {
         tenant_id: "tenant-1",
         user_id: "user-1",
         role: "editor",
+        sales_enabled: true,
+        out_of_office: false,
         created_at: "2026-07-03T10:00:00.000Z",
       })
     ).toEqual({
       tenantId: "tenant-1",
       userId: "user-1",
       role: "editor",
+      salesEnabled: true,
+      outOfOffice: false,
       createdAt: "2026-07-03T10:00:00.000Z",
     });
   });

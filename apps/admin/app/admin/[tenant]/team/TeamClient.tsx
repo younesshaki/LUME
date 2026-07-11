@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { TenantInvite, TenantRole } from "@lume/types";
+import type { LeadAssignmentMode } from "@/lib/leadAssignment";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
@@ -13,6 +14,7 @@ import {
   validateInviteEmail,
   type TeamMember,
 } from "@/lib/team";
+import { updateLeadAssignmentMode, updateMemberSalesAvailability } from "./actions";
 
 type TeamClientProps = {
   tenantId: string;
@@ -20,6 +22,7 @@ type TeamClientProps = {
   tenantName: string;
   currentUserId: string;
   canManage: boolean;
+  initialAssignmentMode: LeadAssignmentMode;
   initialMembers: TeamMember[];
   initialInvites: TenantInvite[];
 };
@@ -36,17 +39,73 @@ export default function TeamClient({
   tenantName,
   currentUserId,
   canManage,
+  initialAssignmentMode,
   initialMembers,
   initialInvites,
 }: TeamClientProps) {
   const router = useRouter();
   const [members, setMembers] = useState(initialMembers);
+  const [assignmentMode, setAssignmentMode] = useState(initialAssignmentMode);
   const [invites, setInvites] = useState(initialInvites);
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<TenantRole>("viewer");
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const availableSalesCount = members.filter(
+    (member) => member.salesEnabled && !member.outOfOffice
+  ).length;
+
+  async function changeAssignmentMode(mode: LeadAssignmentMode) {
+    if (!canManage || mode === assignmentMode) return;
+    setBusyKey("assignment-mode");
+    setStatus({ type: "saving", message: "Updating lead routing…" });
+    try {
+      const result = await updateLeadAssignmentMode(tenantSlug, mode);
+      if (result.error) {
+        setStatus({ type: "error", message: result.error });
+      } else {
+        setAssignmentMode(mode);
+        setStatus({ type: "success", message: "Lead routing updated." });
+        router.refresh();
+      }
+    } catch {
+      setStatus({ type: "error", message: "Unable to update lead routing." });
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function changeSalesAvailability(
+    member: TeamMember,
+    salesEnabled: boolean,
+    outOfOffice: boolean,
+  ) {
+    if (!canManage) return;
+    setBusyKey(`sales:${member.userId}`);
+    setStatus({ type: "saving", message: "Updating sales availability…" });
+    try {
+      const result = await updateMemberSalesAvailability(
+        tenantSlug,
+        member.userId,
+        salesEnabled,
+        outOfOffice,
+      );
+      if (result.error) {
+        setStatus({ type: "error", message: result.error });
+      } else {
+        setMembers((current) => current.map((item) =>
+          item.userId === member.userId ? { ...item, salesEnabled, outOfOffice } : item
+        ));
+        setStatus({ type: "success", message: "Sales availability updated." });
+        router.refresh();
+      }
+    } catch {
+      setStatus({ type: "error", message: "Unable to update sales availability." });
+    } finally {
+      setBusyKey(null);
+    }
+  }
 
   async function changeRole(member: TeamMember, role: TenantRole) {
     if (!canManage || role === member.role) return;
@@ -191,7 +250,36 @@ export default function TeamClient({
       )}
       {status.message && <StatusBanner type={status.type} message={status.message} />}
 
-      <section className="overflow-hidden rounded-xl border">
+      <section className="rounded-xl border p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold">Lead routing</h2>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+              Round robin assigns each new lead to the next available sales-enabled member.
+              Manual assignments remain available from each lead detail page.
+            </p>
+          </div>
+          <label className="text-xs font-medium text-muted-foreground">
+            Assignment mode
+            <select
+              value={assignmentMode}
+              disabled={!canManage || busyKey === "assignment-mode"}
+              onChange={(event) => void changeAssignmentMode(event.target.value as LeadAssignmentMode)}
+              className="mt-1 block rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm text-foreground disabled:opacity-50 dark:border-neutral-700"
+            >
+              <option value="manual">Manual</option>
+              <option value="round_robin">Round robin</option>
+            </select>
+          </label>
+        </div>
+        {assignmentMode === "round_robin" && availableSalesCount === 0 ? (
+          <p className="mt-3 text-sm text-amber-700 dark:text-amber-400" role="status">
+            No sales members are currently available; new leads will remain unassigned.
+          </p>
+        ) : null}
+      </section>
+
+      <section className="overflow-x-auto rounded-xl border">
         <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Members</h2>
         </div>
@@ -200,6 +288,8 @@ export default function TeamClient({
             <tr className="border-b bg-muted/50">
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Sales routing</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Out of office</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Joined</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
             </tr>
@@ -229,6 +319,40 @@ export default function TeamClient({
                       </option>
                     ))}
                   </select>
+                </td>
+                <td className="px-4 py-3">
+                  <label className="inline-flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={member.salesEnabled}
+                      disabled={!canManage || busyKey === `sales:${member.userId}`}
+                      onChange={(event) => void changeSalesAvailability(
+                        member,
+                        event.target.checked,
+                        event.target.checked ? member.outOfOffice : false,
+                      )}
+                    />
+                    Sales member
+                  </label>
+                </td>
+                <td className="px-4 py-3">
+                  <label className="inline-flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={member.outOfOffice}
+                      disabled={
+                        !canManage ||
+                        !member.salesEnabled ||
+                        busyKey === `sales:${member.userId}`
+                      }
+                      onChange={(event) => void changeSalesAvailability(
+                        member,
+                        member.salesEnabled,
+                        event.target.checked,
+                      )}
+                    />
+                    Away
+                  </label>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{formatDate(member.createdAt)}</td>
                 <td className="px-4 py-3 text-right">

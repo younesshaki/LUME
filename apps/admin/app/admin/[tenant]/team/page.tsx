@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
-  canManageTeam,
   rowToTeamMember,
   rowToTenantInvite,
   type TeamMemberRow,
@@ -27,28 +26,33 @@ export default async function TeamPage({ params }: PageProps) {
     .maybeSingle();
   if (!tenant) notFound();
 
-  const { data: currentMembership } = await supabase
-    .from("tenant_members")
-    .select("role")
-    .eq("tenant_id", tenant.id)
-    .eq("user_id", user?.id ?? "")
-    .maybeSingle();
+  const { data: canManage } = await supabase.rpc("user_has_tenant_role", {
+    p_tenant_id: tenant.id,
+    p_roles: ["owner", "admin"],
+  });
 
-  const { data: memberRows, error: membersError } = await supabase
-    .from("tenant_members")
-    .select("tenant_id, user_id, role, created_at")
-    .eq("tenant_id", tenant.id)
-    .order("created_at", { ascending: true });
+  const [membersResult, invitesResult, settingsResult] = await Promise.all([
+    supabase
+      .from("tenant_members")
+      .select("tenant_id, user_id, role, sales_enabled, out_of_office, created_at")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("tenant_invites")
+      .select("*")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("tenant_settings")
+      .select("lead_assignment_mode")
+      .eq("tenant_id", tenant.id)
+      .maybeSingle(),
+  ]);
 
-  if (membersError) {
-    throw new Error(`Unable to load team members: ${membersError.message}`);
-  }
+  const { data: memberRows, error: membersError } = membersResult;
+  if (membersError) throw new Error(`Unable to load team members: ${membersError.message}`);
 
-  const { data: inviteRows, error: invitesError } = await supabase
-    .from("tenant_invites")
-    .select("*")
-    .eq("tenant_id", tenant.id)
-    .order("created_at", { ascending: false });
+  const { data: inviteRows, error: invitesError } = invitesResult;
 
   if (invitesError) {
     throw new Error(`Unable to load tenant invites: ${invitesError.message}`);
@@ -60,7 +64,8 @@ export default async function TeamPage({ params }: PageProps) {
       tenantSlug={tenant.slug}
       tenantName={tenant.name}
       currentUserId={user?.id ?? ""}
-      canManage={canManageTeam(currentMembership?.role ?? null)}
+      canManage={canManage === true}
+      initialAssignmentMode={settingsResult.data?.lead_assignment_mode ?? "manual"}
       initialMembers={((memberRows ?? []) as TeamMemberRow[]).map(rowToTeamMember)}
       initialInvites={(inviteRows ?? []).map(rowToTenantInvite)}
     />

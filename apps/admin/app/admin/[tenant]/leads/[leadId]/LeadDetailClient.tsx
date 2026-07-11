@@ -15,6 +15,14 @@ type LeadDetailClientProps = {
   lead: Lead;
   initialActivities: LeadActivity[];
   lostReasons: LeadLostReason[];
+  teamMembers: AssignableTeamMember[];
+};
+
+type AssignableTeamMember = {
+  userId: string;
+  role: string;
+  salesEnabled: boolean;
+  outOfOffice: boolean;
 };
 
 type StatusState =
@@ -32,12 +40,63 @@ export default function LeadDetailClient({
   lead,
   initialActivities,
   lostReasons,
+  teamMembers,
 }: LeadDetailClientProps) {
   const [currentLead, setCurrentLead] = useState(lead);
   const [activities, setActivities] = useState(initialActivities);
   const [state, setState] = useState<StatusState>({ type: "idle", message: "" });
   const [draftStatus, setDraftStatus] = useState<LeadStatus>(lead.status);
   const [draftLostReason, setDraftLostReason] = useState(lead.lostReason ?? "");
+
+  async function updateAssignee(nextAssigneeId: string | null) {
+    if (nextAssigneeId === currentLead.assignedTo) return;
+    if (nextAssigneeId && !teamMembers.some((member) => member.userId === nextAssigneeId)) {
+      setState({ type: "error", message: "Choose a tenant team member." });
+      return;
+    }
+
+    setState({ type: "saving", message: "Updating lead assignment…" });
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error: updateError } = await supabase
+        .from("leads")
+        .update({ assigned_to: nextAssigneeId })
+        .eq("tenant_id", tenantId)
+        .eq("id", currentLead.id);
+      if (updateError) throw new Error(updateError.message);
+
+      const body = nextAssigneeId
+        ? `Lead assigned to team member ${nextAssigneeId}.`
+        : "Lead assignment cleared.";
+      const { data: activityRow, error: activityError } = await supabase
+        .from("lead_activities")
+        .insert({
+          tenant_id: tenantId,
+          lead_id: currentLead.id,
+          actor_user_id: null,
+          type: "assignment",
+          body,
+        })
+        .select("*")
+        .single();
+
+      setCurrentLead((current) => ({ ...current, assignedTo: nextAssigneeId }));
+      if (!activityError && activityRow) {
+        setActivities((current) => [rowToLeadActivity(activityRow), ...current]);
+      }
+      setState({
+        type: "success",
+        message: activityError
+          ? "Lead assignment updated, but its timeline entry could not be recorded."
+          : "Lead assignment updated.",
+      });
+    } catch (error) {
+      setState({
+        type: "error",
+        message: error instanceof Error ? error.message : "Unable to update lead assignment.",
+      });
+    }
+  }
 
   async function updateStatus() {
     const nextStatus = draftStatus;
@@ -179,6 +238,27 @@ export default function LeadDetailClient({
       <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <div>
+            <h2 className="text-sm font-semibold">Assignment</h2>
+            <label className="mt-3 block text-xs font-medium text-muted-foreground">
+              Team member
+              <select
+                value={currentLead.assignedTo ?? ""}
+                disabled={state.type === "saving"}
+                onChange={(event) => void updateAssignee(event.target.value || null)}
+                className="mt-1 block w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm text-foreground disabled:opacity-50 dark:border-neutral-700"
+              >
+                <option value="">Unassigned</option>
+                {teamMembers.map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {member.userId} · {member.role}
+                    {member.salesEnabled ? " · sales" : ""}
+                    {member.outOfOffice ? " · away" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="border-t border-neutral-200 pt-4 dark:border-neutral-800">
             <h2 className="text-sm font-semibold">Contact</h2>
             <dl className="mt-3 space-y-3 text-sm">
               <InfoRow label="Email" value={currentLead.email} />

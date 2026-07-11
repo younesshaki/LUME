@@ -32,14 +32,38 @@ export type Database = {
           tenant_id: string;
           user_id: string;
           role: "owner" | "admin" | "editor" | "viewer";
+          sales_enabled: boolean;
+          out_of_office: boolean;
           created_at: string;
         };
         Insert: {
           tenant_id: string;
           user_id: string;
           role?: "owner" | "admin" | "editor" | "viewer";
+          sales_enabled?: boolean;
+          out_of_office?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["tenant_members"]["Insert"]>;
+        Relationships: [];
+      };
+      tenant_settings: {
+        Row: {
+          tenant_id: string;
+          lead_assignment_mode: "manual" | "round_robin";
+          last_lead_assignee_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_settings"]["Row"],
+          "lead_assignment_mode" | "last_lead_assignee_id" | "created_at" | "updated_at"
+        > & {
+          lead_assignment_mode?: "manual" | "round_robin";
+          last_lead_assignee_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_settings"]["Insert"]>;
         Relationships: [];
       };
       plans: {

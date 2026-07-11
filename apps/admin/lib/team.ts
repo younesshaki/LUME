@@ -4,6 +4,8 @@ export type TeamMember = {
   tenantId: string;
   userId: string;
   role: TenantRole;
+  salesEnabled: boolean;
+  outOfOffice: boolean;
   createdAt: string;
 };
 
@@ -11,6 +13,8 @@ export type TeamMemberRow = {
   tenant_id: string;
   user_id: string;
   role: TenantRole;
+  sales_enabled: boolean;
+  out_of_office: boolean;
   created_at: string;
 };
 
@@ -34,6 +38,8 @@ export function rowToTeamMember(row: TeamMemberRow): TeamMember {
     tenantId: row.tenant_id,
     userId: row.user_id,
     role: row.role,
+    salesEnabled: row.sales_enabled,
+    outOfOffice: row.out_of_office,
     createdAt: row.created_at,
   };
 }
