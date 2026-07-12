@@ -32,7 +32,6 @@ export default async function DomainsPage({ params }: PageProps) {
 
   return (
     <DomainsClient
-      tenantId={tenant.id}
       tenantSlug={tenant.slug}
       tenantName={tenant.name}
       initialDomains={(data ?? []).map(rowToTenantDomain)}

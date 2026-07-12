@@ -774,15 +774,17 @@ export type Database = {
           domain: string;
           verified: boolean;
           verification_token: string;
+          vercel_config: Record<string, unknown>;
           created_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["tenant_domains"]["Row"],
-          "id" | "verified" | "verification_token" | "created_at"
+          "id" | "verified" | "verification_token" | "vercel_config" | "created_at"
         > & {
           id?: string;
           verified?: boolean;
           verification_token?: string;
+          vercel_config?: Record<string, unknown>;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["tenant_domains"]["Insert"]>;

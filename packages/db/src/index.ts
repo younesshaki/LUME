@@ -19,4 +19,5 @@ export * from "./storageQuota";
 export * from "./uploadPolicy";
 export * from "./emailEvents";
 export * from "./leadEmail";
+export * from "./vercel";
 export type { Database } from "./schema";

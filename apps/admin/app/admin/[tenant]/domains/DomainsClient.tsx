@@ -5,16 +5,14 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { TenantDomain } from "@lume/types";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   normalizeDomainInput,
-  rowToTenantDomain,
   validateDomainInput,
   verificationHost,
 } from "@/lib/domains";
+import { addTenantDomain, removeTenantDomain } from "./actions";
 
 type DomainsClientProps = {
-  tenantId: string;
   tenantSlug: string;
   tenantName: string;
   initialDomains: TenantDomain[];
@@ -27,7 +25,6 @@ type StatusState =
   | { type: "error"; message: string };
 
 export default function DomainsClient({
-  tenantId,
   tenantSlug,
   tenantName,
   initialDomains,
@@ -49,13 +46,10 @@ export default function DomainsClient({
     const domain = normalizeDomainInput(domainInput);
     setStatus({ type: "saving", message: "Adding domain..." });
     try {
-      const { data, error } = await createSupabaseBrowserClient()
-        .from("tenant_domains")
-        .insert({ tenant_id: tenantId, domain })
-        .select("*")
-        .single();
-      if (error) throw new Error(error.message);
-      setDomains((current) => [rowToTenantDomain(data), ...current]);
+      const result = await addTenantDomain(tenantSlug, domain);
+      if (result.error || !result.domain) throw new Error(result.error ?? "Unable to add domain.");
+      const addedDomain = result.domain;
+      setDomains((current) => [addedDomain, ...current]);
       setDomainInput("");
       setStatus({ type: "success", message: "Domain added. Add the TXT record below to verify ownership." });
       router.refresh();
@@ -70,12 +64,8 @@ export default function DomainsClient({
   async function removeDomain(domain: TenantDomain) {
     setRemovingId(domain.id);
     try {
-      const { error } = await createSupabaseBrowserClient()
-        .from("tenant_domains")
-        .delete()
-        .eq("tenant_id", tenantId)
-        .eq("id", domain.id);
-      if (error) throw new Error(error.message);
+      const result = await removeTenantDomain(tenantSlug, domain.id);
+      if (result.error) throw new Error(result.error);
       setDomains((current) => current.filter((item) => item.id !== domain.id));
       toast.success(`Removed ${domain.domain}`);
       router.refresh();
@@ -107,6 +97,11 @@ export default function DomainsClient({
           Add domain
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
             <input
+              name="domain"
+              type="text"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
               value={domainInput}
               onChange={(event) => {
                 setDomainInput(event.target.value);
