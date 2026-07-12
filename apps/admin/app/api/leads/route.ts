@@ -14,6 +14,7 @@
 import type { LeadCaptureResponse } from "@lume/types";
 import {
   accrueLoyaltyPoints,
+  enqueueLeadCreatedWebhooks,
   quotaExceededPayload,
   quotaResponseHeaders,
   type Database,
@@ -172,6 +173,14 @@ export async function POST(request: Request): Promise<Response> {
       leadId: data.id,
     });
   }
+
+  await enqueueLeadCreatedWebhooks(supabase, tenant.tenantId, data.id)
+    .catch((webhookError: unknown) => {
+      captureError("api/leads/crm-webhook", webhookError, {
+        tenantId: tenant.tenantId,
+        leadId: data.id,
+      });
+    });
 
   const response: LeadCaptureResponse = { leadId: data.id };
   return json(response, 201, request, quotaHeaders);

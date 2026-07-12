@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   deliverTenantWebhook,
   isAllowedWebhookEndpoint,
+  isPublicWebhookAddress,
   nextWebhookAttempt,
+  normalizeWebhookRetryDelays,
   signWebhookPayload,
   WEBHOOK_RETRY_DELAYS_MS,
   type WebhookDeliveryJob,
@@ -27,6 +29,9 @@ describe("tenant webhook delivery", () => {
     expect(isAllowedWebhookEndpoint("https://10.0.0.5/hook")).toBe(false);
     expect(isAllowedWebhookEndpoint("https://192.168.1.5/hook")).toBe(false);
     expect(isAllowedWebhookEndpoint("https://[::1]/hook")).toBe(false);
+    expect(isPublicWebhookAddress("10.0.0.1")).toBe(false);
+    expect(isPublicWebhookAddress("::1")).toBe(false);
+    expect(isPublicWebhookAddress("8.8.8.8")).toBe(true);
   });
 
   it("builds a standard HMAC-SHA256 signature", async () => {
@@ -45,6 +50,23 @@ describe("tenant webhook delivery", () => {
     expect(nextWebhookAttempt(0, 0)).toBe("1970-01-01T00:01:00.000Z");
     expect(nextWebhookAttempt(5, 0)).toBeNull();
     expect(() => nextWebhookAttempt(-1)).toThrow(/non-negative/i);
+    expect(normalizeWebhookRetryDelays([5, 60, 300])).toEqual([5_000, 60_000, 300_000]);
+    expect(normalizeWebhookRetryDelays([])).toBeNull();
+    expect(normalizeWebhookRetryDelays([0])).toBeNull();
+  });
+
+  it("uses a tenant-configured bounded retry schedule", async () => {
+    await expect(deliverTenantWebhook(job, {
+      signingSecret: "test-only-secret",
+      transport: async () => ({ status: 429 }),
+      retryDelaysMs: [2_000],
+      nowMs: 0,
+    })).resolves.toEqual({
+      status: "retrying",
+      responseStatus: 429,
+      nextAttemptAt: "1970-01-01T00:00:02.000Z",
+      error: "Webhook responded with HTTP 429.",
+    });
   });
 
   it("is a safe no-op until transport and secret configuration are injected", async () => {

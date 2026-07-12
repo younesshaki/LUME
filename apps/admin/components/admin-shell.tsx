@@ -35,6 +35,7 @@ import {
   Search,
   CheckCheck,
   Users,
+  Webhook as WebhookIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -125,6 +126,7 @@ const SECTIONS = [
   { slug: "analytics", label: "Analytics", icon: BarChart3 },
   { slug: "settings/billing", label: "Billing", icon: CreditCard },
   { slug: "settings/api-keys", label: "API Keys", icon: KeyRound },
+  { slug: "settings/integrations", label: "Integrations", icon: WebhookIcon },
   { slug: "pages", label: "Pages", icon: FileText },
   { slug: "navigation", label: "Navigation", icon: PanelTop },
   { slug: "assets", label: "Assets", icon: ImageIcon },

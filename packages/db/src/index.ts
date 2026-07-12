@@ -10,6 +10,7 @@ export * from "./audit";
 export * from "./visitors";
 export * from "./loyalty";
 export * from "./webhooks";
+export * from "./webhookQueue";
 export * from "./csvImports";
 export * from "./notifications";
 export * from "./vehicleStatus";

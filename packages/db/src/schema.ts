@@ -373,16 +373,21 @@ export type Database = {
           endpoint_url: string;
           events: string[];
           enabled: boolean;
+          integration_kind: "hubspot" | "pipedrive" | "custom";
+          retry_delays_seconds: number[];
           created_at: string;
           updated_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["tenant_webhooks"]["Row"],
-          "id" | "events" | "enabled" | "created_at" | "updated_at"
+          "id" | "events" | "enabled" | "integration_kind" |
+          "retry_delays_seconds" | "created_at" | "updated_at"
         > & {
           id?: string;
           events?: string[];
           enabled?: boolean;
+          integration_kind?: "hubspot" | "pipedrive" | "custom";
+          retry_delays_seconds?: number[];
           created_at?: string;
           updated_at?: string;
         };
@@ -1440,6 +1445,32 @@ export type Database = {
           domain_id: string | null;
           domain_limit: number;
           domain_count: number;
+        }[];
+      };
+      create_tenant_crm_webhook: {
+        Args: {
+          p_tenant_id: string;
+          p_name: string;
+          p_endpoint_url: string;
+          p_integration_kind: "hubspot" | "pipedrive" | "custom";
+          p_retry_delays_seconds: number[];
+          p_signing_secret_ciphertext: string;
+        };
+        Returns: string;
+      };
+      claim_webhook_deliveries: {
+        Args: { p_limit?: number };
+        Returns: {
+          id: string;
+          tenant_id: string;
+          webhook_id: string;
+          endpoint_url: string;
+          event_type: "lead.created" | "lead.status_changed" | "vehicle.sold" | "test_drive.scheduled";
+          event_id: string;
+          payload: Record<string, unknown>;
+          attempt_count: number;
+          signing_secret_ciphertext: string;
+          retry_delays_seconds: number[];
         }[];
       };
     };

@@ -12,6 +12,8 @@ export const WEBHOOK_RETRY_DELAYS_MS = [
   6 * 60 * 60_000,
 ] as const;
 
+export const MAX_WEBHOOK_RETRY_ATTEMPTS = 10;
+
 export type WebhookDeliveryJob = {
   id: string;
   endpointUrl: string;
@@ -51,6 +53,11 @@ export function isAllowedWebhookEndpoint(endpointUrl: string): boolean {
   return !isPrivateIpv4(hostname) && !isPrivateIpv6(hostname);
 }
 
+export function isPublicWebhookAddress(address: string): boolean {
+  const normalized = address.replace(/^\[|\]$/g, "").toLowerCase();
+  return !isPrivateIpv4(normalized) && !isPrivateIpv6(normalized);
+}
+
 export async function signWebhookPayload(secret: string, body: string): Promise<string> {
   const key = await globalThis.crypto.subtle.importKey(
     "raw",
@@ -71,12 +78,21 @@ export async function signWebhookPayload(secret: string, body: string): Promise<
 export function nextWebhookAttempt(
   completedAttempts: number,
   nowMs = Date.now(),
+  retryDelaysMs: readonly number[] = WEBHOOK_RETRY_DELAYS_MS,
 ): string | null {
   if (!Number.isSafeInteger(completedAttempts) || completedAttempts < 0) {
     throw new RangeError("completedAttempts must be a non-negative safe integer.");
   }
-  const delay = WEBHOOK_RETRY_DELAYS_MS[completedAttempts];
+  const delay = retryDelaysMs[completedAttempts];
   return delay === undefined ? null : new Date(nowMs + delay).toISOString();
+}
+
+export function normalizeWebhookRetryDelays(seconds: readonly number[]): number[] | null {
+  if (seconds.length < 1 || seconds.length > MAX_WEBHOOK_RETRY_ATTEMPTS) return null;
+  const delays = seconds.map((value) => value * 1_000);
+  return delays.every((value) => Number.isSafeInteger(value) && value >= 1_000 && value <= 86_400_000)
+    ? delays
+    : null;
 }
 
 /**
@@ -89,6 +105,7 @@ export async function deliverTenantWebhook(
     signingSecret?: string;
     transport?: WebhookTransport;
     nowMs?: number;
+    retryDelaysMs?: readonly number[];
   } = {},
 ): Promise<WebhookDeliveryOutcome> {
   if (!options.transport || !options.signingSecret) return { status: "not_configured" };
@@ -129,7 +146,11 @@ export async function deliverTenantWebhook(
     error = reason instanceof Error ? reason.message : error;
   }
 
-  const nextAttemptAt = nextWebhookAttempt(job.attemptCount, options.nowMs);
+  const nextAttemptAt = nextWebhookAttempt(
+    job.attemptCount,
+    options.nowMs,
+    options.retryDelaysMs ?? WEBHOOK_RETRY_DELAYS_MS,
+  );
   return nextAttemptAt
     ? { status: "retrying", responseStatus, nextAttemptAt, error }
     : { status: "dead_letter", responseStatus, error };
