@@ -1,4 +1,11 @@
 export {
+  LeadCreatedEmail,
+  leadCreatedEmailTemplate,
+} from "./LeadCreatedEmail";
+export type { LeadCreatedEmailProps, LeadEmailSummary } from "./LeadCreatedEmail";
+export { LeadDigestEmail, leadDigestEmailTemplate } from "./LeadDigestEmail";
+export type { LeadDigestEmailProps } from "./LeadDigestEmail";
+export {
   PasswordResetEmail,
   passwordResetEmailTemplate,
 } from "./PasswordResetEmail";

@@ -30,6 +30,8 @@ import {
 import { checkPublicApiQuota } from "@/lib/quota.server";
 import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
 import { apiKeyFromRequest, verifyTenantApiKey } from "@/lib/apiKeys";
+import { notifyNewLead } from "@/lib/leadEmailNotifications.server";
+import { captureError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -125,7 +127,11 @@ export async function POST(request: Request): Promise<Response> {
     lost_reason: null,
   };
 
-  const { data, error } = await supabase.from("leads").insert(insert).select("id").single();
+  const { data, error } = await supabase
+    .from("leads")
+    .insert(insert)
+    .select("id, assigned_to, created_at")
+    .single();
   if (error || !data) {
     console.error("[/api/leads] insert failed:", error?.message ?? "no row");
     return json({ error: "Unable to capture lead" }, 500, request, quotaHeaders);
@@ -144,6 +150,26 @@ export async function POST(request: Request): Promise<Response> {
         "[/api/leads] loyalty accrual failed:",
         accrualError instanceof Error ? accrualError.message : "unknown error",
       );
+    });
+  }
+
+  try {
+    const notification = await notifyNewLead(
+      supabase,
+      tenant.tenantId,
+      data.id,
+      new URL(request.url).origin,
+    );
+    if (notification.status === "failed") {
+      captureError("api/leads/email", new Error(notification.reason), {
+        tenantId: tenant.tenantId,
+        leadId: data.id,
+      });
+    }
+  } catch (notificationError) {
+    captureError("api/leads/email", notificationError, {
+      tenantId: tenant.tenantId,
+      leadId: data.id,
     });
   }
 

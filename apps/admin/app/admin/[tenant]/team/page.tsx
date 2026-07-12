@@ -6,6 +6,7 @@ import {
   type TeamMemberRow,
 } from "@/lib/team";
 import TeamClient from "./TeamClient";
+import { normalizeLeadEmailSettings } from "@/lib/leadEmailPolicy";
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
@@ -44,7 +45,7 @@ export default async function TeamPage({ params }: PageProps) {
       .order("created_at", { ascending: false }),
     supabase
       .from("tenant_settings")
-      .select("lead_assignment_mode")
+      .select("lead_assignment_mode, lead_email_enabled, lead_email_roles, lead_email_mode, lead_email_unassigned_address, email_from_address")
       .eq("tenant_id", tenant.id)
       .maybeSingle(),
   ]);
@@ -58,6 +59,14 @@ export default async function TeamPage({ params }: PageProps) {
     throw new Error(`Unable to load tenant invites: ${invitesError.message}`);
   }
 
+  const leadEmailSettings = normalizeLeadEmailSettings({
+    enabled: settingsResult.data?.lead_email_enabled ?? false,
+    roles: settingsResult.data?.lead_email_roles ?? ["owner"],
+    mode: settingsResult.data?.lead_email_mode ?? "instant",
+    unassignedAddress: settingsResult.data?.lead_email_unassigned_address ?? null,
+    fromAddress: settingsResult.data?.email_from_address ?? null,
+  });
+
   return (
     <TeamClient
       tenantId={tenant.id}
@@ -66,6 +75,13 @@ export default async function TeamPage({ params }: PageProps) {
       currentUserId={user?.id ?? ""}
       canManage={canManage === true}
       initialAssignmentMode={settingsResult.data?.lead_assignment_mode ?? "manual"}
+      initialLeadEmailSettings={leadEmailSettings ?? {
+        enabled: false,
+        roles: ["owner"],
+        mode: "instant",
+        unassignedAddress: null,
+        fromAddress: null,
+      }}
       initialMembers={((memberRows ?? []) as TeamMemberRow[]).map(rowToTeamMember)}
       initialInvites={(inviteRows ?? []).map(rowToTenantInvite)}
     />

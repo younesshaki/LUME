@@ -52,6 +52,10 @@ export type Database = {
           lead_assignment_mode: "manual" | "round_robin";
           last_lead_assignee_id: string | null;
           email_from_address: string | null;
+          lead_email_enabled: boolean;
+          lead_email_roles: Array<"owner" | "admin" | "editor" | "viewer">;
+          lead_email_mode: "instant" | "hourly";
+          lead_email_unassigned_address: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -60,12 +64,20 @@ export type Database = {
           | "lead_assignment_mode"
           | "last_lead_assignee_id"
           | "email_from_address"
+          | "lead_email_enabled"
+          | "lead_email_roles"
+          | "lead_email_mode"
+          | "lead_email_unassigned_address"
           | "created_at"
           | "updated_at"
         > & {
           lead_assignment_mode?: "manual" | "round_robin";
           last_lead_assignee_id?: string | null;
           email_from_address?: string | null;
+          lead_email_enabled?: boolean;
+          lead_email_roles?: Array<"owner" | "admin" | "editor" | "viewer">;
+          lead_email_mode?: "instant" | "hourly";
+          lead_email_unassigned_address?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -321,6 +333,36 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["tenant_email_suppressions"]["Insert"]>;
+        Relationships: [];
+      };
+      lead_email_digest_batches: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          window_start: string;
+          lead_ids: string[];
+          status: "pending" | "delivering" | "retrying" | "sent" | "failed";
+          attempt_count: number;
+          next_attempt_at: string;
+          last_error: string | null;
+          sent_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["lead_email_digest_batches"]["Row"],
+          "id" | "status" | "attempt_count" | "last_error" | "sent_at" |
+          "created_at" | "updated_at"
+        > & {
+          id?: string;
+          status?: "pending" | "delivering" | "retrying" | "sent" | "failed";
+          attempt_count?: number;
+          last_error?: string | null;
+          sent_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["lead_email_digest_batches"]["Insert"]>;
         Relationships: [];
       };
       tenant_webhooks: {
@@ -1318,6 +1360,20 @@ export type Database = {
           p_occurred_at: string;
         };
         Returns: "recorded" | "duplicate" | "unknown_tenant";
+      };
+      enqueue_lead_email_digest: {
+        Args: { p_tenant_id: string; p_lead_id: string; p_created_at: string };
+        Returns: string | null;
+      };
+      claim_lead_email_digests: {
+        Args: { p_limit?: number };
+        Returns: {
+          id: string;
+          tenant_id: string;
+          window_start: string;
+          lead_ids: string[];
+          attempt_count: number;
+        }[];
       };
     };
     Enums: Record<string, never>;

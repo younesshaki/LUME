@@ -18,4 +18,5 @@ export * from "./quota";
 export * from "./storageQuota";
 export * from "./uploadPolicy";
 export * from "./emailEvents";
+export * from "./leadEmail";
 export type { Database } from "./schema";

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { TenantInvite, TenantRole } from "@lume/types";
 import type { LeadAssignmentMode } from "@/lib/leadAssignment";
+import type { LeadEmailSettings } from "@/lib/leadEmailPolicy";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
@@ -14,7 +15,11 @@ import {
   validateInviteEmail,
   type TeamMember,
 } from "@/lib/team";
-import { updateLeadAssignmentMode, updateMemberSalesAvailability } from "./actions";
+import {
+  updateLeadAssignmentMode,
+  updateLeadEmailSettings,
+  updateMemberSalesAvailability,
+} from "./actions";
 
 type TeamClientProps = {
   tenantId: string;
@@ -23,6 +28,7 @@ type TeamClientProps = {
   currentUserId: string;
   canManage: boolean;
   initialAssignmentMode: LeadAssignmentMode;
+  initialLeadEmailSettings: LeadEmailSettings;
   initialMembers: TeamMember[];
   initialInvites: TenantInvite[];
 };
@@ -40,12 +46,14 @@ export default function TeamClient({
   currentUserId,
   canManage,
   initialAssignmentMode,
+  initialLeadEmailSettings,
   initialMembers,
   initialInvites,
 }: TeamClientProps) {
   const router = useRouter();
   const [members, setMembers] = useState(initialMembers);
   const [assignmentMode, setAssignmentMode] = useState(initialAssignmentMode);
+  const [leadEmailSettings, setLeadEmailSettings] = useState(initialLeadEmailSettings);
   const [invites, setInvites] = useState(initialInvites);
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -71,6 +79,23 @@ export default function TeamClient({
       }
     } catch {
       setStatus({ type: "error", message: "Unable to update lead routing." });
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function saveLeadEmailSettings() {
+    if (!canManage) return;
+    setBusyKey("lead-email-settings");
+    setStatus({ type: "saving", message: "Saving lead email settings…" });
+    try {
+      const result = await updateLeadEmailSettings(tenantSlug, leadEmailSettings);
+      setStatus(result.error
+        ? { type: "error", message: result.error }
+        : { type: "success", message: "Lead email settings saved." });
+      if (!result.error) router.refresh();
+    } catch {
+      setStatus({ type: "error", message: "Unable to save lead email settings." });
     } finally {
       setBusyKey(null);
     }
@@ -277,6 +302,93 @@ export default function TeamClient({
             No sales members are currently available; new leads will remain unassigned.
           </p>
         ) : null}
+      </section>
+
+      <section className="rounded-xl border p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold">Lead email notifications</h2>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+              Owners are always included. Add roles, notify an unassigned pool, and choose
+              immediate delivery or one hourly digest.
+            </p>
+          </div>
+          <label className="inline-flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={leadEmailSettings.enabled}
+              disabled={!canManage || busyKey === "lead-email-settings"}
+              onChange={(event) => setLeadEmailSettings((current) => ({
+                ...current,
+                enabled: event.target.checked,
+              }))}
+            />
+            Enabled
+          </label>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="text-xs font-medium text-muted-foreground">
+            Delivery mode
+            <select
+              value={leadEmailSettings.mode}
+              disabled={!canManage || busyKey === "lead-email-settings"}
+              onChange={(event) => setLeadEmailSettings((current) => ({
+                ...current,
+                mode: event.target.value === "hourly" ? "hourly" : "instant",
+              }))}
+              className="mt-1 block w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm text-foreground disabled:opacity-50 dark:border-neutral-700"
+            >
+              <option value="instant">Immediately</option>
+              <option value="hourly">Hourly digest</option>
+            </select>
+          </label>
+          <label className="text-xs font-medium text-muted-foreground">
+            Unassigned-pool email (optional)
+            <input
+              type="email"
+              value={leadEmailSettings.unassignedAddress ?? ""}
+              disabled={!canManage || busyKey === "lead-email-settings"}
+              placeholder="sales@example.com"
+              onChange={(event) => setLeadEmailSettings((current) => ({
+                ...current,
+                unassignedAddress: event.target.value || null,
+              }))}
+              className="mt-1 block w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm text-foreground disabled:opacity-50 dark:border-neutral-700"
+            />
+          </label>
+        </div>
+        <fieldset className="mt-4" disabled={!canManage || busyKey === "lead-email-settings"}>
+          <legend className="text-xs font-medium text-muted-foreground">Additional roles</legend>
+          <div className="mt-2 flex flex-wrap gap-4">
+            {TENANT_ROLES.map((role) => {
+              const checked = role === "owner" || leadEmailSettings.roles.includes(role);
+              return (
+                <label key={role} className="inline-flex items-center gap-2 text-xs capitalize">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={role === "owner" || !canManage || busyKey === "lead-email-settings"}
+                    onChange={(event) => setLeadEmailSettings((current) => ({
+                      ...current,
+                      roles: event.target.checked
+                        ? [...new Set([...current.roles, role])]
+                        : current.roles.filter((item) => item !== role),
+                    }))}
+                  />
+                  {role}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+        <button
+          type="button"
+          disabled={!canManage || busyKey === "lead-email-settings"}
+          onClick={() => void saveLeadEmailSettings()}
+          className="mt-4 rounded-lg bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+        >
+          {busyKey === "lead-email-settings" ? "Saving…" : "Save email settings"}
+        </button>
       </section>
 
       <section className="overflow-x-auto rounded-xl border">
