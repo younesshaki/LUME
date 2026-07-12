@@ -1,10 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import {
-  checkQuota,
-  quotaExceededPayload,
-  quotaWarningHeader,
-  type Database,
-} from "@lume/db";
+import { recordPublicUsage, type UsageRpc } from "./usage";
 
 /**
  * POST /api/leads — public lead capture for the Vite site (same-origin).
@@ -66,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return json(req, res, { error: "Supabase server env not configured" }, 500);
   }
 
-  const supabase = createClient<Database>(supabaseUrl, serviceRoleKey, {
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -81,13 +76,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   const lead = validation.value;
 
-  const quota = await checkQuota(supabase, {
-    tenantId: tenant.tenantId,
-    eventType: "lead_requests",
-  });
-  if (!quota.allowed) return json(req, res, quotaExceededPayload(quota), 429);
-  const warning = quotaWarningHeader(quota);
-  if (warning) res.setHeader("X-Lume-Quota-Warning", warning);
+  await recordPublicUsage(
+    (name, args) => supabase.rpc(name, args) as ReturnType<UsageRpc>,
+    tenant.tenantId,
+    "lead_requests",
+  );
 
   const { data, error } = await supabase
     .from("leads")
@@ -105,9 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       utm_source: lead.utmSource,
       utm_medium: lead.utmMedium,
       utm_campaign: lead.utmCampaign,
-      utm_content: null,
       referrer: header(req, "referer") ?? null,
-      source_context: null,
       ip_addr: requestIp(req),
       user_agent: header(req, "user-agent") ?? null,
       lost_reason: null,
@@ -210,7 +201,6 @@ function setCorsHeaders(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Lume-Tenant");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Expose-Headers", "X-Lume-Quota-Warning");
   res.setHeader("Vary", "Origin");
 }
 
