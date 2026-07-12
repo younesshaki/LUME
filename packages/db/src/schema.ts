@@ -1389,6 +1389,26 @@ export type Database = {
         Args: { p_limit?: number };
         Returns: Database["public"]["Tables"]["tenant_domains"]["Row"][];
       };
+      tenant_custom_domain_limit: {
+        Args: { p_tenant_id: string };
+        Returns: number;
+      };
+      create_tenant_domain_with_limit: {
+        Args: {
+          p_tenant_id: string;
+          p_domain: string;
+          p_vercel_config?: Record<string, unknown>;
+          p_verification_status?: "pending" | "verified";
+          p_verified?: boolean;
+          p_verification_checked_at?: string | null;
+        };
+        Returns: {
+          outcome: string;
+          domain_id: string | null;
+          domain_limit: number;
+          domain_count: number;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

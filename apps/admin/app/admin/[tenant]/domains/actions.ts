@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import type { TenantDomain } from "@lume/types";
-import { VercelDomainApiError, type VercelDomainOperation } from "@lume/db";
+import {
+  getTenantCustomDomainLimit,
+  reserveTenantDomain,
+  VercelDomainApiError,
+  type VercelDomainOperation,
+} from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { auditWrite } from "@/lib/audit";
 import { normalizeDomainInput, rowToTenantDomain, validateDomainInput } from "@/lib/domains";
@@ -20,7 +25,21 @@ export async function addTenantDomain(slug: string, input: string): Promise<Doma
   const domain = normalizeDomainInput(input);
   const service = createServiceClient();
   const existing = await service.from("tenant_domains").select("id").eq("domain", domain).maybeSingle();
-  if (existing.error || existing.data) return { error: "This domain is already registered." };
+  if (existing.error) return { error: "Unable to check domain availability." };
+  if (existing.data) return { error: "This domain is already registered." };
+  try {
+    const [limit, countResult] = await Promise.all([
+      getTenantCustomDomainLimit(service, authorized.tenantId),
+      service.from("tenant_domains").select("id", { count: "exact", head: true })
+        .eq("tenant_id", authorized.tenantId),
+    ]);
+    if (countResult.error || countResult.count === null) {
+      return { error: "Unable to load the custom-domain allowance." };
+    }
+    if (limit >= 0 && countResult.count >= limit) return { error: domainLimitMessage(limit) };
+  } catch {
+    return { error: "Unable to load the custom-domain allowance." };
+  }
 
   let provider: VercelDomainOperation;
   try {
@@ -30,27 +49,35 @@ export async function addTenantDomain(slug: string, input: string): Promise<Doma
     return { error: providerErrorMessage(error, "Unable to add this domain to Vercel.") };
   }
 
-  const { data, error } = await service.from("tenant_domains").insert({
-    tenant_id: authorized.tenantId,
-    domain,
-    verified: provider.status === "configured" && provider.verified,
-    verification_status: provider.status === "configured" && provider.verified
-      ? "verified"
-      : "pending",
-    verification_checked_at: provider.status === "configured" ? new Date().toISOString() : null,
-    vercel_config: providerConfig(provider),
-  }).select("*").single();
-  if (error || !data) {
-    if (provider.status === "configured") {
-      await configuredVercelDomainClient().removeDomain(domain).catch((rollbackError: unknown) => {
-        captureError("admin/domains/add-rollback", rollbackError, {
-          tenantId: authorized.tenantId,
-          domain,
-        });
-      });
-    }
-    return { error: "Unable to save this domain." };
+  let reservation: Awaited<ReturnType<typeof reserveTenantDomain>>;
+  try {
+    reservation = await reserveTenantDomain(service, {
+      tenantId: authorized.tenantId,
+      domain,
+      verified: provider.status === "configured" && provider.verified,
+      verificationStatus: provider.status === "configured" && provider.verified
+        ? "verified"
+        : "pending",
+      verificationCheckedAt: provider.status === "configured" ? new Date().toISOString() : null,
+      vercelConfig: providerConfig(provider),
+    });
+  } catch (error) {
+    await rollbackProviderDomain(provider, domain, authorized.tenantId);
+    captureError("admin/domains/reserve", error, { tenantId: authorized.tenantId, domain });
+    return { error: "Unable to enforce the custom-domain allowance." };
   }
+  if (reservation.outcome !== "created" || !reservation.domainId) {
+    await rollbackProviderDomain(provider, domain, authorized.tenantId);
+    return reservation.outcome === "limit_exceeded"
+      ? { error: domainLimitMessage(reservation.limit) }
+      : { error: "This domain is already registered." };
+  }
+  const { data, error } = await service.from("tenant_domains")
+    .select("*")
+    .eq("tenant_id", authorized.tenantId)
+    .eq("id", reservation.domainId)
+    .single();
+  if (error || !data) return { error: "Domain reserved; refresh to see its status." };
 
   await auditWrite({
     tenantId: authorized.tenantId,
@@ -131,4 +158,20 @@ function providerErrorMessage(error: unknown, fallback: string): string {
   if (error.code === "forbidden") return "Vercel does not permit this domain for the configured team.";
   if (error.status === 409) return "This domain is assigned to another Vercel project.";
   return fallback;
+}
+
+async function rollbackProviderDomain(
+  provider: VercelDomainOperation,
+  domain: string,
+  tenantId: string,
+): Promise<void> {
+  if (provider.status !== "configured") return;
+  await configuredVercelDomainClient().removeDomain(domain).catch((error: unknown) => {
+    captureError("admin/domains/add-rollback", error, { tenantId, domain });
+  });
+}
+
+function domainLimitMessage(limit: number): string {
+  if (limit <= 0) return "Your current plan does not include a custom domain.";
+  return `Your current plan includes ${limit} custom domain${limit === 1 ? "" : "s"}.`;
 }

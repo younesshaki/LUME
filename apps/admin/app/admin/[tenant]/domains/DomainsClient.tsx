@@ -16,6 +16,7 @@ import { addTenantDomain, removeTenantDomain } from "./actions";
 type DomainsClientProps = {
   tenantSlug: string;
   tenantName: string;
+  customDomainLimit: number;
   initialDomains: TenantDomain[];
 };
 
@@ -28,6 +29,7 @@ type StatusState =
 export default function DomainsClient({
   tenantSlug,
   tenantName,
+  customDomainLimit,
   initialDomains,
 }: DomainsClientProps) {
   const router = useRouter();
@@ -36,9 +38,14 @@ export default function DomainsClient({
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const atDomainLimit = customDomainLimit >= 0 && domains.length >= customDomainLimit;
 
   async function addDomain(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (atDomainLimit) {
+      setStatus({ type: "error", message: domainLimitMessage(customDomainLimit) });
+      return;
+    }
     const validationError = validateDomainInput(domainInput);
     if (validationError) {
       setStatus({ type: "error", message: validationError });
@@ -129,6 +136,17 @@ export default function DomainsClient({
         onSubmit={addDomain}
         className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
       >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>Custom domain allowance</span>
+          <span className="font-medium text-foreground">
+            {domains.length} / {customDomainLimit < 0 ? "Unlimited" : customDomainLimit}
+          </span>
+        </div>
+        {atDomainLimit ? (
+          <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+            {domainLimitMessage(customDomainLimit)} Remove a domain or change plans to add another.
+          </p>
+        ) : null}
         <label className="block text-sm font-medium">
           Add domain
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -138,6 +156,7 @@ export default function DomainsClient({
               inputMode="url"
               autoCapitalize="none"
               autoCorrect="off"
+              disabled={atDomainLimit || status.type === "saving"}
               value={domainInput}
               onChange={(event) => {
                 setDomainInput(event.target.value);
@@ -148,7 +167,7 @@ export default function DomainsClient({
             />
             <button
               type="submit"
-              disabled={status.type === "saving"}
+              disabled={atDomainLimit || status.type === "saving"}
               className="rounded-lg bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
             >
               Add Domain
@@ -275,4 +294,9 @@ function formatDate(value: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function domainLimitMessage(limit: number): string {
+  if (limit <= 0) return "Your current plan does not include a custom domain.";
+  return `Your current plan includes ${limit} custom domain${limit === 1 ? "" : "s"}.`;
 }

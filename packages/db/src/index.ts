@@ -21,4 +21,5 @@ export * from "./emailEvents";
 export * from "./leadEmail";
 export * from "./vercel";
 export * from "./domainVerification";
+export * from "./domainLimits";
 export type { Database } from "./schema";
