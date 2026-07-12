@@ -20,4 +20,5 @@ export * from "./uploadPolicy";
 export * from "./emailEvents";
 export * from "./leadEmail";
 export * from "./vercel";
+export * from "./domainVerification";
 export type { Database } from "./schema";

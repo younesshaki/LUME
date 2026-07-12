@@ -120,6 +120,8 @@ export const PUBLIC_ROUTE_LIMITS = {
   consent: 10,
   /** Signed provider delivery callbacks can arrive in large campaign bursts. */
   "resend-webhook": 600,
+  /** Authenticated manual DNS verification checks. */
+  "domain-verify": 10,
 } as const;
 
 export type PublicRouteScope = keyof typeof PUBLIC_ROUTE_LIMITS;

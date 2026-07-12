@@ -775,16 +775,24 @@ export type Database = {
           verified: boolean;
           verification_token: string;
           vercel_config: Record<string, unknown>;
+          verification_status: "pending" | "verified" | "failed" | null;
+          verification_checked_at: string | null;
+          verification_failed_at: string | null;
           created_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["tenant_domains"]["Row"],
-          "id" | "verified" | "verification_token" | "vercel_config" | "created_at"
+          "id" | "verified" | "verification_token" | "vercel_config" |
+          "verification_status" | "verification_checked_at" | "verification_failed_at" |
+          "created_at"
         > & {
           id?: string;
           verified?: boolean;
           verification_token?: string;
           vercel_config?: Record<string, unknown>;
+          verification_status?: "pending" | "verified" | "failed" | null;
+          verification_checked_at?: string | null;
+          verification_failed_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["tenant_domains"]["Insert"]>;
@@ -1376,6 +1384,10 @@ export type Database = {
           lead_ids: string[];
           attempt_count: number;
         }[];
+      };
+      claim_tenant_domains_for_verification: {
+        Args: { p_limit?: number };
+        Returns: Database["public"]["Tables"]["tenant_domains"]["Row"][];
       };
     };
     Enums: Record<string, never>;

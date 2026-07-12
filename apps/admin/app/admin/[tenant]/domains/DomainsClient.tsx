@@ -6,9 +6,10 @@ import { toast } from "sonner";
 import type { TenantDomain } from "@lume/types";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import {
+  domainDnsInstructions,
+  domainDnsRecommendations,
   normalizeDomainInput,
   validateDomainInput,
-  verificationHost,
 } from "@/lib/domains";
 import { addTenantDomain, removeTenantDomain } from "./actions";
 
@@ -34,6 +35,7 @@ export default function DomainsClient({
   const [domainInput, setDomainInput] = useState("");
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   async function addDomain(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,6 +77,40 @@ export default function DomainsClient({
       });
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function verifyDomain(domain: TenantDomain) {
+    setVerifyingId(domain.id);
+    setStatus({ type: "saving", message: `Checking ${domain.domain}…` });
+    try {
+      const response = await fetch(`/api/domains/${encodeURIComponent(domain.id)}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const payload = await response.json() as { domain?: TenantDomain; error?: string };
+      if (!response.ok || !payload.domain) {
+        throw new Error(payload.error ?? "Unable to verify domain.");
+      }
+      const checkedDomain = payload.domain;
+      setDomains((current) => current.map((item) =>
+        item.id === checkedDomain.id ? checkedDomain : item));
+      setStatus({
+        type: checkedDomain.verified ? "success" : "idle",
+        message: checkedDomain.verified
+          ? `${checkedDomain.domain} is verified.`
+          : checkedDomain.verificationStatus === "failed"
+            ? "Verification still failed. Review the DNS values below and try again."
+            : "DNS is not verified yet. Propagation can take several minutes.",
+      });
+      router.refresh();
+    } catch (error) {
+      setStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Unable to verify domain.",
+      });
+    } finally {
+      setVerifyingId(null);
     }
   }
 
@@ -140,46 +176,71 @@ export default function DomainsClient({
                     className={`rounded-full px-2 py-1 text-xs font-medium ${
                       domain.verified
                         ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                        : domain.verificationStatus === "failed"
+                          ? "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-300"
                         : "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
                     }`}
                   >
-                    {domain.verified ? "Verified" : "Pending verification"}
+                    {domain.verified
+                      ? "Verified"
+                      : domain.verificationStatus === "failed"
+                        ? "Verification failed"
+                        : "Pending verification"}
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Added {formatDate(domain.createdAt)}
                 </p>
               </div>
-              <ConfirmActionDialog
-                title={`Remove ${domain.domain}?`}
-                description="The domain stops routing to this site and its verification record becomes invalid. You can add it again later, but it will need to be re-verified."
-                actionLabel="Remove domain"
-                onConfirm={() => void removeDomain(domain)}
-              >
-                <button
-                  type="button"
-                  disabled={removingId === domain.id}
-                  className="rounded border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+              <div className="flex flex-wrap gap-2">
+                {!domain.verified ? (
+                  <button
+                    type="button"
+                    disabled={verifyingId === domain.id}
+                    onClick={() => void verifyDomain(domain)}
+                    className="rounded border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
+                  >
+                    {verifyingId === domain.id ? "Checking…" : "Check verification"}
+                  </button>
+                ) : null}
+                <ConfirmActionDialog
+                  title={`Remove ${domain.domain}?`}
+                  description="The domain stops routing to this site and its verification record becomes invalid. You can add it again later, but it will need to be re-verified."
+                  actionLabel="Remove domain"
+                  onConfirm={() => void removeDomain(domain)}
                 >
-                  {removingId === domain.id ? "Removing..." : "Remove"}
-                </button>
-              </ConfirmActionDialog>
+                  <button
+                    type="button"
+                    disabled={removingId === domain.id}
+                    className="rounded border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                  >
+                    {removingId === domain.id ? "Removing..." : "Remove"}
+                  </button>
+                </ConfirmActionDialog>
+              </div>
             </div>
 
             {!domain.verified && (
               <div className="mt-4 rounded-lg bg-neutral-50 p-3 text-sm dark:bg-neutral-900">
                 <p className="font-medium">DNS verification</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Add this TXT record at your DNS provider, then ask an admin to run verification.
+                  Add each record below at your DNS provider, then check verification again.
                 </p>
-                <dl className="mt-3 grid gap-3 md:grid-cols-[160px_minmax(0,1fr)]">
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Type</dt>
-                  <dd className="font-mono text-xs">TXT</dd>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Host</dt>
-                  <dd className="break-all font-mono text-xs">{verificationHost(domain.domain)}</dd>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Value</dt>
-                  <dd className="break-all font-mono text-xs">{domain.verificationToken}</dd>
-                </dl>
+                {domainDnsInstructions(domain).map((instruction, index) => (
+                  <dl key={`${instruction.type}-${instruction.host}-${index}`} className="mt-3 grid gap-3 md:grid-cols-[160px_minmax(0,1fr)]">
+                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">Type</dt>
+                    <dd className="font-mono text-xs">{instruction.type}</dd>
+                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">Host</dt>
+                    <dd className="break-all font-mono text-xs">{instruction.host}</dd>
+                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">Value</dt>
+                    <dd className="break-all font-mono text-xs">{instruction.value}</dd>
+                  </dl>
+                ))}
+                {domain.verificationStatus === "failed" && domainDnsRecommendations(domain).length > 0 ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Vercel routing targets: {domainDnsRecommendations(domain).join(" or ")}
+                  </p>
+                ) : null}
               </div>
             )}
           </article>

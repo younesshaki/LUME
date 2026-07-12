@@ -34,6 +34,10 @@ export async function addTenantDomain(slug: string, input: string): Promise<Doma
     tenant_id: authorized.tenantId,
     domain,
     verified: provider.status === "configured" && provider.verified,
+    verification_status: provider.status === "configured" && provider.verified
+      ? "verified"
+      : "pending",
+    verification_checked_at: provider.status === "configured" ? new Date().toISOString() : null,
     vercel_config: providerConfig(provider),
   }).select("*").single();
   if (error || !data) {

@@ -18,3 +18,8 @@ export type { TenantInvitedEmailProps, TenantInviteRole } from "./TenantInvitedE
 export { WelcomeEmail, welcomeEmailTemplate } from "./WelcomeEmail";
 export type { WelcomeEmailProps } from "./WelcomeEmail";
 export { requireSafeActionUrl } from "./layout";
+export {
+  DomainVerificationEmail,
+  domainVerificationEmailTemplate,
+} from "./DomainVerificationEmail";
+export type { DomainVerificationEmailProps } from "./DomainVerificationEmail";

@@ -8,5 +8,9 @@ export type TenantDomain = {
   domain: string;
   verified: boolean;
   verificationToken: string;
+  verificationStatus: "pending" | "verified" | "failed";
+  verificationCheckedAt: string | null;
+  verificationFailedAt: string | null;
+  vercelConfig: Record<string, unknown>;
   createdAt: string;
 };
