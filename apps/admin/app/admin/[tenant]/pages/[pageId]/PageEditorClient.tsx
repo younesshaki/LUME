@@ -7,8 +7,8 @@ import type { Database } from "@lume/db";
 import { useRouter } from "next/navigation";
 import { publishDraft, restoreRevision, unpublishPage, updateDraftBlocks } from "@lume/db";
 import type { PageBlock, PageBlocksDocument, PageRevision } from "@lume/types";
-import type { BlockField, EditorBlockDescriptor } from "@lume/blocks";
-import { validatePageBlocksDocument } from "@lume/blocks";
+import type { BlockCategory, BlockField, EditorBlockDescriptor } from "@lume/blocks";
+import { reorderByBlockId, validatePageBlocksDocument } from "@lume/blocks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { listTenantMediaAssets, type TenantAsset } from "@/lib/assets";
 import { LivePreviewPanel } from "./LivePreviewPanel";
@@ -62,6 +62,8 @@ export default function PageEditorClient({
   const [previewRevisionId, setPreviewRevisionId] = useState<string | null>(
     initialRevisions[0]?.id ?? null
   );
+  const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
+  const [dragTargetId, setDragTargetId] = useState<string | null>(null);
 
   const descriptorsByType = useMemo(
     () => new Map(blockDescriptors.map((descriptor) => [descriptor.type, descriptor])),
@@ -71,6 +73,13 @@ export default function PageEditorClient({
     () => blockDescriptors.filter((descriptor) => descriptor.palette),
     [blockDescriptors]
   );
+  const paletteByCategory = useMemo(() => {
+    const groups = new Map<BlockCategory, EditorBlockDescriptor[]>();
+    for (const descriptor of paletteDescriptors) {
+      groups.set(descriptor.category, [...(groups.get(descriptor.category) ?? []), descriptor]);
+    }
+    return groups;
+  }, [paletteDescriptors]);
   const selectedBlock = blocks.find((block) => block.id === selectedBlockId) ?? null;
   const selectedDescriptor = selectedBlock ? descriptorsByType.get(selectedBlock.type) : null;
   const currentDraftDocument = currentDocument(blocks, initialBlocks.version);
@@ -102,6 +111,15 @@ export default function PageEditorClient({
       [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
       return next;
     });
+  }
+
+  function dropBlock(targetId: string) {
+    if (!draggedBlockId) return;
+    setBlocks((current) => reorderByBlockId(current, draggedBlockId, targetId));
+    setSelectedBlockId(draggedBlockId);
+    setDraggedBlockId(null);
+    setDragTargetId(null);
+    setState({ type: "idle", message: "" });
   }
 
   function removeBlock(blockId: string) {
@@ -274,18 +292,31 @@ export default function PageEditorClient({
         <aside className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Blocks</h2>
           <p className="mt-1 text-xs text-muted-foreground">Add supported content blocks.</p>
-          <div className="mt-4 space-y-2">
-            {paletteDescriptors.map((descriptor) => (
-              <button
-                key={descriptor.type}
-                type="button"
-                onClick={() => addBlock(descriptor)}
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-              >
-                <span className="block font-medium">{descriptor.displayName}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">{descriptor.description}</span>
-              </button>
-            ))}
+          <div className="mt-4 space-y-5">
+            {(["content", "data", "media"] as const).map((category) => {
+              const descriptors = paletteByCategory.get(category) ?? [];
+              if (descriptors.length === 0) return null;
+              return (
+                <section key={category} aria-labelledby={`palette-${category}`}>
+                  <h3 id={`palette-${category}`} className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {category}
+                  </h3>
+                  <div className="space-y-2">
+                    {descriptors.map((descriptor) => (
+                      <button
+                        key={descriptor.type}
+                        type="button"
+                        onClick={() => addBlock(descriptor)}
+                        className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+                      >
+                        <span className="block font-medium">{descriptor.displayName}</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">{descriptor.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         </aside>
 
@@ -309,10 +340,21 @@ export default function PageEditorClient({
               return (
                 <div
                   key={block.id}
+                  onDragOver={(event) => {
+                    if (!draggedBlockId || draggedBlockId === block.id) return;
+                    event.preventDefault();
+                    setDragTargetId(block.id);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    dropBlock(block.id);
+                  }}
                   className={`rounded-lg border p-3 ${
                     selected
                       ? "border-neutral-900 bg-neutral-50 dark:border-white dark:bg-neutral-900"
-                      : "border-border"
+                      : dragTargetId === block.id
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                        : "border-border"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -329,6 +371,25 @@ export default function PageEditorClient({
                       </span>
                     </button>
                     <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        draggable
+                        aria-label={`Drag ${descriptor?.displayName ?? block.type} to reorder`}
+                        title="Drag to reorder"
+                        onDragStart={(event) => {
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData("text/plain", block.id);
+                          setDraggedBlockId(block.id);
+                          setSelectedBlockId(block.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedBlockId(null);
+                          setDragTargetId(null);
+                        }}
+                        className="cursor-grab rounded border border-neutral-200 px-2 py-1 text-xs active:cursor-grabbing dark:border-neutral-700"
+                      >
+                        Drag
+                      </button>
                       <button
                         type="button"
                         onClick={() => moveBlock(block.id, -1)}
