@@ -568,20 +568,60 @@ export type Database = {
           height: number | null;
           sort_order: number;
           is_primary: boolean;
+          ai_description: string | null;
+          ai_description_status: "pending" | "processing" | "completed" | "failed" | null;
+          ai_description_model: string | null;
+          ai_description_updated_at: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["vehicle_images"]["Row"],
-          "id" | "sort_order" | "is_primary" | "created_at" | "updated_at"
+          "id" | "sort_order" | "is_primary" | "ai_description" |
+          "ai_description_status" | "ai_description_model" |
+          "ai_description_updated_at" | "created_at" | "updated_at"
         > & {
           id?: string;
           sort_order?: number;
           is_primary?: boolean;
+          ai_description?: string | null;
+          ai_description_status?: "pending" | "processing" | "completed" | "failed" | null;
+          ai_description_model?: string | null;
+          ai_description_updated_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["vehicle_images"]["Insert"]>;
+        Relationships: [];
+      };
+      vehicle_image_description_jobs: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          image_id: string;
+          status: "pending" | "delivering" | "retrying" | "completed" | "dead_letter";
+          attempt_count: number;
+          next_attempt_at: string;
+          last_error: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["vehicle_image_description_jobs"]["Row"],
+          "id" | "status" | "attempt_count" | "next_attempt_at" | "last_error" |
+          "completed_at" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          status?: "pending" | "delivering" | "retrying" | "completed" | "dead_letter";
+          attempt_count?: number;
+          next_attempt_at?: string;
+          last_error?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["vehicle_image_description_jobs"]["Insert"]>;
         Relationships: [];
       };
       rag_documents: {
@@ -1472,6 +1512,44 @@ export type Database = {
           signing_secret_ciphertext: string;
           retry_delays_seconds: number[];
         }[];
+      };
+      enqueue_vehicle_image_description: {
+        Args: { p_tenant_id: string; p_image_id: string };
+        Returns: string | null;
+      };
+      claim_vehicle_image_description_jobs: {
+        Args: { p_limit?: number };
+        Returns: {
+          id: string;
+          tenant_id: string;
+          image_id: string;
+          r2_key: string;
+          content_type: "image/jpeg" | "image/png" | "image/webp";
+          byte_size: number;
+          attempt_count: number;
+          vehicle_year: number;
+          vehicle_make: string;
+          vehicle_model: string;
+          vehicle_trim: string | null;
+        }[];
+      };
+      complete_vehicle_image_description_job: {
+        Args: {
+          p_job_id: string;
+          p_attempt_count: number;
+          p_description: string;
+          p_model: string;
+        };
+        Returns: boolean;
+      };
+      fail_vehicle_image_description_job: {
+        Args: {
+          p_job_id: string;
+          p_attempt_count: number;
+          p_next_attempt_at: string | null;
+          p_error: string;
+        };
+        Returns: boolean;
       };
     };
     Enums: Record<string, never>;

@@ -23,6 +23,7 @@ export type Vehicle = {
   fuelType: string;
   imageSrc: string;
   primaryImageSrc?: string;
+  primaryImageAlt?: string;
   sellerCity: string;
   sellerState: string;
   isSpecial: boolean;
@@ -525,6 +526,7 @@ function normalizeApiVehicle(vehicle: Vehicle & { tenantId?: string; externalId?
     fuelType: vehicle.fuelType ? normalizeFuelType(vehicle.fuelType) : "",
     imageSrc: vehicle.imageSrc || GENERATED_IMAGES[imageKey] || fallbackImage,
     primaryImageSrc: vehicle.primaryImageSrc || undefined,
+    primaryImageAlt: vehicle.primaryImageAlt || undefined,
     sellerCity: vehicle.sellerCity || "",
     sellerState: vehicle.sellerState || "",
     isSpecial,

@@ -22,6 +22,8 @@ export type Vehicle = {
   imageSrc: string;
   /** Managed vehicle_images primary image, preferred over legacy imagery. */
   primaryImageSrc?: string;
+  /** AI-generated description for the managed primary image. */
+  primaryImageAlt?: string;
   sellerCity: string;
   sellerState: string;
   isSpecial: boolean;

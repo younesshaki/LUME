@@ -124,7 +124,7 @@ function VehicleCard({
         {vehicleDisplayImage(vehicle) ? (
           <img
             src={vehicleDisplayImage(vehicle)}
-            alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+            alt={vehicle.primaryImageAlt || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
           />
         ) : (
           <div className="vehiclesPage__cardImagePlaceholder">

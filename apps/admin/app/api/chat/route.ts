@@ -238,6 +238,25 @@ export async function POST(request: Request): Promise<Response> {
       matchedVehicles = match.results;
       totalMatched = match.totalMatched;
       totalInventory = vehicles.length;
+      const matchedIds = matchedVehicles.slice(0, 20).map((vehicle) => vehicle.id);
+      if (matchedIds.length > 0) {
+        const { data: imageDescriptions } = await supabase
+          .from("vehicle_images")
+          .select("vehicle_id, ai_description")
+          .eq("tenant_id", tenant.tenantId)
+          .eq("is_primary", true)
+          .eq("ai_description_status", "completed")
+          .in("vehicle_id", matchedIds);
+        for (const image of imageDescriptions ?? []) {
+          if (!image.ai_description) continue;
+          const vehicle = matchedVehicles.find((candidate) => candidate.id === image.vehicle_id);
+          if (vehicle) contextChunks.push({
+            category: "vehicle-image",
+            text: `Primary image for ${vehicle.year} ${vehicle.make} ${vehicle.model}: ${image.ai_description}`,
+            score: 1,
+          });
+        }
+      }
     }
 
     assembled = assembleSystemPrompt({

@@ -68,10 +68,14 @@ export async function GET(request: Request): Promise<Response> {
     loadVehicleFacets(supabase, tenant.tenantId, sp),
     loadPrimaryVehicleImages(supabase, tenant.tenantId, rows.map((row) => row.id)),
   ]);
-  const vehicles = rows.map((row) => ({
-    ...rowToVehicle(row),
-    primaryImageSrc: primaryImages.get(row.id),
-  }));
+  const vehicles = rows.map((row) => {
+    const primaryImage = primaryImages.get(row.id);
+    return {
+      ...rowToVehicle(row),
+      primaryImageSrc: primaryImage?.url,
+      primaryImageAlt: primaryImage?.alt,
+    };
+  });
   const totalCount = count ?? vehicles.length;
   const response: VehicleListResponse = {
     vehicles,
@@ -86,12 +90,12 @@ async function loadPrimaryVehicleImages(
   supabase: ReturnType<typeof createAnonServerClient>,
   tenantId: string,
   vehicleIds: string[],
-): Promise<Map<string, string>> {
+): Promise<Map<string, { url: string; alt?: string }>> {
   const publicBaseUrl = readR2PublicBaseUrl();
   if (!publicBaseUrl || vehicleIds.length === 0) return new Map();
   const { data, error } = await supabase
     .from("vehicle_images")
-    .select("vehicle_id, r2_key")
+    .select("vehicle_id, r2_key, ai_description")
     .eq("tenant_id", tenantId)
     .eq("is_primary", true)
     .in("vehicle_id", vehicleIds);
@@ -100,10 +104,13 @@ async function loadPrimaryVehicleImages(
     console.warn("[/api/vehicles] primary image query unavailable:", error.message);
     return new Map();
   }
-  const images = new Map<string, string>();
+  const images = new Map<string, { url: string; alt?: string }>();
   for (const image of data ?? []) {
     const url = vehicleImagePublicUrl(publicBaseUrl, image.r2_key);
-    if (url) images.set(image.vehicle_id, url);
+    if (url) images.set(image.vehicle_id, {
+      url,
+      ...(image.ai_description ? { alt: image.ai_description } : {}),
+    });
   }
   return images;
 }

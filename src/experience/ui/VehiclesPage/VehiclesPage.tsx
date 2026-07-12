@@ -215,7 +215,7 @@ function VehicleCard({
         {vehicleDisplayImage(vehicle) ? (
           <img
             src={vehicleDisplayImage(vehicle)}
-            alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+            alt={vehicle.primaryImageAlt || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
           />
         ) : (
           <div className="vehiclesPage__cardImagePlaceholder">
@@ -756,7 +756,7 @@ function CompareModal({
         <div className="vehiclesPage__compareGrid">
           {vehicles.map((vehicle) => (
             <article key={vehicle.id} className="vehiclesPage__compareColumn">
-              <img src={vehicleDisplayImage(vehicle)} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} />
+              <img src={vehicleDisplayImage(vehicle)} alt={vehicle.primaryImageAlt || `${vehicle.year} ${vehicle.make} ${vehicle.model}`} />
               <h3>{vehicle.year} {vehicle.make} {vehicle.model}</h3>
               <dl>
                 <div><dt>Price</dt><dd>{formatVehiclePrice(vehicle.price)}</dd></div>

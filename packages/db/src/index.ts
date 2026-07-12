@@ -23,4 +23,5 @@ export * from "./leadEmail";
 export * from "./vercel";
 export * from "./domainVerification";
 export * from "./domainLimits";
+export * from "./imageDescriptions";
 export type { Database } from "./schema";

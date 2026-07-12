@@ -11,6 +11,10 @@ import {
 import {
   authorizeVehicleImageRequest,
 } from "@/lib/vehicleImages.server";
+import { enqueueVehicleImageDescription } from "@lume/db";
+import { createServiceClient } from "@lume/db/server";
+import { captureError } from "@/lib/observability";
+import { after } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -105,6 +109,19 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
     const status = error?.message.includes("at most 20") ? 409 : 500;
     return json({ error: status === 409 ? error?.message : "Unable to save vehicle image metadata." }, status);
   }
+
+  after(async () => {
+    await enqueueVehicleImageDescription(
+      createServiceClient(),
+      authorization.tenant.tenantId,
+      data.id,
+    ).catch((descriptionError: unknown) => {
+      captureError("api/vehicles/images/description-enqueue", descriptionError, {
+        tenantId: authorization.tenant.tenantId,
+        imageId: data.id,
+      });
+    });
+  });
 
   return imageResponse(data, config.publicBaseUrl, 201);
 }
