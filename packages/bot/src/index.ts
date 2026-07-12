@@ -99,3 +99,19 @@ export {
   toolThinkingText,
   turnThinkingSteps,
 } from "./thinkingSteps";
+export {
+  type ConversationMemorySnapshot,
+  type ConversationMemoryStore,
+  type ConversationMemoryUpdate,
+  type MemoryMessage,
+  type MemoryToolResult,
+  CONVERSATION_MEMORY_TTL_SECONDS,
+  FallbackConversationMemoryStore,
+  InMemoryConversationMemoryStore,
+  MAX_MEMORY_MESSAGES,
+  MAX_MEMORY_TOOL_RESULTS,
+  appendConversationMemory,
+  conversationMemoryToolPrompt,
+  mergeRememberedMessages,
+  normalizeConversationMemory,
+} from "./conversationMemory";

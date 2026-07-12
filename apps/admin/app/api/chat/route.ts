@@ -19,7 +19,7 @@
  * `messages` with role: "system" is dropped. The tenant is resolved from the
  * X-Lume-Tenant header (or ?tenant= or subdomain — see lib/tenant.ts).
  */
-import type { BotAction, ChatMessage, ChatRequest } from "@lume/types";
+import type { BotAction, ChatRequest } from "@lume/types";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
 import {
   getTenantVehicle,
@@ -30,6 +30,8 @@ import {
 } from "@lume/db";
 import {
   filterBotTools,
+  conversationMemoryToolPrompt,
+  mergeRememberedMessages,
   parseToolCalls,
   runToolCalls,
   turnThinkingSteps,
@@ -37,6 +39,7 @@ import {
   toToolSpecs,
   type BotToolContext,
   type LlmToolCall,
+  type MemoryMessage,
 } from "@lume/bot";
 import {
   assembleSystemPrompt,
@@ -71,6 +74,11 @@ import {
   openVisitorPreferenceTurn,
   visitorPreferenceSystemPrompt,
 } from "@/lib/visitorPreferences";
+import {
+  conversationMemoryKey,
+  getConversationMemoryStore,
+} from "@/lib/conversationMemory.server";
+import { captureError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -115,12 +123,14 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // Drop any client-supplied system messages — only the server defines those.
-  const cleanMessages: ChatMessage[] = body.messages
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({
-      role: m.role,
-      content: String(m.content ?? "").slice(0, MAX_USER_CONTENT_LENGTH),
-    }));
+  const cleanMessages: MemoryMessage[] = body.messages
+    .flatMap((message): MemoryMessage[] =>
+      message.role === "user" || message.role === "assistant"
+        ? [{
+            role: message.role,
+            content: String(message.content ?? "").slice(0, MAX_USER_CONTENT_LENGTH),
+          }]
+        : []);
 
   const lastUser = [...cleanMessages].reverse().find((m) => m.role === "user");
   if (!lastUser) {
@@ -155,6 +165,18 @@ export async function POST(request: Request): Promise<Response> {
   const enabledToolNames = enabledTools.map((tool) => tool.name);
   const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
   const tenantName = tenant.name ?? tenant.slug;
+  const memoryStore = getConversationMemoryStore();
+  const memoryKey = visitor ? conversationMemoryKey(tenant.tenantId, visitor.id) : null;
+  const remembered = memoryKey
+    ? await memoryStore.get(memoryKey).catch((error: unknown) => {
+        captureError("api/chat/memory-read", error, { tenantId: tenant.tenantId });
+        return null;
+      })
+    : null;
+  const modelMessages: MemoryMessage[] = mergeRememberedMessages(
+    remembered?.messages ?? [],
+    cleanMessages,
+  );
   const visitorTurn = visitor
     ? await openVisitorPreferenceTurn(supabase, {
         tenantId: tenant.tenantId,
@@ -241,7 +263,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const systemMessage = {
     role: "system" as const,
-    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
+    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}${conversationMemoryToolPrompt(remembered?.toolResults ?? [])}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
   };
 
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
@@ -257,7 +279,7 @@ export async function POST(request: Request): Promise<Response> {
     body: JSON.stringify({
       model: "deepseek-chat",
       stream: false,
-      messages: [systemMessage, ...cleanMessages],
+      messages: [systemMessage, ...modelMessages],
       ...toolRequestFields,
     }),
   });
@@ -327,6 +349,13 @@ export async function POST(request: Request): Promise<Response> {
             assistantContent: content,
           });
         }
+        if (memoryKey && content) {
+          await memoryStore.append(memoryKey, {
+            messages: [lastUser, { role: "assistant", content }],
+          }).catch((error: unknown) => {
+            captureError("api/chat/memory-write", error, { tenantId: tenant.tenantId });
+          });
+        }
         controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -361,7 +390,7 @@ export async function POST(request: Request): Promise<Response> {
       // failure modes bounded. Revisit if multi-round tool use proves useful.
       messages: [
         systemMessage,
-        ...cleanMessages,
+        ...modelMessages,
         {
           role: "assistant",
           content: phase1Message.content ?? "",
@@ -485,6 +514,17 @@ export async function POST(request: Request): Promise<Response> {
             visitorId: visitor.id,
             sessionId: visitorTurn.sessionId,
             assistantContent,
+          });
+        }
+        if (streamCompletionObserved && memoryKey && assistantContent.trim()) {
+          await memoryStore.append(memoryKey, {
+            messages: [lastUser, { role: "assistant", content: assistantContent }],
+            toolResults: turn.steps.map((step) => ({
+              name: step.call.name,
+              result: step.result,
+            })),
+          }).catch((error: unknown) => {
+            captureError("api/chat/memory-write", error, { tenantId: tenant.tenantId });
           });
         }
         reader.releaseLock();
