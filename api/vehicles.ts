@@ -34,6 +34,7 @@ type Vehicle = {
   drivetrain: string;
   fuelType: string;
   imageSrc: string;
+  primaryImageSrc?: string;
   sellerCity: string;
   sellerState: string;
   isSpecial: boolean;
@@ -44,6 +45,14 @@ type VehicleListResponse = {
   vehicles: Vehicle[];
   totalCount: number;
   hasMore: boolean;
+};
+
+type ManagedVehicleImageRow = {
+  vehicle_id: string;
+  r2_key: string;
+  is_primary: boolean;
+  sort_order: number;
+  created_at: string;
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -62,9 +71,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const supabaseUrl =
     process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  // Public read: use the ANON key so RLS (vehicles_select_public_active +
-  // tenant_is_active) is the isolation backstop. The .eq("tenant_id") below is
-  // defense-in-depth, not the only guard — never use the service-role key here.
   const anonKey =
     process.env.SUPABASE_ANON_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
@@ -87,9 +93,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const usageClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    // Best-effort metering, inlined on purpose: this standalone Vercel
-    // function is bundled without its relative deps, and root package.json is
-    // "type":"module", so a `./usage` import fails at runtime (ERR_MODULE_NOT_FOUND).
     try {
       await usageClient.rpc("increment_usage_event", {
         p_tenant_id: tenant.tenantId,
@@ -168,7 +171,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return json(req, res, { error: error.message }, 500);
   }
 
-  const vehicles = (data ?? []).map(rowToVehicle);
+  const rows = data ?? [];
+  const managedImages = await loadManagedVehicleImages(
+    supabase,
+    tenant.tenantId,
+    rows.map((row: any) => row.id),
+  );
+  const r2PublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.trim() || "";
+  const vehicles = rows.map((row: any) =>
+    rowToVehicle(row, managedImages.get(row.id), r2PublicBaseUrl),
+  );
   const totalCount = count ?? vehicles.length;
   const response: VehicleListResponse = {
     vehicles,
@@ -178,6 +190,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   res.setHeader("Cache-Control", "private, no-store");
   return json(req, res, response, 200);
+}
+
+async function loadManagedVehicleImages(
+  supabase: any,
+  tenantId: string,
+  vehicleIds: string[],
+): Promise<Map<string, ManagedVehicleImageRow>> {
+  const imagesByVehicle = new Map<string, ManagedVehicleImageRow>();
+  if (vehicleIds.length === 0) return imagesByVehicle;
+
+  const { data, error } = await supabase
+    .from("vehicle_images")
+    .select("vehicle_id, r2_key, is_primary, sort_order, created_at")
+    .eq("tenant_id", tenantId)
+    .in("vehicle_id", vehicleIds)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.warn("[/api/vehicles] managed image query failed:", error.message);
+    return imagesByVehicle;
+  }
+
+  for (const image of (data ?? []) as ManagedVehicleImageRow[]) {
+    const current = imagesByVehicle.get(image.vehicle_id);
+    if (!current || image.is_primary || (!current.is_primary && compareImageOrder(image, current) < 0)) {
+      imagesByVehicle.set(image.vehicle_id, image);
+    }
+  }
+  return imagesByVehicle;
+}
+
+function compareImageOrder(left: ManagedVehicleImageRow, right: ManagedVehicleImageRow): number {
+  if (left.sort_order !== right.sort_order) return left.sort_order - right.sort_order;
+  return left.created_at.localeCompare(right.created_at);
+}
+
+function managedVehicleImageUrl(baseUrl: string, r2Key: string): string | undefined {
+  if (!baseUrl || !r2Key) return undefined;
+  try {
+    const base = new URL(baseUrl);
+    const path = r2Key.split("/").map(encodeURIComponent).join("/");
+    base.pathname = `${base.pathname.replace(/\/$/, "")}/${path}`;
+    return base.toString();
+  } catch {
+    return undefined;
+  }
 }
 
 async function getTenantFromRequest(
@@ -255,7 +314,11 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(Math.max(n, min), max);
 }
 
-function rowToVehicle(row: any): Vehicle {
+function rowToVehicle(
+  row: any,
+  managedImage: ManagedVehicleImageRow | undefined,
+  r2PublicBaseUrl: string,
+): Vehicle {
   return {
     id: row.id,
     tenantId: row.tenant_id,
@@ -273,6 +336,9 @@ function rowToVehicle(row: any): Vehicle {
     drivetrain: row.drivetrain,
     fuelType: row.fuel_type,
     imageSrc: row.image_src,
+    primaryImageSrc: managedImage
+      ? managedVehicleImageUrl(r2PublicBaseUrl, managedImage.r2_key)
+      : undefined,
     sellerCity: row.seller_city,
     sellerState: row.seller_state,
     isSpecial: row.is_special,
