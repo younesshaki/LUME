@@ -798,6 +798,39 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["tenant_domains"]["Insert"]>;
         Relationships: [];
       };
+      tenant_asset_scans: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          bucket_id: string;
+          object_key: string;
+          content_type: string | null;
+          byte_size: number | null;
+          status: "pending" | "clean" | "infected" | "error" | "skipped" | "unavailable";
+          scanner: string | null;
+          signature: string | null;
+          quarantine_key: string | null;
+          scanned_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_asset_scans"]["Row"],
+          "id" | "status" | "scanner" | "signature" | "quarantine_key" |
+          "scanned_at" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          status?: "pending" | "clean" | "infected" | "error" | "skipped" | "unavailable";
+          scanner?: string | null;
+          signature?: string | null;
+          quarantine_key?: string | null;
+          scanned_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_asset_scans"]["Insert"]>;
+        Relationships: [];
+      };
       bot_personas: {
         Row: {
           id: string;
