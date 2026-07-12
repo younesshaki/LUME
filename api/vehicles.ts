@@ -82,19 +82,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = createClient(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceClient = serviceRoleKey
+    ? createClient(supabaseUrl, serviceRoleKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+    : null;
 
   const tenant = await getTenantFromRequest(req, supabase);
   if (!tenant) {
     return json(req, res, { error: "Unknown or inactive tenant" }, 404);
   }
 
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (serviceRoleKey) {
-    const usageClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+  if (serviceClient) {
     try {
-      await usageClient.rpc("increment_usage_event", {
+      await serviceClient.rpc("increment_usage_event", {
         p_tenant_id: tenant.tenantId,
         p_event_type: "vehicle_requests",
         p_period_start: null,
@@ -108,6 +110,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const limit = clamp(parseInt(query(req, "limit") || "") || DEFAULT_LIMIT, 1, MAX_LIMIT);
   const offset = Math.max(0, parseInt(query(req, "offset") || "") || 0);
 
+  // The anonymous client remains the authority for which vehicle rows may be
+  // returned publicly. Managed image metadata is loaded later only for these
+  // already-visible IDs.
   let vehicleQuery = supabase
     .from("vehicles")
     .select("*", { count: "exact" })
@@ -172,12 +177,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const rows = data ?? [];
+  // The image RLS policy is stricter than the public vehicle policy. Use the
+  // server-only client when available, but constrain it to the tenant and the
+  // exact vehicle IDs already approved by the anonymous vehicle query above.
   const managedImages = await loadManagedVehicleImages(
-    supabase,
+    serviceClient ?? supabase,
     tenant.tenantId,
     rows.map((row: any) => row.id),
   );
-  const r2PublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.trim() || "";
+  const r2PublicBaseUrl =
+    process.env.R2_PUBLIC_BASE_URL?.trim() ??
+    process.env.VITE_R2_PUBLIC_BASE_URL?.trim() ??
+    "";
   const vehicles = rows.map((row: any) =>
     rowToVehicle(row, managedImages.get(row.id), r2PublicBaseUrl),
   );
