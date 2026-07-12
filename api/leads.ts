@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { recordPublicUsage, type UsageRpc } from "./usage";
 
 /**
  * POST /api/leads — public lead capture for the Vite site (same-origin).
@@ -76,11 +75,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   const lead = validation.value;
 
-  await recordPublicUsage(
-    (name, args) => supabase.rpc(name, args) as ReturnType<UsageRpc>,
-    tenant.tenantId,
-    "lead_requests",
-  );
+  // Best-effort metering, inlined on purpose: this standalone Vercel function
+  // is bundled without its relative deps, and root package.json is
+  // "type":"module", so a `./usage` import fails at runtime (ERR_MODULE_NOT_FOUND).
+  try {
+    await supabase.rpc("increment_usage_event", {
+      p_tenant_id: tenant.tenantId,
+      p_event_type: "lead_requests",
+      p_period_start: null,
+      p_increment: 1,
+    });
+  } catch {
+    // metering must never fail lead capture
+  }
 
   const { data, error } = await supabase
     .from("leads")

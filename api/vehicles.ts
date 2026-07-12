@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { recordPublicUsage, type UsageRpc } from "./usage";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -88,11 +87,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const usageClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    await recordPublicUsage(
-      (name, args) => usageClient.rpc(name, args) as ReturnType<UsageRpc>,
-      tenant.tenantId,
-      "vehicle_requests",
-    );
+    // Best-effort metering, inlined on purpose: this standalone Vercel
+    // function is bundled without its relative deps, and root package.json is
+    // "type":"module", so a `./usage` import fails at runtime (ERR_MODULE_NOT_FOUND).
+    try {
+      await usageClient.rpc("increment_usage_event", {
+        p_tenant_id: tenant.tenantId,
+        p_event_type: "vehicle_requests",
+        p_period_start: null,
+        p_increment: 1,
+      });
+    } catch {
+      // metering must never fail the public read
+    }
   }
 
   const limit = clamp(parseInt(query(req, "limit") || "") || DEFAULT_LIMIT, 1, MAX_LIMIT);
