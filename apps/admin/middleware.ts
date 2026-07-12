@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import {
+  isSubdomainRoutingEnabled,
+  tenantSlugFromHost,
+} from "@/lib/subdomainRouting";
 
 /**
  * Refresh Supabase session on every request and gate /admin/* routes.
@@ -8,6 +12,17 @@ import { updateSession } from "@/lib/supabase/middleware";
  * redirect to /login with `next` set so we can return them after login.
  */
 export async function middleware(request: NextRequest) {
+  if (isSubdomainRoutingEnabled(process.env.SUBDOMAIN_TENANT_ROUTING_ENABLED)) {
+    const tenantSlug = tenantSlugFromHost(
+      request.headers.get("host") ?? request.nextUrl.host,
+      process.env.LUME_ROOT_DOMAIN ?? ""
+    );
+    if (tenantSlug) {
+      // Host-derived scope wins over a caller-supplied selector on tenant hosts.
+      request.headers.set("x-lume-tenant", tenantSlug);
+    }
+  }
+
   const { response, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
 

@@ -16,8 +16,7 @@
  */
 import { createAnonServerClient } from "@lume/db/server";
 import type { TenantContext } from "@lume/types";
-
-const SUBDOMAIN_RESERVED = new Set(["www", "app", "api", "admin", "static", "cdn"]);
+import { legacyTenantSlugFromHost } from "./subdomainRouting";
 
 /**
  * Resolve a tenant by slug. Uses the anon Supabase client + tenant_by_slug RPC.
@@ -54,12 +53,7 @@ export function extractTenantSlugFromRequest(request: Request): string | null {
 
   const host = request.headers.get("host") ?? url.host;
   if (!host) return null;
-  const hostname = host.split(":")[0];
-  const parts = hostname.split(".");
-  if (parts.length < 3) return null; // need at least sub.domain.tld
-  const sub = parts[0];
-  if (SUBDOMAIN_RESERVED.has(sub)) return null;
-  return sub || null;
+  return legacyTenantSlugFromHost(host);
 }
 
 /** Reject ambiguous requests before a header-selected tenant is cached under a query URL. */

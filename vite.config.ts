@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   const ollamaHost = env.VITE_OLLAMA_HOST ?? 'http://127.0.0.1:11434';
   const adminApiHost = env.VITE_ADMIN_API_HOST ?? 'http://127.0.0.1:3000';
   const r2PublicBaseUrl = env.VITE_R2_PUBLIC_BASE_URL;
+  const preserveTenantHost = env.VITE_SUBDOMAIN_TENANT_ROUTING_ENABLED === 'true';
 
   return {
     plugins: [react(), glsl(), tailwind()],
@@ -22,7 +23,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           target: adminApiHost,
-          changeOrigin: true,
+          changeOrigin: !preserveTenantHost,
         },
         ...(r2PublicBaseUrl
           ? {

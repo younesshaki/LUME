@@ -114,6 +114,17 @@ For chat-like streaming, mirror `app/api/chat/route.ts`: prepend a
 one-shot `data: {"type":"meta",...}` SSE event with metadata, then
 pass the upstream stream through.
 
+### Local subdomain routing (default off)
+
+SCRUM-105 routing is intentionally disabled unless both development apps opt
+in. Add `127.0.0.1 default.lume.local` to your hosts file, then set
+`SUBDOMAIN_TENANT_ROUTING_ENABLED=true` and `LUME_ROOT_DOMAIN=lume.local` in
+`apps/admin/.env.local`, plus `VITE_SUBDOMAIN_TENANT_ROUTING_ENABLED=true` in
+the root `.env.local`. Open `http://default.lume.local:5173`; the Vite API
+proxy preserves that Host and the Next middleware injects the validated tenant
+slug. Leave either flag false for the existing localhost behavior. Production
+enablement also requires wildcard DNS and TLS for the configured root domain.
+
 ## Adding a new admin page
 
 Pattern: `apps/admin/app/admin/[tenant]/<feature>/page.tsx` (Server
