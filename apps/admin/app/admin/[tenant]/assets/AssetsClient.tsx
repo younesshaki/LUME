@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertCircle, Copy, ImageIcon, LoaderCircle, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@lume/db";
+import { BUCKET_UPLOAD_POLICIES, TENANT_BUCKETS, type Database } from "@lume/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -31,12 +31,11 @@ type StatusState =
   | { type: "success"; message: string }
   | { type: "error"; message: string };
 
-const ACCEPTED_MEDIA = {
-  "image/*": [],
-  "video/*": [],
-};
-
-const MAX_ASSET_BYTES = 50 * 1024 * 1024;
+const MEDIA_UPLOAD_POLICY = BUCKET_UPLOAD_POLICIES[TENANT_BUCKETS.media];
+const ACCEPTED_MEDIA = Object.fromEntries(
+  MEDIA_UPLOAD_POLICY.allowedTypes.map((type) => [type, []])
+) as Record<string, string[]>;
+const MAX_ASSET_BYTES = MEDIA_UPLOAD_POLICY.maxBytes;
 
 export default function AssetsClient({ tenantId, tenantSlug, tenantName }: AssetsClientProps) {
   const [assets, setAssets] = useState<TenantAsset[]>([]);
@@ -88,10 +87,10 @@ export default function AssetsClient({ tenantId, tenantSlug, tenantName }: Asset
         maxSize={MAX_ASSET_BYTES}
         disabled={status.type === "loading"}
         label={status.type === "loading" ? "Uploading…" : "Upload media"}
-        description="Drop an image or video here, or click to browse. Maximum 50 MB."
+        description="Drop a JPEG, PNG, WebP, or GIF image here, or click to browse. Maximum 10 MB."
         onChange={(files) => void uploadAsset(files[0])}
         onReject={() => {
-          const message = "Choose an image or video smaller than 50 MB.";
+          const message = "Choose a supported image smaller than 10 MB.";
           setStatus({ type: "error", message });
           toast.error("File not accepted", { description: message });
         }}
@@ -154,7 +153,7 @@ export default function AssetsClient({ tenantId, tenantSlug, tenantName }: Asset
             <EmptyState
               icon={ImageIcon}
               title="Your media library is empty"
-              description="Drop your first image or video above. Uploaded assets become available to pages, branding, and vehicle content."
+              description="Drop your first image above. Uploaded assets become available to pages, branding, and vehicle content."
               action={
                 <span className="inline-flex items-center gap-2 text-sm text-primary">
                   <UploadCloud className="size-4" /> Drag a file into the upload area

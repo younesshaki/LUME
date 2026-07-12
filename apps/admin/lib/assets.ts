@@ -12,7 +12,10 @@ export type TenantAsset = {
   objectKey: string;
   url: string;
   updatedAt: string | null;
+  contentType: string | null;
 };
+
+export type TenantAssetFilter = "all" | "image" | "other";
 
 type StorageClient = SupabaseClient<Database, "public">;
 
@@ -35,6 +38,7 @@ export async function listTenantMediaAssets(
         objectKey,
         url: publicUrl(client, TENANT_BUCKETS.media, objectKey),
         updatedAt: item.updated_at ?? item.created_at ?? null,
+        contentType: item.metadata?.mimetype ?? null,
       };
     });
 }
@@ -66,6 +70,7 @@ export async function uploadTenantMediaAsset(
     objectKey,
     url: publicUrl(client, TENANT_BUCKETS.media, objectKey),
     updatedAt: new Date().toISOString(),
+    contentType: file.type || null,
   };
 }
 
@@ -78,6 +83,27 @@ export function sanitizeAssetFileName(name: string): string {
     .slice(0, 80);
   const safeExtension = extension.replace(/[^a-z0-9]/g, "").slice(0, 12);
   return `${safeBaseName || "asset"}${safeExtension ? `.${safeExtension}` : ""}`;
+}
+
+export function tenantAssetType(asset: TenantAsset): Exclude<TenantAssetFilter, "all"> {
+  return asset.contentType?.startsWith("image/") || /\.(png|jpe?g|webp|gif|svg)$/i.test(asset.name)
+    ? "image"
+    : "other";
+}
+
+export function filterTenantAssets(
+  assets: readonly TenantAsset[],
+  query: string,
+  type: TenantAssetFilter
+): TenantAsset[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  return assets.filter((asset) => {
+    const matchesQuery =
+      !normalizedQuery ||
+      asset.name.toLowerCase().includes(normalizedQuery) ||
+      asset.objectKey.toLowerCase().includes(normalizedQuery);
+    return matchesQuery && (type === "all" || tenantAssetType(asset) === type);
+  });
 }
 
 function splitExtension(name: string): [string, string] {
