@@ -24,6 +24,14 @@ describe("loadVehicleFacets", () => {
       models: ["X5", "Camry"],
       states: ["CA", "AZ"],
       cities: ["Denver"],
+      ranges: {
+        yearMin: 2005,
+        yearMax: 2026,
+        priceMin: 12500,
+        priceMax: 240000,
+        mileageMin: 0,
+        mileageMax: 180000,
+      },
     });
 
     const facets = await loadVehicleFacets("BMW", "CO");
@@ -31,6 +39,14 @@ describe("loadVehicleFacets", () => {
     expect(facets.models).toEqual(["Camry", "X5"]);
     expect(facets.states).toEqual(["AZ", "CA"]);
     expect(facets.cities).toEqual(["Denver"]);
+    expect(facets.ranges).toEqual({
+      yearMin: 2005,
+      yearMax: 2026,
+      priceMin: 12500,
+      priceMax: 240000,
+      mileageMin: 0,
+      mileageMax: 180000,
+    });
   });
 
   it("memoizes per make/state scope (no second request)", async () => {
@@ -47,5 +63,20 @@ describe("loadVehicleFacets", () => {
     expect(calledUrl).toContain("/api/vehicles/facets");
     expect(calledUrl).toContain("make=Ford");
     expect(calledUrl).toContain("sellerState=FL");
+  });
+
+  it("does not download the full catalog when facets fail", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      statusText: "Unavailable",
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadVehicleFacets("NoCatalogFallback", "ZZ")).resolves.toMatchObject({
+      makes: [], models: [], states: [], cities: [],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/vehicles/facets");
   });
 });

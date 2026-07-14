@@ -594,6 +594,20 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["vehicle_images"]["Insert"]>;
         Relationships: [];
       };
+      tenant_inventory_versions: {
+        Row: {
+          tenant_id: string;
+          version: number;
+          updated_at: string;
+        };
+        Insert: {
+          tenant_id: string;
+          version?: number;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_inventory_versions"]["Insert"]>;
+        Relationships: [];
+      };
       vehicle_image_description_jobs: {
         Row: {
           id: string;
@@ -1281,6 +1295,55 @@ export type Database = {
           models: string[];
           states: string[];
           cities: string[];
+        }[];
+      };
+      vehicle_facets_v2: {
+        Args: { p_tenant_id: string; p_make?: string | null; p_state?: string | null };
+        Returns: {
+          makes: string[];
+          models: string[];
+          states: string[];
+          cities: string[];
+          year_min: number | null;
+          year_max: number | null;
+          price_min: number | null;
+          price_max: number | null;
+          mileage_min: number | null;
+          mileage_max: number | null;
+          catalog_version: number;
+        }[];
+      };
+      public_vehicle_inventory: {
+        Args: { p_tenant_id: string };
+        Returns: {
+          id: string;
+          tenant_id: string;
+          external_id: string | null;
+          stock_type: string | null;
+          year: number;
+          make: string;
+          model: string;
+          trim: string;
+          price: number;
+          mileage: number | null;
+          body_style: string;
+          exterior_color: string;
+          interior_color: string;
+          drivetrain: string;
+          fuel_type: string;
+          image_src: string;
+          seller_city: string;
+          seller_state: string;
+          is_special: boolean;
+          special_image_src: string | null;
+          search_vector: string | null;
+          status: "live";
+          sold_at: string | null;
+          sold_price: number | null;
+          created_at: string;
+          primary_image_r2_key: string | null;
+          primary_image_alt: string | null;
+          catalog_version: number;
         }[];
       };
       user_has_tenant_role: {

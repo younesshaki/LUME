@@ -14,7 +14,13 @@ import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const EMPTY: VehicleFacets = { makes: [], models: [], states: [], cities: [] };
+const EMPTY: VehicleFacets = {
+  makes: [], models: [], states: [], cities: [],
+  ranges: {
+    yearMin: null, yearMax: null, priceMin: null,
+    priceMax: null, mileageMin: null, mileageMax: null,
+  },
+};
 
 export async function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeadersFor(request) });
@@ -31,8 +37,19 @@ export async function GET(request: Request): Promise<Response> {
   const state = (sp.get("sellerState") ?? "").trim();
   const supabase = createAnonServerClient();
 
-  const facets = await loadFacets(supabase, tenant.tenantId, make, state);
-  return json(facets, 200, request, { "Cache-Control": "private, max-age=60" });
+  const result = await loadFacets(supabase, tenant.tenantId, make, state);
+  const etag = result.catalogVersion === null
+    ? null
+    : `W/"inventory-facets-${tenant.tenantId}-${result.catalogVersion}"`;
+  const headers = {
+    "Cache-Control": "private, no-cache",
+    Vary: "Origin, X-Lume-Tenant",
+    ...(etag ? { ETag: etag } : {}),
+  };
+  if (etag && request.headers.get("if-none-match") === etag) {
+    return new Response(null, { status: 304, headers: { ...corsHeadersFor(request), ...headers } });
+  }
+  return json(result.facets, 200, request, headers);
 }
 
 async function loadFacets(
@@ -40,20 +57,15 @@ async function loadFacets(
   tenantId: string,
   make: string,
   state: string,
-): Promise<VehicleFacets> {
-  const { data, error } = await supabase.rpc("vehicle_facets", {
+): Promise<{ facets: VehicleFacets; catalogVersion: number | null }> {
+  const { data, error } = await supabase.rpc("vehicle_facets_v2", {
     p_tenant_id: tenantId,
     p_make: make || null,
     p_state: state || null,
   });
   if (!error && data) {
     const row = Array.isArray(data) ? data[0] : data;
-    return {
-      makes: toStringArray(row?.makes),
-      models: toStringArray(row?.models),
-      states: toStringArray(row?.states),
-      cities: toStringArray(row?.cities),
-    };
+    return { facets: normalizeFacets(row), catalogVersion: finiteNumber(row?.catalog_version) };
   }
   if (error) {
     console.warn("[/api/vehicles/facets] RPC unavailable, scanning columns:", error.message);
@@ -61,20 +73,47 @@ async function loadFacets(
 
   const { data: rows, error: scanError } = await supabase
     .from("vehicles")
-    .select("make, model, seller_state, seller_city")
+    .select("make, model, seller_state, seller_city, year, price, mileage")
     .eq("tenant_id", tenantId)
     .eq("status", "live");
   if (scanError || !rows) {
     console.warn("[/api/vehicles/facets] column scan failed:", scanError?.message);
-    return EMPTY;
+    return { facets: EMPTY, catalogVersion: null };
   }
+  return { facets: {
+      makes: uniqueSorted(rows.map((r) => r.make)),
+      models: uniqueSorted(rows.filter((r) => !make || r.make === make).map((r) => r.model)),
+      states: uniqueSorted(rows.map((r) => r.seller_state)),
+      cities: uniqueSorted(
+        rows.filter((r) => !state || r.seller_state === state).map((r) => r.seller_city),
+      ),
+      ranges: {
+        yearMin: minNumber(rows.map((r) => r.year)),
+        yearMax: maxNumber(rows.map((r) => r.year)),
+        priceMin: minNumber(rows.map((r) => r.price)),
+        priceMax: maxNumber(rows.map((r) => r.price)),
+        mileageMin: minNumber(rows.map((r) => r.mileage)),
+        mileageMax: maxNumber(rows.map((r) => r.mileage)),
+      },
+    }, catalogVersion: null,
+  };
+}
+
+function normalizeFacets(value: unknown): VehicleFacets {
+  const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
   return {
-    makes: uniqueSorted(rows.map((r) => r.make)),
-    models: uniqueSorted(rows.filter((r) => !make || r.make === make).map((r) => r.model)),
-    states: uniqueSorted(rows.map((r) => r.seller_state)),
-    cities: uniqueSorted(
-      rows.filter((r) => !state || r.seller_state === state).map((r) => r.seller_city),
-    ),
+    makes: toStringArray(row.makes),
+    models: toStringArray(row.models),
+    states: toStringArray(row.states),
+    cities: toStringArray(row.cities),
+    ranges: {
+      yearMin: finiteNumber(row.year_min),
+      yearMax: finiteNumber(row.year_max),
+      priceMin: finiteNumber(row.price_min),
+      priceMax: finiteNumber(row.price_max),
+      mileageMin: finiteNumber(row.mileage_min),
+      mileageMax: finiteNumber(row.mileage_max),
+    },
   };
 }
 
@@ -84,6 +123,21 @@ function toStringArray(value: unknown): string[] {
 
 function uniqueSorted(values: Array<string | null>): string[] {
   return [...new Set(values.filter((v): v is string => Boolean(v)))].sort();
+}
+
+function finiteNumber(value: unknown): number | null {
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function minNumber(values: unknown[]): number | null {
+  const numbers = values.map(finiteNumber).filter((value): value is number => value !== null);
+  return numbers.length ? Math.min(...numbers) : null;
+}
+
+function maxNumber(values: unknown[]): number | null {
+  const numbers = values.map(finiteNumber).filter((value): value is number => value !== null);
+  return numbers.length ? Math.max(...numbers) : null;
 }
 
 function json(

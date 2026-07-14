@@ -64,7 +64,8 @@ export type VehicleSort =
 
 export type VehicleListResponse = {
   vehicles: Vehicle[];
-  totalCount: number;
+  /** Present when the caller requested a count; later pages can reuse page 1. */
+  totalCount?: number;
   hasMore: boolean;
   facets?: VehicleFacets;
 };
@@ -74,6 +75,14 @@ export type VehicleFacets = {
   models: string[];
   states: string[];
   cities: string[];
+  ranges?: {
+    yearMin: number | null;
+    yearMax: number | null;
+    priceMin: number | null;
+    priceMax: number | null;
+    mileageMin: number | null;
+    mileageMax: number | null;
+  };
 };
 
 export type VehicleGalleryImage = {

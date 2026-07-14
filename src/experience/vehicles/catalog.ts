@@ -42,11 +42,19 @@ export type VehicleFacets = {
   models: string[];
   states: string[];
   cities: string[];
+  ranges?: {
+    yearMin: number | null;
+    yearMax: number | null;
+    priceMin: number | null;
+    priceMax: number | null;
+    mileageMin: number | null;
+    mileageMax: number | null;
+  };
 };
 
 export type VehicleResults = {
   vehicles: Vehicle[];
-  totalCount: number;
+  totalCount: number | null;
   hasMore: boolean;
   facets: VehicleFacets;
   source: "api" | "fallback";
@@ -508,6 +516,12 @@ async function loadVehicleResultsFromApi(
 ): Promise<VehicleResults> {
   const offset = (Math.max(1, page) - 1) * pageSize;
   const params = vehicleFiltersToApiSearchParams(filters, sort, offset, pageSize);
+  const countKey = vehicleCountCacheKey(params);
+  const cachedCount = readCachedVehicleCount(countKey);
+  // The initial page refreshes the count (and therefore reflects admin
+  // mutations promptly); subsequent pages reuse it instead of repeating an
+  // exact count query.
+  if (offset === 0 || cachedCount === null) params.set("includeCount", "true");
   const res = await fetch(createVehiclesApiUrl(params), {
     headers: {
       "X-Lume-Tenant": TENANT_SLUG,
@@ -522,10 +536,16 @@ async function loadVehicleResultsFromApi(
   const vehicles = Array.isArray(payload.vehicles)
     ? payload.vehicles.map(normalizeApiVehicle).filter((vehicle): vehicle is Vehicle => Boolean(vehicle))
     : [];
+  if (typeof payload.totalCount === "number") {
+    vehicleCountCache.set(countKey, {
+      count: payload.totalCount,
+      expiresAt: Date.now() + VEHICLE_COUNT_CACHE_MS,
+    });
+  }
 
   return {
     vehicles,
-    totalCount: payload.totalCount ?? vehicles.length,
+    totalCount: payload.totalCount ?? cachedCount,
     hasMore: Boolean(payload.hasMore),
     facets: normalizeVehicleFacets(payload.facets),
     source: "api",
@@ -568,6 +588,26 @@ export function vehicleFiltersToApiSearchParams(
 }
 
 const facetsCache = new Map<string, VehicleFacets>();
+const VEHICLE_COUNT_CACHE_MS = 15_000;
+const vehicleCountCache = new Map<string, { count: number; expiresAt: number }>();
+
+function vehicleCountCacheKey(params: URLSearchParams): string {
+  const key = new URLSearchParams(params);
+  key.delete("offset");
+  key.delete("limit");
+  key.delete("includeCount");
+  return key.toString();
+}
+
+function readCachedVehicleCount(key: string): number | null {
+  const entry = vehicleCountCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    vehicleCountCache.delete(key);
+    return null;
+  }
+  return entry.count;
+}
 
 /**
  * Load filter-dropdown values from the lightweight facets endpoint (distinct
@@ -581,7 +621,7 @@ export async function loadVehicleFacets(
   make: string,
   sellerState: string,
 ): Promise<VehicleFacets> {
-  const key = `${make} ${sellerState}`;
+  const key = `${make}\u0000${sellerState}`;
   const cached = facetsCache.get(key);
   if (cached) return cached;
 
@@ -598,9 +638,15 @@ export async function loadVehicleFacets(
     facetsCache.set(key, facets);
     return facets;
   } catch (error) {
-    console.warn("Vehicle facets API failed, deriving from catalog", error);
-    const vehicles = await loadVehicles();
-    return vehicleFacetsFromVehicles(vehicles, { make, sellerState });
+    console.warn("Vehicle facets API failed", error);
+    // Never start a full-catalog request merely to populate dropdowns. If the
+    // legacy catalog was already loaded for another fallback path, it is safe
+    // to derive from that in-memory data; otherwise leave the controls empty.
+    const fallback = cached
+      ? vehicleFacetsFromVehicles(cached, { make, sellerState })
+      : normalizeVehicleFacets(undefined);
+    facetsCache.set(key, fallback);
+    return fallback;
   }
 }
 
@@ -620,7 +666,19 @@ function normalizeVehicleFacets(facets: VehicleFacets | undefined): VehicleFacet
     models: Array.isArray(facets?.models) ? facets.models.filter(Boolean).sort() : [],
     states: Array.isArray(facets?.states) ? facets.states.filter(Boolean).sort() : [],
     cities: Array.isArray(facets?.cities) ? facets.cities.filter(Boolean).sort() : [],
+    ...(facets?.ranges ? { ranges: {
+      yearMin: finiteNumberOrNull(facets.ranges.yearMin),
+      yearMax: finiteNumberOrNull(facets.ranges.yearMax),
+      priceMin: finiteNumberOrNull(facets.ranges.priceMin),
+      priceMax: finiteNumberOrNull(facets.ranges.priceMax),
+      mileageMin: finiteNumberOrNull(facets.ranges.mileageMin),
+      mileageMax: finiteNumberOrNull(facets.ranges.mileageMax),
+    } } : {}),
   };
+}
+
+function finiteNumberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function normalizeApiVehicle(vehicle: Vehicle & { tenantId?: string; externalId?: string }): Vehicle | null {
