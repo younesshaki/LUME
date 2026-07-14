@@ -1274,6 +1274,15 @@ export type Database = {
         Args: Record<string, never>;
         Returns: string[];
       };
+      vehicle_facets: {
+        Args: { p_tenant_id: string; p_make?: string | null; p_state?: string | null };
+        Returns: {
+          makes: string[];
+          models: string[];
+          states: string[];
+          cities: string[];
+        }[];
+      };
       user_has_tenant_role: {
         Args: { p_tenant_id: string; p_roles: string[] };
         Returns: boolean;

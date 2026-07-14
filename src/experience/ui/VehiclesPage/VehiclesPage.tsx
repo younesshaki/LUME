@@ -24,6 +24,7 @@ import {
   YEAR_MIN,
   countActiveFilters,
   formatVehiclePrice,
+  loadVehicleFacets,
   loadVehicleResults,
   vehicleDisplayImage,
   type Vehicle,
@@ -58,6 +59,15 @@ const EMPTY_VEHICLE_FACETS: VehicleFacets = {
   states: [],
   cities: [],
 };
+
+function isEmptyFacets(facets: VehicleFacets): boolean {
+  return (
+    facets.makes.length === 0 &&
+    facets.models.length === 0 &&
+    facets.states.length === 0 &&
+    facets.cities.length === 0
+  );
+}
 
 function formatMileage(miles: number | null): string {
   if (miles === null) return "N/A";
@@ -823,7 +833,9 @@ export default function VehiclesPage({
         if (cancelled) return;
         setVehicles(result.vehicles);
         setTotalCount(result.totalCount);
-        setFacets(result.facets);
+        // Seed dropdowns from the list response as a fallback; the dedicated
+        // facets effect below is the authority and refines them.
+        setFacets((current) => (isEmptyFacets(current) ? result.facets : current));
         setVehicleLookup((current) => mergeVehicleLookup(current, result.vehicles));
         setLoadError(false);
       })
@@ -840,6 +852,22 @@ export default function VehiclesPage({
       cancelled = true;
     };
   }, [filters, page, sort]);
+
+  // Filter-dropdown values load from the lightweight facets endpoint and only
+  // refetch when the make/state scope changes — not on every page or sort.
+  useEffect(() => {
+    let cancelled = false;
+    loadVehicleFacets(filters.make, filters.sellerState)
+      .then((next) => {
+        if (!cancelled) setFacets(next);
+      })
+      .catch((error) => {
+        if (!cancelled) console.error("Unable to load filter options", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filters.make, filters.sellerState]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {

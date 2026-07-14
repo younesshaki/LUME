@@ -567,12 +567,49 @@ export function vehicleFiltersToApiSearchParams(
   return params;
 }
 
-function createVehiclesApiUrl(params: URLSearchParams): string {
+const facetsCache = new Map<string, VehicleFacets>();
+
+/**
+ * Load filter-dropdown values from the lightweight facets endpoint (distinct
+ * sets computed server-side), scoped to the selected make/state. Results are
+ * memoized per (make, state) for the session; on failure we derive facets from
+ * the cached catalog so the dropdowns still populate (and the default tenant's
+ * CSV path keeps working). This replaces deriving facets from a full catalog
+ * download on every page/sort change.
+ */
+export async function loadVehicleFacets(
+  make: string,
+  sellerState: string,
+): Promise<VehicleFacets> {
+  const key = `${make} ${sellerState}`;
+  const cached = facetsCache.get(key);
+  if (cached) return cached;
+
+  try {
+    const params = new URLSearchParams();
+    params.set("tenant", TENANT_SLUG);
+    if (make) params.set("make", make);
+    if (sellerState) params.set("sellerState", sellerState);
+    const res = await fetch(createVehiclesApiUrl(params, "/facets"), {
+      headers: { "X-Lume-Tenant": TENANT_SLUG },
+    });
+    if (!res.ok) throw new Error(`Facets API ${res.status}: ${res.statusText}`);
+    const facets = normalizeVehicleFacets((await res.json()) as VehicleFacets);
+    facetsCache.set(key, facets);
+    return facets;
+  } catch (error) {
+    console.warn("Vehicle facets API failed, deriving from catalog", error);
+    const vehicles = await loadVehicles();
+    return vehicleFacetsFromVehicles(vehicles, { make, sellerState });
+  }
+}
+
+function createVehiclesApiUrl(params: URLSearchParams, subPath = ""): string {
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : "http://localhost";
-  const url = new URL(`${ADMIN_API_HOST ?? ""}${VEHICLES_API_PATH}`, origin);
+  const url = new URL(`${ADMIN_API_HOST ?? ""}${VEHICLES_API_PATH}${subPath}`, origin);
   params.forEach((value, key) => url.searchParams.set(key, value));
   return ADMIN_API_HOST ? url.toString() : `${url.pathname}${url.search}`;
 }
