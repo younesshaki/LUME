@@ -29,6 +29,8 @@ interface AnimatedThemeTogglerProps extends React.ComponentPropsWithoutRef<"butt
   onThemeChange?: (theme: "light" | "dark") => void
 }
 
+const TRANSITION_OVERSCAN_PX = 16
+
 function polygonCollapsed(cx: number, cy: number, vertexCount: number): string {
   const pairs = Array.from(
     { length: vertexCount },
@@ -133,6 +135,14 @@ function getThemeTransitionClipPaths(
   }
 }
 
+function waitForStablePaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve())
+    })
+  })
+}
+
 export const AnimatedThemeToggler = ({
   className,
   duration = 400,
@@ -147,6 +157,7 @@ export const AnimatedThemeToggler = ({
   const [internalIsDark, setInternalIsDark] = useState(false)
   const isDark = isControlled ? theme === "dark" : internalIsDark
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const transitionInFlightRef = useRef(false)
 
   useEffect(() => {
     if (isControlled) return
@@ -168,10 +179,19 @@ export const AnimatedThemeToggler = ({
 
   const toggleTheme = useCallback(() => {
     const button = buttonRef.current
-    if (!button) return
+    if (!button || transitionInFlightRef.current) return
 
-    const viewportWidth = window.visualViewport?.width ?? window.innerWidth
-    const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+    const nextTheme: "light" | "dark" = isDark ? "light" : "dark"
+    const viewportWidth = Math.max(
+      window.innerWidth,
+      document.documentElement.clientWidth,
+      window.visualViewport?.width ?? 0
+    )
+    const viewportHeight = Math.max(
+      window.innerHeight,
+      document.documentElement.clientHeight,
+      window.visualViewport?.height ?? 0
+    )
 
     let x: number
     let y: number
@@ -184,26 +204,29 @@ export const AnimatedThemeToggler = ({
       y = top + height / 2
     }
 
-    const maxRadius = Math.hypot(
-      Math.max(x, viewportWidth - x),
-      Math.max(y, viewportHeight - y)
-    )
+    const maxRadius =
+      Math.ceil(
+        Math.hypot(
+          Math.max(x, viewportWidth - x),
+          Math.max(y, viewportHeight - y)
+        )
+      ) + TRANSITION_OVERSCAN_PX
 
-    const applyTheme = () => {
-      const newTheme = !isDark
-      // Always toggle the class synchronously so the View Transitions API
-      // snapshots the new theme inside the startViewTransition callback.
-      document.documentElement.classList.toggle("dark")
-      if (isControlled) {
-        onThemeChange?.(newTheme ? "dark" : "light")
-      } else {
-        setInternalIsDark(newTheme)
-        localStorage.setItem("theme", newTheme ? "dark" : "light")
+    const applyThemeClass = () => {
+      document.documentElement.classList.toggle("dark", nextTheme === "dark")
+      if (!isControlled) {
+        setInternalIsDark(nextTheme === "dark")
+        localStorage.setItem("theme", nextTheme)
       }
     }
 
+    const persistControlledTheme = () => {
+      if (isControlled) onThemeChange?.(nextTheme)
+    }
+
     if (typeof document.startViewTransition !== "function") {
-      applyTheme()
+      flushSync(applyThemeClass)
+      persistControlledTheme()
       return
     }
 
@@ -217,46 +240,48 @@ export const AnimatedThemeToggler = ({
     )
 
     const root = document.documentElement
+    transitionInFlightRef.current = true
     root.dataset.magicuiThemeVt = "active"
     root.style.setProperty(
       "--magicui-theme-toggle-vt-duration",
       `${duration}ms`
     )
-    // Pin the collapsed clip-path via CSS so Firefox does not paint the new
-    // theme unclipped between snapshot and the ready.then() JS animation.
     root.style.setProperty("--magicui-theme-vt-clip-from", clipPath[0])
+
+    let finalized = false
     const cleanup = () => {
+      if (finalized) return
+      finalized = true
+      persistControlledTheme()
       delete root.dataset.magicuiThemeVt
       root.style.removeProperty("--magicui-theme-toggle-vt-duration")
       root.style.removeProperty("--magicui-theme-vt-clip-from")
+      transitionInFlightRef.current = false
     }
 
     const transition = document.startViewTransition(() => {
-      flushSync(applyTheme)
+      flushSync(applyThemeClass)
     })
-    if (typeof transition?.finished?.finally === "function") {
-      transition.finished.finally(cleanup)
-    } else {
-      cleanup()
-    }
 
-    const ready = transition?.ready
-    if (ready && typeof ready.then === "function") {
-      ready.then(() => {
-        document.documentElement.animate(
-          {
-            clipPath,
-          },
-          {
-            duration,
-            // Star: linear avoids easing overshoot that fights polygon interpolation at t→1; VT group duration is synced above.
-            easing: shape === "star" ? "linear" : "ease-in-out",
-            fill: "forwards",
-            pseudoElement: "::view-transition-new(root)",
-          }
-        )
-      })
-    }
+    const animationFinished = transition.ready.then(() => {
+      const animation = document.documentElement.animate(
+        {
+          clipPath,
+        },
+        {
+          duration,
+          // Star: linear avoids easing overshoot that fights polygon interpolation at t→1.
+          easing: shape === "star" ? "linear" : "ease-in-out",
+          fill: "forwards",
+          pseudoElement: "::view-transition-new(root)",
+        }
+      )
+      return animation.finished
+    })
+
+    void Promise.allSettled([transition.finished, animationFinished])
+      .then(waitForStablePaint)
+      .then(cleanup, cleanup)
   }, [shape, fromCenter, duration, isDark, isControlled, onThemeChange])
 
   return (
