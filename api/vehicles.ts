@@ -3,6 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const SUBDOMAIN_RESERVED = new Set(["www", "app", "api", "admin", "static", "cdn"]);
+// Only the columns the public client actually renders (plus created_at/is_special
+// for ordering) — avoids shipping every column on every list page.
+const VEHICLE_COLUMNS =
+  "id, tenant_id, external_id, stock_type, year, make, model, trim, price, mileage, " +
+  "body_style, exterior_color, interior_color, drivetrain, fuel_type, image_src, " +
+  "seller_city, seller_state, is_special, special_image_src, created_at";
 
 type VercelRequest = {
   method?: string;
@@ -112,11 +118,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // The anonymous client remains the authority for which vehicle rows may be
   // returned publicly. Managed image metadata is loaded later only for these
-  // already-visible IDs.
+  // already-visible IDs. Select only the columns the client needs instead of
+  // "*" — smaller payload per page.
   let vehicleQuery = supabase
     .from("vehicles")
-    .select("*", { count: "exact" })
+    .select(VEHICLE_COLUMNS, { count: "exact" })
     .eq("tenant_id", tenant.tenantId);
+
+  const search = query(req, "q")?.trim();
+  if (search) {
+    const like = search.replace(/[%,]/g, " ").replace(/\s+/g, " ").trim();
+    if (like) {
+      vehicleQuery = vehicleQuery.or(
+        [
+          `make.ilike.%${like}%`,
+          `model.ilike.%${like}%`,
+          `trim.ilike.%${like}%`,
+          `body_style.ilike.%${like}%`,
+          `fuel_type.ilike.%${like}%`,
+          `exterior_color.ilike.%${like}%`,
+          `seller_city.ilike.%${like}%`,
+          `seller_state.ilike.%${like}%`,
+        ].join(","),
+      );
+    }
+  }
 
   for (const [param, column] of [
     ["make", "make"],
