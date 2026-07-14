@@ -158,11 +158,21 @@ body {
   }
 }
 
-/* The theme toggle now reveals via a controlled fixed DOM overlay
-   (components/ui/animated-theme-toggler.tsx), not the browser View Transitions
-   snapshot — whose reveal caused an intermittent one-frame edge flash in
-   Chrome on macOS. The overlay paints the target theme's own --background and
-   is inert (pointer-events: none). */
-[data-theme-reveal-overlay] {
-  contain: strict;
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html[data-magicui-theme-vt="active"]::view-transition-old(root) {
+  z-index: 1;
+}
+
+html[data-magicui-theme-vt="active"]::view-transition-new(root) {
+  z-index: 2;
+  clip-path: var(--magicui-theme-vt-clip-from);
+}
+
+html[data-magicui-theme-vt="active"]::view-transition-group(root) {
+  animation-duration: var(--magicui-theme-toggle-vt-duration);
 }
