@@ -13,6 +13,7 @@ import { SITE_NAV_ITEMS, type SiteNavItem } from "../../siteNavigation";
 type MobileNavProps = {
   currentScreen: string;
   onNavigate: (screen: string) => void;
+  onIntent?: (screen: string) => void;
   items?: SiteNavItem[];
   showCta?: boolean;
   ctaLabel?: string;
@@ -21,6 +22,7 @@ type MobileNavProps = {
 export function MobileNav({
   currentScreen,
   onNavigate,
+  onIntent,
   items = SITE_NAV_ITEMS,
   showCta = true,
   ctaLabel,
@@ -69,6 +71,8 @@ export function MobileNav({
               <button
                 key={item.screen}
                 onClick={() => handleNavigate(item.screen)}
+                onFocus={() => onIntent?.(item.screen)}
+                onPointerDown={() => onIntent?.(item.screen)}
                 className={`text-left py-4 text-base tracking-[0.15em] uppercase border-b border-white/5
                   transition-colors duration-150 cursor-pointer
                   ${isActive ? "text-[#C9A84C]" : "text-white/60 hover:text-white/90"}`}
@@ -83,6 +87,7 @@ export function MobileNav({
           <div className="px-6 py-8">
             <InvitationCTA
               onClick={() => handleNavigate("contact")}
+              onIntent={() => onIntent?.("contact")}
               label={ctaLabel}
               className="w-full justify-center"
             />

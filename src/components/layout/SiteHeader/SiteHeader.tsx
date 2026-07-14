@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/app-shell/NavigationProvider";
+import { preloadRouteModule } from "@/app-shell/routeModules";
 import { mediaUrl } from "@/config/cdn";
 import { loadHeaderConfig, type PublicHeaderConfig } from "@/lib/publicNav";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
@@ -89,6 +90,9 @@ export function SiteHeader() {
       <button
         aria-label="Go to LUME home"
         onClick={() => onNavigate("home")}
+        onMouseEnter={() => preloadRouteModule("home")}
+        onFocus={() => preloadRouteModule("home")}
+        onPointerDown={() => preloadRouteModule("home")}
         className="flex-shrink-0 cursor-pointer focus-visible:outline-none
           focus-visible:ring-1 focus-visible:ring-[#C9A84C] rounded"
       >
@@ -103,8 +107,8 @@ export function SiteHeader() {
       {/* Desktop nav — centered */}
       <div className="hidden md:flex absolute left-1/2 -translate-x-1/2">
         {useGooeyNav
-          ? <GooeyDesktopNav currentScreen={activeKey} onNavigate={onNavigate} items={items} />
-          : <DesktopNav currentScreen={activeKey} onNavigate={onNavigate} items={items} />}
+          ? <GooeyDesktopNav currentScreen={activeKey} onNavigate={onNavigate} onIntent={preloadRouteModule} items={items} />
+          : <DesktopNav currentScreen={activeKey} onNavigate={onNavigate} onIntent={preloadRouteModule} items={items} />}
       </div>
 
       {/* Right slot */}
@@ -114,6 +118,7 @@ export function SiteHeader() {
         {headerConfig.showCta && (
           <InvitationCTA
             onClick={() => onNavigate("contact")}
+            onIntent={() => preloadRouteModule("contact")}
             label={headerConfig.ctaLabel}
             className="hidden md:inline-flex"
           />
@@ -121,6 +126,7 @@ export function SiteHeader() {
         <MobileNav
           currentScreen={activeKey}
           onNavigate={onNavigate}
+          onIntent={preloadRouteModule}
           items={items}
           showCta={headerConfig.showCta}
           ctaLabel={headerConfig.ctaLabel}

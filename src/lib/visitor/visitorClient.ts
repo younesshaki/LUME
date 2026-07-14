@@ -34,6 +34,7 @@ export function createVisitorClient({
   fetcher?: Fetcher;
   tenantSlug?: string;
 } = {}): VisitorClient {
+  let getMeRequest: Promise<Visitor | null> | null = null;
   const request = (path: string, init: RequestInit = {}) => {
     const headers = new Headers(init.headers);
     if (init.body && !headers.has("Content-Type")) {
@@ -86,14 +87,25 @@ export function createVisitorClient({
     },
 
     async getMe(signal) {
-      const response = await request("/api/visitor/me", { signal });
-      if (response.status === 401) return null;
-      await ensureOk(response);
-      const payload = await readJson(response);
-      if (!isRecord(payload) || !isVisitor(payload.visitor)) {
-        throw new VisitorApiError(response.status, "The account response was invalid.");
+      if (!signal && getMeRequest) return getMeRequest;
+      const lookup = (async (): Promise<Visitor | null> => {
+        const response = await request("/api/visitor/me", { signal });
+        if (response.status === 401) return null;
+        await ensureOk(response);
+        const payload = await readJson(response);
+        if (!isRecord(payload) || !isVisitor(payload.visitor)) {
+          throw new VisitorApiError(response.status, "The account response was invalid.");
+        }
+        return payload.visitor;
+      })();
+      if (!signal) {
+        getMeRequest = lookup;
+        const clear = () => {
+          if (getMeRequest === lookup) getMeRequest = null;
+        };
+        void lookup.then(clear, clear);
       }
-      return payload.visitor;
+      return lookup;
     },
 
     async getLoyalty(signal) {

@@ -62,24 +62,26 @@ function ActiveVisitorAuthProvider({
   }, [client]);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let cancelled = false;
 
-    void client.getMe(controller.signal).then(
+    void client.getMe().then(
       (visitor) => {
-        if (!controller.signal.aborted) {
+        if (!cancelled) {
           dispatch(visitor
             ? { type: "check_authenticated", visitor }
             : { type: "check_anonymous" });
         }
       },
       (error: unknown) => {
-        if (!controller.signal.aborted) {
+        if (!cancelled) {
           dispatch({ type: "failed", message: errorMessage(error) });
         }
       }
     );
 
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+    };
   }, [client]);
 
   const login = useCallback(async (input: VisitorLoginInput) => {
