@@ -163,3 +163,16 @@ body {
   animation: none;
   mix-blend-mode: normal;
 }
+
+html[data-magicui-theme-vt="active"]::view-transition-old(root) {
+  z-index: 1;
+}
+
+html[data-magicui-theme-vt="active"]::view-transition-new(root) {
+  z-index: 2;
+  clip-path: var(--magicui-theme-vt-clip-from);
+}
+
+html[data-magicui-theme-vt="active"]::view-transition-group(root) {
+  animation-duration: var(--magicui-theme-toggle-vt-duration);
+}
