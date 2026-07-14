@@ -22,28 +22,44 @@ import type { SoundSpec } from "./types";
 type PoolEntry = {
   elements: HTMLAudioElement[];
   cursor: number;
-  lastFiredAt: number;
 };
 
-const pools = new Map<SoundKey, PoolEntry>();
+// Element pools are keyed by physical audio `src`, not by sound key, so that
+// multiple sound keys pointing at the same file (e.g. click-sharp/click-firm)
+// share one pool instead of each creating its own. Pools are built lazily on
+// first playback — nothing is fetched at app boot.
+const pools = new Map<string, PoolEntry>();
+// Cooldown is tracked per sound key so keys that merely share a file keep
+// independent machine-gun protection.
+const lastFiredAt = new Map<SoundKey, number>();
 const activeTimeouts = new Map<string, number[]>();
 let unlocked = false;
 let initialized = false;
 
 function getPool(key: SoundKey): PoolEntry {
-  let entry = pools.get(key);
-  if (entry) return entry;
-
   const spec = SOUND_LIBRARY[key] as SoundSpec;
+  const src = spec.src;
   const size = Math.max(1, spec.pool ?? 3);
+
+  let entry = pools.get(src);
+  if (entry) {
+    // A later key may want a larger pool for the same file; grow to fit.
+    while (entry.elements.length < size) {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      entry.elements.push(audio);
+    }
+    return entry;
+  }
+
   const elements: HTMLAudioElement[] = [];
   for (let i = 0; i < size; i++) {
-    const audio = new Audio(spec.src);
+    const audio = new Audio(src);
     audio.preload = "auto";
     elements.push(audio);
   }
-  entry = { elements, cursor: 0, lastFiredAt: 0 };
-  pools.set(key, entry);
+  entry = { elements, cursor: 0 };
+  pools.set(src, entry);
   return entry;
 }
 
@@ -79,12 +95,12 @@ function playSoundOnce(
   }
 
   const spec = SOUND_LIBRARY[soundKey] as SoundSpec;
-  const pool = getPool(soundKey);
   const now =
     typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
 
-  if (spec.cooldownMs && now - pool.lastFiredAt < spec.cooldownMs) return;
+  if (spec.cooldownMs && now - (lastFiredAt.get(soundKey) ?? 0) < spec.cooldownMs) return;
 
+  const pool = getPool(soundKey);
   const audio = pool.elements[pool.cursor];
   pool.cursor = (pool.cursor + 1) % pool.elements.length;
 
@@ -110,7 +126,7 @@ function playSoundOnce(
     });
   }
 
-  pool.lastFiredAt = now;
+  lastFiredAt.set(soundKey, now);
 }
 
 function cancelSequence(actionKey: string): void {
@@ -206,17 +222,14 @@ export function play(action: string): void {
 /**
  * Initialize the engine. Safe to call multiple times.
  *  - Sets up an autoplay-policy unlock on the first user gesture
- *  - Preloads every sound with `preload !== false`
+ *
+ * Sound pools are NOT preloaded here — they are built lazily on first
+ * playback (and deduped by file), so app boot does not fetch the whole
+ * sound library up front.
  */
 export function init(): void {
   if (initialized) return;
   initialized = true;
-
-  // Eagerly create pool entries (preload via Audio.preload="auto")
-  for (const key of Object.keys(SOUND_LIBRARY) as SoundKey[]) {
-    if ((SOUND_LIBRARY[key] as SoundSpec).preload === false) continue;
-    getPool(key);
-  }
 
   if (typeof window === "undefined") return;
 
@@ -243,6 +256,7 @@ export function _reset(): void {
   }
   activeTimeouts.clear();
   pools.clear();
+  lastFiredAt.clear();
   unlocked = false;
   initialized = false;
 }
