@@ -71,6 +71,24 @@ const loadPagePreviewBridge = () => import("./lib/pageBuilder/PagePreviewBridge"
 // postMessage. It renders the real block components with no site chrome.
 const PAGE_PREVIEW_PATH = "/__preview";
 
+/** Run a callback when the browser is idle; returns a cleanup that cancels it. */
+function whenIdle(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const ric = (
+    window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    }
+  ).requestIdleCallback;
+  if (ric) {
+    const id = ric(callback, { timeout: 2000 });
+    return () =>
+      (window as unknown as { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(callback, 1200);
+  return () => window.clearTimeout(id);
+}
+
 const AdminRouter = lazy(loadAdminRouter);
 const AccountPage = lazy(loadAccountPage);
 const ContactPage = lazy(loadContactPage);
@@ -261,19 +279,25 @@ export default function App() {
     readCookieConsent
   );
 
+  // Prefetch only the routes a visitor is likely to reach next, and only when
+  // the browser is idle. Deliberately route-scoped: the Three.js Experience and
+  // the admin bundle are never pulled onto a light public route like /vehicles —
+  // they load on demand when actually navigated to.
   useEffect(() => {
-    void loadAccountPage();
-    void loadStoryHomePage();
-    void loadProductsPage();
-    void loadVehiclesPage();
-    void loadVehicleDetailPage();
-    void loadProductDetailPage();
-    void loadShowcasePage();
-    void loadContactPage();
-    void loadShowcaseTitleCard();
-    void loadAdminRouter();
-    void loadExperience();
-  }, []);
+    const common = [loadStoryHomePage, loadProductsPage, loadVehiclesPage, loadContactPage];
+    const bySection: Record<string, Array<() => Promise<unknown>>> = {
+      home: [...common, loadShowcasePage, loadVehicleDetailPage, loadProductDetailPage],
+      products: [loadProductDetailPage, loadStoryHomePage, loadVehiclesPage],
+      vehicles: [loadVehicleDetailPage, loadStoryHomePage, loadProductsPage],
+      showcase: [loadShowcaseTitleCard, loadExperience, loadStoryHomePage],
+      contact: [loadStoryHomePage, loadVehiclesPage],
+      account: [loadStoryHomePage],
+    };
+    const loaders = bySection[currentRouteConfig.section] ?? common;
+    return whenIdle(() => {
+      for (const load of loaders) void load();
+    });
+  }, [currentRouteConfig.section]);
 
   useEffect(() => {
     setActiveRoute(routeId);
@@ -448,9 +472,13 @@ export default function App() {
         <BottomDock />
       )}
       <ModeToggle className={showSiteHeader ? "modeToggle--belowHeader" : ""} />
-      {!showGateOverlay && (
-        <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
-      )}
+      {/* Ambient music only mounts on the home and showcase sections, so light
+          public routes like /vehicles never instantiate (and fetch) the audio. */}
+      {!showGateOverlay &&
+        (currentRouteConfig.section === "home" ||
+          currentRouteConfig.section === "showcase") && (
+          <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
+        )}
       {LOCAL_CHAT_ENABLED && !showGateOverlay && (
         <Suspense fallback={null}>
           <OllamaChat />
