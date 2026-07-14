@@ -52,6 +52,22 @@ export type VehicleResults = {
   source: "api" | "fallback";
 };
 
+export type VehicleGalleryImage = {
+  src: string;
+  alt?: string;
+  isPrimary: boolean;
+};
+
+export type VehicleDetail = {
+  vehicle: Vehicle;
+  images: VehicleGalleryImage[];
+};
+
+type VehicleDetailApiResponse = {
+  vehicle?: Vehicle & { tenantId?: string; externalId?: string };
+  images?: Array<{ src?: string; alt?: string; isPrimary?: boolean; sortOrder?: number }>;
+};
+
 export type VehiclePriceSignal = {
   enabled: boolean;
   reductions: number;
@@ -376,6 +392,78 @@ export async function loadVehiclePriceSignal(
   } catch {
     return null;
   }
+}
+
+/**
+ * Load a single vehicle plus its full ordered image gallery. Prefers the
+ * tenant-scoped detail endpoint; on any failure falls back to the cached
+ * catalog (which itself falls back to the CSV for the default tenant), so the
+ * detail page keeps working for legacy/special/fallback imagery.
+ */
+export async function loadVehicleById(id: string): Promise<VehicleDetail | null> {
+  if (!id) return null;
+
+  try {
+    const detail = await loadVehicleDetailFromApi(id);
+    if (detail) return detail;
+  } catch (error) {
+    console.warn("Vehicle detail API load failed, falling back to catalog", error);
+  }
+
+  const vehicles = await loadVehicles();
+  const vehicle = getVehicleById(vehicles, id);
+  if (!vehicle) return null;
+  return { vehicle, images: buildFallbackGallery(vehicle) };
+}
+
+async function loadVehicleDetailFromApi(id: string): Promise<VehicleDetail | null> {
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "http://localhost";
+  const path = `${VEHICLES_API_PATH}/${encodeURIComponent(id)}`;
+  const url = new URL(`${ADMIN_API_HOST ?? ""}${path}`, origin);
+  url.searchParams.set("tenant", TENANT_SLUG);
+  const res = await fetch(ADMIN_API_HOST ? url.toString() : `${url.pathname}${url.search}`, {
+    headers: { "X-Lume-Tenant": TENANT_SLUG },
+  });
+
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Vehicle detail API ${res.status}: ${res.statusText}`);
+
+  const payload = (await res.json()) as VehicleDetailApiResponse;
+  if (!payload.vehicle) return null;
+  const vehicle = normalizeApiVehicle(payload.vehicle);
+  if (!vehicle) return null;
+
+  const managed: VehicleGalleryImage[] = Array.isArray(payload.images)
+    ? payload.images
+        .filter((image): image is { src: string } & typeof image => Boolean(image?.src))
+        .map((image) => ({
+          src: image.src,
+          isPrimary: Boolean(image.isPrimary),
+          ...(image.alt ? { alt: image.alt } : {}),
+        }))
+    : [];
+
+  return {
+    vehicle,
+    images: managed.length > 0 ? managed : buildFallbackGallery(vehicle),
+  };
+}
+
+/**
+ * When no managed gallery exists, synthesize a single-image gallery from the
+ * vehicle's display image (managed primary → special → legacy/fallback).
+ */
+export function buildFallbackGallery(vehicle: Vehicle): VehicleGalleryImage[] {
+  return [
+    {
+      src: vehicleDisplayImage(vehicle),
+      alt: vehicle.primaryImageAlt || `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      isPrimary: true,
+    },
+  ];
 }
 
 async function loadVehiclesFromApi(): Promise<Vehicle[]> {

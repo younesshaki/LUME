@@ -75,3 +75,15 @@ export type VehicleFacets = {
   states: string[];
   cities: string[];
 };
+
+export type VehicleGalleryImage = {
+  src: string;
+  alt?: string;
+  isPrimary: boolean;
+  sortOrder: number;
+};
+
+export type VehicleDetailResponse = {
+  vehicle: Vehicle;
+  images: VehicleGalleryImage[];
+};
