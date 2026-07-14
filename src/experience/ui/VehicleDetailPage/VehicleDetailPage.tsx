@@ -2,16 +2,16 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Check, GitCompare, Heart, Send, X } from "lucide-react";
 import {
   formatVehiclePrice,
-  getVehicleById,
+  loadVehicleById,
   loadVehiclePriceSignal,
-  loadVehicles,
-  vehicleDisplayImage,
   type Vehicle,
+  type VehicleGalleryImage,
   type VehiclePriceSignal,
 } from "@/experience/vehicles/catalog";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import VehicleGallery from "./VehicleGallery";
 import { vehicleDetailSoundActions } from "./VehicleDetailPage.sounds";
 import "./VehicleDetailPage.css";
 
@@ -199,7 +199,8 @@ export default function VehicleDetailPage({
   onNavigateToContact,
 }: VehicleDetailPageProps) {
   const { play } = useSound();
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [images, setImages] = useState<VehicleGalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [inquiryOpen, setInquiryOpen] = useState(false);
@@ -209,23 +210,38 @@ export default function VehicleDetailPage({
     vehicleId: string;
     signal: VehiclePriceSignal | null;
   } | null>(null);
-  const vehicle = getVehicleById(vehicles, vehicleId);
   const priceSignal = loadedPriceSignal?.vehicleId === vehicleId
     ? loadedPriceSignal.signal
     : null;
 
   useEffect(() => {
-    loadVehicles()
-      .then((items) => {
-        setVehicles(items);
+    if (!vehicleId) {
+      setVehicle(null);
+      setImages([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    loadVehicleById(vehicleId)
+      .then((detail) => {
+        if (cancelled) return;
+        setVehicle(detail?.vehicle ?? null);
+        setImages(detail?.images ?? []);
         setLoadError(false);
       })
       .catch((error) => {
+        if (cancelled) return;
         console.error("Unable to load vehicle detail", error);
         setLoadError(true);
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [vehicleId]);
 
   useEffect(() => {
     if (!vehicleId) return;
@@ -302,10 +318,19 @@ export default function VehicleDetailPage({
 
               <section className="vehicleDetail__layout">
                 <div className="vehicleDetail__media">
-                  <img src={vehicleDisplayImage(vehicle)} alt={vehicle.primaryImageAlt || `${vehicle.year} ${vehicle.make} ${vehicle.model}`} />
-                  <span className={`vehicleDetail__badge vehicleDetail__badge--${vehicle.stockType.toLowerCase()}`}>
-                    {vehicle.stockType}
-                  </span>
+                  <VehicleGallery
+                    images={images}
+                    title={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                    badge={
+                      vehicle.stockType ? (
+                        <span
+                          className={`vehicleDetail__badge vehicleDetail__badge--${vehicle.stockType.toLowerCase()}`}
+                        >
+                          {vehicle.stockType}
+                        </span>
+                      ) : null
+                    }
+                  />
                 </div>
 
                 <div className="vehicleDetail__panel">
