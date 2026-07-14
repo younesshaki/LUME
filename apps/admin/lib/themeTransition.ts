@@ -1,0 +1,126 @@
+/**
+ * Pure geometry for the theme-toggle reveal. Produces the collapsed → expanded
+ * `clip-path` pair that a fixed DOM overlay animates between, expanding from the
+ * theme button. Kept dependency-free so it is unit-testable in isolation.
+ */
+
+export type TransitionVariant =
+  | "circle"
+  | "square"
+  | "triangle"
+  | "diamond"
+  | "hexagon"
+  | "rectangle"
+  | "star";
+
+export const TRANSITION_OVERSCAN_PX = 16;
+
+export function polygonCollapsed(cx: number, cy: number, vertexCount: number): string {
+  const pairs = Array.from({ length: vertexCount }, () => `${cx}px ${cy}px`).join(", ");
+  return `polygon(${pairs})`;
+}
+
+export function getThemeTransitionClipPaths(
+  variant: TransitionVariant,
+  cx: number,
+  cy: number,
+  maxRadius: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): [string, string] {
+  switch (variant) {
+    case "circle":
+      return [
+        `circle(0px at ${cx}px ${cy}px)`,
+        `circle(${maxRadius}px at ${cx}px ${cy}px)`,
+      ];
+    case "square": {
+      const halfW = Math.max(cx, viewportWidth - cx);
+      const halfH = Math.max(cy, viewportHeight - cy);
+      const halfSide = Math.max(halfW, halfH) * 1.05;
+      const end = [
+        `${cx - halfSide}px ${cy - halfSide}px`,
+        `${cx + halfSide}px ${cy - halfSide}px`,
+        `${cx + halfSide}px ${cy + halfSide}px`,
+        `${cx - halfSide}px ${cy + halfSide}px`,
+      ].join(", ");
+      return [polygonCollapsed(cx, cy, 4), `polygon(${end})`];
+    }
+    case "triangle": {
+      const scale = maxRadius * 2.2;
+      const dx = (Math.sqrt(3) / 2) * scale;
+      const verts = [
+        `${cx}px ${cy - scale}px`,
+        `${cx + dx}px ${cy + 0.5 * scale}px`,
+        `${cx - dx}px ${cy + 0.5 * scale}px`,
+      ].join(", ");
+      return [polygonCollapsed(cx, cy, 3), `polygon(${verts})`];
+    }
+    case "diamond": {
+      const R = maxRadius * Math.SQRT2;
+      const end = [
+        `${cx}px ${cy - R}px`,
+        `${cx + R}px ${cy}px`,
+        `${cx}px ${cy + R}px`,
+        `${cx - R}px ${cy}px`,
+      ].join(", ");
+      return [polygonCollapsed(cx, cy, 4), `polygon(${end})`];
+    }
+    case "hexagon": {
+      const R = maxRadius * Math.SQRT2;
+      const verts: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI) / 3;
+        verts.push(`${cx + R * Math.cos(a)}px ${cy + R * Math.sin(a)}px`);
+      }
+      return [polygonCollapsed(cx, cy, 6), `polygon(${verts.join(", ")})`];
+    }
+    case "rectangle": {
+      const halfW = Math.max(cx, viewportWidth - cx);
+      const halfH = Math.max(cy, viewportHeight - cy);
+      const end = [
+        `${cx - halfW}px ${cy - halfH}px`,
+        `${cx + halfW}px ${cy - halfH}px`,
+        `${cx + halfW}px ${cy + halfH}px`,
+        `${cx - halfW}px ${cy + halfH}px`,
+      ].join(", ");
+      return [polygonCollapsed(cx, cy, 4), `polygon(${end})`];
+    }
+    case "star": {
+      const R = maxRadius * Math.SQRT2 * 1.03;
+      const innerRatio = 0.42;
+      const starPolygon = (radius: number) => {
+        const verts: string[] = [];
+        for (let i = 0; i < 5; i++) {
+          const outerA = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+          verts.push(`${cx + radius * Math.cos(outerA)}px ${cy + radius * Math.sin(outerA)}px`);
+          const innerA = outerA + Math.PI / 5;
+          verts.push(
+            `${cx + radius * innerRatio * Math.cos(innerA)}px ${cy + radius * innerRatio * Math.sin(innerA)}px`,
+          );
+        }
+        return `polygon(${verts.join(", ")})`;
+      };
+      const startR = Math.max(2, R * 0.025);
+      return [starPolygon(startR), starPolygon(R)];
+    }
+    default:
+      return [
+        `circle(0px at ${cx}px ${cy}px)`,
+        `circle(${maxRadius}px at ${cx}px ${cy}px)`,
+      ];
+  }
+}
+
+/** Farthest-corner radius from (x, y), plus a small overscan so no seam remains. */
+export function maxRevealRadius(
+  x: number,
+  y: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): number {
+  return (
+    Math.ceil(Math.hypot(Math.max(x, viewportWidth - x), Math.max(y, viewportHeight - y))) +
+    TRANSITION_OVERSCAN_PX
+  );
+}
