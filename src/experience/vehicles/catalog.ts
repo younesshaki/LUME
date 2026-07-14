@@ -56,6 +56,7 @@ export type VehicleGalleryImage = {
   src: string;
   alt?: string;
   isPrimary: boolean;
+  sortOrder?: number;
 };
 
 export type VehicleDetail = {
@@ -410,10 +411,21 @@ export async function loadVehicleById(id: string): Promise<VehicleDetail | null>
     console.warn("Vehicle detail API load failed, falling back to catalog", error);
   }
 
-  const vehicles = await loadVehicles();
-  const vehicle = getVehicleById(vehicles, id);
+  const vehicle = await loadLegacyVehicleById(id);
   if (!vehicle) return null;
   return { vehicle, images: buildFallbackGallery(vehicle) };
+}
+
+async function loadLegacyVehicleById(id: string): Promise<Vehicle | null> {
+  const cachedVehicle = cached?.find((vehicle) => vehicle.id === id);
+  if (cachedVehicle) return cachedVehicle;
+  if (TENANT_SLUG !== "default") return null;
+
+  // The default tenant's CSV is the last-resort legacy source. Crucially this
+  // does not call loadVehiclesFromApi(), so a failed detail request can never
+  // trigger the old sequential 200/400/600/... full-catalog API waterfall.
+  const vehicles = await loadVehiclesFromCsv();
+  return vehicles.find((vehicle) => vehicle.id === id) ?? null;
 }
 
 async function loadVehicleDetailFromApi(id: string): Promise<VehicleDetail | null> {
@@ -436,20 +448,37 @@ async function loadVehicleDetailFromApi(id: string): Promise<VehicleDetail | nul
   const vehicle = normalizeApiVehicle(payload.vehicle);
   if (!vehicle) return null;
 
-  const managed: VehicleGalleryImage[] = Array.isArray(payload.images)
-    ? payload.images
-        .filter((image): image is { src: string } & typeof image => Boolean(image?.src))
-        .map((image) => ({
-          src: image.src,
-          isPrimary: Boolean(image.isPrimary),
-          ...(image.alt ? { alt: image.alt } : {}),
-        }))
-    : [];
+  const managed = normalizeVehicleGallery(payload.images);
 
   return {
     vehicle,
     images: managed.length > 0 ? managed : buildFallbackGallery(vehicle),
   };
+}
+
+export function normalizeVehicleGallery(
+  images: VehicleDetailApiResponse["images"],
+): VehicleGalleryImage[] {
+  if (!Array.isArray(images)) return [];
+  return images
+    .map((image, index) => ({ image, index }))
+    .filter(
+      (entry): entry is { image: { src: string; alt?: string; isPrimary?: boolean; sortOrder?: number }; index: number } =>
+        typeof entry.image?.src === "string" && entry.image.src.trim().length > 0,
+    )
+    .sort((left, right) => {
+      const primaryOrder = Number(Boolean(right.image.isPrimary)) - Number(Boolean(left.image.isPrimary));
+      if (primaryOrder !== 0) return primaryOrder;
+      const leftOrder = Number.isFinite(left.image.sortOrder) ? left.image.sortOrder! : Number.MAX_SAFE_INTEGER;
+      const rightOrder = Number.isFinite(right.image.sortOrder) ? right.image.sortOrder! : Number.MAX_SAFE_INTEGER;
+      return leftOrder - rightOrder || left.index - right.index;
+    })
+    .map(({ image }) => ({
+      src: image.src.trim(),
+      isPrimary: Boolean(image.isPrimary),
+      ...(image.alt?.trim() ? { alt: image.alt.trim() } : {}),
+      ...(Number.isFinite(image.sortOrder) ? { sortOrder: image.sortOrder } : {}),
+    }));
 }
 
 /**

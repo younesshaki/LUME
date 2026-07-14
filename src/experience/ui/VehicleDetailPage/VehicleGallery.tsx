@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import type { VehicleGalleryImage } from "@/experience/vehicles/catalog";
 
@@ -19,6 +20,7 @@ export default function VehicleGallery({ images, title, badge }: VehicleGalleryP
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const expandButtonRef = useRef<HTMLButtonElement>(null);
 
   const count = images.length;
   const safeIndex = Math.min(activeIndex, Math.max(0, count - 1));
@@ -84,7 +86,7 @@ export default function VehicleGallery({ images, title, badge }: VehicleGalleryP
           className="vehicleGallery__main"
           src={active.src}
           alt={altFor(active, title, safeIndex, count)}
-          loading="eager"
+          loading={safeIndex === 0 ? "eager" : "lazy"}
           draggable={false}
         />
         {badge}
@@ -114,6 +116,7 @@ export default function VehicleGallery({ images, title, badge }: VehicleGalleryP
         )}
 
         <button
+          ref={expandButtonRef}
           type="button"
           className="vehicleGallery__expand"
           aria-label="View photo full screen"
@@ -143,15 +146,19 @@ export default function VehicleGallery({ images, title, badge }: VehicleGalleryP
         </ul>
       )}
 
-      {lightboxOpen && (
-        <GalleryLightbox
-          images={images}
-          title={title}
-          index={safeIndex}
-          onIndexChange={setActiveIndex}
-          onClose={() => setLightboxOpen(false)}
-        />
-      )}
+      {lightboxOpen && typeof document !== "undefined"
+        ? createPortal(
+            <GalleryLightbox
+              images={images}
+              title={title}
+              index={safeIndex}
+              onIndexChange={setActiveIndex}
+              onClose={() => setLightboxOpen(false)}
+              returnFocusRef={expandButtonRef}
+            />,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -162,37 +169,45 @@ function GalleryLightbox({
   index,
   onIndexChange,
   onClose,
+  returnFocusRef,
 }: {
   images: VehicleGalleryImage[];
   title: string;
   index: number;
   onIndexChange: (next: number) => void;
   onClose: () => void;
+  returnFocusRef: React.RefObject<HTMLButtonElement>;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const indexRef = useRef(index);
+  const onCloseRef = useRef(onClose);
+  const onIndexChangeRef = useRef(onIndexChange);
   const count = images.length;
   const active = images[index];
 
+  indexRef.current = index;
+  onCloseRef.current = onClose;
+  onIndexChangeRef.current = onIndexChange;
+
   const goTo = useCallback(
-    (next: number) => onIndexChange(((next % count) + count) % count),
-    [count, onIndexChange],
+    (next: number) => onIndexChangeRef.current(((next % count) + count) % count),
+    [count],
   );
 
   useEffect(() => {
-    const previous =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialogRef.current?.querySelector<HTMLElement>("button")?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
       } else if (event.key === "ArrowLeft" && count > 1) {
         event.preventDefault();
-        goTo(index - 1);
+        goTo(indexRef.current - 1);
       } else if (event.key === "ArrowRight" && count > 1) {
         event.preventDefault();
-        goTo(index + 1);
+        goTo(indexRef.current + 1);
       } else if (event.key === "Tab" && dialogRef.current) {
         const nodes = Array.from(
           dialogRef.current.querySelectorAll<HTMLElement>("button:not(:disabled)"),
@@ -216,9 +231,21 @@ function GalleryLightbox({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
-      previous?.focus();
+      returnFocusRef.current?.focus();
     };
-  }, [count, goTo, index, onClose]);
+  }, [count, goTo, returnFocusRef]);
+
+  const handleTouchStart = (event: React.TouchEvent) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+  };
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    if (touchStartX.current === null || count <= 1) return;
+    const delta = (event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+    if (Math.abs(delta) >= SWIPE_THRESHOLD_PX) {
+      goTo(indexRef.current + (delta < 0 ? 1 : -1));
+    }
+    touchStartX.current = null;
+  };
 
   if (!active) return null;
 
@@ -231,6 +258,8 @@ function GalleryLightbox({
         aria-modal="true"
         aria-label={`${title} photo viewer`}
         onMouseDown={(event) => event.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <button
           type="button"

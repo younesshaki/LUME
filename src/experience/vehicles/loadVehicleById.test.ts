@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildFallbackGallery, loadVehicleById, type Vehicle } from "./catalog";
+import {
+  buildFallbackGallery,
+  loadVehicleById,
+  normalizeVehicleGallery,
+  type Vehicle,
+} from "./catalog";
 
 const baseVehicle: Vehicle = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -58,6 +63,21 @@ describe("buildFallbackGallery", () => {
   });
 });
 
+describe("normalizeVehicleGallery", () => {
+  it("drops invalid entries and orders primary first, then sort order stably", () => {
+    expect(normalizeVehicleGallery([
+      { src: " /third.webp ", isPrimary: false, sortOrder: 3 },
+      { src: "/primary.webp", isPrimary: true, sortOrder: 99 },
+      { src: "/second.webp", isPrimary: false, sortOrder: 2 },
+      { src: "", isPrimary: false, sortOrder: 0 },
+    ])).toEqual([
+      { src: "/primary.webp", isPrimary: true, sortOrder: 99 },
+      { src: "/second.webp", isPrimary: false, sortOrder: 2 },
+      { src: "/third.webp", isPrimary: false, sortOrder: 3 },
+    ]);
+  });
+});
+
 describe("loadVehicleById", () => {
   it("returns the vehicle with its ordered managed gallery", async () => {
     mockFetchOnce(200, {
@@ -71,7 +91,12 @@ describe("loadVehicleById", () => {
     const detail = await loadVehicleById(baseVehicle.id);
     expect(detail).not.toBeNull();
     expect(detail!.images).toHaveLength(2);
-    expect(detail!.images[0]).toEqual({ src: "https://cdn/1.webp", alt: "Front", isPrimary: true });
+    expect(detail!.images[0]).toEqual({
+      src: "https://cdn/1.webp",
+      alt: "Front",
+      isPrimary: true,
+      sortOrder: 0,
+    });
     expect(detail!.images[1].src).toBe("https://cdn/2.webp");
     expect(detail!.vehicle.primaryImageSrc).toBe("https://cdn/1.webp");
   });
@@ -91,5 +116,23 @@ describe("loadVehicleById", () => {
     vi.stubGlobal("fetch", fetchSpy);
     expect(await loadVehicleById("")).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the legacy CSV without starting a full API pagination loop", async () => {
+    const fetchSpy = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 503, statusText: "Unavailable" })
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => [
+          "_primaryKey,stockType,year,make,model,trim,mileage,bodyStyle,exteriorColor,interiorColor,drivetrain,fuelType,sellerCity,sellerState",
+          `${baseVehicle.id},Used,2022,BMW,X5,xDrive40i,12000,SUV,Black,Tan,AWD,Gasoline,Denver,CO`,
+        ].join("\n"),
+      });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const detail = await loadVehicleById(baseVehicle.id);
+    expect(detail?.vehicle.id).toBe(baseVehicle.id);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy.mock.calls.every(([url]) => !String(url).includes("offset="))).toBe(true);
   });
 });
