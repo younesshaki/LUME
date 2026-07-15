@@ -3,13 +3,12 @@
  * a session cookie and returns the visitor. Failures are deliberately generic
  * to avoid account enumeration.
  */
-import { rowToVisitor } from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { isAllowedOrigin } from "@/lib/origin";
 import { parseLoginInput } from "@/lib/visitorInput";
 import { verifyPassword, createSessionToken } from "@/lib/visitorAuth";
-import { buildSessionCookie, visitorCorsHeaders } from "@/lib/visitorSession";
+import { buildSessionCookie, toPublicVisitor, visitorCorsHeaders } from "@/lib/visitorSession";
 import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -41,7 +40,7 @@ export async function POST(request: Request): Promise<Response> {
   const supabase = createServiceClient();
   const { data: visitor } = await supabase
     .from("visitors")
-    .select("*")
+    .select("id, tenant_id, email, password_hash, first_name, last_name, created_at")
     .eq("tenant_id", tenant.tenantId)
     .eq("email", parsed.value.email)
     .maybeSingle();
@@ -59,7 +58,7 @@ export async function POST(request: Request): Promise<Response> {
 
   return json(
     request,
-    { visitor: rowToVisitor(visitor) },
+    { visitor: toPublicVisitor(visitor) },
     200,
     buildSessionCookie(session.token, session.expiresAt),
   );
