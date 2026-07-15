@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import "../../experience/ui/VehicleDetailPage/VehicleInquiry.css";
 
 type TurnstileApi = {
   render: (
