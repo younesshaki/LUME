@@ -30,7 +30,6 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   LogOut,
-  Paintbrush,
   Palette,
   PanelTop,
   Plus,
@@ -96,9 +95,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
-import { useThemeAnimation } from "@/components/theme-animation";
-import { AppearanceDialog } from "@/components/appearance-dialog";
-import { THEME_TOGGLE_ELEMENT_ID } from "@/components/admin-shell-ids";
 import {
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
@@ -418,7 +414,6 @@ function UserMenu({
   flagshipUrl: string;
   signOutAction: () => Promise<void>;
 }) {
-  const [appearanceOpen, setAppearanceOpen] = React.useState(false);
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -448,11 +443,6 @@ function UserMenu({
                 </a>
               </DropdownMenuItem>
             )}
-            {isPlatformAdmin && <DropdownMenuSeparator />}
-            <DropdownMenuItem onSelect={() => setAppearanceOpen(true)}>
-              <Paintbrush className="size-4" />
-              Appearance
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
@@ -466,7 +456,6 @@ function UserMenu({
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
-      <AppearanceDialog open={appearanceOpen} onOpenChange={setAppearanceOpen} />
     </SidebarMenu>
   );
 }
@@ -486,7 +475,6 @@ function ShellHeader({
   const [commandOpen, setCommandOpen] = React.useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const currentTheme = resolvedTheme === "light" ? "light" : "dark";
-  const { variant: themeAnimation } = useThemeAnimation();
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -533,10 +521,9 @@ function ShellHeader({
           }
         />
         <AnimatedThemeToggler
-          id={THEME_TOGGLE_ELEMENT_ID}
           theme={currentTheme}
           onThemeChange={setTheme}
-          variant={themeAnimation}
+          variant="circle"
           duration={350}
           className="inline-flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-3.5"
         />
