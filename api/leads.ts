@@ -1,16 +1,39 @@
-import { createClient } from "@supabase/supabase-js";
-
 /**
- * POST /api/leads — public lead capture for the Vite site (same-origin).
+ * /api/leads on the public Vite deployment — thin same-origin proxy.
  *
- * Mirrors apps/admin/app/api/leads/route.ts but as a Vercel serverless function
- * on the public deployment, so the public site can submit leads same-origin
- * (like /api/vehicles and /api/chat). The browser uses anon creds only; this
- * trusted route validates origin + tenant, then writes with the service-role
- * client because `leads` intentionally has no anon insert policy.
+ * The canonical implementation lives in apps/admin/app/api/leads/route.ts and
+ * owns validation, Turnstile, quotas, visitor attribution, loyalty, email, and
+ * CRM webhooks. Keeping this function transport-only prevents those behaviors
+ * from drifting across deployments.
+ *
+ * Config:
+ * - LUME_LEADS_UPSTREAM_URL (preferred): admin deployment /api/leads URL.
+ * - LUME_CHAT_UPSTREAM_URL fallback: when it ends in /api/chat, the leads URL
+ *   is derived automatically so existing public deployments need no new env.
  */
-const SUBDOMAIN_RESERVED = new Set(["www", "app", "api", "admin", "static", "cdn"]);
-const ALLOWED_PUBLIC_SOURCES = new Set(["chat", "contact-form", "test-drive", "api"]);
+const VISITOR_SESSION_COOKIE_NAME = "lume_visitor_session";
+
+const FORWARDED_REQUEST_HEADERS = [
+  "content-type",
+  "origin",
+  "x-lume-tenant",
+  "x-forwarded-for",
+  "referer",
+  "user-agent",
+  "cookie",
+] as const;
+
+const FORWARDED_RESPONSE_HEADERS = [
+  "content-type",
+  "cache-control",
+  "retry-after",
+  "x-lume-quota-warning",
+  "access-control-allow-origin",
+  "access-control-allow-headers",
+  "access-control-allow-methods",
+  "access-control-expose-headers",
+  "vary",
+] as const;
 
 type VercelRequest = {
   method?: string;
@@ -23,203 +46,122 @@ type VercelResponse = {
   status: (statusCode: number) => VercelResponse;
   setHeader: (name: string, value: string) => void;
   json: (payload: unknown) => void;
+  write: (chunk: Uint8Array | string) => void;
   end: () => void;
 };
 
-type NormalizedLead = {
-  firstName: string;
-  lastName: string;
-  email: string | null;
-  phone: string | null;
-  message: string | null;
-  vehicleId: string | null;
-  source: "chat" | "contact-form" | "test-drive" | "api";
-  utmSource: string | null;
-  utmMedium: string | null;
-  utmCampaign: string | null;
-};
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === "OPTIONS") {
-    setCorsHeaders(req, res);
-    return res.status(204).end();
+  if (req.method !== "POST" && req.method !== "OPTIONS") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (req.method !== "POST") {
-    return json(req, res, { error: "Method not allowed" }, 405);
+  const upstreamBase = resolveLeadsUpstreamUrl();
+  if (!upstreamBase) {
+    console.error("[/api/leads proxy] lead upstream not configured");
+    return res.status(500).json({ error: "Lead upstream not configured" });
   }
 
-  if (!isAllowedOrigin(req)) {
-    return json(req, res, { error: "Forbidden origin" }, 403);
+  const headers: Record<string, string> = {};
+  for (const name of FORWARDED_REQUEST_HEADERS) {
+    const rawValue = header(req, name);
+    const value = name === "cookie" ? visitorSessionCookieHeader(rawValue) : rawValue;
+    if (value) headers[name] = value;
   }
 
-  const supabaseUrl =
-    process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
-    return json(req, res, { error: "Supabase server env not configured" }, 500);
-  }
+  const bypassSecret = process.env.LUME_CHAT_BYPASS_SECRET?.trim();
+  if (bypassSecret) headers["x-vercel-protection-bypass"] = bypassSecret;
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const tenantQuery = query(req, "tenant");
+  const upstreamUrl = tenantQuery
+    ? appendTenantQuery(upstreamBase, tenantQuery)
+    : upstreamBase;
 
-  const tenant = await getTenantFromRequest(req, supabase);
-  if (!tenant) {
-    return json(req, res, { error: "Unknown or inactive tenant" }, 404);
-  }
-
-  const validation = normalizeLeadCaptureInput(req.body);
-  if (!validation.ok) {
-    return json(req, res, { error: validation.error }, 400);
-  }
-  const lead = validation.value;
-
-  // Best-effort metering, inlined on purpose: this standalone Vercel function
-  // is bundled without its relative deps, and root package.json is
-  // "type":"module", so a `./usage` import fails at runtime (ERR_MODULE_NOT_FOUND).
+  let upstream: Response;
   try {
-    await supabase.rpc("increment_usage_event", {
-      p_tenant_id: tenant.tenantId,
-      p_event_type: "lead_requests",
-      p_period_start: null,
-      p_increment: 1,
+    upstream = await fetch(upstreamUrl, {
+      method: req.method,
+      headers,
+      body:
+        req.method === "POST"
+          ? typeof req.body === "string"
+            ? req.body
+            : JSON.stringify(req.body ?? {})
+          : undefined,
     });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "upstream unreachable";
+    console.error("[/api/leads proxy] upstream fetch failed:", message);
+    return res.status(502).json({ error: "Lead upstream unreachable" });
+  }
+
+  res.status(upstream.status);
+  for (const name of FORWARDED_RESPONSE_HEADERS) {
+    const value = upstream.headers.get(name);
+    if (value) res.setHeader(name, value);
+  }
+
+  if (!upstream.body) return res.end();
+
+  const reader = upstream.body.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+  } finally {
+    reader.releaseLock();
+    res.end();
+  }
+}
+
+export function visitorSessionCookieHeader(rawCookie: string | undefined): string | undefined {
+  if (!rawCookie) return undefined;
+  for (const part of rawCookie.split(";")) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf("=");
+    if (separator < 1) continue;
+    const name = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1);
+    if (name === VISITOR_SESSION_COOKIE_NAME && value) {
+      return `${VISITOR_SESSION_COOKIE_NAME}=${value}`;
+    }
+  }
+  return undefined;
+}
+
+export function resolveLeadsUpstreamUrl(
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  const explicit = env.LUME_LEADS_UPSTREAM_URL?.trim();
+  if (explicit) return validAbsoluteUrl(explicit);
+
+  const chatUpstream = env.LUME_CHAT_UPSTREAM_URL?.trim();
+  if (!chatUpstream) return null;
+  try {
+    const url = new URL(chatUpstream);
+    if (!/\/api\/chat\/?$/.test(url.pathname)) return null;
+    url.pathname = url.pathname.replace(/\/api\/chat\/?$/, "/api/leads");
+    url.search = "";
+    url.hash = "";
+    return url.toString();
   } catch {
-    // metering must never fail lead capture
-  }
-
-  const { data, error } = await supabase
-    .from("leads")
-    .insert({
-      tenant_id: tenant.tenantId,
-      source: lead.source,
-      status: "new",
-      assigned_to: null,
-      first_name: lead.firstName,
-      last_name: lead.lastName,
-      email: lead.email,
-      phone: lead.phone,
-      message: lead.message,
-      vehicle_id: lead.vehicleId,
-      utm_source: lead.utmSource,
-      utm_medium: lead.utmMedium,
-      utm_campaign: lead.utmCampaign,
-      referrer: header(req, "referer") ?? null,
-      ip_addr: requestIp(req),
-      user_agent: header(req, "user-agent") ?? null,
-      lost_reason: null,
-    })
-    .select("id")
-    .single();
-
-  if (error || !data) {
-    console.error("[/api/leads] insert failed:", error?.message ?? "no row");
-    return json(req, res, { error: "Unable to capture lead" }, 500);
-  }
-
-  return json(req, res, { leadId: data.id }, 201);
-}
-
-function normalizeLeadCaptureInput(
-  input: unknown
-): { ok: true; value: NormalizedLead } | { ok: false; error: string } {
-  if (!isRecord(input)) return { ok: false, error: "Request body must be an object." };
-
-  const email = nullableTrimmed(input.email, 160);
-  const phone = nullableTrimmed(input.phone, 60);
-  if (!email && !phone) return { ok: false, error: "Email or phone is required." };
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, error: "Email is invalid." };
-  }
-
-  const rawSource = input.source;
-  const source =
-    typeof rawSource === "string" && ALLOWED_PUBLIC_SOURCES.has(rawSource)
-      ? (rawSource as NormalizedLead["source"])
-      : "contact-form";
-
-  return {
-    ok: true,
-    value: {
-      firstName: nullableTrimmed(input.firstName, 120) ?? "",
-      lastName: nullableTrimmed(input.lastName, 120) ?? "",
-      email,
-      phone,
-      message: nullableTrimmed(input.message, 2_000),
-      vehicleId: nullableTrimmed(input.vehicleId, 80),
-      source,
-      utmSource: nullableTrimmed(input.utmSource, 120),
-      utmMedium: nullableTrimmed(input.utmMedium, 120),
-      utmCampaign: nullableTrimmed(input.utmCampaign, 120),
-    },
-  };
-}
-
-async function getTenantFromRequest(
-  req: VercelRequest,
-  supabase: any
-): Promise<{ tenantId: string; slug: string } | null> {
-  const slug = extractTenantSlugFromRequest(req);
-  if (!slug) return null;
-
-  const { data, error } = await supabase.rpc("tenant_by_slug", { p_slug: slug });
-  if (error) {
-    console.error("[tenant] tenant_by_slug RPC failed:", error.message);
     return null;
   }
-  const row = (data as Array<{ id: string; slug: string; status: string }> | null)?.[0];
-  if (!row || row.status !== "active") return null;
-  return { tenantId: row.id, slug: row.slug };
 }
 
-function extractTenantSlugFromRequest(req: VercelRequest): string | null {
-  const headerSlug = header(req, "x-lume-tenant")?.trim();
-  if (headerSlug) return headerSlug;
-
-  const querySlug = query(req, "tenant")?.trim();
-  if (querySlug) return querySlug;
-
-  const host = header(req, "host");
-  if (!host) return null;
-  const hostname = host.split(":")[0];
-  const parts = hostname.split(".");
-  if (parts.length < 3) return null;
-  const sub = parts[0];
-  if (SUBDOMAIN_RESERVED.has(sub)) return null;
-  return sub || null;
+function validAbsoluteUrl(value: string): string | null {
+  try {
+    return new URL(value).toString();
+  } catch {
+    return null;
+  }
 }
 
-function isAllowedOrigin(req: VercelRequest): boolean {
-  const allowed = (process.env.ALLOWED_CHAT_ORIGINS ?? "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  if (allowed.length === 0) return true;
-
-  const origin = header(req, "origin");
-  if (!origin) return true;
-  return allowed.includes(origin);
-}
-
-function setCorsHeaders(req: VercelRequest, res: VercelResponse) {
-  const origin = header(req, "origin") ?? "";
-  if (!origin || !isAllowedOrigin(req)) return;
-  res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Lume-Tenant");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Vary", "Origin");
-}
-
-function requestIp(req: VercelRequest): string | null {
-  const forwarded = header(req, "x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]?.trim() || null;
-  return header(req, "cf-connecting-ip") ?? null;
-}
-
-function json(req: VercelRequest, res: VercelResponse, payload: unknown, status: number) {
-  setCorsHeaders(req, res);
-  return res.status(status).json(payload);
+function appendTenantQuery(base: string, tenant: string): string {
+  const url = new URL(base);
+  url.searchParams.set("tenant", tenant);
+  return url.toString();
 }
 
 function header(req: VercelRequest, name: string): string | undefined {
@@ -230,14 +172,4 @@ function header(req: VercelRequest, name: string): string | undefined {
 function query(req: VercelRequest, name: string): string | undefined {
   const value = req.query[name];
   return Array.isArray(value) ? value[0] : value;
-}
-
-function nullableTrimmed(value: unknown, maxLength: number): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim().slice(0, maxLength);
-  return trimmed || null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
