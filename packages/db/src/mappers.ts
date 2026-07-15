@@ -86,12 +86,26 @@ export function rowToLead(row: LeadRow): Lead {
   };
 }
 
-function rowToLeadSourceContext(value: Record<string, unknown> | null): LeadSourceContext | null {
-  if (value?.trigger !== "bot-action") return null;
-  if (value.actionType !== "capture_lead" && value.actionType !== "open-lead-form") return null;
-  return {
-    trigger: "bot-action",
-    actionType: value.actionType,
-    ...(typeof value.vehicleId === "string" ? { vehicleId: value.vehicleId } : {}),
-  };
+export function rowToLeadSourceContext(value: Record<string, unknown> | null): LeadSourceContext | null {
+  if (value?.trigger === "bot-action") {
+    if (value.actionType !== "capture_lead" && value.actionType !== "open-lead-form") {
+      return null;
+    }
+    return {
+      trigger: "bot-action",
+      actionType: value.actionType,
+      ...(typeof value.vehicleId === "string" ? { vehicleId: value.vehicleId } : {}),
+    };
+  }
+
+  if (value?.trigger === "vehicle-inquiry" && value.actionType === "request-info") {
+    return {
+      trigger: "vehicle-inquiry",
+      actionType: "request-info",
+      ...(typeof value.pagePath === "string" ? { pagePath: value.pagePath } : {}),
+      ...(typeof value.vehicleTitle === "string" ? { vehicleTitle: value.vehicleTitle } : {}),
+    };
+  }
+
+  return null;
 }

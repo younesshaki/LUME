@@ -4,11 +4,23 @@ export type LeadSource = "chat" | "contact-form" | "test-drive" | "csv-import" |
 export type LeadStatus = "new" | "contacted" | "qualified" | "won" | "lost";
 export type LeadActivityType = "note" | "call" | "email" | "status_change" | "assignment";
 
-export type LeadSourceContext = {
+export type BotActionLeadSourceContext = {
   trigger: "bot-action";
   actionType: "capture_lead" | "open-lead-form";
   vehicleId?: string;
 };
+
+/** Context captured from the public vehicle detail inquiry form. */
+export type VehicleInquiryLeadSourceContext = {
+  trigger: "vehicle-inquiry";
+  actionType: "request-info";
+  pagePath?: string;
+  vehicleTitle?: string;
+};
+
+export type LeadSourceContext =
+  | BotActionLeadSourceContext
+  | VehicleInquiryLeadSourceContext;
 
 export type Lead = {
   id: string;

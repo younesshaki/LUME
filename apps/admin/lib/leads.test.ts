@@ -71,7 +71,29 @@ describe("normalizeLeadCaptureInput", () => {
     });
   });
 
-  it("drops source context for non-chat or malformed submissions", () => {
+  it("keeps the safe vehicle inquiry context for contact-form submissions", () => {
+    const inquiry = normalizeLeadCaptureInput({
+      email: "visitor@example.com",
+      source: "contact-form",
+      sourceContext: {
+        trigger: "vehicle-inquiry",
+        actionType: "request-info",
+        pagePath: "/vehicles/vehicle-1",
+        vehicleTitle: "2024 LUME Grand Touring",
+        untrusted: "must not persist",
+      },
+    });
+    expect(inquiry.ok).toBe(true);
+    if (!inquiry.ok) return;
+    expect(inquiry.value.sourceContext).toEqual({
+      trigger: "vehicle-inquiry",
+      actionType: "request-info",
+      pagePath: "/vehicles/vehicle-1",
+      vehicleTitle: "2024 LUME Grand Touring",
+    });
+  });
+
+  it("drops unsupported source context submissions", () => {
     const nonChat = normalizeLeadCaptureInput({
       phone: "123",
       source: "contact-form",

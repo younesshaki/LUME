@@ -8,7 +8,8 @@ import {
   type VehicleGalleryImage,
   type VehiclePriceSignal,
 } from "@/experience/vehicles/catalog";
-import { publicTenantSlug } from "@/lib/publicTenant";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { submitLead } from "@/lib/leads";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -18,6 +19,7 @@ import "./VehicleDetailPage.css";
 
 const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
 
 function formatMileage(miles: number | null): string {
   if (miles === null) return "N/A";
@@ -107,19 +109,6 @@ function splitName(name: string): { firstName: string; lastName: string } {
   };
 }
 
-function attributionFromLocation() {
-  if (typeof window === "undefined") {
-    return { utmSource: null, utmMedium: null, utmCampaign: null, utmContent: null };
-  }
-  const params = new URLSearchParams(window.location.search);
-  return {
-    utmSource: params.get("utm_source"),
-    utmMedium: params.get("utm_medium"),
-    utmCampaign: params.get("utm_campaign"),
-    utmContent: params.get("utm_content"),
-  };
-}
-
 function InquiryModal({
   open,
   vehicle,
@@ -133,6 +122,8 @@ function InquiryModal({
   const [submittedLeadId, setSubmittedLeadId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const dialogRef = useDialogKeyboard(open, onClose);
 
   useEffect(() => {
@@ -140,6 +131,7 @@ function InquiryModal({
     setSubmittedLeadId(null);
     setSubmitError(null);
     setSubmitting(false);
+    setTurnstileToken(null);
   }, [open, vehicle.id]);
 
   if (!open) return null;
@@ -160,40 +152,25 @@ function InquiryModal({
     setSubmitError(null);
 
     try {
-      const response = await fetch("/api/leads", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Lume-Tenant": publicTenantSlug,
+      const response = await submitLead({
+        firstName,
+        lastName,
+        email: email || undefined,
+        phone: phone || undefined,
+        message: message || undefined,
+        vehicleId: vehicle.id,
+        source: "contact-form",
+        ...(turnstileToken ? { turnstileToken } : {}),
+        sourceContext: {
+          trigger: "vehicle-inquiry",
+          actionType: "request-info",
+          ...(typeof window !== "undefined" ? { pagePath: window.location.pathname } : {}),
+          vehicleTitle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
         },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          email: email || null,
-          phone: phone || null,
-          message: message || null,
-          vehicleId: vehicle.id,
-          source: "contact-form",
-          ...attributionFromLocation(),
-          referrer: typeof document === "undefined" ? null : document.referrer || null,
-          sourceContext: {
-            intent: "request-info",
-            pagePath: typeof window === "undefined" ? null : window.location.pathname,
-            vehicleTitle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-          },
-        }),
       });
 
-      const payload = (await response.json().catch(() => null)) as
-        | { leadId?: string; error?: string }
-        | null;
-      if (!response.ok || !payload?.leadId) {
-        throw new Error(payload?.error || "We could not submit your inquiry. Please try again.");
-      }
-
       play(vehicleDetailSoundActions.inquirySubmit);
-      setSubmittedLeadId(payload.leadId);
+      setSubmittedLeadId(response.leadId);
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -202,6 +179,10 @@ function InquiryModal({
       );
     } finally {
       setSubmitting(false);
+      if (TURNSTILE_SITE_KEY) {
+        setTurnstileToken(null);
+        setTurnstileResetKey((key) => key + 1);
+      }
     }
   };
 
@@ -256,12 +237,23 @@ function InquiryModal({
                 defaultValue={`I would like more information about the ${vehicle.year} ${vehicle.make} ${vehicle.model}.`}
               />
             </label>
+            {TURNSTILE_SITE_KEY ? (
+              <TurnstileWidget
+                key={turnstileResetKey}
+                siteKey={TURNSTILE_SITE_KEY}
+                onToken={setTurnstileToken}
+              />
+            ) : null}
             {submitError && (
               <p className="vehicleDetail__formError" role="alert">
                 {submitError}
               </p>
             )}
-            <button type="submit" className="vehicleDetail__primaryBtn" disabled={submitting}>
+            <button
+              type="submit"
+              className="vehicleDetail__primaryBtn"
+              disabled={submitting || (Boolean(TURNSTILE_SITE_KEY) && !turnstileToken)}
+            >
               {submitting ? <Loader2 size={16} aria-hidden="true" /> : <Send size={16} />}
               {submitting ? "Sending inquiry…" : "Send inquiry"}
             </button>

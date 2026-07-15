@@ -115,18 +115,35 @@ function normalizeSourceContext(
   value: unknown,
   source: NormalizedLeadCapture["source"],
 ): LeadSourceContext | null {
-  if (source !== "chat" || !isRecord(value)) return null;
-  if (value.trigger !== "bot-action") return null;
-  if (value.actionType !== "capture_lead" && value.actionType !== "open-lead-form") {
-    return null;
+  if (!isRecord(value)) return null;
+
+  if (source === "chat" && value.trigger === "bot-action") {
+    if (value.actionType !== "capture_lead" && value.actionType !== "open-lead-form") {
+      return null;
+    }
+
+    const vehicleId = nullableTrimmed(value.vehicleId, 80);
+    return {
+      trigger: "bot-action",
+      actionType: value.actionType,
+      ...(vehicleId ? { vehicleId } : {}),
+    };
   }
 
-  const vehicleId = nullableTrimmed(value.vehicleId, 80);
-  return {
-    trigger: "bot-action",
-    actionType: value.actionType,
-    ...(vehicleId ? { vehicleId } : {}),
-  };
+  if (source === "contact-form" && value.trigger === "vehicle-inquiry") {
+    if (value.actionType !== "request-info") return null;
+
+    const pagePath = nullableTrimmed(value.pagePath, 2_048);
+    const vehicleTitle = nullableTrimmed(value.vehicleTitle, 240);
+    return {
+      trigger: "vehicle-inquiry",
+      actionType: "request-info",
+      ...(pagePath ? { pagePath } : {}),
+      ...(vehicleTitle ? { vehicleTitle } : {}),
+    };
+  }
+
+  return null;
 }
 
 function nullableTrimmed(value: unknown, maxLength: number): string | null {
