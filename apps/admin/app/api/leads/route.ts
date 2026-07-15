@@ -37,6 +37,8 @@ import { captureError } from "@/lib/observability";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeadersFor(request) });
 }
@@ -51,7 +53,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   if (!apiKey && !isAllowedOrigin(request)) {
-    return json({ error: "Forbidden origin" }, 403);
+    return json({ error: "Forbidden origin" }, 403, request);
   }
 
   const rateLimit = checkPublicRouteRateLimit("leads", request);
@@ -90,6 +92,31 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const supabase = createServiceClient();
+
+  // A public inquiry may only reference a currently live vehicle owned by the
+  // resolved tenant. The FK alone cannot prevent a cross-tenant vehicle ID from
+  // being attached to a lead.
+  if (lead.vehicleId) {
+    if (!UUID_PATTERN.test(lead.vehicleId)) {
+      return json({ error: "Vehicle is unavailable" }, 400, request);
+    }
+    const { data: vehicle, error: vehicleError } = await supabase
+      .from("vehicles")
+      .select("id")
+      .eq("id", lead.vehicleId)
+      .eq("tenant_id", tenant.tenantId)
+      .eq("status", "live")
+      .maybeSingle();
+    if (vehicleError) {
+      captureError("api/leads/vehicle-validation", vehicleError, {
+        tenantId: tenant.tenantId,
+        vehicleId: lead.vehicleId,
+      });
+      return json({ error: "Unable to validate vehicle" }, 500, request);
+    }
+    if (!vehicle) return json({ error: "Vehicle is unavailable" }, 400, request);
+  }
+
   const quota = await checkPublicApiQuota(tenant.tenantId, "lead_requests", supabase);
   if (!quota.allowed) return json(quotaExceededPayload(quota), 429, request);
   const quotaHeaders = quotaResponseHeaders(quota);
