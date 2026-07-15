@@ -9,9 +9,9 @@
  * localStorage only (no backend, no tenant scope) because it is a personal UI
  * preference, not tenant data.
  *
- * Note: Chrome on macOS falls back to a solid-circle cover for every shape (the
- * toggler avoids a one-frame compositor flash there), so the shape choice is
- * visible in Safari/Firefox and non-Mac Chrome.
+ * Every shape works in every browser: on Chrome/macOS the toggler animates the
+ * shape with a solid clip-path cover (no iframe snapshot) to stay flash-free;
+ * elsewhere it reveals the destination snapshot through the same shape.
  */
 import * as React from "react";
 import type { TransitionVariant } from "@/lib/themeTransition";

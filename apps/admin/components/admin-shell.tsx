@@ -101,6 +101,7 @@ import {
   useThemeAnimation,
 } from "@/components/theme-animation";
 import { AppearanceDialog } from "@/components/appearance-dialog";
+import { THEME_TOGGLE_ELEMENT_ID } from "@/components/admin-shell-ids";
 import {
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
@@ -537,6 +538,7 @@ function ShellHeader({
           }
         />
         <AnimatedThemeToggler
+          id={THEME_TOGGLE_ELEMENT_ID}
           theme={currentTheme}
           onThemeChange={setTheme}
           variant={themeAnimation}

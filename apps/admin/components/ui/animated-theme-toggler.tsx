@@ -299,8 +299,21 @@ export const AnimatedThemeToggler = ({
     }
     sessionRef.current = session
 
+    // Failsafe: if any await in the reveal never settles (a browser quirk, a
+    // backgrounded tab resuming mid-flight), force-clean this session so the
+    // toggle can never wedge into a permanently unresponsive state.
+    const watchdog = window.setTimeout(() => {
+      if (sessionRef.current !== session) return
+      if (!committed) commitTheme(nextTheme)
+      session.controller.abort()
+      session.animation?.cancel()
+      session.overlay?.remove()
+      sessionRef.current = null
+      inFlightRef.current = false
+    }, Math.max(0, duration) + SNAPSHOT_LOAD_TIMEOUT_MS + THEME_APPLY_TIMEOUT_MS + 1_000)
+
+    let committed = false
     const run = async () => {
-      let committed = false
       try {
         const root = document.documentElement
         const viewportWidth = Math.max(
@@ -319,36 +332,41 @@ export const AnimatedThemeToggler = ({
         const radius = maxRevealRadius(x, y, viewportWidth, viewportHeight)
 
         if (isGoogleChromeOnMacOS()) {
-          const overscannedRadius = radius + 24
-          const diameter = overscannedRadius * 2
+          // Chrome on macOS flashes a one-frame compositor edge when we snapshot
+          // the destination into an iframe, so here the cover is a plain solid
+          // fill (no snapshot → no flash) — but it still animates the *chosen*
+          // shape via clip-path, so the shape preference is honored everywhere.
+          const [fromClip, toClip] = getThemeTransitionClipPaths(
+            variant,
+            x,
+            y,
+            radius,
+            viewportWidth,
+            viewportHeight,
+          )
           const overlay = document.createElement("div")
           overlay.dataset.themeSolidCover = ""
           overlay.setAttribute("aria-hidden", "true")
           overlay.inert = true
           overlay.style.position = "fixed"
-          overlay.style.left = `${x - overscannedRadius}px`
-          overlay.style.top = `${y - overscannedRadius}px`
-          overlay.style.width = `${diameter}px`
-          overlay.style.height = `${diameter}px`
-          overlay.style.borderRadius = "50%"
+          overlay.style.inset = "0"
           overlay.style.background = nextTheme === "dark"
             ? DARK_THEME_BACKGROUND
             : LIGHT_THEME_BACKGROUND
           overlay.style.pointerEvents = "none"
           overlay.style.zIndex = "2147483000"
-          overlay.style.transform = "scale(0)"
-          overlay.style.transformOrigin = "50% 50%"
-          overlay.style.willChange = "transform, opacity"
+          overlay.style.clipPath = fromClip
+          overlay.style.willChange = "clip-path, opacity"
           overlay.style.contain = "strict"
           session.overlay = overlay
           document.body.append(overlay)
 
           await waitForStablePaint(session.controller.signal)
           const coverAnimation = overlay.animate(
-            { transform: ["scale(0)", "scale(1)"] },
+            { clipPath: [fromClip, toClip] },
             {
               duration,
-              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+              easing: variant === "star" ? "linear" : "cubic-bezier(0.22, 1, 0.36, 1)",
               fill: "forwards",
             },
           )
@@ -433,6 +451,7 @@ export const AnimatedThemeToggler = ({
       } catch (error) {
         if (!session.controller.signal.aborted && !committed) commitTheme(nextTheme)
       } finally {
+        window.clearTimeout(watchdog)
         if (sessionRef.current === session) {
           session.overlay?.remove()
           sessionRef.current = null

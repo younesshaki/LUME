@@ -10,7 +10,6 @@
  * shows exactly what the header toggle will do.
  */
 import * as React from "react";
-import { useTheme } from "next-themes";
 
 import {
   Dialog,
@@ -23,8 +22,8 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { THEME_ANIMATIONS, useThemeAnimation } from "@/components/theme-animation";
+import { THEME_TOGGLE_ELEMENT_ID } from "@/components/admin-shell-ids";
 import { cn } from "@/lib/utils";
 
 export function AppearanceDialog({
@@ -35,8 +34,18 @@ export function AppearanceDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { variant, setVariant } = useThemeAnimation();
-  const { resolvedTheme, setTheme } = useTheme();
-  const currentTheme = resolvedTheme === "light" ? "light" : "dark";
+
+  // Preview by closing the dialog, then triggering the real header toggle so
+  // the reveal plays over the actual app — never inside the modal (a
+  // full-screen reveal fired from within a modal can wedge Radix's body
+  // pointer-events lock, which made the toggle unresponsive until refresh).
+  const previewAnimation = React.useCallback(() => {
+    onOpenChange(false);
+    window.setTimeout(() => {
+      const toggle = document.getElementById(THEME_TOGGLE_ELEMENT_ID);
+      if (toggle instanceof HTMLElement) toggle.click();
+    }, 160);
+  }, [onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,21 +87,13 @@ export function AppearanceDialog({
         </RadioGroup>
 
         <p className="text-xs text-muted-foreground">
-          Tip: Chrome on macOS shows a circle reveal for every shape to keep the
-          transition flash-free.
+          Tip: press “Try it” to preview the animation on the live theme toggle.
         </p>
 
         <DialogFooter className="sm:justify-between">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <AnimatedThemeToggler
-              theme={currentTheme}
-              onThemeChange={setTheme}
-              variant={variant}
-              duration={350}
-              className="inline-flex size-9 items-center justify-center rounded-md border bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4"
-            />
-            <span>Try it</span>
-          </div>
+          <Button type="button" variant="outline" onClick={previewAnimation}>
+            Try it
+          </Button>
           <Button type="button" onClick={() => onOpenChange(false)}>
             Done
           </Button>
