@@ -5,6 +5,7 @@ const calls = {
   vehicleEq: [] as Array<[string, unknown]>,
   imageEq: [] as Array<[string, unknown]>,
   imageOrder: [] as Array<[string, unknown]>,
+  imageClientKeys: [] as string[],
 };
 
 const vehicleRow = {
@@ -41,7 +42,7 @@ function thenable<T>(value: T) {
 }
 
 vi.mock("@supabase/supabase-js", () => ({
-  createClient: () => ({
+  createClient: (_url: string, key: string) => ({
     rpc: vi.fn().mockResolvedValue({
       data: [{ id: "tenant-1", slug: "atelier", status: "active" }],
       error: null,
@@ -58,6 +59,7 @@ vi.mock("@supabase/supabase-js", () => ({
         };
         return query;
       }
+      calls.imageClientKeys.push(key);
       const result = {
         data: [
           {
@@ -91,6 +93,7 @@ afterEach(() => {
   calls.vehicleEq.length = 0;
   calls.imageEq.length = 0;
   calls.imageOrder.length = 0;
+  calls.imageClientKeys.length = 0;
   vi.unstubAllEnvs();
 });
 
@@ -98,6 +101,7 @@ describe("standalone public vehicle detail", () => {
   it("scopes the visible vehicle and ordered gallery to the resolved tenant", async () => {
     vi.stubEnv("SUPABASE_URL", "https://supabase.example");
     vi.stubEnv("SUPABASE_ANON_KEY", "anon");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role");
     vi.stubEnv("R2_PUBLIC_BASE_URL", "https://cdn.example");
     const { default: handler } = await import("./[id]");
     let status = 0;
@@ -133,6 +137,7 @@ describe("standalone public vehicle detail", () => {
       ["tenant_id", "tenant-1"],
       ["vehicle_id", vehicleRow.id],
     ]);
+    expect(calls.imageClientKeys).toEqual(["service-role"]);
     expect(calls.imageOrder.map(([column]) => column)).toEqual([
       "is_primary",
       "sort_order",
