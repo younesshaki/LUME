@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Check, GitCompare, Heart, Send, X } from "lucide-react";
+import { Check, GitCompare, Heart, LoaderCircle, Send, X } from "lucide-react";
 import {
   formatVehiclePrice,
   loadVehicleById,
@@ -8,6 +8,7 @@ import {
   type VehicleGalleryImage,
   type VehiclePriceSignal,
 } from "@/experience/vehicles/catalog";
+import { submitVehicleInquiry } from "@/experience/leads/vehicleInquiry";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -108,19 +109,49 @@ function InquiryModal({
   onClose: () => void;
 }) {
   const { play } = useSound();
-  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submission, setSubmission] = useState<{ duplicate: boolean } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const dialogRef = useDialogKeyboard(open, onClose);
+  const vehicleTitle = `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}`;
 
   useEffect(() => {
-    if (open) setSubmitted(false);
-  }, [open]);
+    if (!open) return;
+    setSubmitting(false);
+    setSubmission(null);
+    setError(null);
+  }, [open, vehicle.id]);
 
   if (!open) return null;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    play(vehicleDetailSoundActions.inquirySubmit);
-    setSubmitted(true);
+    if (submitting) return;
+
+    const fields = new FormData(event.currentTarget);
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await submitVehicleInquiry({
+        fullName: String(fields.get("name") ?? ""),
+        email: String(fields.get("email") ?? ""),
+        phone: String(fields.get("phone") ?? ""),
+        message: String(fields.get("message") ?? ""),
+        vehicleId: vehicle.id,
+        vehicleTitle,
+      });
+      play(vehicleDetailSoundActions.inquirySubmit);
+      setSubmission({ duplicate: result.duplicate });
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to send your inquiry. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -131,11 +162,12 @@ function InquiryModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="vehicle-inquiry-title"
+        aria-busy={submitting}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="vehicleDetail__modalHeader">
           <div>
-            <p className="vehicleDetail__eyebrow">Demo inquiry</p>
+            <p className="vehicleDetail__eyebrow">Vehicle inquiry</p>
             <h2 id="vehicle-inquiry-title">{vehicle.year} {vehicle.make} {vehicle.model}</h2>
           </div>
           <button type="button" className="vehicleDetail__iconBtn" aria-label="Close inquiry" onClick={onClose}>
@@ -143,36 +175,51 @@ function InquiryModal({
           </button>
         </div>
 
-        {submitted ? (
-          <div className="vehicleDetail__success">
+        {submission ? (
+          <div className="vehicleDetail__success" role="status" aria-live="polite">
             <Check size={22} />
-            <p>Inquiry saved for demo review.</p>
+            <div>
+              <p>
+                {submission.duplicate
+                  ? "We already received this inquiry. The dealership can follow up from its dashboard."
+                  : "Your inquiry was sent to the dealership."}
+              </p>
+              <button type="button" className="vehicleDetail__secondaryBtn" onClick={onClose}>
+                Close
+              </button>
+            </div>
           </div>
         ) : (
           <form className="vehicleDetail__form" onSubmit={handleSubmit}>
             <label>
               <span>Name</span>
-              <input name="name" required autoComplete="name" />
+              <input name="name" required autoComplete="name" disabled={submitting} />
             </label>
             <label>
               <span>Email</span>
-              <input name="email" type="email" required autoComplete="email" />
+              <input name="email" type="email" required autoComplete="email" disabled={submitting} />
             </label>
             <label>
               <span>Phone</span>
-              <input name="phone" type="tel" autoComplete="tel" />
+              <input name="phone" type="tel" autoComplete="tel" disabled={submitting} />
             </label>
             <label>
               <span>Message</span>
               <textarea
                 name="message"
                 rows={4}
-                defaultValue={`I would like more information about the ${vehicle.year} ${vehicle.make} ${vehicle.model}.`}
+                defaultValue={`I would like more information about the ${vehicleTitle}.`}
+                disabled={submitting}
               />
             </label>
-            <button type="submit" className="vehicleDetail__primaryBtn">
-              <Send size={16} />
-              Submit demo inquiry
+            {error && (
+              <p className="vehicleDetail__formError" role="alert" aria-live="assertive">
+                {error}
+              </p>
+            )}
+            <button type="submit" className="vehicleDetail__primaryBtn" disabled={submitting}>
+              {submitting ? <LoaderCircle className="vehicleDetail__spinner" size={16} /> : <Send size={16} />}
+              {submitting ? "Sending inquiry" : "Send inquiry"}
             </button>
           </form>
         )}
