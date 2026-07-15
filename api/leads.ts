@@ -68,7 +68,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (value) headers[name] = value;
   }
 
-  const bypassSecret = process.env.LUME_CHAT_BYPASS_SECRET?.trim();
+  const bypassSecret = (
+    process.env.LUME_LEADS_BYPASS_SECRET ?? process.env.LUME_CHAT_BYPASS_SECRET
+  )?.trim();
   if (bypassSecret) headers["x-vercel-protection-bypass"] = bypassSecret;
 
   const tenantQuery = query(req, "tenant");
