@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Award, Coins, Users2 } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 import { TierManager, type TierRow } from "./TierManager";
 
 type PageProps = { params: Promise<{ tenant: string }> };
@@ -64,6 +66,11 @@ export default async function LoyaltyPage({ params }: PageProps) {
       <PageHeader
         title="Loyalty"
         description={`Points, tiers, and recent activity for ${tenant.name}`}
+        actions={
+          <Button variant="outline" asChild>
+            <Link href={`/admin/${slug}/customers`}>Registered customers</Link>
+          </Button>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
