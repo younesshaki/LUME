@@ -3,12 +3,14 @@
  * and a credentials-aware CORS helper for the cross-origin public site.
  */
 import type { Visitor } from "@lume/types";
-import { rowToVisitor } from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { corsHeadersFor } from "@/lib/origin";
 import { hashSessionToken } from "@/lib/visitorAuth";
+import { toPublicVisitor } from "./visitorPublic";
 
 export const VISITOR_COOKIE = "lume_visitor_session";
+
+export { toPublicVisitor } from "./visitorPublic";
 
 /**
  * Cross-origin cookie: the public site lives on a different origin than the
@@ -69,12 +71,12 @@ export async function resolveVisitor(
 
   const { data: visitor } = await supabase
     .from("visitors")
-    .select("*")
+    .select("id, tenant_id, email, first_name, last_name, created_at")
     .eq("tenant_id", tenantId)
     .eq("id", session.visitor_id)
     .maybeSingle();
 
-  return visitor ? rowToVisitor(visitor) : null;
+  return visitor ? toPublicVisitor(visitor) : null;
 }
 
 /** CORS headers that additionally permit credentialed (cookie) requests. */

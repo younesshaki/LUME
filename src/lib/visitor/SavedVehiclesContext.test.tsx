@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SAVED_VEHICLE_STORAGE_KEY, readSavedVehicleIds, writeSavedVehicleIds } from "./SavedVehiclesContext";
+import { SAVED_VEHICLE_STORAGE_KEY, readSavedVehicleIds, synchronizeSavedVehicleIds, writeSavedVehicleIds } from "./SavedVehiclesContext";
 
 function storageWith(value: string | null) {
   const values = new Map<string, string>();
@@ -20,5 +20,17 @@ describe("saved vehicle local storage", () => {
 
   it("fails safely for malformed legacy local storage", () => {
     expect(readSavedVehicleIds(storageWith("not json"))).toEqual([]);
+  });
+
+  it("keeps only failed anonymous IDs for a later authenticated retry", async () => {
+    const storage = storageWith(null);
+    const attempted: string[] = [];
+    const retryIds = await synchronizeSavedVehicleIds(["vehicle-1", "vehicle-2", "vehicle-1"], async (id) => {
+      attempted.push(id);
+      if (id === "vehicle-2") throw new Error("temporarily unavailable");
+    }, storage);
+    expect(attempted).toEqual(["vehicle-1", "vehicle-2"]);
+    expect(retryIds).toEqual(["vehicle-2"]);
+    expect(readSavedVehicleIds(storage)).toEqual(["vehicle-2"]);
   });
 });

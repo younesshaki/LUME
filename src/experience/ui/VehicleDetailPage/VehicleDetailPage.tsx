@@ -362,15 +362,22 @@ export default function VehicleDetailPage({
   const handleToggleSaved = () => {
     if (!vehicleId) return;
     play(vehicleDetailSoundActions.saveToggle);
-    void toggleSaved(vehicleId);
+    const wasSaved = savedIds.includes(vehicleId);
+    void toggleSaved(vehicleId).then((changed) => {
+      if (changed) trackConversion(wasSaved ? "vehicle_unsaved" : "vehicle_saved", { vehicleId });
+    });
   };
 
   const toggleCompare = () => {
     if (!vehicleId) return;
     play(vehicleDetailSoundActions.compareToggle);
     setCompareIds((ids) => {
-      if (ids.includes(vehicleId)) return ids.filter((id) => id !== vehicleId);
+      if (ids.includes(vehicleId)) {
+        trackConversion("compare_removed", { vehicleId });
+        return ids.filter((id) => id !== vehicleId);
+      }
       if (ids.length >= 3) return ids;
+      trackConversion("compare_added", { vehicleId });
       return [...ids, vehicleId];
     });
   };

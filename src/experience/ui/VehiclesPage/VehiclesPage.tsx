@@ -43,6 +43,8 @@ import {
 } from "@/lib/botActionConsumers";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
+import { useSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
+import { trackConversion } from "@/lib/conversionAnalytics";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { useVehiclesPageStateBridge } from "./VehiclesPage.state";
@@ -50,7 +52,6 @@ import { vehiclePageSoundActions } from "./VehiclesPage.sounds";
 import "./VehiclesPage.css";
 
 const PAGE_SIZE = 24;
-const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
 const SCROLL_STORAGE_PREFIX = "lume.vehicle-scroll:";
 const EMPTY_VEHICLE_FACETS: VehicleFacets = {
@@ -792,6 +793,7 @@ export default function VehiclesPage({
   onSelectVehicle,
 }: VehiclesPageProps) {
   const { play } = useSound();
+  const { savedIds: savedVehicleIds, toggleSaved: togglePersistentSave } = useSavedVehicles();
   const { mode } = useDualMode();
   const isStandard = mode === "standard";
   const initialState = useMemo(() => {
@@ -810,11 +812,12 @@ export default function VehiclesPage({
   const [sort, setSort] = useState<VehicleSort>(initialState.sort);
   const [page, setPage] = useState(initialState.page);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [savedVehicleIds, setSavedVehicleIds] = useState<string[]>(() => readStoredIds(SAVED_STORAGE_KEY));
   const [compareVehicleIds, setCompareVehicleIds] = useState<string[]>(() => readStoredIds(COMPARE_STORAGE_KEY).slice(0, 3));
   const [compareOpen, setCompareOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const restoredScrollRef = useRef(false);
+  const inventoryTrackedRef = useRef(false);
+  const analyticsFiltersInitializedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -840,6 +843,28 @@ export default function VehiclesPage({
       cancelled = true;
     };
   }, [filters, page, sort]);
+
+  useEffect(() => {
+    if (loading || loadError || inventoryTrackedRef.current) return;
+    inventoryTrackedRef.current = true;
+    trackConversion("inventory_view");
+  }, [loadError, loading]);
+
+  useEffect(() => {
+    if (!analyticsFiltersInitializedRef.current) {
+      analyticsFiltersInitializedRef.current = true;
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const activeFilters = countActiveFilters(filters);
+      if (filters.query.trim()) {
+        trackConversion("search_performed", { metadata: { query_length: filters.query.trim().length, active_filter_count: activeFilters } });
+      } else if (activeFilters > 0 || sort !== "recommended") {
+        trackConversion("filter_applied", { metadata: { active_filter_count: activeFilters, sort } });
+      }
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [filters, sort]);
 
   // Filter-dropdown values load from the lightweight facets endpoint and only
   // refetch when the make/state scope changes — not on every page or sort.
@@ -883,10 +908,6 @@ export default function VehiclesPage({
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
   }, [page, safePage]);
-
-  useEffect(() => {
-    writeStoredIds(SAVED_STORAGE_KEY, savedVehicleIds);
-  }, [savedVehicleIds]);
 
   useEffect(() => {
     writeStoredIds(COMPARE_STORAGE_KEY, compareVehicleIds);
@@ -943,17 +964,20 @@ export default function VehiclesPage({
   });
 
   const toggleSaved = (vehicleId: string) => {
-    setSavedVehicleIds((ids) =>
-      ids.includes(vehicleId)
-        ? ids.filter((id) => id !== vehicleId)
-        : [...ids, vehicleId]
-    );
+    const wasSaved = savedVehicleIds.includes(vehicleId);
+    void togglePersistentSave(vehicleId).then((changed) => {
+      if (changed) trackConversion(wasSaved ? "vehicle_unsaved" : "vehicle_saved", { vehicleId });
+    });
   };
 
   const toggleCompare = (vehicleId: string) => {
     setCompareVehicleIds((ids) => {
-      if (ids.includes(vehicleId)) return ids.filter((id) => id !== vehicleId);
+      if (ids.includes(vehicleId)) {
+        trackConversion("compare_removed", { vehicleId });
+        return ids.filter((id) => id !== vehicleId);
+      }
       if (ids.length >= 3) return ids;
+      trackConversion("compare_added", { vehicleId });
       return [...ids, vehicleId];
     });
   };

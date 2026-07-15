@@ -7,6 +7,7 @@ import {
   summarizeLeadLostReasons,
 } from "@/lib/leadLostReasons";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseConversionReport } from "@/lib/conversionAnalyticsReport";
 import {
   InventoryByBodyStyleChart,
   InventoryByMakeChart,
@@ -16,6 +17,7 @@ import {
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
+  searchParams: Promise<{ range?: string }>;
 };
 
 const LEADS_WINDOW_DAYS = 30;
@@ -61,8 +63,12 @@ type LeadSummaryRow = {
 
 const LEAD_STATUSES: LeadStatus[] = ["new", "contacted", "qualified", "won", "lost"];
 
-export default async function AnalyticsPage({ params }: PageProps) {
+const CONVERSION_WINDOWS = [7, 30, 90] as const;
+
+export default async function AnalyticsPage({ params, searchParams }: PageProps) {
   const { tenant: slug } = await params;
+  const selectedRange = (await searchParams).range;
+  const conversionWindowDays = selectedRange && CONVERSION_WINDOWS.includes(Number(selectedRange) as typeof CONVERSION_WINDOWS[number]) ? Number(selectedRange) : 30;
   const supabase = await createSupabaseServerClient();
 
   const { data: tenant } = await supabase
@@ -73,9 +79,8 @@ export default async function AnalyticsPage({ params }: PageProps) {
   if (!tenant) notFound();
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const windowStart = new Date(
-    Date.now() - LEADS_WINDOW_DAYS * 24 * 60 * 60 * 1000
-  ).toISOString();
+  const windowStart = new Date(Date.now() - LEADS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const conversionWindowStart = new Date(Date.now() - conversionWindowDays * 24 * 60 * 60 * 1000).toISOString();
 
   const [
     vehiclesResult,
@@ -86,7 +91,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
     soldVehiclesResult,
     vehicleFacts,
     lostReasonOptionsResult,
-    conversionFunnelResult,
+    conversionReportResult,
   ] = await Promise.all([
     supabase
       .from("vehicles")
@@ -122,7 +127,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
       .from("lead_lost_reason_options")
       .select("key, label, sort_order, is_active")
       .eq("tenant_id", tenant.id),
-    supabase.rpc("tenant_conversion_funnel", { p_tenant_id: tenant.id, p_since: windowStart }),
+    supabase.rpc("tenant_conversion_report", { p_tenant_id: tenant.id, p_since: conversionWindowStart }),
   ]);
 
   if (vehiclesResult.error) throw new Error(`Unable to load vehicles count: ${vehiclesResult.error.message}`);
@@ -131,16 +136,22 @@ export default async function AnalyticsPage({ params }: PageProps) {
   if (recentLeadsResult.error) throw new Error(`Unable to load recent leads: ${recentLeadsResult.error.message}`);
   if (priceHistoryResult.error) throw new Error(`Unable to load price history count: ${priceHistoryResult.error.message}`);
   if (soldVehiclesResult.error) throw new Error(`Unable to load sold vehicle facts: ${soldVehiclesResult.error.message}`);
-  if (conversionFunnelResult.error) throw new Error(`Unable to load conversion funnel: ${conversionFunnelResult.error.message}`);
+  if (conversionReportResult.error) throw new Error(`Unable to load conversion analytics: ${conversionReportResult.error.message}`);
 
-  const conversionEvents = new Map((conversionFunnelResult.data ?? []).map((row) => [row.event_name, Number(row.event_count)]));
+  const conversionReport = parseConversionReport(conversionReportResult.data);
   const funnel = [
-    ["Inventory sessions", conversionEvents.get("inventory_view") ?? 0],
-    ["Vehicle views", conversionEvents.get("vehicle_view") ?? 0],
-    ["Saves", conversionEvents.get("vehicle_saved") ?? 0],
-    ["Inquiry opens", conversionEvents.get("inquiry_opened") ?? 0],
-    ["Submitted leads", conversionEvents.get("inquiry_submitted") ?? 0],
+    ["Inventory sessions", conversionReport.funnel.get("inventory_view")?.sessionCount ?? 0],
+    ["Vehicle views", conversionReport.funnel.get("vehicle_view")?.eventCount ?? 0],
+    ["Saves", conversionReport.funnel.get("vehicle_saved")?.eventCount ?? 0],
+    ["Inquiry opens", conversionReport.funnel.get("inquiry_opened")?.eventCount ?? 0],
+    ["Submitted leads", conversionReport.funnel.get("inquiry_submitted")?.eventCount ?? 0],
   ] as const;
+  const reportVehicleIds = conversionReport.vehicles.slice(0, 20).map((row) => row.vehicleId);
+  const { data: reportVehicles, error: reportVehiclesError } = reportVehicleIds.length
+    ? await supabase.from("vehicles").select("id, year, make, model").eq("tenant_id", tenant.id).in("id", reportVehicleIds)
+    : { data: [], error: null };
+  if (reportVehiclesError) throw new Error(`Unable to load conversion vehicles: ${reportVehiclesError.message}`);
+  const reportVehicleNames = new Map((reportVehicles ?? []).map((vehicle) => [vehicle.id, `${vehicle.year} ${vehicle.make} ${vehicle.model}`]));
 
   const leadsByStatus = countLeadStatuses(
     ((leadsResult.data ?? []) as Array<{ status: LeadStatus }>).map((row) => row.status)
@@ -202,12 +213,23 @@ export default async function AnalyticsPage({ params }: PageProps) {
 
       <section className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><h2 className="text-sm font-semibold">Conversion funnel</h2><p className="mt-1 text-sm text-muted-foreground">Consent-aware activity from the last 30 days. Metrics begin after deployment.</p></div>
+          <div><h2 className="text-sm font-semibold">Conversion funnel</h2><p className="mt-1 text-sm text-muted-foreground">Consent-aware activity. Metrics begin after deployment and are not retroactive.</p></div>
+          <form><label className="text-xs text-muted-foreground" htmlFor="conversion-range">Window </label><select id="conversion-range" name="range" defaultValue={String(conversionWindowDays)} className="rounded border bg-background px-2 py-1 text-sm"><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select><button className="ml-2 text-sm underline" type="submit">Apply</button></form>
           <span className="text-xs text-muted-foreground">No raw event records are loaded here.</span>
         </div>
         <ol className="mt-5 grid gap-3 sm:grid-cols-5">
           {funnel.map(([label, count], index) => <li key={label} className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">{index + 1}. {label}</p><p className="mt-2 text-2xl font-semibold">{count.toLocaleString()}</p><p className="text-xs text-muted-foreground">{index === 0 ? "Baseline" : `${percentage(count, funnel[index - 1]?.[1] ?? 0)}% from prior step`}</p></li>)}
         </ol>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <ConversionVehiclePanel title="Top viewed vehicles" rows={conversionReport.vehicles.filter((row) => row.viewCount > 0).slice(0, 8)} vehicleNames={reportVehicleNames} slug={tenant.slug} />
+        <ConversionVehiclePanel title="Viewed often, no submitted lead" rows={conversionReport.vehicles.filter((row) => row.viewCount > 0 && row.submittedLeadCount === 0).slice(0, 8)} vehicleNames={reportVehicleNames} slug={tenant.slug} />
+      </section>
+      <section className="grid gap-6 lg:grid-cols-3">
+        <ConversionList title="Source and campaign" empty="No consented campaign activity yet." rows={conversionReport.sources.slice(0, 8).map((row) => ({ label: `${row.source} · ${row.campaign}`, detail: `${row.viewCount} views · ${row.submittedLeadCount} submitted leads` }))} />
+        <ConversionList title="Registered vs anonymous" empty="No consented identity activity yet." rows={conversionReport.identities.map((row) => ({ label: row.identity, detail: `${row.viewCount} views · ${row.saveCount} saves · ${row.submittedLeadCount} submitted leads` }))} />
+        <div className="rounded-xl border p-4"><h2 className="text-sm font-semibold">View-to-lead time</h2><p className="mt-3 text-2xl font-semibold">{conversionReport.medianViewToLeadSeconds === null ? "—" : formatDuration(conversionReport.medianViewToLeadSeconds)}</p><p className="mt-1 text-sm text-muted-foreground">Median from first recorded vehicle view to submitted lead, when identity and vehicle match.</p></div>
       </section>
 
       <LeadsOverTimeChart data={leadsSeries} />
@@ -388,4 +410,18 @@ function formatDate(value: string): string {
 
 function formatCurrency(value: number): string {
   return CURRENCY_FORMATTER.format(value);
+}
+
+function ConversionVehiclePanel({ title, rows, vehicleNames, slug }: { title: string; rows: Array<{ vehicleId: string; viewCount: number; submittedLeadCount: number }>; vehicleNames: Map<string, string>; slug: string }) {
+  return <div className="rounded-xl border p-4"><h2 className="text-sm font-semibold">{title}</h2>{!rows.length ? <p className="mt-4 text-sm text-muted-foreground">No consented vehicle activity yet.</p> : <ul className="mt-3 space-y-3 text-sm">{rows.map((row) => <li key={row.vehicleId} className="flex items-center justify-between gap-3"><Link className="hover:underline" href={`/admin/${slug}/vehicles/${row.vehicleId}`}>{vehicleNames.get(row.vehicleId) ?? "Unavailable vehicle"}</Link><span className="shrink-0 text-muted-foreground">{row.viewCount} views · {row.submittedLeadCount} leads</span></li>)}</ul>}</div>;
+}
+
+function ConversionList({ title, empty, rows }: { title: string; empty: string; rows: Array<{ label: string; detail: string }> }) {
+  return <div className="rounded-xl border p-4"><h2 className="text-sm font-semibold">{title}</h2>{!rows.length ? <p className="mt-4 text-sm text-muted-foreground">{empty}</p> : <ul className="mt-3 space-y-3 text-sm">{rows.map((row) => <li key={row.label}><p>{row.label}</p><p className="text-muted-foreground">{row.detail}</p></li>)}</ul>}</div>;
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)} sec`;
+  if (seconds < 3_600) return `${Math.round(seconds / 60)} min`;
+  return `${(seconds / 3_600).toFixed(1)} hr`;
 }

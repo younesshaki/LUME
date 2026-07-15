@@ -4,6 +4,7 @@ export const ANALYTICS_EVENT_NAMES = [
 export const OPERATIONAL_EVENT_NAMES = ["inquiry_submitted"] as const;
 export type ConversionEventName = (typeof ANALYTICS_EVENT_NAMES)[number] | (typeof OPERATIONAL_EVENT_NAMES)[number];
 export type AnalyticsEventInput = { eventId: string; name: (typeof ANALYTICS_EVENT_NAMES)[number]; vehicleId?: string; metadata?: Record<string, unknown> };
+export type AnalyticsAttribution = { utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?: string; referrer?: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_METADATA_BYTES = 2_048;
@@ -21,6 +22,24 @@ export function parseAnalyticsEvents(value: unknown): AnalyticsEventInput[] | nu
     events.push({ eventId: event.eventId, name: event.name as AnalyticsEventInput["name"], ...(vehicleId ? { vehicleId } : {}), ...(Object.keys(metadata).length ? { metadata } : {}) });
   }
   return events;
+}
+
+/** Accept only bounded campaign fields; the endpoint never receives arbitrary URLs or headers. */
+export function parseAnalyticsAttribution(value: unknown): AnalyticsAttribution {
+  if (!isRecord(value) || !isRecord(value.attribution)) return {};
+  const raw = value.attribution;
+  const map: Array<[keyof AnalyticsAttribution, string]> = [
+    ["utmSource", "utmSource"], ["utmMedium", "utmMedium"], ["utmCampaign", "utmCampaign"], ["utmContent", "utmContent"], ["referrer", "referrer"],
+  ];
+  const result: AnalyticsAttribution = {};
+  for (const [target, source] of map) {
+    const candidate = raw[source];
+    if (typeof candidate === "string") {
+      const trimmed = candidate.trim().slice(0, 160);
+      if (trimmed) result[target] = trimmed;
+    }
+  }
+  return result;
 }
 
 export function sanitizeMetadata(value: unknown): Record<string, unknown> | null {

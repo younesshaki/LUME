@@ -64,6 +64,7 @@ export async function openVisitorPreferenceTurn(
   try {
     const requestedSessionId = normalizeSessionId(input.requestedSessionId);
     let sessionId: string | null = null;
+    let createdSession = false;
 
     if (requestedSessionId) {
       const owned = await findOwnedSession(client, input, requestedSessionId);
@@ -81,6 +82,7 @@ export async function openVisitorPreferenceTurn(
           .single();
         if (error || !data) return null;
         sessionId = data.id;
+        createdSession = true;
       }
     } else if (!input.startNewSession) {
       const latest = await findLatestOwnedSession(client, input);
@@ -106,6 +108,13 @@ export async function openVisitorPreferenceTurn(
         .single();
       if (error || !data) return null;
       sessionId = data.id;
+      createdSession = true;
+    }
+
+    if (createdSession) {
+      // Operational outcome: this is emitted only after a real, owned chat
+      // session exists. A reporting failure must never interrupt chat.
+      void recordChatStarted(client, input.tenantId, input.visitorId);
     }
 
     const latestMessage = await findLatestObservedMessage(client, input.tenantId, sessionId);
@@ -137,6 +146,20 @@ export async function openVisitorPreferenceTurn(
     return { sessionId };
   } catch {
     return null;
+  }
+}
+
+async function recordChatStarted(client: DbClient, tenantId: string, visitorId: string): Promise<void> {
+  try {
+    await client.from("conversion_events").insert({
+      tenant_id: tenantId,
+      visitor_id: visitorId,
+      event_name: "chat_started",
+      event_category: "operational",
+      metadata: {},
+    });
+  } catch {
+    // Conversion reporting is strictly best-effort for a real chat action.
   }
 }
 
