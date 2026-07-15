@@ -71,19 +71,52 @@ describe("normalizeLeadCaptureInput", () => {
     });
   });
 
-  it("drops source context for non-chat or malformed submissions", () => {
-    const nonChat = normalizeLeadCaptureInput({
+  it("keeps bounded vehicle-detail inquiry context and drops unknown fields", () => {
+    const result = normalizeLeadCaptureInput({
+      email: "visitor@example.com",
+      source: "contact-form",
+      vehicleId: "11111111-1111-4111-8111-111111111111",
+      sourceContext: {
+        trigger: "vehicle-detail",
+        actionType: "request-info",
+        vehicleId: " 11111111-1111-4111-8111-111111111111 ",
+        vehicleTitle: ` ${"Luxury vehicle ".repeat(30)} `,
+        pagePath: "/vehicles/11111111-1111-4111-8111-111111111111?utm_source=test",
+        rawProfile: "must not persist",
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.sourceContext).toEqual({
+      trigger: "vehicle-detail",
+      actionType: "request-info",
+      vehicleId: "11111111-1111-4111-8111-111111111111",
+      vehicleTitle: "Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle",
+      pagePath: "/vehicles/11111111-1111-4111-8111-111111111111?utm_source=test",
+    });
+    expect(result.value.sourceContext?.vehicleTitle).toHaveLength(240);
+  });
+
+  it("drops malformed or source-incompatible context", () => {
+    const nonChatBot = normalizeLeadCaptureInput({
       phone: "123",
       source: "contact-form",
       sourceContext: { trigger: "bot-action", actionType: "open-lead-form" },
     });
-    const malformed = normalizeLeadCaptureInput({
+    const malformedBot = normalizeLeadCaptureInput({
       phone: "123",
       source: "chat",
       sourceContext: { trigger: "bot-action", actionType: "delete_lead" },
     });
-    expect(nonChat.ok && nonChat.value.sourceContext).toBeNull();
-    expect(malformed.ok && malformed.value.sourceContext).toBeNull();
+    const missingVehicle = normalizeLeadCaptureInput({
+      phone: "123",
+      source: "contact-form",
+      sourceContext: { trigger: "vehicle-detail", actionType: "request-info" },
+    });
+    expect(nonChatBot.ok && nonChatBot.value.sourceContext).toBeNull();
+    expect(malformedBot.ok && malformedBot.value.sourceContext).toBeNull();
+    expect(missingVehicle.ok && missingVehicle.value.sourceContext).toBeNull();
   });
 
   it("accepts a bounded Turnstile token without persisting it as lead data", () => {
