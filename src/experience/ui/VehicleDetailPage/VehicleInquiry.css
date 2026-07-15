@@ -1,0 +1,49 @@
+.vehicleDetail__formError {
+  margin: 0;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 6px;
+  background: rgba(127, 29, 29, 0.18);
+  color: #fecaca;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding: 0.7rem 0.8rem;
+}
+
+.vehicleDetail__primaryBtn:disabled,
+.vehicleDetail__form input:disabled,
+.vehicleDetail__form textarea:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.vehicleDetail__spinner {
+  animation: vehicleInquirySpin 0.8s linear infinite;
+}
+
+.vehicleDetail__turnstile {
+  display: flex;
+  min-height: 4.1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.vehicleDetail__success > div {
+  display: grid;
+  gap: 1rem;
+}
+
+.vehicleDetail__success .vehicleDetail__secondaryBtn {
+  justify-self: start;
+}
+
+@keyframes vehicleInquirySpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vehicleDetail__spinner {
+    animation: none;
+  }
+}
