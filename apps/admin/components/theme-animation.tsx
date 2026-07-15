@@ -4,10 +4,17 @@
  * Per-user theme-toggle animation preference.
  *
  * The animation styles are the reveal shapes already implemented by
- * `AnimatedThemeToggler` (see `lib/themeTransition.ts`). This context lets each
- * admin pick which shape their light/dark toggle uses; the choice is stored in
- * localStorage only (no backend, no tenant scope) because it is a personal UI
- * preference, not tenant data.
+ * `AnimatedThemeToggler` (see `lib/themeTransition.ts`). Each admin picks which
+ * shape their light/dark toggle uses; the choice is stored in localStorage only
+ * (no backend, no tenant scope) because it is a personal UI preference.
+ *
+ * Deliberately a module-level store read via `useSyncExternalStore` rather than
+ * a React context provider: the preference is consumed in two far-apart places
+ * (the header toggle and this settings dialog), and a provider high in the tree
+ * would re-render the ENTIRE admin shell on every selection. Doing that while
+ * the modal settings dialog is open corrupts Radix's body pointer-events lock
+ * and freezes the page until refresh. A subscription store re-renders only the
+ * actual consumers, so selecting an option never touches the rest of the tree.
  *
  * Every shape works in every browser: on Chrome/macOS the toggler animates the
  * shape with a solid clip-path cover (no iframe snapshot) to stay flash-free;
@@ -40,53 +47,56 @@ const VALID_VARIANTS = new Set<TransitionVariant>(
   THEME_ANIMATIONS.map((option) => option.value),
 );
 
-function isVariant(value: string | null): value is TransitionVariant {
-  return value !== null && VALID_VARIANTS.has(value as TransitionVariant);
+function readStored(): TransitionVariant {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && VALID_VARIANTS.has(stored as TransitionVariant)) {
+      return stored as TransitionVariant;
+    }
+  } catch {
+    // No stored preference (or storage blocked) — fall back to the default.
+  }
+  return DEFAULT_THEME_ANIMATION;
 }
 
-type ThemeAnimationContextValue = {
+// Hydrated eagerly on the client. The variant only affects a click handler, not
+// any rendered DOM, so a client value differing from the SSR default causes no
+// hydration mismatch.
+let currentVariant: TransitionVariant =
+  typeof window === "undefined" ? DEFAULT_THEME_ANIMATION : readStored();
+
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getSnapshot(): TransitionVariant {
+  return currentVariant;
+}
+
+function getServerSnapshot(): TransitionVariant {
+  return DEFAULT_THEME_ANIMATION;
+}
+
+export function setThemeAnimation(variant: TransitionVariant): void {
+  if (variant === currentVariant) return;
+  currentVariant = variant;
+  try {
+    localStorage.setItem(STORAGE_KEY, variant);
+  } catch {
+    // The choice still applies for this session when storage is unavailable.
+  }
+  for (const listener of listeners) listener();
+}
+
+export function useThemeAnimation(): {
   variant: TransitionVariant;
   setVariant: (variant: TransitionVariant) => void;
-};
-
-const ThemeAnimationContext = React.createContext<ThemeAnimationContextValue | null>(null);
-
-export function ThemeAnimationProvider({ children }: { children: React.ReactNode }) {
-  // Start from the default so server and first client render match; the stored
-  // preference is applied after mount to avoid a hydration mismatch.
-  const [variant, setVariantState] = React.useState<TransitionVariant>(DEFAULT_THEME_ANIMATION);
-
-  React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (isVariant(stored)) setVariantState(stored);
-    } catch {
-      // No stored preference is fine — the default stands.
-    }
-  }, []);
-
-  const setVariant = React.useCallback((next: TransitionVariant) => {
-    setVariantState(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // The choice still applies for this session when storage is unavailable.
-    }
-  }, []);
-
-  const value = React.useMemo(() => ({ variant, setVariant }), [variant, setVariant]);
-
-  return (
-    <ThemeAnimationContext.Provider value={value}>
-      {children}
-    </ThemeAnimationContext.Provider>
-  );
-}
-
-export function useThemeAnimation(): ThemeAnimationContextValue {
-  const context = React.useContext(ThemeAnimationContext);
-  if (!context) {
-    throw new Error("useThemeAnimation must be used within a ThemeAnimationProvider");
-  }
-  return context;
+} {
+  const variant = React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return { variant, setVariant: setThemeAnimation };
 }

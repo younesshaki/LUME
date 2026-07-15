@@ -96,10 +96,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
-import {
-  ThemeAnimationProvider,
-  useThemeAnimation,
-} from "@/components/theme-animation";
+import { useThemeAnimation } from "@/components/theme-animation";
 import { AppearanceDialog } from "@/components/appearance-dialog";
 import { THEME_TOGGLE_ELEMENT_ID } from "@/components/admin-shell-ids";
 import {
@@ -217,7 +214,6 @@ export function AdminShell({
   return (
     // This shadcn sidebar version does not mount its own TooltipProvider;
     // the collapsed-rail tooltips crash without one.
-    <ThemeAnimationProvider>
     <TooltipProvider delayDuration={0}>
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -349,7 +345,6 @@ export function AdminShell({
       </SidebarInset>
     </SidebarProvider>
     </TooltipProvider>
-    </ThemeAnimationProvider>
   );
 }
 

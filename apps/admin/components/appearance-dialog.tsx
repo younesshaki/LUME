@@ -3,7 +3,7 @@
 /**
  * "Appearance" settings dialog — lets the signed-in admin choose which shape
  * the light/dark theme toggle animates with. The choice is a per-user
- * localStorage preference managed by `ThemeAnimationProvider`.
+ * localStorage preference exposed by the `useThemeAnimation` store.
  *
  * The dialog doubles as a live preview: the toggle inside it runs the currently
  * selected animation against the real theme, so picking a shape and pressing it
