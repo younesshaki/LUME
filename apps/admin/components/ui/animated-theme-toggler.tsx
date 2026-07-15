@@ -2,143 +2,191 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Moon, Sun } from "lucide-react"
-import { flushSync } from "react-dom"
 
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
+import {
+  buildThemeSnapshotMarkup,
+  getThemeTransitionClipPaths,
+  maxRevealRadius,
+  rootMatchesTheme,
+  type TransitionVariant,
+} from "../../lib/themeTransition"
 
-export type TransitionVariant =
-  | "circle"
-  | "square"
-  | "triangle"
-  | "diamond"
-  | "hexagon"
-  | "rectangle"
-  | "star"
+export type { TransitionVariant }
 
 interface AnimatedThemeTogglerProps extends React.ComponentPropsWithoutRef<"button"> {
   duration?: number
   variant?: TransitionVariant
-  /** When true, the transition expands from the viewport center instead of the button center. */
+  /** When true, the reveal expands from the viewport center instead of the button center. */
   fromCenter?: boolean
-  /**
-   * Controlled theme value. When provided, the parent owns persistence
-   * (e.g. `next-themes`) and this component will not write to localStorage.
-   */
+  /** Controlled theme; next-themes remains the persistence authority. */
   theme?: "light" | "dark"
-  /** Called on toggle. Pair with `theme` for controlled usage. */
   onThemeChange?: (theme: "light" | "dark") => void
 }
 
-const TRANSITION_OVERSCAN_PX = 16
-
-function polygonCollapsed(cx: number, cy: number, vertexCount: number): string {
-  const pairs = Array.from(
-    { length: vertexCount },
-    () => `${cx}px ${cy}px`
-  ).join(", ")
-  return `polygon(${pairs})`
+type RevealSession = {
+  controller: AbortController
+  overlay: HTMLDivElement | null
+  animation: Animation | null
 }
 
-function getThemeTransitionClipPaths(
-  variant: TransitionVariant,
-  cx: number,
-  cy: number,
-  maxRadius: number,
-  viewportWidth: number,
-  viewportHeight: number
-): [string, string] {
-  switch (variant) {
-    case "circle":
-      return [
-        `circle(0px at ${cx}px ${cy}px)`,
-        `circle(${maxRadius}px at ${cx}px ${cy}px)`,
-      ]
-    case "square": {
-      const halfW = Math.max(cx, viewportWidth - cx)
-      const halfH = Math.max(cy, viewportHeight - cy)
-      const halfSide = Math.max(halfW, halfH) * 1.05
-      const end = [
-        `${cx - halfSide}px ${cy - halfSide}px`,
-        `${cx + halfSide}px ${cy - halfSide}px`,
-        `${cx + halfSide}px ${cy + halfSide}px`,
-        `${cx - halfSide}px ${cy + halfSide}px`,
-      ].join(", ")
-      return [polygonCollapsed(cx, cy, 4), `polygon(${end})`]
+const SNAPSHOT_LOAD_TIMEOUT_MS = 1_500
+const THEME_APPLY_TIMEOUT_MS = 500
+
+function prefersReducedMotion(): boolean {
+  return typeof window.matchMedia === "function"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
+
+function waitForSnapshotLoad(
+  iframe: HTMLIFrameElement,
+  theme: "light" | "dark",
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Theme reveal aborted", "AbortError"))
+      return
     }
-    case "triangle": {
-      const scale = maxRadius * 2.2
-      const dx = (Math.sqrt(3) / 2) * scale
-      const verts = [
-        `${cx}px ${cy - scale}px`,
-        `${cx + dx}px ${cy + 0.5 * scale}px`,
-        `${cx - dx}px ${cy + 0.5 * scale}px`,
-      ].join(", ")
-      return [polygonCollapsed(cx, cy, 3), `polygon(${verts})`]
+    let settled = false
+    let timeout = 0
+    let readinessFrame = 0
+    const cleanup = () => {
+      window.clearTimeout(timeout)
+      cancelAnimationFrame(readinessFrame)
+      iframe.removeEventListener("load", checkReady)
+      iframe.removeEventListener("error", onError)
+      signal.removeEventListener("abort", onAbort)
     }
-    case "diamond": {
-      // Slightly larger than the view-transition circle radius so axis-aligned coverage matches the circle reveal.
-      const R = maxRadius * Math.SQRT2
-      const end = [
-        `${cx}px ${cy - R}px`,
-        `${cx + R}px ${cy}px`,
-        `${cx}px ${cy + R}px`,
-        `${cx - R}px ${cy}px`,
-      ].join(", ")
-      return [polygonCollapsed(cx, cy, 4), `polygon(${end})`]
-    }
-    case "hexagon": {
-      const R = maxRadius * Math.SQRT2
-      const verts: string[] = []
-      for (let i = 0; i < 6; i++) {
-        const a = -Math.PI / 2 + (i * Math.PI) / 3
-        verts.push(`${cx + R * Math.cos(a)}px ${cy + R * Math.sin(a)}px`)
-      }
-      return [polygonCollapsed(cx, cy, 6), `polygon(${verts.join(", ")})`]
-    }
-    case "rectangle": {
-      const halfW = Math.max(cx, viewportWidth - cx)
-      const halfH = Math.max(cy, viewportHeight - cy)
-      const end = [
-        `${cx - halfW}px ${cy - halfH}px`,
-        `${cx + halfW}px ${cy - halfH}px`,
-        `${cx + halfW}px ${cy + halfH}px`,
-        `${cx - halfW}px ${cy + halfH}px`,
-      ].join(", ")
-      return [polygonCollapsed(cx, cy, 4), `polygon(${end})`]
-    }
-    case "star": {
-      // Small overscan so the last frames never leave a 1px seam before the transition group ends.
-      const R = maxRadius * Math.SQRT2 * 1.03
-      const innerRatio = 0.42
-      const starPolygon = (radius: number) => {
-        const verts: string[] = []
-        for (let i = 0; i < 5; i++) {
-          const outerA = -Math.PI / 2 + (i * 2 * Math.PI) / 5
-          verts.push(
-            `${cx + radius * Math.cos(outerA)}px ${cy + radius * Math.sin(outerA)}px`
-          )
-          const innerA = outerA + Math.PI / 5
-          verts.push(
-            `${cx + radius * innerRatio * Math.cos(innerA)}px ${cy + radius * innerRatio * Math.sin(innerA)}px`
-          )
+    const checkReady = () => {
+      if (settled) return
+      try {
+        if (iframe.contentDocument?.documentElement.dataset.themeRevealSnapshot === theme) {
+          settled = true
+          cleanup()
+          resolve()
+          return
         }
-        return `polygon(${verts.join(", ")})`
+      } catch {
+        // A restrictive frame policy will fall through to the safe timeout.
       }
-      const startR = Math.max(2, R * 0.025)
-      return [starPolygon(startR), starPolygon(R)]
+      readinessFrame = requestAnimationFrame(checkReady)
     }
-    default:
-      return [
-        `circle(0px at ${cx}px ${cy}px)`,
-        `circle(${maxRadius}px at ${cx}px ${cy}px)`,
-      ]
-  }
+    const onError = () => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(new Error("Theme snapshot failed to load"))
+    }
+    const onAbort = () => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(new DOMException("Theme reveal aborted", "AbortError"))
+    }
+    iframe.addEventListener("load", checkReady)
+    iframe.addEventListener("error", onError, { once: true })
+    signal.addEventListener("abort", onAbort, { once: true })
+    readinessFrame = requestAnimationFrame(checkReady)
+    timeout = window.setTimeout(
+      () => onError(),
+      SNAPSHOT_LOAD_TIMEOUT_MS,
+    )
+  })
 }
 
-function waitForStablePaint(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => resolve())
+function waitForAnimation(animation: Animation, duration: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Theme reveal aborted", "AbortError"))
+      return
+    }
+    let settled = false
+    const cleanup = () => {
+      window.clearTimeout(timeout)
+      signal.removeEventListener("abort", onAbort)
+    }
+    const finish = () => {
+      if (settled) return
+      settled = true
+      cleanup()
+      resolve()
+    }
+    const fail = (error: unknown) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(error)
+    }
+    const onAbort = () => {
+      animation.cancel()
+      fail(new DOMException("Theme reveal aborted", "AbortError"))
+    }
+    const timeout = window.setTimeout(() => {
+      try {
+        animation.finish()
+      } finally {
+        finish()
+      }
+    }, Math.max(0, duration) + 250)
+    signal.addEventListener("abort", onAbort, { once: true })
+    void animation.finished.then(finish, fail)
+  })
+}
+
+function waitForThemeApplication(
+  root: HTMLElement,
+  theme: "light" | "dark",
+  signal: AbortSignal,
+): Promise<void> {
+  if (rootMatchesTheme(root, theme)) return Promise.resolve()
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Theme reveal aborted", "AbortError"))
+      return
+    }
+    let timeout = 0
+    const observer = new MutationObserver(() => {
+      if (rootMatchesTheme(root, theme)) finish()
+    })
+    const cleanup = () => {
+      observer.disconnect()
+      window.clearTimeout(timeout)
+      signal.removeEventListener("abort", onAbort)
+    }
+    const finish = () => {
+      cleanup()
+      resolve()
+    }
+    const onAbort = () => {
+      cleanup()
+      reject(new DOMException("Theme reveal aborted", "AbortError"))
+    }
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
+    signal.addEventListener("abort", onAbort, { once: true })
+    timeout = window.setTimeout(finish, THEME_APPLY_TIMEOUT_MS)
+  })
+}
+
+function waitForStablePaint(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Theme reveal aborted", "AbortError"))
+      return
+    }
+    let firstFrame = 0
+    let secondFrame = 0
+    const onAbort = () => {
+      cancelAnimationFrame(firstFrame)
+      cancelAnimationFrame(secondFrame)
+      reject(new DOMException("Theme reveal aborted", "AbortError"))
+    }
+    signal.addEventListener("abort", onAbort, { once: true })
+    firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        signal.removeEventListener("abort", onAbort)
+        resolve()
+      })
     })
   })
 }
@@ -146,153 +194,175 @@ function waitForStablePaint(): Promise<void> {
 export const AnimatedThemeToggler = ({
   className,
   duration = 400,
-  variant,
+  variant = "circle",
   fromCenter = false,
   theme,
   onThemeChange,
+  onClick,
   ...props
 }: AnimatedThemeTogglerProps) => {
-  const shape = variant ?? "circle"
   const isControlled = theme !== undefined
   const [internalIsDark, setInternalIsDark] = useState(false)
   const isDark = isControlled ? theme === "dark" : internalIsDark
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const transitionInFlightRef = useRef(false)
+  const inFlightRef = useRef(false)
+  const sessionRef = useRef<RevealSession | null>(null)
 
   useEffect(() => {
     if (isControlled) return
-
     const updateTheme = () => {
       setInternalIsDark(document.documentElement.classList.contains("dark"))
     }
-
     updateTheme()
-
     const observer = new MutationObserver(updateTheme)
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    })
-
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
     return () => observer.disconnect()
   }, [isControlled])
 
+  const cancelSession = useCallback(() => {
+    const session = sessionRef.current
+    if (!session) return
+    session.controller.abort()
+    session.animation?.cancel()
+    session.overlay?.remove()
+    sessionRef.current = null
+    inFlightRef.current = false
+  }, [])
+
+  useEffect(() => cancelSession, [cancelSession])
+
+  const commitTheme = useCallback((nextTheme: "light" | "dark") => {
+    if (isControlled) {
+      onThemeChange?.(nextTheme)
+      return
+    }
+    document.documentElement.classList.toggle("dark", nextTheme === "dark")
+    setInternalIsDark(nextTheme === "dark")
+    try {
+      localStorage.setItem("theme", nextTheme)
+    } catch {
+      // The visible theme still updates when storage is unavailable.
+    }
+  }, [isControlled, onThemeChange])
+
   const toggleTheme = useCallback(() => {
     const button = buttonRef.current
-    if (!button || transitionInFlightRef.current) return
-
+    if (!button || inFlightRef.current) return
     const nextTheme: "light" | "dark" = isDark ? "light" : "dark"
-    const viewportWidth = Math.max(
-      window.innerWidth,
-      document.documentElement.clientWidth,
-      window.visualViewport?.width ?? 0
-    )
-    const viewportHeight = Math.max(
-      window.innerHeight,
-      document.documentElement.clientHeight,
-      window.visualViewport?.height ?? 0
-    )
 
-    let x: number
-    let y: number
-    if (fromCenter) {
-      x = viewportWidth / 2
-      y = viewportHeight / 2
-    } else {
-      const { top, left, width, height } = button.getBoundingClientRect()
-      x = left + width / 2
-      y = top + height / 2
-    }
-
-    const maxRadius =
-      Math.ceil(
-        Math.hypot(
-          Math.max(x, viewportWidth - x),
-          Math.max(y, viewportHeight - y)
-        )
-      ) + TRANSITION_OVERSCAN_PX
-
-    const applyThemeClass = () => {
-      document.documentElement.classList.toggle("dark", nextTheme === "dark")
-      if (!isControlled) {
-        setInternalIsDark(nextTheme === "dark")
-        localStorage.setItem("theme", nextTheme)
-      }
-    }
-
-    const persistControlledTheme = () => {
-      if (isControlled) onThemeChange?.(nextTheme)
-    }
-
-    if (typeof document.startViewTransition !== "function") {
-      flushSync(applyThemeClass)
-      persistControlledTheme()
+    if (duration <= 0 || prefersReducedMotion() || typeof document.documentElement.animate !== "function") {
+      commitTheme(nextTheme)
       return
     }
 
-    const clipPath = getThemeTransitionClipPaths(
-      shape,
-      x,
-      y,
-      maxRadius,
-      viewportWidth,
-      viewportHeight
-    )
+    inFlightRef.current = true
+    const session: RevealSession = {
+      controller: new AbortController(),
+      overlay: null,
+      animation: null,
+    }
+    sessionRef.current = session
 
-    const root = document.documentElement
-    transitionInFlightRef.current = true
-    root.dataset.magicuiThemeVt = "active"
-    root.style.setProperty(
-      "--magicui-theme-toggle-vt-duration",
-      `${duration}ms`
-    )
-    root.style.setProperty("--magicui-theme-vt-clip-from", clipPath[0])
+    const run = async () => {
+      let committed = false
+      try {
+        const root = document.documentElement
+        const viewportWidth = Math.max(
+          window.innerWidth,
+          root.clientWidth,
+          window.visualViewport?.width ?? 0,
+        )
+        const viewportHeight = Math.max(
+          window.innerHeight,
+          root.clientHeight,
+          window.visualViewport?.height ?? 0,
+        )
+        const rect = button.getBoundingClientRect()
+        const x = fromCenter ? viewportWidth / 2 : rect.left + rect.width / 2
+        const y = fromCenter ? viewportHeight / 2 : rect.top + rect.height / 2
+        const radius = maxRevealRadius(x, y, viewportWidth, viewportHeight)
+        const [fromClip, toClip] = getThemeTransitionClipPaths(
+          variant,
+          x,
+          y,
+          radius,
+          viewportWidth,
+          viewportHeight,
+        )
 
-    let finalized = false
-    const cleanup = () => {
-      if (finalized) return
-      finalized = true
-      persistControlledTheme()
-      delete root.dataset.magicuiThemeVt
-      root.style.removeProperty("--magicui-theme-toggle-vt-duration")
-      root.style.removeProperty("--magicui-theme-vt-clip-from")
-      transitionInFlightRef.current = false
+        const overlay = document.createElement("div")
+        overlay.dataset.themeRevealOverlay = ""
+        overlay.setAttribute("aria-hidden", "true")
+        overlay.inert = true
+        overlay.style.visibility = "hidden"
+        overlay.style.clipPath = fromClip
+
+        const iframe = document.createElement("iframe")
+        iframe.title = ""
+        iframe.tabIndex = -1
+        iframe.setAttribute("aria-hidden", "true")
+        iframe.setAttribute("sandbox", "allow-same-origin")
+        overlay.append(iframe)
+        session.overlay = overlay
+
+        const loaded = waitForSnapshotLoad(iframe, nextTheme, session.controller.signal)
+        document.body.append(overlay)
+        iframe.srcdoc = buildThemeSnapshotMarkup(nextTheme)
+        await loaded
+        if (session.controller.signal.aborted) return
+
+        try {
+          iframe.contentWindow?.scrollTo(window.scrollX, window.scrollY)
+        } catch {
+          // Access can be unavailable under an unusually strict CSP.
+        }
+        await waitForStablePaint(session.controller.signal)
+        overlay.style.visibility = "visible"
+        void overlay.getBoundingClientRect()
+
+        const animation = overlay.animate(
+          { clipPath: [fromClip, toClip] },
+          {
+            duration,
+            easing: variant === "star" ? "linear" : "ease-in-out",
+            fill: "forwards",
+          },
+        )
+        session.animation = animation
+        await waitForAnimation(animation, duration, session.controller.signal)
+        if (session.controller.signal.aborted) return
+
+        commitTheme(nextTheme)
+        committed = true
+        await waitForThemeApplication(root, nextTheme, session.controller.signal)
+        await waitForStablePaint(session.controller.signal)
+      } catch (error) {
+        if (!session.controller.signal.aborted && !committed) commitTheme(nextTheme)
+      } finally {
+        if (sessionRef.current === session) {
+          session.overlay?.remove()
+          sessionRef.current = null
+          inFlightRef.current = false
+        }
+      }
     }
 
-    const transition = document.startViewTransition(() => {
-      flushSync(applyThemeClass)
-    })
-
-    const animationFinished = transition.ready.then(() => {
-      const animation = document.documentElement.animate(
-        {
-          clipPath,
-        },
-        {
-          duration,
-          // Star: linear avoids easing overshoot that fights polygon interpolation at t→1.
-          easing: shape === "star" ? "linear" : "ease-in-out",
-          fill: "forwards",
-          pseudoElement: "::view-transition-new(root)",
-        }
-      )
-      return animation.finished
-    })
-
-    void Promise.allSettled([transition.finished, animationFinished])
-      .then(waitForStablePaint)
-      .then(cleanup, cleanup)
-  }, [shape, fromCenter, duration, isDark, isControlled, onThemeChange])
+    void run()
+  }, [commitTheme, duration, fromCenter, isDark, variant])
 
   return (
     <button
       type="button"
       ref={buttonRef}
-      onClick={toggleTheme}
+      onClick={(event) => {
+        onClick?.(event)
+        if (!event.defaultPrevented) toggleTheme()
+      }}
       className={cn(className)}
       {...props}
     >
-      {isDark ? <Sun /> : <Moon />}
+      <Sun className="hidden dark:block" />
+      <Moon className="block dark:hidden" />
       <span className="sr-only">Toggle theme</span>
     </button>
   )
