@@ -49,7 +49,9 @@ describe("vehicle inquiry client", () => {
   });
 
   it("submits with visitor credentials and treats a 201 as a new lead", async () => {
-    const fetcher = vi.fn(async () => Response.json({ leadId: "lead-1" }, { status: 201 }));
+    const fetcher = vi.fn<typeof fetch>(async (_input, _init) =>
+      Response.json({ leadId: "lead-1" }, { status: 201 }),
+    );
 
     await expect(submitVehicleInquiry({
       fullName: "Ada Lovelace",
@@ -57,7 +59,7 @@ describe("vehicle inquiry client", () => {
       vehicleId,
       vehicleTitle: "2024 Ferrari Roma",
     }, {
-      fetcher: fetcher as typeof fetch,
+      fetcher,
       tenantSlug: "demo",
       pageUrl: "https://public.example/vehicles/111",
       timeoutMs: 1_000,
