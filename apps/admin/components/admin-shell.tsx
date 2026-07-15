@@ -34,8 +34,10 @@ import {
   PanelTop,
   Plus,
   Search,
+  Settings,
   CheckCheck,
   Users,
+  UsersRound,
   Webhook as WebhookIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -49,6 +51,7 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -129,29 +132,48 @@ type AdminShellProps = {
 
 const SECTIONS = [
   { slug: "", label: "Overview", icon: LayoutDashboard },
-  { slug: "website", label: "Website", icon: LayoutTemplate },
   { slug: "vehicles", label: "Vehicles", icon: Car },
   {
-    label: "Leads & Visitors",
-    icon: Inbox,
+    label: "CRM",
+    icon: UsersRound,
     children: [
-      { slug: "leads", label: "Leads" },
-      { slug: "customers", label: "Customers" },
+      { slug: "leads", label: "Leads", icon: Inbox },
+      { slug: "customers", label: "Customers", icon: Users },
+      { slug: "loyalty", label: "Loyalty", icon: Award },
     ],
   },
-  { slug: "loyalty", label: "Loyalty", icon: Award },
+  {
+    // Clickable header: opens the Website hub; the chevron toggles the group.
+    slug: "website",
+    label: "Website",
+    icon: LayoutTemplate,
+    children: [
+      { slug: "pages", label: "Pages", icon: FileText },
+      { slug: "navigation", label: "Navigation", icon: PanelTop },
+      { slug: "branding", label: "Branding", icon: Palette },
+      { slug: "assets", label: "Assets", icon: ImageIcon },
+    ],
+  },
+  {
+    label: "AI Concierge",
+    icon: Bot,
+    children: [
+      { slug: "persona", label: "Bot Config", icon: Bot },
+      { slug: "knowledge", label: "Knowledge", icon: BookOpen },
+    ],
+  },
   { slug: "analytics", label: "Analytics", icon: BarChart3 },
-  { slug: "settings/billing", label: "Billing", icon: CreditCard },
-  { slug: "settings/api-keys", label: "API Keys", icon: KeyRound },
-  { slug: "settings/integrations", label: "Integrations", icon: WebhookIcon },
-  { slug: "pages", label: "Pages", icon: FileText },
-  { slug: "navigation", label: "Navigation", icon: PanelTop },
-  { slug: "assets", label: "Assets", icon: ImageIcon },
-  { slug: "branding", label: "Branding", icon: Palette },
-  { slug: "domains", label: "Domains", icon: Globe },
-  { slug: "team", label: "Team", icon: Users },
-  { slug: "persona", label: "Bot Config", icon: Bot },
-  { slug: "knowledge", label: "Knowledge", icon: BookOpen },
+  {
+    label: "Settings",
+    icon: Settings,
+    children: [
+      { slug: "team", label: "Team", icon: Users },
+      { slug: "domains", label: "Domains", icon: Globe },
+      { slug: "settings/billing", label: "Billing", icon: CreditCard },
+      { slug: "settings/api-keys", label: "API Keys", icon: KeyRound },
+      { slug: "settings/integrations", label: "Integrations", icon: WebhookIcon },
+    ],
+  },
 ] as const;
 
 /**
@@ -165,7 +187,7 @@ const NAV_LEAVES: NavLeaf[] = SECTIONS.flatMap<NavLeaf>((section) =>
     ? section.children.map((child) => ({
         slug: child.slug,
         label: child.label,
-        icon: section.icon,
+        icon: child.icon,
       }))
     : [{ slug: section.slug, label: section.label, icon: section.icon }],
 );
@@ -226,9 +248,16 @@ export function AdminShell({
                     if ("children" in section) {
                       const childHref = (slug: string) =>
                         `/admin/${activeTenant.slug}/${slug}`;
-                      const groupActive = section.children.some((child) =>
-                        pathname.startsWith(childHref(child.slug)),
-                      );
+                      // Groups may have their own landing page (e.g. Website):
+                      // the header links to it and the chevron toggles the group.
+                      const landingHref =
+                        "slug" in section ? `/admin/${activeTenant.slug}/${section.slug}` : null;
+                      const landingActive = landingHref ? pathname === landingHref : false;
+                      const groupActive =
+                        landingActive ||
+                        section.children.some((child) =>
+                          pathname.startsWith(childHref(child.slug)),
+                        );
                       return (
                         <Collapsible
                           key={section.label}
@@ -237,13 +266,36 @@ export function AdminShell({
                           className="group/collapsible"
                         >
                           <SidebarMenuItem>
-                            <CollapsibleTrigger asChild>
-                              <SidebarMenuButton tooltip={section.label} isActive={groupActive}>
-                                <section.icon />
-                                <span>{section.label}</span>
-                                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                              </SidebarMenuButton>
-                            </CollapsibleTrigger>
+                            {landingHref ? (
+                              <>
+                                <SidebarMenuButton
+                                  asChild
+                                  isActive={landingActive}
+                                  tooltip={section.label}
+                                >
+                                  <Link href={landingHref}>
+                                    <section.icon />
+                                    <span>{section.label}</span>
+                                  </Link>
+                                </SidebarMenuButton>
+                                <CollapsibleTrigger asChild>
+                                  <SidebarMenuAction
+                                    aria-label={`Toggle ${section.label}`}
+                                    className="transition-transform duration-200 data-[state=open]:rotate-90"
+                                  >
+                                    <ChevronRight />
+                                  </SidebarMenuAction>
+                                </CollapsibleTrigger>
+                              </>
+                            ) : (
+                              <CollapsibleTrigger asChild>
+                                <SidebarMenuButton tooltip={section.label} isActive={groupActive}>
+                                  <section.icon />
+                                  <span>{section.label}</span>
+                                  <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                </SidebarMenuButton>
+                              </CollapsibleTrigger>
+                            )}
                             <CollapsibleContent>
                               <SidebarMenuSub>
                                 {section.children.map((child) => (
@@ -253,6 +305,7 @@ export function AdminShell({
                                       isActive={pathname.startsWith(childHref(child.slug))}
                                     >
                                       <Link href={childHref(child.slug)}>
+                                        <child.icon />
                                         <span>{child.label}</span>
                                       </Link>
                                     </SidebarMenuSubButton>
