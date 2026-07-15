@@ -4,6 +4,8 @@ import { createServiceClient } from "@lume/db/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { buildCustomerTimeline, customerEngagement, summarizeVehicleInterest } from "@/lib/customer360";
+import { isMissingOptionalCustomerRelation } from "@/lib/customerProfileOptionalData";
+import { captureError } from "@/lib/observability";
 
 type Props = { params: Promise<{ tenant: string; visitorId: string }> };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -43,13 +45,18 @@ export default async function CustomerProfilePage({ params }: Props) {
     service.from("loyalty_accounts").select("id, points_balance, tier, updated_at").eq("tenant_id", tenant.id).is("visitor_id", null).ilike("email", visitor.email).order("updated_at", { ascending: false }).limit(1),
     service.from("conversion_events").select("event_name, vehicle_id, occurred_at").eq("tenant_id", tenant.id).eq("visitor_id", visitorId).order("occurred_at", { ascending: false }).limit(EVENT_LIMIT),
   ]);
-  for (const result of [savesResult, leadsResult, chatsResult, linkedLoyaltyResult, legacyLoyaltyResult, eventsResult]) {
-    if (result.error) throw new Error("Unable to load customer profile");
+  for (const [source, result] of [
+    ["leads", leadsResult], ["chat_sessions", chatsResult], ["loyalty_accounts", linkedLoyaltyResult], ["legacy_loyalty_accounts", legacyLoyaltyResult],
+  ] as const) {
+    if (result.error) {
+      captureError("admin/customer-profile", result.error, { tenantId: tenant.id, visitorId, source });
+      throw new Error("Unable to load customer profile");
+    }
   }
-  const saves = savesResult.data ?? [];
+  const saves = optionalRows(savesResult, "visitor_saved_vehicles", tenant.id, visitorId);
   const leads = leadsResult.data ?? [];
   const chats = chatsResult.data ?? [];
-  const events = eventsResult.data ?? [];
+  const events = optionalRows(eventsResult, "conversion_events", tenant.id, visitorId);
   // Prefer a visitor-linked account; this fallback mirrors the directory's
   // treatment of pre-account, email-only loyalty accounts without duplicating it.
   const loyalty = linkedLoyaltyResult.data ?? legacyLoyaltyResult.data?.[0] ?? null;
@@ -115,3 +122,18 @@ function VehicleLink({ vehicle, adminRoot }: { vehicle: VehicleRow | undefined; 
 function Empty({ children }: { children: React.ReactNode }) { return <p className="mt-3 text-sm text-muted-foreground">{children}</p>; }
 function Card({ label, value, helper }: { label: string; value: string; helper: string }) { return <div className="rounded-xl border p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></div>; }
 function format(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date); }
+
+function optionalRows<T>(
+  result: { data: T[] | null; error: { code?: string; message?: string } | null },
+  source: string,
+  tenantId: string,
+  visitorId: string,
+): T[] {
+  if (!result.error) return result.data ?? [];
+  if (isMissingOptionalCustomerRelation(result.error)) {
+    captureError("admin/customer-profile/optional-relation", result.error, { tenantId, visitorId, source });
+    return [];
+  }
+  captureError("admin/customer-profile", result.error, { tenantId, visitorId, source });
+  throw new Error("Unable to load customer profile");
+}
