@@ -19,7 +19,7 @@ type SavedVehiclesContextValue = {
   savedVehicles: readonly VisitorSavedVehicle[];
   status: "loading" | "ready" | "error";
   error: string | null;
-  toggleSaved: (vehicleId: string) => Promise<void>;
+  toggleSaved: (vehicleId: string) => Promise<boolean>;
   refresh: () => Promise<void>;
 };
 
@@ -101,7 +101,7 @@ function ActiveSavedVehiclesProvider({
   }, [auth.status, auth.visitor, refresh]);
 
   const toggleSaved = useCallback(async (vehicleId: string) => {
-    if (!vehicleId || inFlight.current.has(vehicleId)) return;
+    if (!vehicleId || inFlight.current.has(vehicleId)) return false;
     inFlight.current.add(vehicleId);
     const wasSaved = savedIds.includes(vehicleId);
     const nextIds = wasSaved ? savedIds.filter((id) => id !== vehicleId) : uniqueIds([...savedIds, vehicleId]);
@@ -111,7 +111,7 @@ function ActiveSavedVehiclesProvider({
     if (auth.status !== "authenticated") {
       writeSavedVehicleIds(nextIds);
       inFlight.current.delete(vehicleId);
-      return;
+      return true;
     }
 
     try {
@@ -124,9 +124,11 @@ function ActiveSavedVehiclesProvider({
         setSavedVehicles(items);
         setSavedIds(items.map((item) => item.vehicleId));
       }
+      return true;
     } catch (reason) {
       setSavedIds(savedIds);
       setError(messageFor(reason));
+      return false;
     } finally {
       inFlight.current.delete(vehicleId);
     }
