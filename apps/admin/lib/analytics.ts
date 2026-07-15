@@ -88,12 +88,22 @@ export function niceBucketSize(rawSize: number): number {
   return 10 * magnitude;
 }
 
-const compactUsd = new Intl.NumberFormat("en", {
-  style: "currency",
-  currency: "USD",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
+/** Stable across Node/ICU builds used locally, in CI, and on Vercel. */
+function compactUsd(value: number): string {
+  const magnitude = Math.abs(value);
+  const [divisor, suffix] = magnitude >= 1_000_000_000
+    ? [1_000_000_000, "B"]
+    : magnitude >= 1_000_000
+      ? [1_000_000, "M"]
+      : magnitude >= 1_000
+        ? [1_000, "K"]
+        : [1, ""];
+  const scaled = value / divisor;
+  const label = Number.isInteger(scaled)
+    ? String(scaled)
+    : scaled.toFixed(1).replace(/\.0$/, "");
+  return `$${label}${suffix}`;
+}
 
 /**
  * Histogram of prices in ~`targetBuckets` friendly-width buckets from 0 (or
@@ -114,7 +124,7 @@ export function priceHistogram(prices: number[], targetBuckets = 8): PriceBucket
   for (let bucket = firstBucket; bucket <= lastBucket; bucket++) {
     const from = bucket * size;
     buckets.push({
-      label: `${compactUsd.format(from)}–${compactUsd.format(from + size)}`,
+      label: `${compactUsd(from)}–${compactUsd(from + size)}`,
       count: 0,
     });
   }
