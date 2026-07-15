@@ -10,6 +10,7 @@ import { parseSignupInput } from "@/lib/visitorInput";
 import { hashPassword, createSessionToken } from "@/lib/visitorAuth";
 import { buildSessionCookie, visitorCorsHeaders } from "@/lib/visitorSession";
 import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
+import { captureError } from "@/lib/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,6 +71,15 @@ export async function POST(request: Request): Promise<Response> {
     token_hash: session.tokenHash,
     expires_at: session.expiresAt.toISOString(),
   });
+
+  const { error: conversionError } = await supabase.from("conversion_events").insert({
+    tenant_id: tenant.tenantId,
+    visitor_id: visitor.id,
+    event_name: "account_created",
+    event_category: "operational",
+    metadata: {},
+  });
+  if (conversionError) captureError("api/visitor/signup/conversion-event", conversionError, { tenantId: tenant.tenantId, visitorId: visitor.id });
 
   return json(
     request,

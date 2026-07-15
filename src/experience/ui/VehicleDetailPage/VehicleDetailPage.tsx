@@ -10,6 +10,7 @@ import {
 } from "@/experience/vehicles/catalog";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { submitLead } from "@/lib/leads";
+import { trackConversion } from "@/lib/conversionAnalytics";
 import { useSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
@@ -124,6 +125,7 @@ function InquiryModal({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [started, setStarted] = useState(false);
   const dialogRef = useDialogKeyboard(open, onClose);
 
   useEffect(() => {
@@ -132,6 +134,7 @@ function InquiryModal({
     setSubmitError(null);
     setSubmitting(false);
     setTurnstileToken(null);
+    setStarted(false);
   }, [open, vehicle.id]);
 
   if (!open) return null;
@@ -215,7 +218,9 @@ function InquiryModal({
             </div>
           </div>
         ) : (
-          <form className="vehicleDetail__form" onSubmit={handleSubmit}>
+          <form className="vehicleDetail__form" onSubmit={handleSubmit} onFocusCapture={() => {
+            if (!started) { setStarted(true); trackConversion("inquiry_started", { vehicleId: vehicle.id }); }
+          }}>
             <label>
               <span>Name</span>
               <input name="name" required autoComplete="name" disabled={submitting} />
@@ -327,6 +332,10 @@ export default function VehicleDetailPage({
   }, [vehicleId]);
 
   useEffect(() => {
+    if (vehicle) trackConversion("vehicle_view", { vehicleId: vehicle.id });
+  }, [vehicle]);
+
+  useEffect(() => {
     if (!vehicleId) return;
     let cancelled = false;
     void loadVehiclePriceSignal(vehicleId).then((signal) => {
@@ -428,6 +437,7 @@ export default function VehicleDetailPage({
                       className="vehicleDetail__primaryBtn"
                       onClick={() => {
                         play(vehicleDetailSoundActions.inquiryOpen);
+                        trackConversion("inquiry_opened", { vehicleId: vehicle.id });
                         setInquiryOpen(true);
                       }}
                     >

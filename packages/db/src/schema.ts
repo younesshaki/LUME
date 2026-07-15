@@ -1256,6 +1256,43 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["consent_events"]["Insert"]>;
         Relationships: [];
       };
+      conversion_events: {
+        Row: {
+          id: string;
+          event_id: string;
+          tenant_id: string;
+          visitor_id: string | null;
+          anonymous_session_id: string | null;
+          vehicle_id: string | null;
+          event_name: "inventory_view" | "search_performed" | "filter_applied" | "vehicle_view" | "vehicle_saved" | "vehicle_unsaved" | "compare_added" | "compare_removed" | "inquiry_opened" | "inquiry_started" | "inquiry_submitted" | "chat_started" | "account_created";
+          event_category: "analytics" | "operational";
+          utm_source: string | null;
+          utm_medium: string | null;
+          utm_campaign: string | null;
+          utm_content: string | null;
+          referrer: string | null;
+          metadata: Record<string, unknown>;
+          occurred_at: string;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["conversion_events"]["Row"], "id" | "event_id" | "visitor_id" | "anonymous_session_id" | "vehicle_id" | "utm_source" | "utm_medium" | "utm_campaign" | "utm_content" | "referrer" | "metadata" | "occurred_at" | "created_at"> & {
+          id?: string;
+          event_id?: string;
+          visitor_id?: string | null;
+          anonymous_session_id?: string | null;
+          vehicle_id?: string | null;
+          utm_source?: string | null;
+          utm_medium?: string | null;
+          utm_campaign?: string | null;
+          utm_content?: string | null;
+          referrer?: string | null;
+          metadata?: Record<string, unknown>;
+          occurred_at?: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       tenant_api_keys: {
         Row: {
           id: string;
@@ -1419,6 +1456,10 @@ export type Database = {
           balance_after: number;
           transaction_id: string | null;
         }[];
+      };
+      tenant_conversion_funnel: {
+        Args: { p_tenant_id: string; p_since: string };
+        Returns: Array<{ event_name: string; event_count: number; session_count: number }>;
       };
       archive_due_sold_vehicles: {
         Args: { p_cutoff: string; p_limit?: number };

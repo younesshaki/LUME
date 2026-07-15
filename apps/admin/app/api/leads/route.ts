@@ -167,6 +167,17 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
+  await supabase.from("conversion_events").insert({
+    tenant_id: tenant.tenantId,
+    visitor_id: visitor?.id ?? null,
+    vehicle_id: lead.vehicleId,
+    event_name: "inquiry_submitted",
+    event_category: "operational",
+    metadata: { leadId: data.id, source: lead.source },
+  }).then(({ error: analyticsError }) => {
+    if (analyticsError) captureError("api/leads/conversion-event", analyticsError, { tenantId: tenant.tenantId, leadId: data.id });
+  });
+
   try {
     const notification = await notifyNewLead(
       supabase,

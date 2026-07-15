@@ -26,6 +26,10 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
+function percentage(value: number, total: number): number {
+  return total > 0 ? Math.round((value / total) * 100) : 0;
+}
+
 /** Page through the tenant's vehicles; only the three columns the charts need. */
 async function fetchVehicleFacts(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
@@ -82,6 +86,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
     soldVehiclesResult,
     vehicleFacts,
     lostReasonOptionsResult,
+    conversionFunnelResult,
   ] = await Promise.all([
     supabase
       .from("vehicles")
@@ -117,6 +122,7 @@ export default async function AnalyticsPage({ params }: PageProps) {
       .from("lead_lost_reason_options")
       .select("key, label, sort_order, is_active")
       .eq("tenant_id", tenant.id),
+    supabase.rpc("tenant_conversion_funnel", { p_tenant_id: tenant.id, p_since: windowStart }),
   ]);
 
   if (vehiclesResult.error) throw new Error(`Unable to load vehicles count: ${vehiclesResult.error.message}`);
@@ -125,6 +131,16 @@ export default async function AnalyticsPage({ params }: PageProps) {
   if (recentLeadsResult.error) throw new Error(`Unable to load recent leads: ${recentLeadsResult.error.message}`);
   if (priceHistoryResult.error) throw new Error(`Unable to load price history count: ${priceHistoryResult.error.message}`);
   if (soldVehiclesResult.error) throw new Error(`Unable to load sold vehicle facts: ${soldVehiclesResult.error.message}`);
+  if (conversionFunnelResult.error) throw new Error(`Unable to load conversion funnel: ${conversionFunnelResult.error.message}`);
+
+  const conversionEvents = new Map((conversionFunnelResult.data ?? []).map((row) => [row.event_name, Number(row.event_count)]));
+  const funnel = [
+    ["Inventory sessions", conversionEvents.get("inventory_view") ?? 0],
+    ["Vehicle views", conversionEvents.get("vehicle_view") ?? 0],
+    ["Saves", conversionEvents.get("vehicle_saved") ?? 0],
+    ["Inquiry opens", conversionEvents.get("inquiry_opened") ?? 0],
+    ["Submitted leads", conversionEvents.get("inquiry_submitted") ?? 0],
+  ] as const;
 
   const leadsByStatus = countLeadStatuses(
     ((leadsResult.data ?? []) as Array<{ status: LeadStatus }>).map((row) => row.status)
@@ -182,6 +198,16 @@ export default async function AnalyticsPage({ params }: PageProps) {
           value={soldVehiclesResult.data?.length ?? 0}
           helper={`${formatCurrency(soldVehicleRevenue)} recorded value`}
         />
+      </section>
+
+      <section className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div><h2 className="text-sm font-semibold">Conversion funnel</h2><p className="mt-1 text-sm text-muted-foreground">Consent-aware activity from the last 30 days. Metrics begin after deployment.</p></div>
+          <span className="text-xs text-muted-foreground">No raw event records are loaded here.</span>
+        </div>
+        <ol className="mt-5 grid gap-3 sm:grid-cols-5">
+          {funnel.map(([label, count], index) => <li key={label} className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">{index + 1}. {label}</p><p className="mt-2 text-2xl font-semibold">{count.toLocaleString()}</p><p className="text-xs text-muted-foreground">{index === 0 ? "Baseline" : `${percentage(count, funnel[index - 1]?.[1] ?? 0)}% from prior step`}</p></li>)}
+        </ol>
       </section>
 
       <LeadsOverTimeChart data={leadsSeries} />
