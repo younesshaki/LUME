@@ -8,6 +8,7 @@ import {
   type VehicleGalleryImage,
   type VehiclePriceSignal,
 } from "@/experience/vehicles/catalog";
+import { publicTenantSlug } from "@/lib/publicTenant";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -98,6 +99,8 @@ function DetailFact({ label, value }: { label: string; value: string }) {
   );
 }
 
+type LeadApiResponse = { leadId?: string; error?: string };
+
 function InquiryModal({
   open,
   vehicle,
@@ -109,18 +112,89 @@ function InquiryModal({
 }) {
   const { play } = useSound();
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const dialogRef = useDialogKeyboard(open, onClose);
 
   useEffect(() => {
-    if (open) setSubmitted(false);
-  }, [open]);
+    if (open) {
+      setSubmitted(false);
+      setSubmitting(false);
+      setError(null);
+    }
+  }, [open, vehicle.id]);
 
   if (!open) return null;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    play(vehicleDetailSoundActions.inquirySubmit);
-    setSubmitted(true);
+    if (submitting) return;
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const firstName = String(formData.get("firstName") ?? "").trim();
+    const lastName = String(formData.get("lastName") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
+    const message = String(formData.get("message") ?? "").trim();
+    const location = window.location;
+    const params = new URLSearchParams(location.search);
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/leads?tenant=${encodeURIComponent(publicTenantSlug)}`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Lume-Tenant": publicTenantSlug,
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: email || null,
+          phone: phone || null,
+          message: message || null,
+          vehicleId: vehicle.id,
+          source: "contact-form",
+          utmSource: params.get("utm_source"),
+          utmMedium: params.get("utm_medium"),
+          utmCampaign: params.get("utm_campaign"),
+          utmContent: params.get("utm_content"),
+          referrer: document.referrer || null,
+          sourceContext: {
+            intent: "request-info",
+            pagePath: `${location.pathname}${location.search}`,
+            vehicleTitle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+          },
+        }),
+      });
+
+      let payload: LeadApiResponse = {};
+      try {
+        payload = (await response.json()) as LeadApiResponse;
+      } catch {
+        // Preserve a useful generic error when an upstream returns non-JSON.
+      }
+
+      if (!response.ok || !payload.leadId) {
+        throw new Error(payload.error || "Unable to submit your inquiry. Please try again.");
+      }
+
+      play(vehicleDetailSoundActions.inquirySubmit);
+      setSubmitted(true);
+      form.reset();
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "Unable to submit your inquiry. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -135,7 +209,7 @@ function InquiryModal({
       >
         <div className="vehicleDetail__modalHeader">
           <div>
-            <p className="vehicleDetail__eyebrow">Demo inquiry</p>
+            <p className="vehicleDetail__eyebrow">Vehicle inquiry</p>
             <h2 id="vehicle-inquiry-title">{vehicle.year} {vehicle.make} {vehicle.model}</h2>
           </div>
           <button type="button" className="vehicleDetail__iconBtn" aria-label="Close inquiry" onClick={onClose}>
@@ -144,35 +218,47 @@ function InquiryModal({
         </div>
 
         {submitted ? (
-          <div className="vehicleDetail__success">
+          <div className="vehicleDetail__success" role="status" aria-live="polite">
             <Check size={22} />
-            <p>Inquiry saved for demo review.</p>
+            <p>Your inquiry was sent. The dealership can now follow up with you.</p>
           </div>
         ) : (
           <form className="vehicleDetail__form" onSubmit={handleSubmit}>
-            <label>
-              <span>Name</span>
-              <input name="name" required autoComplete="name" />
-            </label>
+            <div className="vehicleDetail__formGrid">
+              <label>
+                <span>First name</span>
+                <input name="firstName" required autoComplete="given-name" disabled={submitting} />
+              </label>
+              <label>
+                <span>Last name</span>
+                <input name="lastName" required autoComplete="family-name" disabled={submitting} />
+              </label>
+            </div>
             <label>
               <span>Email</span>
-              <input name="email" type="email" required autoComplete="email" />
+              <input name="email" type="email" required autoComplete="email" disabled={submitting} />
             </label>
             <label>
               <span>Phone</span>
-              <input name="phone" type="tel" autoComplete="tel" />
+              <input name="phone" type="tel" autoComplete="tel" disabled={submitting} />
             </label>
             <label>
               <span>Message</span>
               <textarea
                 name="message"
                 rows={4}
+                disabled={submitting}
                 defaultValue={`I would like more information about the ${vehicle.year} ${vehicle.make} ${vehicle.model}.`}
               />
             </label>
-            <button type="submit" className="vehicleDetail__primaryBtn">
+            {error && (
+              <p className="vehicleDetail__formError" role="alert">
+                {error}
+              </p>
+            )}
+            <button type="submit" className="vehicleDetail__primaryBtn" disabled={submitting}>
               <Send size={16} />
-              Submit demo inquiry
+              {submitting ? "Sending…" : "Send inquiry"}
             </button>
           </form>
         )}
