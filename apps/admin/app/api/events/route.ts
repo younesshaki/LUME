@@ -4,7 +4,7 @@ import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { checkPublicRouteRateLimit, rateLimitedResponse } from "@/lib/rateLimit";
 import { resolveVisitor } from "@/lib/visitorSession";
 import { captureError } from "@/lib/observability";
-import { isUuid, parseAnalyticsEvents } from "@/lib/conversionEvents";
+import { isUuid, parseAnalyticsAttribution, parseAnalyticsEvents } from "@/lib/conversionEvents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ export async function POST(request: Request): Promise<Response> {
   try { body = await request.json(); } catch { return json(request, { error: "Invalid JSON" }, 400); }
   const events = parseAnalyticsEvents(body);
   if (!events) return json(request, { error: "Invalid analytics event batch" }, 400);
+  const attribution = parseAnalyticsAttribution(body);
   const client = createServiceClient();
   const visitor = await resolveVisitor(request, tenant.tenantId, client);
   const anonymousSessionId = typeof body === "object" && body !== null && !Array.isArray(body)
@@ -38,6 +39,8 @@ export async function POST(request: Request): Promise<Response> {
   const { error } = await client.from("conversion_events").upsert(events.map((event) => ({
     tenant_id: tenant.tenantId, event_id: event.eventId, visitor_id: visitor?.id ?? null, anonymous_session_id: sessionId,
     vehicle_id: event.vehicleId ?? null, event_name: event.name, event_category: "analytics" as const, metadata: event.metadata ?? {},
+    utm_source: attribution.utmSource ?? null, utm_medium: attribution.utmMedium ?? null, utm_campaign: attribution.utmCampaign ?? null,
+    utm_content: attribution.utmContent ?? null, referrer: attribution.referrer ?? null,
   })), { onConflict: "tenant_id,event_id", ignoreDuplicates: true });
   if (error) { captureError("api/events", error, { tenantId: tenant.tenantId }); return json(request, { error: "Unable to record analytics" }, 500); }
   return json(request, { recorded: events.length }, 202);
