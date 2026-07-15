@@ -98,20 +98,14 @@ export default async function CustomersPage({ params, searchParams }: PageProps)
     .order("created_at", { ascending: false });
 
   if (query) {
-    const pattern = `%${query}%`;
+    // Escape LIKE wildcards so a user-typed % or _ matches literally rather
+    // than acting as a pattern operator.
+    const escaped = query.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+    const pattern = `%${escaped}%`;
     visitorsQuery = visitorsQuery.or(
       `email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern}`,
     );
   }
-
-  const { data, count, error } = await visitorsQuery.range(from, from + PAGE_SIZE - 1);
-  if (error) throw new Error(`Unable to load customers: ${error.message}`);
-
-  const visitors = (data ?? []) as VisitorRow[];
-  const customerRows = await enrichCustomers(service, tenant.id, visitors);
-  const totalCount = count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
 
   const href = (targetPage: number) => {
     const params = new URLSearchParams();
@@ -120,6 +114,20 @@ export default async function CustomersPage({ params, searchParams }: PageProps)
     const suffix = params.toString();
     return `/admin/${slug}/customers${suffix ? `?${suffix}` : ""}`;
   };
+
+  const { data, count, error } = await visitorsQuery.range(from, from + PAGE_SIZE - 1);
+  if (error) throw new Error(`Unable to load customers: ${error.message}`);
+
+  const totalCount = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  // A page past the end (e.g. deep-linked, or a search that narrowed results)
+  // otherwise renders an empty table under a valid-looking page number — send
+  // the visitor to the last real page instead.
+  if (page > totalPages) redirect(href(totalPages));
+  const currentPage = page;
+
+  const visitors = (data ?? []) as VisitorRow[];
+  const customerRows = await enrichCustomers(service, tenant.id, visitors);
 
   return (
     <div className="space-y-6">
@@ -236,7 +244,11 @@ async function enrichCustomers(
   if (visitors.length === 0) return [];
 
   const visitorIds = visitors.map((visitor) => visitor.id);
-  const emails = visitors.map((visitor) => visitor.email);
+  // Match email-only loyalty accounts case-insensitively: `.in` is exact, so
+  // send both the stored and lowercased forms (the JS lookup keys on lowercase).
+  const emails = Array.from(
+    new Set(visitors.flatMap((visitor) => [visitor.email, visitor.email.toLowerCase()])),
+  );
   const [linkedLoyalty, emailLoyalty, leads, chats] = await Promise.all([
     service
       .from("loyalty_accounts")

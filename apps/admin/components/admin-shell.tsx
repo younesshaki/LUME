@@ -17,6 +17,7 @@ import {
   BookOpen,
   Building2,
   Car,
+  ChevronRight,
   ChevronsUpDown,
   CreditCard,
   ExternalLink,
@@ -36,6 +37,7 @@ import {
   CheckCheck,
   Users,
   Webhook as WebhookIcon,
+  type LucideIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,10 +51,18 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -121,7 +131,14 @@ const SECTIONS = [
   { slug: "", label: "Overview", icon: LayoutDashboard },
   { slug: "website", label: "Website", icon: LayoutTemplate },
   { slug: "vehicles", label: "Vehicles", icon: Car },
-  { slug: "leads", label: "Leads", icon: Inbox },
+  {
+    label: "Leads & Visitors",
+    icon: Inbox,
+    children: [
+      { slug: "leads", label: "Leads" },
+      { slug: "customers", label: "Customers" },
+    ],
+  },
   { slug: "loyalty", label: "Loyalty", icon: Award },
   { slug: "analytics", label: "Analytics", icon: BarChart3 },
   { slug: "settings/billing", label: "Billing", icon: CreditCard },
@@ -136,6 +153,22 @@ const SECTIONS = [
   { slug: "persona", label: "Bot Config", icon: Bot },
   { slug: "knowledge", label: "Knowledge", icon: BookOpen },
 ] as const;
+
+/**
+ * Flattened navigable pages (group children lifted to the top level, inheriting
+ * the group icon). Used by the breadcrumb resolver and command palette, which
+ * address pages by a single slug and must not know about the sidebar's grouping.
+ */
+type NavLeaf = { slug: string; label: string; icon: LucideIcon };
+const NAV_LEAVES: NavLeaf[] = SECTIONS.flatMap<NavLeaf>((section) =>
+  "children" in section
+    ? section.children.map((child) => ({
+        slug: child.slug,
+        label: child.label,
+        icon: section.icon,
+      }))
+    : [{ slug: section.slug, label: section.label, icon: section.icon }],
+);
 
 function useActiveTenant(tenants: ShellTenant[], pathname: string): ShellTenant | null {
   const fromPath = pathname.match(/^\/admin\/([^/]+)/)?.[1];
@@ -190,6 +223,48 @@ export function AdminShell({
               <SidebarGroupContent>
                 <SidebarMenu>
                   {SECTIONS.map((section) => {
+                    if ("children" in section) {
+                      const childHref = (slug: string) =>
+                        `/admin/${activeTenant.slug}/${slug}`;
+                      const groupActive = section.children.some((child) =>
+                        pathname.startsWith(childHref(child.slug)),
+                      );
+                      return (
+                        <Collapsible
+                          key={section.label}
+                          asChild
+                          defaultOpen={groupActive}
+                          className="group/collapsible"
+                        >
+                          <SidebarMenuItem>
+                            <CollapsibleTrigger asChild>
+                              <SidebarMenuButton tooltip={section.label} isActive={groupActive}>
+                                <section.icon />
+                                <span>{section.label}</span>
+                                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                              </SidebarMenuButton>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <SidebarMenuSub>
+                                {section.children.map((child) => (
+                                  <SidebarMenuSubItem key={child.slug}>
+                                    <SidebarMenuSubButton
+                                      asChild
+                                      isActive={pathname.startsWith(childHref(child.slug))}
+                                    >
+                                      <Link href={childHref(child.slug)}>
+                                        <span>{child.label}</span>
+                                      </Link>
+                                    </SidebarMenuSubButton>
+                                  </SidebarMenuSubItem>
+                                ))}
+                              </SidebarMenuSub>
+                            </CollapsibleContent>
+                          </SidebarMenuItem>
+                        </Collapsible>
+                      );
+                    }
+
                     const href = section.slug
                       ? `/admin/${activeTenant.slug}/${section.slug}`
                       : `/admin/${activeTenant.slug}`;
@@ -597,7 +672,7 @@ function buildCrumbs(pathname: string, activeTenant: ShellTenant | null) {
         : { label: activeTenant.name, href: `/admin/${activeTenant.slug}` }
     );
     if (parts[1]) {
-      const section = SECTIONS.find((s) => s.slug === parts[1]);
+      const section = NAV_LEAVES.find((s) => s.slug === parts[1]);
       const label = section?.label ?? parts[1];
       crumbs.push(
         parts.length === 2
@@ -634,7 +709,7 @@ function CommandPalette({
         <CommandEmpty>No results.</CommandEmpty>
         {tenants.map((tenant) => (
           <CommandGroup key={tenant.id} heading={tenant.name}>
-            {SECTIONS.map((section) => (
+            {NAV_LEAVES.map((section) => (
               <CommandItem
                 key={`${tenant.slug}-${section.label}`}
                 value={`${tenant.name} ${section.label}`}
