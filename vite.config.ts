@@ -24,6 +24,22 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: adminApiHost,
           changeOrigin: !preserveTenantHost,
+          // Browsers omit the Origin header on same-origin GETs (e.g. the
+          // public inventory fetch). The admin's origin allow-list needs one,
+          // so supply the dev origin when the browser didn't — never
+          // overriding a real Origin. Skipped in subdomain-routing mode, where
+          // the preserved Host/Origin must pass through untouched.
+          ...(preserveTenantHost
+            ? {}
+            : {
+                configure: (proxy) => {
+                  proxy.on('proxyReq', (proxyReq, req) => {
+                    if (!req.headers.origin) {
+                      proxyReq.setHeader('origin', 'http://localhost:5173');
+                    }
+                  });
+                },
+              }),
         },
         ...(r2PublicBaseUrl
           ? {

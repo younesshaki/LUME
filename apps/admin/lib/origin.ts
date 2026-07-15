@@ -1,8 +1,15 @@
 /**
  * Cheap CSRF/abuse mitigation for public API routes that don't require auth.
- * Allows the request only if its Origin header matches the comma-separated
- * ALLOWED_CHAT_ORIGINS env var. Browsers always send Origin on cross-site
- * requests, so this blocks the simplest form of abuse without adding cost.
+ * Allows the request if its Origin matches the comma-separated
+ * ALLOWED_CHAT_ORIGINS env var — OR if there is no Origin header at all.
+ *
+ * A cross-site attacker's browser request ALWAYS carries an Origin, so it's
+ * still blocked. An absent Origin only happens for same-origin GETs (e.g. the
+ * public site's same-origin inventory fetch, including behind the local Vite
+ * dev proxy, where browsers omit Origin) and non-browser clients — neither of
+ * which is a cross-site threat. This mirrors the public root api/*.ts origin
+ * check; keeping them consistent is what lets local dev (public -> admin proxy)
+ * work the same as production.
  *
  * For stronger protection, layer Vercel BotID on top.
  */
@@ -20,8 +27,7 @@ export function isAllowedOrigin(request: Request): boolean {
     return true;
   }
   const origin = request.headers.get("origin");
-  if (!origin) return false;
-  return allowed.includes(origin);
+  return !origin || allowed.includes(origin);
 }
 
 export function corsHeadersFor(request: Request): Record<string, string> {

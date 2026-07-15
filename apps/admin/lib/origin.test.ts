@@ -17,7 +17,7 @@ describe("isAllowedOrigin", () => {
     expect(isAllowedOrigin(request)).toBe(true);
   });
 
-  it("rejects missing or unlisted origins when configured", () => {
+  it("rejects unlisted origins when configured", () => {
     vi.stubEnv("ALLOWED_CHAT_ORIGINS", "https://allowed.example");
 
     expect(
@@ -27,7 +27,16 @@ describe("isAllowedOrigin", () => {
         })
       )
     ).toBe(false);
-    expect(isAllowedOrigin(new Request("https://api.example/chat"))).toBe(false);
+  });
+
+  it("allows same-origin requests that omit the Origin header", () => {
+    // Browsers drop Origin on same-origin GETs (e.g. the public site's
+    // inventory fetch behind the local dev proxy). A cross-site attacker always
+    // sends Origin, so an absent Origin is not a cross-site request and is
+    // allowed — matching the public root api/*.ts origin check.
+    vi.stubEnv("ALLOWED_CHAT_ORIGINS", "https://allowed.example");
+
+    expect(isAllowedOrigin(new Request("https://api.example/chat"))).toBe(true);
   });
 
   it("allows empty configuration in development only", () => {
