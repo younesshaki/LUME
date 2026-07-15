@@ -10,7 +10,7 @@ afterEach(() => {
 describe("public lead proxy", () => {
   it("forwards the tenant and only the visitor cookie to the canonical API", async () => {
     vi.stubEnv("LUME_LEADS_UPSTREAM_URL", "https://admin.example/api/leads");
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ leadId: "lead-1" }), {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ leadId: "lead-1" }), {
       status: 201,
       headers: {
         "Content-Type": "application/json",
@@ -32,7 +32,8 @@ describe("public lead proxy", () => {
     }, response.value);
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const url = fetchMock.mock.calls[0]?.[0];
+    const init = fetchMock.mock.calls[0]?.[1];
     expect(url).toBe("https://admin.example/api/leads?tenant=atelier");
     expect(init.headers).toMatchObject({
       "x-lume-tenant": "atelier",
