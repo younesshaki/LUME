@@ -181,7 +181,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps)
             {customerRows.map((customer) => (
               <TableRow key={customer.id}>
                 <TableCell>
-                  <p className="font-medium">{customer.name}</p>
+                  <Link className="font-medium hover:underline" href={`/admin/${slug}/customers/${customer.id}`}>{customer.name}</Link>
                   <p className="text-sm text-muted-foreground">{customer.email}</p>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
