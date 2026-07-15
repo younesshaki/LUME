@@ -1,18 +1,24 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AnimatedThemeToggler } from "./animated-theme-toggler";
+import {
+  AnimatedThemeToggler,
+  isGoogleChromeOnMacOS,
+} from "./animated-theme-toggler";
 
 let originalSrcdoc: PropertyDescriptor | undefined;
 let originalAnimate: PropertyDescriptor | undefined;
+let originalUserAgentData: PropertyDescriptor | undefined;
 
 beforeEach(() => {
   document.documentElement.classList.remove("dark");
   originalSrcdoc = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, "srcdoc");
   originalAnimate = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "animate");
+  originalUserAgentData = Object.getOwnPropertyDescriptor(window.navigator, "userAgentData");
 });
 
 afterEach(() => {
-  document.querySelectorAll("[data-theme-reveal-overlay]").forEach((node) => node.remove());
+  document.querySelectorAll("[data-theme-reveal-overlay], [data-theme-solid-cover]")
+    .forEach((node) => node.remove());
   document.documentElement.classList.remove("dark");
   Reflect.deleteProperty(document, "startViewTransition");
   if (originalSrcdoc) {
@@ -22,6 +28,11 @@ afterEach(() => {
     Object.defineProperty(HTMLElement.prototype, "animate", originalAnimate);
   } else {
     Reflect.deleteProperty(HTMLElement.prototype, "animate");
+  }
+  if (originalUserAgentData) {
+    Object.defineProperty(window.navigator, "userAgentData", originalUserAgentData);
+  } else {
+    Reflect.deleteProperty(window.navigator, "userAgentData");
   }
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -38,6 +49,19 @@ function mockMotionPreference(reduced: boolean): void {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })));
+}
+
+function mockChromeOnMacOS(): void {
+  Object.defineProperty(window.navigator, "userAgentData", {
+    configurable: true,
+    value: {
+      platform: "macOS",
+      brands: [
+        { brand: "Chromium", version: "148" },
+        { brand: "Google Chrome", version: "148" },
+      ],
+    },
+  });
 }
 
 function mockSnapshotAnimation(finished: Promise<unknown> = Promise.resolve()): {
@@ -82,6 +106,29 @@ function mockSnapshotAnimation(finished: Promise<unknown> = Promise.resolve()): 
   return { cancel, animate };
 }
 
+describe("isGoogleChromeOnMacOS", () => {
+  it("uses UA client hints to target Google Chrome on macOS", () => {
+    mockChromeOnMacOS();
+
+    expect(isGoogleChromeOnMacOS()).toBe(true);
+  });
+
+  it("does not target Opera-style Chromium identities", () => {
+    Object.defineProperty(window.navigator, "userAgentData", {
+      configurable: true,
+      value: {
+        platform: "macOS",
+        brands: [
+          { brand: "Chromium", version: "112" },
+          { brand: "Opera", version: "98" },
+        ],
+      },
+    });
+
+    expect(isGoogleChromeOnMacOS()).toBe(false);
+  });
+});
+
 describe("AnimatedThemeToggler", () => {
   it("switches immediately without an overlay for reduced motion", () => {
     mockMotionPreference(true);
@@ -92,6 +139,7 @@ describe("AnimatedThemeToggler", () => {
 
     expect(onThemeChange).toHaveBeenCalledWith("dark");
     expect(document.querySelector("[data-theme-reveal-overlay]")).toBeNull();
+    expect(document.querySelector("[data-theme-solid-cover]")).toBeNull();
   });
 
   it("serializes rapid clicks and removes the destination snapshot after commit", async () => {
@@ -120,6 +168,34 @@ describe("AnimatedThemeToggler", () => {
     });
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(startViewTransition).not.toHaveBeenCalled();
+  });
+
+  it("uses the solid cover instead of an iframe on Google Chrome for macOS", async () => {
+    mockMotionPreference(false);
+    mockChromeOnMacOS();
+    const { animate } = mockSnapshotAnimation();
+    const createElement = vi.spyOn(document, "createElement");
+    const onThemeChange = vi.fn(() => document.documentElement.classList.add("dark"));
+
+    render(
+      <AnimatedThemeToggler
+        theme="light"
+        onThemeChange={onThemeChange}
+        duration={50}
+      />,
+    );
+    createElement.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }));
+
+    await waitFor(() => expect(onThemeChange).toHaveBeenCalledWith("dark"));
+    await waitFor(() => {
+      expect(document.querySelector("[data-theme-solid-cover]")).toBeNull();
+    });
+    expect(createElement).not.toHaveBeenCalledWith("iframe");
+    expect(animate).toHaveBeenCalledWith(
+      { transform: ["scale(0)", "scale(1)"] },
+      expect.objectContaining({ fill: "forwards" }),
+    );
   });
 
   it("cancels an in-flight reveal and removes its overlay on unmount", async () => {
