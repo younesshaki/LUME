@@ -117,7 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-export function visitorSessionCookieHeader(rawCookie: string | undefined): string | undefined {
+function visitorSessionCookieHeader(rawCookie: string | undefined): string | undefined {
   if (!rawCookie) return undefined;
   for (const part of rawCookie.split(";")) {
     const trimmed = part.trim();
@@ -132,7 +132,7 @@ export function visitorSessionCookieHeader(rawCookie: string | undefined): strin
   return undefined;
 }
 
-export function resolveLeadsUpstreamUrl(
+function resolveLeadsUpstreamUrl(
   env: Record<string, string | undefined> = process.env,
 ): string | null {
   const explicit = env.LUME_LEADS_UPSTREAM_URL?.trim();
