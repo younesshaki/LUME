@@ -30,12 +30,48 @@ type RevealSession = {
   animation: Animation | null
 }
 
+type NavigatorWithUserAgentData = Navigator & {
+  userAgentData?: {
+    platform?: string
+    brands?: Array<{ brand: string; version?: string }>
+  }
+  brave?: unknown
+}
+
 const SNAPSHOT_LOAD_TIMEOUT_MS = 1_500
 const THEME_APPLY_TIMEOUT_MS = 500
+const LIGHT_THEME_BACKGROUND = "oklch(1 0 0)"
+const DARK_THEME_BACKGROUND = "oklch(0.145 0 0)"
 
 function prefersReducedMotion(): boolean {
   return typeof window.matchMedia === "function"
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
+
+/**
+ * The iframe/clip-path reveal is kept everywhere it behaves correctly. Chrome
+ * on macOS gets a simpler solid-circle cover because both browser snapshots
+ * and clipped iframe snapshots have shown a one-frame compositor flash there.
+ */
+export function isGoogleChromeOnMacOS(
+  nav: NavigatorWithUserAgentData | undefined =
+    typeof navigator === "undefined" ? undefined : navigator as NavigatorWithUserAgentData,
+): boolean {
+  if (!nav) return false
+
+  const ua = nav.userAgent ?? ""
+  const platform = nav.userAgentData?.platform ?? nav.platform ?? ""
+  const isMac = /mac/i.test(platform) || /Macintosh|Mac OS X/i.test(ua)
+  if (!isMac) return false
+
+  const brands = nav.userAgentData?.brands ?? []
+  if (brands.length > 0) {
+    return brands.some(({ brand }) => brand === "Google Chrome")
+  }
+
+  return /Chrome\/\d+/i.test(ua)
+    && !/(?:Edg|OPR|Opera|Vivaldi|Brave|Chromium)\//i.test(ua)
+    && !("brave" in nav)
 }
 
 function waitForSnapshotLoad(
@@ -281,6 +317,64 @@ export const AnimatedThemeToggler = ({
         const x = fromCenter ? viewportWidth / 2 : rect.left + rect.width / 2
         const y = fromCenter ? viewportHeight / 2 : rect.top + rect.height / 2
         const radius = maxRevealRadius(x, y, viewportWidth, viewportHeight)
+
+        if (isGoogleChromeOnMacOS()) {
+          const overscannedRadius = radius + 24
+          const diameter = overscannedRadius * 2
+          const overlay = document.createElement("div")
+          overlay.dataset.themeSolidCover = ""
+          overlay.setAttribute("aria-hidden", "true")
+          overlay.inert = true
+          overlay.style.position = "fixed"
+          overlay.style.left = `${x - overscannedRadius}px`
+          overlay.style.top = `${y - overscannedRadius}px`
+          overlay.style.width = `${diameter}px`
+          overlay.style.height = `${diameter}px`
+          overlay.style.borderRadius = "50%"
+          overlay.style.background = nextTheme === "dark"
+            ? DARK_THEME_BACKGROUND
+            : LIGHT_THEME_BACKGROUND
+          overlay.style.pointerEvents = "none"
+          overlay.style.zIndex = "2147483000"
+          overlay.style.transform = "scale(0)"
+          overlay.style.transformOrigin = "50% 50%"
+          overlay.style.willChange = "transform, opacity"
+          overlay.style.contain = "strict"
+          session.overlay = overlay
+          document.body.append(overlay)
+
+          await waitForStablePaint(session.controller.signal)
+          const coverAnimation = overlay.animate(
+            { transform: ["scale(0)", "scale(1)"] },
+            {
+              duration,
+              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+              fill: "forwards",
+            },
+          )
+          session.animation = coverAnimation
+          await waitForAnimation(coverAnimation, duration, session.controller.signal)
+          if (session.controller.signal.aborted) return
+
+          commitTheme(nextTheme)
+          committed = true
+          await waitForThemeApplication(root, nextTheme, session.controller.signal)
+          await waitForStablePaint(session.controller.signal)
+
+          const fadeDuration = Math.min(160, Math.max(90, Math.round(duration * 0.35)))
+          const fadeAnimation = overlay.animate(
+            { opacity: [1, 0] },
+            {
+              duration: fadeDuration,
+              easing: "ease-out",
+              fill: "forwards",
+            },
+          )
+          session.animation = fadeAnimation
+          await waitForAnimation(fadeAnimation, fadeDuration, session.controller.signal)
+          return
+        }
+
         const [fromClip, toClip] = getThemeTransitionClipPaths(
           variant,
           x,
