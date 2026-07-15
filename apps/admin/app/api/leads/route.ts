@@ -42,8 +42,6 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  // SCRUM-106: a presented API key is authoritative — it must verify, and it
-  // binds the tenant. Browser callers (no key) keep the origin gate.
   const presentedKey = apiKeyFromRequest(request);
   const apiKey = presentedKey ? await verifyTenantApiKey(presentedKey, "leads:write") : null;
   if (presentedKey && !apiKey) {
@@ -94,6 +92,22 @@ export async function POST(request: Request): Promise<Response> {
   if (!quota.allowed) return json(quotaExceededPayload(quota), 429, request);
   const quotaHeaders = quotaResponseHeaders(quota);
 
+  if (lead.vehicleId) {
+    const vehicleIsValid = await validateInquiryVehicle(
+      supabase,
+      tenant.tenantId,
+      lead.vehicleId,
+    );
+    if (!vehicleIsValid) {
+      return json(
+        { error: "Vehicle is unavailable or does not belong to this dealership" },
+        400,
+        request,
+        quotaHeaders,
+      );
+    }
+  }
+
   // Return an existing lead for accidental retries in the same hour. This is
   // deliberately checked after Turnstile because its tokens are single-use.
   const duplicate = await findRecentDuplicate(tenant.tenantId, lead);
@@ -102,7 +116,6 @@ export async function POST(request: Request): Promise<Response> {
     return json(response, 200, request, quotaHeaders);
   }
 
-  // SCRUM-178: attribute the lead to a signed-in visitor when one is present.
   const visitor = await resolveVisitor(request, tenant.tenantId, supabase).catch(() => null);
 
   const insert: Database["public"]["Tables"]["leads"]["Insert"] = {
@@ -184,6 +197,30 @@ export async function POST(request: Request): Promise<Response> {
 
   const response: LeadCaptureResponse = { leadId: data.id };
   return json(response, 201, request, quotaHeaders);
+}
+
+async function validateInquiryVehicle(
+  supabase: ReturnType<typeof createServiceClient>,
+  tenantId: string,
+  vehicleId: string,
+): Promise<boolean> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(vehicleId)) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id")
+    .eq("id", vehicleId)
+    .eq("tenant_id", tenantId)
+    .eq("status", "live")
+    .maybeSingle();
+
+  if (error) {
+    captureError("api/leads/vehicle-validation", error, { tenantId, vehicleId });
+    return false;
+  }
+  return Boolean(data);
 }
 
 function boundedHeader(value: string | null, maxLength: number): string | null {
