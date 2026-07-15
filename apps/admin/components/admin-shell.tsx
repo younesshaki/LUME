@@ -51,7 +51,6 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -143,11 +142,10 @@ const SECTIONS = [
     ],
   },
   {
-    // Clickable header: opens the Website hub; the chevron toggles the group.
-    slug: "website",
     label: "Website",
     icon: LayoutTemplate,
     children: [
+      { slug: "website", label: "Overview", icon: LayoutDashboard },
       { slug: "pages", label: "Pages", icon: FileText },
       { slug: "navigation", label: "Navigation", icon: PanelTop },
       { slug: "branding", label: "Branding", icon: Palette },
@@ -248,16 +246,13 @@ export function AdminShell({
                     if ("children" in section) {
                       const childHref = (slug: string) =>
                         `/admin/${activeTenant.slug}/${slug}`;
-                      // Groups may have their own landing page (e.g. Website):
-                      // the header links to it and the chevron toggles the group.
-                      const landingHref =
-                        "slug" in section ? `/admin/${activeTenant.slug}/${section.slug}` : null;
-                      const landingActive = landingHref ? pathname === landingHref : false;
-                      const groupActive =
-                        landingActive ||
-                        section.children.some((child) =>
-                          pathname.startsWith(childHref(child.slug)),
-                        );
+                      // Every group behaves the same: the header only toggles the
+                      // list. Pages (including a section's own hub) are always
+                      // reached as child items — one predictable rule, no split
+                      // click target.
+                      const groupActive = section.children.some((child) =>
+                        pathname.startsWith(childHref(child.slug)),
+                      );
                       return (
                         <Collapsible
                           key={section.label}
@@ -266,36 +261,13 @@ export function AdminShell({
                           className="group/collapsible"
                         >
                           <SidebarMenuItem>
-                            {landingHref ? (
-                              <>
-                                <SidebarMenuButton
-                                  asChild
-                                  isActive={landingActive}
-                                  tooltip={section.label}
-                                >
-                                  <Link href={landingHref}>
-                                    <section.icon />
-                                    <span>{section.label}</span>
-                                  </Link>
-                                </SidebarMenuButton>
-                                <CollapsibleTrigger asChild>
-                                  <SidebarMenuAction
-                                    aria-label={`Toggle ${section.label}`}
-                                    className="transition-transform duration-200 data-[state=open]:rotate-90"
-                                  >
-                                    <ChevronRight />
-                                  </SidebarMenuAction>
-                                </CollapsibleTrigger>
-                              </>
-                            ) : (
-                              <CollapsibleTrigger asChild>
-                                <SidebarMenuButton tooltip={section.label} isActive={groupActive}>
-                                  <section.icon />
-                                  <span>{section.label}</span>
-                                  <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                                </SidebarMenuButton>
-                              </CollapsibleTrigger>
-                            )}
+                            <CollapsibleTrigger asChild>
+                              <SidebarMenuButton tooltip={section.label} isActive={groupActive}>
+                                <section.icon />
+                                <span>{section.label}</span>
+                                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                              </SidebarMenuButton>
+                            </CollapsibleTrigger>
                             <CollapsibleContent>
                               <SidebarMenuSub>
                                 {section.children.map((child) => (
