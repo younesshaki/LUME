@@ -1,5 +1,25 @@
 /** Credential-preserving proxy from the public Vite deployment to admin visitor APIs. */
-import { visitorSessionCookieHeader } from "../visitorSessionCookie";
+
+// Inlined on purpose: this standalone Vercel function is bundled without its
+// relative deps, and root package.json is "type":"module", so a
+// `../visitorSessionCookie` import fails at runtime (ERR_MODULE_NOT_FOUND).
+const VISITOR_SESSION_COOKIE_NAME = "lume_visitor_session";
+
+/** Forward only the visitor session token; never proxy unrelated browser cookies. */
+function visitorSessionCookieHeader(rawCookie: string | undefined): string | undefined {
+  if (!rawCookie) return undefined;
+  for (const part of rawCookie.split(";")) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf("=");
+    if (separator < 1) continue;
+    const name = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1);
+    if (name === VISITOR_SESSION_COOKIE_NAME && value) {
+      return `${VISITOR_SESSION_COOKIE_NAME}=${value}`;
+    }
+  }
+  return undefined;
+}
 
 const CHAT_UPSTREAM_URL = process.env.LUME_CHAT_UPSTREAM_URL;
 const BYPASS_SECRET = process.env.LUME_CHAT_BYPASS_SECRET;
