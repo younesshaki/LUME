@@ -42,11 +42,19 @@ export type VehicleFacets = {
   models: string[];
   states: string[];
   cities: string[];
+  ranges?: {
+    yearMin: number | null;
+    yearMax: number | null;
+    priceMin: number | null;
+    priceMax: number | null;
+    mileageMin: number | null;
+    mileageMax: number | null;
+  };
 };
 
 export type VehicleResults = {
   vehicles: Vehicle[];
-  totalCount: number;
+  totalCount: number | null;
   hasMore: boolean;
   facets: VehicleFacets;
   source: "api" | "fallback";
@@ -341,7 +349,13 @@ export async function loadVehicleResults(
     console.warn("Falling back to local vehicle filtering after API query failed", error);
   }
 
-  const vehicles = await loadVehicles();
+  // Keep the degraded path bounded. Retrying loadVehicles() here would drain
+  // the API in sequential 200-item requests after a transient page failure.
+  // The legacy CSV is valid only for the default tenant; other tenants must
+  // never receive another tenant's fallback catalog.
+  const vehicles = TENANT_SLUG === "default"
+    ? (cached ?? await loadVehiclesFromCsv())
+    : [];
   const filtered = filterVehicles(vehicles, filters);
   const sorted = sortVehicles(filtered, sort);
   const offset = (Math.max(1, page) - 1) * pageSize;
@@ -537,6 +551,12 @@ async function loadVehicleResultsFromApi(
 ): Promise<VehicleResults> {
   const offset = (Math.max(1, page) - 1) * pageSize;
   const params = vehicleFiltersToApiSearchParams(filters, sort, offset, pageSize);
+  const countKey = vehicleCountCacheKey(params);
+  const cachedCount = readCachedVehicleCount(countKey);
+  // The initial page refreshes the count (and therefore reflects admin
+  // mutations promptly); subsequent pages reuse it instead of repeating an
+  // exact count query.
+  if (offset === 0 || cachedCount === null) params.set("includeCount", "true");
   const res = await fetch(createVehiclesApiUrl(params), {
     headers: {
       "X-Lume-Tenant": TENANT_SLUG,
@@ -551,10 +571,16 @@ async function loadVehicleResultsFromApi(
   const vehicles = Array.isArray(payload.vehicles)
     ? payload.vehicles.map(normalizeApiVehicle).filter((vehicle): vehicle is Vehicle => Boolean(vehicle))
     : [];
+  if (typeof payload.totalCount === "number") {
+    vehicleCountCache.set(countKey, {
+      count: payload.totalCount,
+      expiresAt: Date.now() + VEHICLE_COUNT_CACHE_MS,
+    });
+  }
 
   return {
     vehicles,
-    totalCount: payload.totalCount ?? vehicles.length,
+    totalCount: payload.totalCount ?? cachedCount,
     hasMore: Boolean(payload.hasMore),
     facets: normalizeVehicleFacets(payload.facets),
     source: "api",
@@ -596,23 +622,46 @@ export function vehicleFiltersToApiSearchParams(
   return params;
 }
 
-const facetsCache = new Map<string, VehicleFacets>();
+const FACETS_CACHE_MS = 60_000;
+const facetsCache = new Map<string, { facets: VehicleFacets; expiresAt: number }>();
+const VEHICLE_COUNT_CACHE_MS = 15_000;
+const vehicleCountCache = new Map<string, { count: number; expiresAt: number }>();
+
+function vehicleCountCacheKey(params: URLSearchParams): string {
+  const key = new URLSearchParams(params);
+  key.delete("offset");
+  key.delete("limit");
+  key.delete("includeCount");
+  return key.toString();
+}
+
+function readCachedVehicleCount(key: string): number | null {
+  const entry = vehicleCountCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    vehicleCountCache.delete(key);
+    return null;
+  }
+  return entry.count;
+}
 
 /**
  * Load filter-dropdown values from the lightweight facets endpoint (distinct
  * sets computed server-side), scoped to the selected make/state. Results are
- * memoized per (make, state) for the session; on failure we derive facets from
- * the cached catalog so the dropdowns still populate (and the default tenant's
- * CSV path keeps working). This replaces deriving facets from a full catalog
- * download on every page/sort change.
+ * memoized briefly per (make, state); on failure we derive facets only from an
+ * already-loaded legacy catalog. The TTL keeps admin catalog changes visible
+ * without downloading the full catalog on every page/sort change.
  */
 export async function loadVehicleFacets(
   make: string,
   sellerState: string,
 ): Promise<VehicleFacets> {
-  const key = `${make} ${sellerState}`;
-  const cached = facetsCache.get(key);
-  if (cached) return cached;
+  const key = `${make}\u0000${sellerState}`;
+  const cachedFacets = facetsCache.get(key);
+  if (cachedFacets && cachedFacets.expiresAt > Date.now()) {
+    return cachedFacets.facets;
+  }
+  if (cachedFacets) facetsCache.delete(key);
 
   try {
     const params = new URLSearchParams();
@@ -624,12 +673,18 @@ export async function loadVehicleFacets(
     });
     if (!res.ok) throw new Error(`Facets API ${res.status}: ${res.statusText}`);
     const facets = normalizeVehicleFacets((await res.json()) as VehicleFacets);
-    facetsCache.set(key, facets);
+    facetsCache.set(key, { facets, expiresAt: Date.now() + FACETS_CACHE_MS });
     return facets;
   } catch (error) {
-    console.warn("Vehicle facets API failed, deriving from catalog", error);
-    const vehicles = await loadVehicles();
-    return vehicleFacetsFromVehicles(vehicles, { make, sellerState });
+    console.warn("Vehicle facets API failed", error);
+    // Never start a full-catalog request merely to populate dropdowns. If the
+    // legacy catalog was already loaded for another fallback path, it is safe
+    // to derive from that in-memory data; otherwise leave the controls empty.
+    const fallback = cached
+      ? vehicleFacetsFromVehicles(cached, { make, sellerState })
+      : normalizeVehicleFacets(undefined);
+    facetsCache.set(key, { facets: fallback, expiresAt: Date.now() + FACETS_CACHE_MS });
+    return fallback;
   }
 }
 
@@ -649,7 +704,19 @@ function normalizeVehicleFacets(facets: VehicleFacets | undefined): VehicleFacet
     models: Array.isArray(facets?.models) ? facets.models.filter(Boolean).sort() : [],
     states: Array.isArray(facets?.states) ? facets.states.filter(Boolean).sort() : [],
     cities: Array.isArray(facets?.cities) ? facets.cities.filter(Boolean).sort() : [],
+    ...(facets?.ranges ? { ranges: {
+      yearMin: finiteNumberOrNull(facets.ranges.yearMin),
+      yearMax: finiteNumberOrNull(facets.ranges.yearMax),
+      priceMin: finiteNumberOrNull(facets.ranges.priceMin),
+      priceMax: finiteNumberOrNull(facets.ranges.priceMax),
+      mileageMin: finiteNumberOrNull(facets.ranges.mileageMin),
+      mileageMax: finiteNumberOrNull(facets.ranges.mileageMax),
+    } } : {}),
   };
+}
+
+function finiteNumberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function normalizeApiVehicle(vehicle: Vehicle & { tenantId?: string; externalId?: string }): Vehicle | null {

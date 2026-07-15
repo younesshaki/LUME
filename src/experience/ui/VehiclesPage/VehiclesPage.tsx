@@ -60,15 +60,6 @@ const EMPTY_VEHICLE_FACETS: VehicleFacets = {
   cities: [],
 };
 
-function isEmptyFacets(facets: VehicleFacets): boolean {
-  return (
-    facets.makes.length === 0 &&
-    facets.models.length === 0 &&
-    facets.states.length === 0 &&
-    facets.cities.length === 0
-  );
-}
-
 function formatMileage(miles: number | null): string {
   if (miles === null) return "N/A";
   if (miles === 0) return "New";
@@ -832,10 +823,7 @@ export default function VehiclesPage({
       .then((result) => {
         if (cancelled) return;
         setVehicles(result.vehicles);
-        setTotalCount(result.totalCount);
-        // Seed dropdowns from the list response as a fallback; the dedicated
-        // facets effect below is the authority and refines them.
-        setFacets((current) => (isEmptyFacets(current) ? result.facets : current));
+        if (result.totalCount !== null) setTotalCount(result.totalCount);
         setVehicleLookup((current) => mergeVehicleLookup(current, result.vehicles));
         setLoadError(false);
       })

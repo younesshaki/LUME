@@ -1,13 +1,11 @@
 /**
- * GET /api/vehicles?q=BMW&bodyStyle=SUV&priceMax=100000&limit=50
- *
- * Public, tenant-scoped vehicle listing. Reads from Supabase via the anon
- * client + RLS — only vehicles for active tenants are visible to anon callers.
- *
- * Returns: { vehicles: Vehicle[], totalCount: number, hasMore: boolean, facets }
+ * Public, tenant-scoped inventory list. The database function projects only
+ * card fields and the ordered managed primary image, so a page is one data
+ * query rather than a vehicle query plus an image query plus a facet scan.
  */
-import type { VehicleFacets, VehicleListResponse } from "@lume/types";
-import { quotaExceededPayload, quotaResponseHeaders, rowToVehicle } from "@lume/db";
+import type { Database } from "@lume/db";
+import { quotaExceededPayload, quotaResponseHeaders } from "@lume/db";
+import type { VehicleListResponse } from "@lume/types";
 import { createAnonServerClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
@@ -20,31 +18,34 @@ export const dynamic = "force-dynamic";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+type InventoryRow = Database["public"]["Functions"]["public_vehicle_inventory"]["Returns"][number];
 
 export async function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeadersFor(request) });
 }
 
 export async function GET(request: Request): Promise<Response> {
-  if (!isAllowedOrigin(request)) {
-    return json({ error: "Forbidden origin" }, 403);
-  }
+  if (!isAllowedOrigin(request)) return json({ error: "Forbidden origin" }, 403);
 
   const tenant = await getTenantFromRequest(request);
   if (!tenant) return json({ error: "Unknown or inactive tenant" }, 404, request);
+
+  // This is enforcement, not best-effort telemetry, so it intentionally stays
+  // in the request path. The standalone public function only defers metering.
   const quota = await checkPublicApiQuota(tenant.tenantId, "vehicle_requests");
   if (!quota.allowed) return json(quotaExceededPayload(quota), 429, request);
   const quotaHeaders = quotaResponseHeaders(quota);
 
-  const url = new URL(request.url);
-  const sp = url.searchParams;
+  const sp = new URL(request.url).searchParams;
   const limit = clamp(parseInt(sp.get("limit") || "") || DEFAULT_LIMIT, 1, MAX_LIMIT);
   const offset = Math.max(0, parseInt(sp.get("offset") || "") || 0);
+  const includeCount = sp.get("includeCount") === "true";
   const supabase = createAnonServerClient();
 
   let query = buildVehicleQuery(supabase, tenant.tenantId, sp, {
     limit,
     offset,
+    includeCount,
     useFullTextSearch: true,
   });
   let { data, count, error } = await query;
@@ -53,6 +54,7 @@ export async function GET(request: Request): Promise<Response> {
     query = buildVehicleQuery(supabase, tenant.tenantId, sp, {
       limit,
       offset,
+      includeCount,
       useFullTextSearch: false,
     });
     ({ data, count, error } = await query);
@@ -63,104 +65,74 @@ export async function GET(request: Request): Promise<Response> {
     return json({ error: error.message }, 500, request, quotaHeaders);
   }
 
-  const rows = data ?? [];
-  const [facets, primaryImages] = await Promise.all([
-    loadVehicleFacets(supabase, tenant.tenantId, sp),
-    loadPrimaryVehicleImages(supabase, tenant.tenantId, rows.map((row) => row.id)),
-  ]);
-  const vehicles = rows.map((row) => {
-    const primaryImage = primaryImages.get(row.id);
-    return {
-      ...rowToVehicle(row),
-      primaryImageSrc: primaryImage?.url,
-      primaryImageAlt: primaryImage?.alt,
-    };
-  });
-  const totalCount = count ?? vehicles.length;
+  const pageRows = (data ?? []) as InventoryRow[];
+  const hasMore = pageRows.length > limit;
+  const rows = hasMore ? pageRows.slice(0, limit) : pageRows;
+  const publicBaseUrl = readR2PublicBaseUrl() ?? "";
+  const vehicles = rows.map((row) => inventoryRowToVehicle(row, publicBaseUrl));
   const response: VehicleListResponse = {
     vehicles,
-    totalCount,
-    hasMore: offset + vehicles.length < totalCount,
-    facets,
+    hasMore,
+    ...(includeCount && count !== null ? { totalCount: count } : {}),
   };
-  return json(response, 200, request, quotaHeaders);
-}
 
-async function loadPrimaryVehicleImages(
-  supabase: ReturnType<typeof createAnonServerClient>,
-  tenantId: string,
-  vehicleIds: string[],
-): Promise<Map<string, { url: string; alt?: string }>> {
-  const publicBaseUrl = readR2PublicBaseUrl();
-  if (!publicBaseUrl || vehicleIds.length === 0) return new Map();
-  const { data, error } = await supabase
-    .from("vehicle_images")
-    .select("vehicle_id, r2_key, ai_description")
-    .eq("tenant_id", tenantId)
-    .eq("is_primary", true)
-    .in("vehicle_id", vehicleIds);
-  if (error) {
-    // Migration 043 may roll out after the API; legacy image_src remains valid.
-    console.warn("[/api/vehicles] primary image query unavailable:", error.message);
-    return new Map();
+  const etag = rows[0] ? `W/"inventory-${tenant.tenantId}-${rows[0].catalog_version}"` : null;
+  const cacheHeaders = {
+    ...quotaHeaders,
+    "Cache-Control": "private, no-cache",
+    Vary: "Origin, X-Lume-Tenant",
+    ...(etag ? { ETag: etag } : {}),
+  };
+  if (etag && request.headers.get("if-none-match") === etag) {
+    return new Response(null, { status: 304, headers: cacheHeaders });
   }
-  const images = new Map<string, { url: string; alt?: string }>();
-  for (const image of data ?? []) {
-    const url = vehicleImagePublicUrl(publicBaseUrl, image.r2_key);
-    if (url) images.set(image.vehicle_id, {
-      url,
-      ...(image.ai_description ? { alt: image.ai_description } : {}),
-    });
-  }
-  return images;
+  return json(response, 200, request, cacheHeaders);
 }
 
 function buildVehicleQuery(
   supabase: ReturnType<typeof createAnonServerClient>,
   tenantId: string,
   sp: URLSearchParams,
-  options: { limit: number; offset: number; useFullTextSearch: boolean }
+  options: {
+    limit: number;
+    offset: number;
+    includeCount: boolean;
+    useFullTextSearch: boolean;
+  },
 ) {
   let query = supabase
-    .from("vehicles")
-    .select("*", { count: "exact" })
-    .eq("tenant_id", tenantId)
-    .eq("status", "live");
+    .rpc(
+      "public_vehicle_inventory",
+      { p_tenant_id: tenantId },
+      options.includeCount ? { count: "exact" } : {},
+    )
+    .select("*");
 
   const search = searchTerm(sp);
   if (search) {
     if (options.useFullTextSearch) {
-      query = query.textSearch("search_vector", search, {
-        config: "simple",
-        type: "websearch",
-      });
+      query = query.textSearch("search_vector", search, { config: "simple", type: "websearch" });
     } else {
       const like = sanitizeLikeSearch(search);
       if (like) {
-        query = query.or(
-          [
-            `make.ilike.%${like}%`,
-            `model.ilike.%${like}%`,
-            `trim.ilike.%${like}%`,
-            `body_style.ilike.%${like}%`,
-            `fuel_type.ilike.%${like}%`,
-            `exterior_color.ilike.%${like}%`,
-            `seller_city.ilike.%${like}%`,
-            `seller_state.ilike.%${like}%`,
-          ].join(",")
-        );
+        query = query.or([
+          `make.ilike.%${like}%`,
+          `model.ilike.%${like}%`,
+          `trim.ilike.%${like}%`,
+          `body_style.ilike.%${like}%`,
+          `fuel_type.ilike.%${like}%`,
+          `exterior_color.ilike.%${like}%`,
+          `seller_city.ilike.%${like}%`,
+          `seller_state.ilike.%${like}%`,
+        ].join(","));
       }
     }
   }
 
   for (const [param, column] of [
-    ["make", "make"],
-    ["model", "model"],
-    ["bodyStyle", "body_style"],
-    ["stockType", "stock_type"],
-    ["fuelType", "fuel_type"],
-    ["drivetrain", "drivetrain"],
-    ["sellerState", "seller_state"],
+    ["make", "make"], ["model", "model"], ["bodyStyle", "body_style"],
+    ["stockType", "stock_type"], ["fuelType", "fuel_type"],
+    ["drivetrain", "drivetrain"], ["sellerState", "seller_state"],
     ["sellerCity", "seller_city"],
   ] as const) {
     const value = sp.get(param);
@@ -180,20 +152,11 @@ function buildVehicleQuery(
     query = query.or(`mileage.lte.${mileageMax},mileage.is.null`);
   }
 
-  const sort = sp.get("sort") || "recommended";
-  switch (sort) {
-    case "price_asc":
-      query = query.order("price", { ascending: true });
-      break;
-    case "price_desc":
-      query = query.order("price", { ascending: false });
-      break;
-    case "year_desc":
-      query = query.order("year", { ascending: false });
-      break;
-    case "year_asc":
-      query = query.order("year", { ascending: true });
-      break;
+  switch (sp.get("sort") || "recommended") {
+    case "price_asc": query = query.order("price", { ascending: true }); break;
+    case "price_desc": query = query.order("price", { ascending: false }); break;
+    case "year_desc": query = query.order("year", { ascending: false }); break;
+    case "year_asc": query = query.order("year", { ascending: true }); break;
     case "mileage_asc":
       query = query.order("mileage", { ascending: true, nullsFirst: false });
       break;
@@ -201,50 +164,48 @@ function buildVehicleQuery(
       query = query.order("mileage", { ascending: false, nullsFirst: false });
       break;
     default:
-      query = query.order("is_special", { ascending: false }).order("created_at", {
-        ascending: false,
-      });
+      query = query.order("is_special", { ascending: false }).order("created_at", { ascending: false });
   }
 
-  return query.range(options.offset, options.offset + options.limit - 1);
+  // Stable tie-breaking prevents duplicates or omissions between offset pages.
+  return query.order("id", { ascending: true }).range(options.offset, options.offset + options.limit);
 }
 
-async function loadVehicleFacets(
-  supabase: ReturnType<typeof createAnonServerClient>,
-  tenantId: string,
-  sp: URLSearchParams
-): Promise<VehicleFacets> {
-  const { data, error } = await supabase
-    .from("vehicles")
-    .select("make, model, seller_state, seller_city")
-    .eq("tenant_id", tenantId)
-    .eq("status", "live");
-
-  if (error) {
-    console.warn("[/api/vehicles] facet query error:", error.message);
-    return { makes: [], models: [], states: [], cities: [] };
-  }
-
-  const selectedMake = sp.get("make") ?? "";
-  const selectedState = sp.get("sellerState") ?? "";
+function inventoryRowToVehicle(row: InventoryRow, publicBaseUrl: string) {
+  const primaryImageSrc = row.primary_image_r2_key
+    ? vehicleImagePublicUrl(publicBaseUrl, row.primary_image_r2_key)
+    : undefined;
   return {
-    makes: uniqueSorted((data ?? []).map((row) => row.make)),
-    models: uniqueSorted(
-      (data ?? [])
-        .filter((row) => !selectedMake || row.make === selectedMake)
-        .map((row) => row.model)
-    ),
-    states: uniqueSorted((data ?? []).map((row) => row.seller_state)),
-    cities: uniqueSorted(
-      (data ?? [])
-        .filter((row) => !selectedState || row.seller_state === selectedState)
-        .map((row) => row.seller_city)
-    ),
+    id: row.id,
+    tenantId: row.tenant_id,
+    ...(row.external_id ? { externalId: row.external_id } : {}),
+    stockType: row.stock_type ?? "",
+    year: row.year,
+    make: row.make,
+    model: row.model,
+    trim: row.trim,
+    price: row.price,
+    mileage: row.mileage,
+    bodyStyle: row.body_style,
+    exteriorColor: row.exterior_color,
+    interiorColor: row.interior_color,
+    drivetrain: row.drivetrain,
+    fuelType: row.fuel_type,
+    imageSrc: row.image_src,
+    ...(primaryImageSrc ? { primaryImageSrc } : {}),
+    ...(row.primary_image_alt ? { primaryImageAlt: row.primary_image_alt } : {}),
+    sellerCity: row.seller_city,
+    sellerState: row.seller_state,
+    isSpecial: row.is_special,
+    ...(row.special_image_src ? { specialImageSrc: row.special_image_src } : {}),
+    status: "live" as const,
+    soldAt: row.sold_at,
+    soldPrice: row.sold_price,
   };
 }
 
-function clamp(n: number, min: number, max: number): number {
-  return Math.min(Math.max(n, min), max);
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
 function searchTerm(sp: URLSearchParams): string {
@@ -258,10 +219,6 @@ function sanitizeLikeSearch(search: string): string {
 function searchVectorMissing(message: string): boolean {
   const normalized = message.toLowerCase();
   return normalized.includes("search_vector") || normalized.includes("websearch_to_tsquery");
-}
-
-function uniqueSorted(values: Array<string | null>): string[] {
-  return [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
 }
 
 function json(

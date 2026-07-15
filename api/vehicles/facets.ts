@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * GET /api/vehicles/facets?tenant=<slug>&make=<make>&sellerState=<state>
@@ -32,7 +32,69 @@ type VehicleFacets = {
   models: string[];
   states: string[];
   cities: string[];
+  ranges: {
+    yearMin: number | null;
+    yearMax: number | null;
+    priceMin: number | null;
+    priceMax: number | null;
+    mileageMin: number | null;
+    mileageMax: number | null;
+  };
 };
+
+type FacetResult = { facets: VehicleFacets; catalogVersion: number | null };
+
+type FacetRow = {
+  makes: string[];
+  models: string[];
+  states: string[];
+  cities: string[];
+  year_min: number | null;
+  year_max: number | null;
+  price_min: number | null;
+  price_max: number | null;
+  mileage_min: number | null;
+  mileage_max: number | null;
+  catalog_version: number;
+};
+
+type FacetsDatabase = {
+  public: {
+    Tables: {
+      vehicles: {
+        Row: {
+          tenant_id: string;
+          status: string;
+          make: string | null;
+          model: string | null;
+          seller_state: string | null;
+          seller_city: string | null;
+          year: number | null;
+          price: number | null;
+          mileage: number | null;
+        };
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      tenant_by_slug: {
+        Args: { p_slug: string };
+        Returns: Array<{ id: string; slug: string; status: string }>;
+      };
+      vehicle_facets_v2: {
+        Args: { p_tenant_id: string; p_make?: string | null; p_state?: string | null };
+        Returns: FacetRow[];
+      };
+    };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+
+type FacetsClient = SupabaseClient<FacetsDatabase, "public">;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") {
@@ -56,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return json(req, res, { error: "Supabase server env not configured" }, 500);
   }
 
-  const supabase = createClient(supabaseUrl, anonKey, {
+  const supabase = createClient<FacetsDatabase>(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -67,72 +129,128 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const make = query(req, "make")?.trim() || "";
   const state = query(req, "sellerState")?.trim() || "";
-  const facets = await loadFacets(supabase, tenant.tenantId, make, state);
+  const result = await loadFacets(supabase, tenant.tenantId, make, state);
 
-  // Facet values are already public via the listing and change only when the
-  // catalog does; a short private (browser-only, per-URL keyed by ?tenant=)
-  // cache avoids recomputing on every filter interaction without any risk of
-  // one tenant's values being served to another.
-  res.setHeader("Cache-Control", "private, max-age=60");
-  return json(req, res, facets, 200);
+  // Browser caches may retain the public payload, but must revalidate it. The
+  // per-tenant version changes after every vehicle or managed-image mutation.
+  const etag = result.catalogVersion === null
+    ? null
+    : `W/"inventory-facets-${tenant.tenantId}-${result.catalogVersion}"`;
+  res.setHeader("Cache-Control", "private, no-cache");
+  res.setHeader("Vary", "Origin, X-Lume-Tenant");
+  if (etag) res.setHeader("ETag", etag);
+  if (etag && header(req, "if-none-match") === etag) {
+    setCorsHeaders(req, res);
+    return res.status(304).end();
+  }
+  return json(req, res, result.facets, 200);
 }
 
 async function loadFacets(
-  supabase: any,
+  supabase: FacetsClient,
   tenantId: string,
   make: string,
   state: string,
-): Promise<VehicleFacets> {
-  const { data, error } = await supabase.rpc("vehicle_facets", {
+): Promise<FacetResult> {
+  const { data, error } = await supabase.rpc("vehicle_facets_v2", {
     p_tenant_id: tenantId,
     p_make: make || null,
     p_state: state || null,
   });
   if (!error && data) {
     const row = Array.isArray(data) ? data[0] : data;
-    return normalizeFacets(row);
+    return {
+      facets: normalizeFacets(row),
+      catalogVersion: finiteNumber(row?.catalog_version),
+    };
   }
   if (error) {
     console.warn("[/api/vehicles/facets] RPC unavailable, scanning columns:", error.message);
   }
-  return scanFacets(supabase, tenantId, make, state);
+  return { facets: await scanFacets(supabase, tenantId, make, state), catalogVersion: null };
 }
 
 async function scanFacets(
-  supabase: any,
+  supabase: FacetsClient,
   tenantId: string,
   make: string,
   state: string,
 ): Promise<VehicleFacets> {
   const { data, error } = await supabase
     .from("vehicles")
-    .select("make, model, seller_state, seller_city")
-    .eq("tenant_id", tenantId);
+    .select("make, model, seller_state, seller_city, year, price, mileage")
+    .eq("tenant_id", tenantId)
+    .eq("status", "live");
   if (error || !data) {
     console.warn("[/api/vehicles/facets] column scan failed:", error?.message);
-    return { makes: [], models: [], states: [], cities: [] };
+    return emptyFacets();
   }
   const rows = data as Array<{
     make: string | null;
     model: string | null;
     seller_state: string | null;
     seller_city: string | null;
+    year: number | null;
+    price: number | null;
+    mileage: number | null;
   }>;
   return {
     makes: uniqueSorted(rows.map((r) => r.make)),
     models: uniqueSorted(rows.filter((r) => !make || r.make === make).map((r) => r.model)),
     states: uniqueSorted(rows.map((r) => r.seller_state)),
     cities: uniqueSorted(rows.filter((r) => !state || r.seller_state === state).map((r) => r.seller_city)),
+    ranges: {
+      yearMin: minNumber(rows.map((r) => r.year)),
+      yearMax: maxNumber(rows.map((r) => r.year)),
+      priceMin: minNumber(rows.map((r) => r.price)),
+      priceMax: maxNumber(rows.map((r) => r.price)),
+      mileageMin: minNumber(rows.map((r) => r.mileage)),
+      mileageMax: maxNumber(rows.map((r) => r.mileage)),
+    },
   };
 }
 
-function normalizeFacets(row: any): VehicleFacets {
+function normalizeFacets(value: unknown): VehicleFacets {
+  const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
   return {
-    makes: toStringArray(row?.makes),
-    models: toStringArray(row?.models),
-    states: toStringArray(row?.states),
-    cities: toStringArray(row?.cities),
+    makes: toStringArray(row.makes),
+    models: toStringArray(row.models),
+    states: toStringArray(row.states),
+    cities: toStringArray(row.cities),
+    ranges: {
+      yearMin: finiteNumber(row.year_min),
+      yearMax: finiteNumber(row.year_max),
+      priceMin: finiteNumber(row.price_min),
+      priceMax: finiteNumber(row.price_max),
+      mileageMin: finiteNumber(row.mileage_min),
+      mileageMax: finiteNumber(row.mileage_max),
+    },
   };
+}
+
+function emptyFacets(): VehicleFacets {
+  return {
+    makes: [], models: [], states: [], cities: [],
+    ranges: {
+      yearMin: null, yearMax: null, priceMin: null,
+      priceMax: null, mileageMin: null, mileageMax: null,
+    },
+  };
+}
+
+function finiteNumber(value: unknown): number | null {
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function minNumber(values: unknown[]): number | null {
+  const numbers = values.map(finiteNumber).filter((value): value is number => value !== null);
+  return numbers.length ? Math.min(...numbers) : null;
+}
+
+function maxNumber(values: unknown[]): number | null {
+  const numbers = values.map(finiteNumber).filter((value): value is number => value !== null);
+  return numbers.length ? Math.max(...numbers) : null;
 }
 
 function toStringArray(value: unknown): string[] {
@@ -145,7 +263,7 @@ function uniqueSorted(values: Array<string | null>): string[] {
 
 async function getTenantFromRequest(
   req: VercelRequest,
-  supabase: any,
+  supabase: FacetsClient,
 ): Promise<{ tenantId: string; slug: string } | null> {
   const slug = extractTenantSlugFromRequest(req);
   if (!slug) return null;
