@@ -45,6 +45,25 @@ type PageRendererState =
   | { status: "ready"; page: PublishedPage }
   | { status: "fallback"; page: null };
 
+const publishedPageRequests = new Map<string, Promise<PublishedPage | null>>();
+
+function fetchPublishedPageOnce(tenantId: string, slug: string): Promise<PublishedPage | null> {
+  const key = `${tenantId}\u0000${slug}`;
+  const existing = publishedPageRequests.get(key);
+  if (existing) return existing;
+  const request = fetchPublishedPage(
+    supabase as Parameters<typeof fetchPublishedPage>[0],
+    tenantId,
+    slug,
+  );
+  publishedPageRequests.set(key, request);
+  const clear = () => {
+    if (publishedPageRequests.get(key) === request) publishedPageRequests.delete(key);
+  };
+  void request.then(clear, clear);
+  return request;
+}
+
 const PAGE_FRAMES: Record<string, PageFrame> = {
   contact: {
     rootClassName: "contactPage",
@@ -105,11 +124,7 @@ export function PageRenderer({
           return;
         }
 
-        const page = await fetchPublishedPage(
-          supabase as Parameters<typeof fetchPublishedPage>[0],
-          tenantId,
-          slug
-        );
+        const page = await fetchPublishedPageOnce(tenantId, slug);
         if (!cancelled) {
           setState(page ? { status: "ready", page } : { status: "fallback", page: null });
         }

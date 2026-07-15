@@ -28,8 +28,21 @@ function toEmail(username: string): string {
 }
 
 const LOCAL_AUTH_KEY = "lume.preview-auth.v1";
+let existingSessionRequest: Promise<AuthUser | null> | null = null;
 
-export async function checkExistingSession(): Promise<AuthUser | null> {
+/** Collapse concurrent provider/StrictMode session checks into one request. */
+export function checkExistingSession(): Promise<AuthUser | null> {
+  if (existingSessionRequest) return existingSessionRequest;
+  const request = lookupExistingSession();
+  existingSessionRequest = request;
+  const clear = () => {
+    if (existingSessionRequest === request) existingSessionRequest = null;
+  };
+  void request.then(clear, clear);
+  return request;
+}
+
+async function lookupExistingSession(): Promise<AuthUser | null> {
   if (!isSupabaseConfigured && typeof window !== "undefined") {
     const username = window.localStorage.getItem(LOCAL_AUTH_KEY);
     return username ? { userId: "local-preview", username } : null;

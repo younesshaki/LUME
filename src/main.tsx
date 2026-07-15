@@ -1,7 +1,5 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { SpeedInsights } from '@vercel/speed-insights/react'
-import { Analytics } from '@vercel/analytics/react'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './app-shell/AuthProvider'
@@ -31,7 +29,5 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
         </SoundProvider>
       </DualModeProvider>
     </TenantThemeProvider>
-    <SpeedInsights />
-    <Analytics />
   </React.StrictMode>,
 )

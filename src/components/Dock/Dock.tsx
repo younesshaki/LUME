@@ -21,6 +21,7 @@ type DockItemProps = {
   className?: string;
   children: React.ReactNode;
   onClick?: () => void;
+  onIntent?: () => void;
   mouseX: MotionValue<number>;
   spring: SpringOptions;
   distance: number;
@@ -32,6 +33,7 @@ function DockItem({
   children,
   className = '',
   onClick,
+  onIntent,
   mouseX,
   spring,
   distance,
@@ -61,10 +63,15 @@ function DockItem({
       }}
       onHoverStart={() => {
         isHovered.set(1);
+        onIntent?.();
         dockSounds.itemHover();
       }}
       onHoverEnd={() => isHovered.set(0)}
-      onFocus={() => isHovered.set(1)}
+      onFocus={() => {
+        isHovered.set(1);
+        onIntent?.();
+      }}
+      onPointerDown={onIntent}
       onBlur={() => isHovered.set(0)}
       onClick={onClick}
       className={`dock-item ${className}`}
@@ -185,6 +192,7 @@ export default function Dock({
               dockSounds.itemClick();
               item.onClick();
             }}
+            onIntent={item.onIntent}
             className={item.className}
             mouseX={mouseX}
             spring={spring}

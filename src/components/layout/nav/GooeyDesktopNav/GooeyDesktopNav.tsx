@@ -6,6 +6,7 @@ import './GooeyNav.css';
 type GooeyDesktopNavProps = {
   currentScreen: string;
   onNavigate: (screen: string) => void;
+  onIntent?: (screen: string) => void;
   items?: SiteNavItem[];
   particleCount?: number;
   particleDistances?: [number, number];
@@ -18,6 +19,7 @@ type GooeyDesktopNavProps = {
 export function GooeyDesktopNav({
   currentScreen,
   onNavigate,
+  onIntent,
   items = SITE_NAV_ITEMS,
   particleCount = 20,
   particleDistances = [70, 8],
@@ -151,6 +153,9 @@ export function GooeyDesktopNav({
               <button
                 type="button"
                 aria-current={activeIndex === index ? 'page' : undefined}
+                onMouseEnter={() => onIntent?.(item.screen)}
+                onFocus={() => onIntent?.(item.screen)}
+                onPointerDown={() => onIntent?.(item.screen)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();

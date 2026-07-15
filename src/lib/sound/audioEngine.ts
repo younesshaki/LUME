@@ -11,7 +11,7 @@
  *  - Autoplay-policy unlock on first user gesture
  *
  * The engine is module-global. `<SoundProvider>` calls `init()` once
- * at app boot to set up the unlock listener and preload sounds.
+ * at app boot to set up only the unlock listener. Audio is created on demand.
  */
 
 import { SOUND_LIBRARY, type SoundKey } from "./sounds";
@@ -21,7 +21,9 @@ import type { SoundSpec } from "./types";
 
 type PoolEntry = {
   elements: HTMLAudioElement[];
+  busy: Set<HTMLAudioElement>;
   cursor: number;
+  maxSize: number;
 };
 
 // Element pools are keyed by physical audio `src`, not by sound key, so that
@@ -35,32 +37,42 @@ const lastFiredAt = new Map<SoundKey, number>();
 const activeTimeouts = new Map<string, number[]>();
 let unlocked = false;
 let initialized = false;
+let unlockHandler: (() => void) | null = null;
 
-function getPool(key: SoundKey): PoolEntry {
+function createPooledAudio(src: string, entry: PoolEntry): HTMLAudioElement {
+  const audio = new Audio(src);
+  audio.preload = "none";
+  const release = () => entry.busy.delete(audio);
+  audio.addEventListener("ended", release);
+  audio.addEventListener("pause", release);
+  entry.elements.push(audio);
+  return audio;
+}
+
+function getPooledAudio(key: SoundKey): { audio: HTMLAudioElement; entry: PoolEntry } {
   const spec = SOUND_LIBRARY[key] as SoundSpec;
   const src = spec.src;
   const size = Math.max(1, spec.pool ?? 3);
 
   let entry = pools.get(src);
-  if (entry) {
-    // A later key may want a larger pool for the same file; grow to fit.
-    while (entry.elements.length < size) {
-      const audio = new Audio(src);
-      audio.preload = "auto";
-      entry.elements.push(audio);
-    }
-    return entry;
+  if (!entry) {
+    entry = { elements: [], busy: new Set(), cursor: 0, maxSize: size };
+    pools.set(src, entry);
+    createPooledAudio(src, entry);
+  } else {
+    entry.maxSize = Math.max(entry.maxSize, size);
   }
 
-  const elements: HTMLAudioElement[] = [];
-  for (let i = 0; i < size; i++) {
-    const audio = new Audio(src);
-    audio.preload = "auto";
-    elements.push(audio);
+  const available = entry.elements.find((audio) => !entry?.busy.has(audio));
+  if (available) return { audio: available, entry };
+
+  if (entry.elements.length < entry.maxSize) {
+    return { audio: createPooledAudio(src, entry), entry };
   }
-  entry = { elements, cursor: 0 };
-  pools.set(src, entry);
-  return entry;
+
+  const audio = entry.elements[entry.cursor];
+  entry.cursor = (entry.cursor + 1) % entry.elements.length;
+  return { audio, entry };
 }
 
 function isAllowed(actionKey: string): boolean {
@@ -100,9 +112,8 @@ function playSoundOnce(
 
   if (spec.cooldownMs && now - (lastFiredAt.get(soundKey) ?? 0) < spec.cooldownMs) return;
 
-  const pool = getPool(soundKey);
-  const audio = pool.elements[pool.cursor];
-  pool.cursor = (pool.cursor + 1) % pool.elements.length;
+  const { audio, entry } = getPooledAudio(soundKey);
+  entry.busy.add(audio);
 
   audio.volume = effectiveVolume(soundKey, actionKey, volumeOverride);
 
@@ -123,6 +134,7 @@ function playSoundOnce(
   if (result && typeof result.catch === "function") {
     result.catch(() => {
       // autoplay blocked, file missing, decode error — silent fail
+      entry.busy.delete(audio);
     });
   }
 
@@ -238,7 +250,9 @@ export function init(): void {
     window.removeEventListener("pointerdown", unlock);
     window.removeEventListener("keydown", unlock);
     window.removeEventListener("touchstart", unlock);
+    unlockHandler = null;
   };
+  unlockHandler = unlock;
 
   window.addEventListener("pointerdown", unlock, { once: false });
   window.addEventListener("keydown", unlock, { once: false });
@@ -249,6 +263,13 @@ export function isUnlocked(): boolean {
   return unlocked;
 }
 
+/** Test/diagnostic snapshot without exposing mutable audio elements. */
+export function _poolStats(): { sources: number; elements: number } {
+  let elements = 0;
+  for (const pool of pools.values()) elements += pool.elements.length;
+  return { sources: pools.size, elements };
+}
+
 /** For tests / hot-reload — reset module state. */
 export function _reset(): void {
   for (const ids of activeTimeouts.values()) {
@@ -257,6 +278,12 @@ export function _reset(): void {
   activeTimeouts.clear();
   pools.clear();
   lastFiredAt.clear();
+  if (typeof window !== "undefined" && unlockHandler) {
+    window.removeEventListener("pointerdown", unlockHandler);
+    window.removeEventListener("keydown", unlockHandler);
+    window.removeEventListener("touchstart", unlockHandler);
+  }
+  unlockHandler = null;
   unlocked = false;
   initialized = false;
 }
