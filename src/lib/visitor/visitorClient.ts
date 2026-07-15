@@ -4,6 +4,7 @@ import type {
   Visitor,
   VisitorLoginInput,
   VisitorLoyalty,
+  VisitorSavedVehicle,
   VisitorSignupInput,
 } from "./types";
 
@@ -15,6 +16,9 @@ export type VisitorClient = {
   logout: (signal?: AbortSignal) => Promise<void>;
   getMe: (signal?: AbortSignal) => Promise<Visitor | null>;
   getLoyalty: (signal?: AbortSignal) => Promise<VisitorLoyalty>;
+  getSavedVehicles: (signal?: AbortSignal) => Promise<VisitorSavedVehicle[]>;
+  saveVehicle: (vehicleId: string, signal?: AbortSignal) => Promise<{ created: boolean }>;
+  removeSavedVehicle: (vehicleId: string, signal?: AbortSignal) => Promise<void>;
 };
 
 export class VisitorApiError extends Error {
@@ -117,6 +121,38 @@ export function createVisitorClient({
       }
       return payload;
     },
+
+    async getSavedVehicles(signal) {
+      const response = await request("/api/visitor/saved-vehicles", { signal });
+      await ensureOk(response);
+      const payload = await readJson(response);
+      if (!isRecord(payload) || !Array.isArray(payload.savedVehicles) || !payload.savedVehicles.every(isSavedVehicle)) {
+        throw new VisitorApiError(response.status, "The saved vehicles response was invalid.");
+      }
+      return payload.savedVehicles;
+    },
+
+    async saveVehicle(vehicleId, signal) {
+      const response = await request("/api/visitor/saved-vehicles", {
+        method: "POST",
+        body: JSON.stringify({ vehicleId }),
+        signal,
+      });
+      await ensureOk(response);
+      const payload = await readJson(response);
+      if (!isRecord(payload) || typeof payload.created !== "boolean") {
+        throw new VisitorApiError(response.status, "The save response was invalid.");
+      }
+      return { created: payload.created };
+    },
+
+    async removeSavedVehicle(vehicleId, signal) {
+      const response = await request(`/api/visitor/saved-vehicles/${encodeURIComponent(vehicleId)}`, {
+        method: "DELETE",
+        signal,
+      });
+      await ensureOk(response);
+    },
   };
 }
 
@@ -193,6 +229,22 @@ function isLoyaltyTransaction(value: unknown): value is LoyaltyTransaction {
     Number.isFinite(value.delta) &&
     typeof value.reason === "string" &&
     typeof value.createdAt === "string"
+  );
+}
+
+function isSavedVehicle(value: unknown): value is VisitorSavedVehicle {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.vehicleId === "string" &&
+    typeof value.savedAt === "string" &&
+    (value.year === null || typeof value.year === "number") &&
+    (value.make === null || typeof value.make === "string") &&
+    (value.model === null || typeof value.model === "string") &&
+    (value.trim === null || typeof value.trim === "string") &&
+    (value.price === null || typeof value.price === "number") &&
+    (value.status === "live" || value.status === "sold" || value.status === "archived" || value.status === "draft" || value.status === "unavailable") &&
+    (value.imageSrc === null || typeof value.imageSrc === "string")
   );
 }
 

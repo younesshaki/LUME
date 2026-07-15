@@ -64,7 +64,8 @@
 .visitorAccount__loading,
 .visitorAuth,
 .visitorAccount__profile,
-.visitorLoyalty {
+.visitorLoyalty,
+.visitorSavedVehicles {
   border: 1px solid var(--visitor-line);
   border-radius: 20px;
   background: color-mix(in srgb, var(--visitor-panel) 92%, transparent);
@@ -260,6 +261,18 @@
 .visitorLoyalty--state {
   min-height: 12rem;
 }
+
+.visitorSavedVehicles { padding: clamp(1.4rem, 4vw, 2.4rem); }
+.visitorSavedVehicles--state { min-height: 9rem; color: var(--visitor-muted); }
+.visitorSavedVehicles__heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.visitorSavedVehicles__heading h2 { margin: 0.7rem 0 0; font-family: var(--theme-experience-font-family, var(--experience-font-family)); font-size: clamp(1.7rem, 4vw, 3rem); font-weight: 400; letter-spacing: .035em; text-transform: uppercase; }
+.visitorSavedVehicles__heading > span { color: var(--visitor-accent); font-size: 2rem; }
+.visitorSavedVehicles__list { display: grid; gap: .8rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
+.visitorSavedVehicles__list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center; border-top: 1px solid var(--visitor-line); padding-top: .8rem; }
+.visitorSavedVehicles__list a, .visitorSavedVehicles__list li > div { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: 1rem; color: inherit; text-decoration: none; }
+.visitorSavedVehicles__list img, .visitorSavedVehicles__imagePlaceholder { width: 5rem; height: 3.8rem; border-radius: 8px; object-fit: cover; background: color-mix(in srgb, var(--visitor-ink) 8%, transparent); }
+.visitorSavedVehicles__list strong, .visitorSavedVehicles__list span, .visitorSavedVehicles__list time { display: block; }
+.visitorSavedVehicles__list span, .visitorSavedVehicles__list time { margin-top: .2rem; color: var(--visitor-muted); font-size: .8rem; }
 
 .visitorLoyalty__balance {
   display: grid;

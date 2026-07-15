@@ -109,6 +109,8 @@ export const PUBLIC_ROUTE_LIMITS = {
   "visitor-me": 60,
   "visitor-loyalty": 30,
   "visitor-chat-history": 60,
+  "visitor-saved-vehicles-read": 60,
+  "visitor-saved-vehicles-write": 30,
   /** PII-heavy and unauthenticated by design. */
   "gdpr-export": 5,
   "gdpr-delete": 5,

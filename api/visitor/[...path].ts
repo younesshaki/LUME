@@ -23,7 +23,15 @@ function visitorSessionCookieHeader(rawCookie: string | undefined): string | und
 
 const CHAT_UPSTREAM_URL = process.env.LUME_CHAT_UPSTREAM_URL;
 const BYPASS_SECRET = process.env.LUME_CHAT_BYPASS_SECRET;
-const ALLOWED_PATHS = new Set(["signup", "login", "logout", "me", "loyalty", "chat-history"]);
+const ALLOWED_PATHS = new Set([
+  "signup",
+  "login",
+  "logout",
+  "me",
+  "loyalty",
+  "chat-history",
+  "saved-vehicles",
+]);
 const REQUEST_HEADERS = [
   "content-type",
   "origin",
@@ -63,7 +71,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   const path = extractVisitorPath(req);
-  if (!path || !ALLOWED_PATHS.has(path)) {
+  const route = path === "saved-vehicles" || /^saved-vehicles\/[0-9a-f-]+$/i.test(path)
+    ? "saved-vehicles"
+    : path;
+  if (!path || !ALLOWED_PATHS.has(route)) {
     return res.status(404).json({ error: "Visitor endpoint not found" });
   }
   if (!CHAT_UPSTREAM_URL) {

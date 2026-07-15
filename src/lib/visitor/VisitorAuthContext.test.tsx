@@ -42,6 +42,9 @@ describe("VisitorAuthProvider", () => {
       logout: async () => undefined,
       getMe: async () => null,
       getLoyalty: async () => ({ points: 0, tier: null, transactions: [] }),
+      getSavedVehicles: async () => [],
+      saveVehicle: async () => ({ created: true }),
+      removeSavedVehicle: async () => undefined,
     };
 
     render(

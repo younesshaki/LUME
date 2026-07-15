@@ -89,6 +89,39 @@ describe("visitor client", () => {
     await expect(client.getLoyalty()).resolves.toEqual(loyalty);
   });
 
+  it("uses the credentialed saved-vehicle endpoints", async () => {
+    const savedVehicle = {
+      id: "save-1",
+      vehicleId: "11111111-1111-4111-8111-111111111111",
+      savedAt: "2026-07-15T00:00:00.000Z",
+      year: 2025,
+      make: "LUME",
+      model: "GT",
+      trim: null,
+      price: 100000,
+      status: "live",
+      imageSrc: null,
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ savedVehicles: [savedVehicle] }))
+      .mockResolvedValueOnce(jsonResponse({ created: true }, 201))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = createVisitorClient({ fetcher, tenantSlug: "atelier" });
+
+    await expect(client.getSavedVehicles()).resolves.toEqual([savedVehicle]);
+    await expect(client.saveVehicle(savedVehicle.vehicleId)).resolves.toEqual({ created: true });
+    await expect(client.removeSavedVehicle(savedVehicle.vehicleId)).resolves.toBeUndefined();
+
+    expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
+      "/api/visitor/saved-vehicles",
+      "/api/visitor/saved-vehicles",
+      `/api/visitor/saved-vehicles/${savedVehicle.vehicleId}`,
+    ]);
+    expect(fetcher.mock.calls[1]?.[1]).toMatchObject({ method: "POST", credentials: "include" });
+    expect(fetcher.mock.calls[2]?.[1]).toMatchObject({ method: "DELETE", credentials: "include" });
+  });
+
   it("logs out with a credentialed tenant-scoped POST and accepts an empty 204", async () => {
     const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       new Response(null, { status: 204 })

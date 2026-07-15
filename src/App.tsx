@@ -47,6 +47,7 @@ import {
 import { SeoProvider } from "./lib/seo/SeoProvider";
 import { ThemeProvider } from "./lib/theme/ThemeContext";
 import { VisitorAuthProvider } from "./lib/visitor/VisitorAuthContext";
+import { SavedVehiclesProvider } from "./lib/visitor/SavedVehiclesContext";
 import {
   loadAccountPage,
   loadAdminRouter,
@@ -415,6 +416,7 @@ export default function App() {
   return (
     <ThemeProvider enabled={!isAdminPath}>
       <VisitorAuthProvider enabled={!isAdminPath}>
+        <SavedVehiclesProvider enabled={!isAdminPath}>
         <SeoProvider pathname={location.pathname} enabled={!isAdminPath}>
       <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>
       <MediaQualitySettings
@@ -641,6 +643,7 @@ export default function App() {
       )}
       </div>
         </SeoProvider>
+        </SavedVehiclesProvider>
       </VisitorAuthProvider>
     </ThemeProvider>
   );

@@ -9,6 +9,7 @@ export * from "./leadsCsv";
 export * from "./audit";
 export * from "./visitors";
 export * from "./loyalty";
+export * from "./savedVehicles";
 export * from "./webhooks";
 export * from "./webhookQueue";
 export * from "./csvImports";

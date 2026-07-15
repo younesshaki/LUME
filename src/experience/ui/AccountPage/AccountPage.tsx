@@ -1,4 +1,5 @@
 import { LoyaltyWidget } from "@/components/visitor/LoyaltyWidget";
+import { SavedVehiclesWidget } from "@/components/visitor/SavedVehiclesWidget";
 import { VisitorAuthPanel } from "@/components/visitor/VisitorAuthPanel";
 import { useVisitorAuth } from "@/lib/visitor/VisitorAuthContext";
 import "@/components/visitor/visitor.css";
@@ -72,6 +73,7 @@ export default function AccountPage() {
             </section>
 
             <LoyaltyWidget visitorId={visitor.id} />
+            <SavedVehiclesWidget />
           </div>
         ) : null}
       </main>

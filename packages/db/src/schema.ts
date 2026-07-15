@@ -1107,6 +1107,21 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["visitors"]["Insert"]>;
         Relationships: [];
       };
+      visitor_saved_vehicles: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          visitor_id: string;
+          vehicle_id: string;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["visitor_saved_vehicles"]["Row"],
+          "id" | "created_at"
+        > & { id?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["visitor_saved_vehicles"]["Insert"]>;
+        Relationships: [];
+      };
       visitor_profiles: {
         Row: {
           visitor_id: string;

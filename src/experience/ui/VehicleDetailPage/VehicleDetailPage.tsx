@@ -10,6 +10,7 @@ import {
 } from "@/experience/vehicles/catalog";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { submitLead } from "@/lib/leads";
+import { useSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -17,7 +18,6 @@ import VehicleGallery from "./VehicleGallery";
 import { vehicleDetailSoundActions } from "./VehicleDetailPage.sounds";
 import "./VehicleDetailPage.css";
 
-const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
 
@@ -282,12 +282,12 @@ export default function VehicleDetailPage({
   onNavigateToContact,
 }: VehicleDetailPageProps) {
   const { play } = useSound();
+  const { savedIds, toggleSaved, error: savedError } = useSavedVehicles();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [images, setImages] = useState<VehicleGalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [inquiryOpen, setInquiryOpen] = useState(false);
-  const [savedIds, setSavedIds] = useState<string[]>(() => readStoredIds(SAVED_STORAGE_KEY));
   const [compareIds, setCompareIds] = useState<string[]>(() => readStoredIds(COMPARE_STORAGE_KEY).slice(0, 3));
   const [loadedPriceSignal, setLoadedPriceSignal] = useState<{
     vehicleId: string;
@@ -347,21 +347,13 @@ export default function VehicleDetailPage({
   }, [vehicle]);
 
   useEffect(() => {
-    writeStoredIds(SAVED_STORAGE_KEY, savedIds);
-  }, [savedIds]);
-
-  useEffect(() => {
     writeStoredIds(COMPARE_STORAGE_KEY, compareIds);
   }, [compareIds]);
 
-  const toggleSaved = () => {
+  const handleToggleSaved = () => {
     if (!vehicleId) return;
     play(vehicleDetailSoundActions.saveToggle);
-    setSavedIds((ids) =>
-      ids.includes(vehicleId)
-        ? ids.filter((id) => id !== vehicleId)
-        : [...ids, vehicleId]
-    );
+    void toggleSaved(vehicleId);
   };
 
   const toggleCompare = () => {
@@ -446,7 +438,7 @@ export default function VehicleDetailPage({
                       className={`vehicleDetail__iconBtn${saved ? " vehicleDetail__iconBtn--active" : ""}`}
                       aria-label={saved ? "Remove saved vehicle" : "Save vehicle"}
                       aria-pressed={saved}
-                      onClick={toggleSaved}
+                      onClick={handleToggleSaved}
                     >
                       <Heart size={17} fill={saved ? "currentColor" : "none"} />
                     </button>
@@ -461,6 +453,7 @@ export default function VehicleDetailPage({
                       {compared ? <Check size={17} /> : <GitCompare size={17} />}
                     </button>
                   </div>
+                  {savedError ? <p className="vehicleDetail__saveError" role="alert">{savedError}</p> : null}
 
                   <dl className="vehicleDetail__facts">
                     <DetailFact label="Mileage" value={formatMileage(vehicle.mileage)} />

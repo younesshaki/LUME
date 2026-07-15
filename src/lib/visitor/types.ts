@@ -38,3 +38,18 @@ export type VisitorLoyalty = {
   tier: LoyaltyTier | null;
   transactions: LoyaltyTransaction[];
 };
+
+export type SavedVehicleStatus = "live" | "sold" | "archived" | "draft" | "unavailable";
+
+export type VisitorSavedVehicle = {
+  id: string;
+  vehicleId: string;
+  savedAt: string;
+  year: number | null;
+  make: string | null;
+  model: string | null;
+  trim: string | null;
+  price: number | null;
+  status: SavedVehicleStatus;
+  imageSrc: string | null;
+};
