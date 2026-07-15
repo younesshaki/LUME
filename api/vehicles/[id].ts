@@ -150,18 +150,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // intentionally stricter, so the server-only client may read metadata only
   // after that visible row is found and only for its exact tenant + vehicle.
   const managedImages = await loadManagedGallery(imageClient, tenant.tenantId, vehicleId);
-  const gallery = managedImages
-    .map((image) => {
+  const gallery: GalleryImage[] = managedImages.flatMap((image) => {
       const src = managedVehicleImageUrl(r2PublicBaseUrl, image.r2_key);
-      if (!src) return null;
-      return {
+      if (!src) return [];
+      return [{
         src,
-        alt: image.ai_description ?? undefined,
+        ...(image.ai_description ? { alt: image.ai_description } : {}),
         isPrimary: image.is_primary,
         sortOrder: image.sort_order,
-      } satisfies GalleryImage;
-    })
-    .filter((image): image is GalleryImage => image !== null);
+      }];
+    });
 
   const primary = gallery[0];
   const vehicle = rowToVehicle(row, primary);
