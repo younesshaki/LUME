@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Check, GitCompare, Heart, Send, X } from "lucide-react";
+import { Check, GitCompare, Heart, Loader2, Send, X } from "lucide-react";
 import {
   formatVehiclePrice,
   loadVehicleById,
@@ -8,6 +8,7 @@ import {
   type VehicleGalleryImage,
   type VehiclePriceSignal,
 } from "@/experience/vehicles/catalog";
+import { publicTenantSlug } from "@/lib/publicTenant";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -98,6 +99,27 @@ function DetailFact({ label, value }: { label: string; value: string }) {
   );
 }
 
+function splitName(name: string): { firstName: string; lastName: string } {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts.shift() ?? "",
+    lastName: parts.join(" "),
+  };
+}
+
+function attributionFromLocation() {
+  if (typeof window === "undefined") {
+    return { utmSource: null, utmMedium: null, utmCampaign: null, utmContent: null };
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    utmSource: params.get("utm_source"),
+    utmMedium: params.get("utm_medium"),
+    utmCampaign: params.get("utm_campaign"),
+    utmContent: params.get("utm_content"),
+  };
+}
+
 function InquiryModal({
   open,
   vehicle,
@@ -108,19 +130,79 @@ function InquiryModal({
   onClose: () => void;
 }) {
   const { play } = useSound();
-  const [submitted, setSubmitted] = useState(false);
+  const [submittedLeadId, setSubmittedLeadId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const dialogRef = useDialogKeyboard(open, onClose);
 
   useEffect(() => {
-    if (open) setSubmitted(false);
-  }, [open]);
+    if (!open) return;
+    setSubmittedLeadId(null);
+    setSubmitError(null);
+    setSubmitting(false);
+  }, [open, vehicle.id]);
 
   if (!open) return null;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    play(vehicleDetailSoundActions.inquirySubmit);
-    setSubmitted(true);
+    if (submitting) return;
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const name = String(formData.get("name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
+    const message = String(formData.get("message") ?? "").trim();
+    const { firstName, lastName } = splitName(name);
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Lume-Tenant": publicTenantSlug,
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: email || null,
+          phone: phone || null,
+          message: message || null,
+          vehicleId: vehicle.id,
+          source: "contact-form",
+          ...attributionFromLocation(),
+          referrer: typeof document === "undefined" ? null : document.referrer || null,
+          sourceContext: {
+            intent: "request-info",
+            pagePath: typeof window === "undefined" ? null : window.location.pathname,
+            vehicleTitle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+          },
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { leadId?: string; error?: string }
+        | null;
+      if (!response.ok || !payload?.leadId) {
+        throw new Error(payload?.error || "We could not submit your inquiry. Please try again.");
+      }
+
+      play(vehicleDetailSoundActions.inquirySubmit);
+      setSubmittedLeadId(payload.leadId);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "We could not submit your inquiry. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -135,7 +217,7 @@ function InquiryModal({
       >
         <div className="vehicleDetail__modalHeader">
           <div>
-            <p className="vehicleDetail__eyebrow">Demo inquiry</p>
+            <p className="vehicleDetail__eyebrow">Vehicle inquiry</p>
             <h2 id="vehicle-inquiry-title">{vehicle.year} {vehicle.make} {vehicle.model}</h2>
           </div>
           <button type="button" className="vehicleDetail__iconBtn" aria-label="Close inquiry" onClick={onClose}>
@@ -143,36 +225,45 @@ function InquiryModal({
           </button>
         </div>
 
-        {submitted ? (
-          <div className="vehicleDetail__success">
+        {submittedLeadId ? (
+          <div className="vehicleDetail__success" role="status" aria-live="polite">
             <Check size={22} />
-            <p>Inquiry saved for demo review.</p>
+            <div>
+              <p>Your inquiry was sent successfully.</p>
+              <p className="vehicleDetail__formHint">The dealership can now follow up with you.</p>
+            </div>
           </div>
         ) : (
           <form className="vehicleDetail__form" onSubmit={handleSubmit}>
             <label>
               <span>Name</span>
-              <input name="name" required autoComplete="name" />
+              <input name="name" required autoComplete="name" disabled={submitting} />
             </label>
             <label>
               <span>Email</span>
-              <input name="email" type="email" required autoComplete="email" />
+              <input name="email" type="email" required autoComplete="email" disabled={submitting} />
             </label>
             <label>
               <span>Phone</span>
-              <input name="phone" type="tel" autoComplete="tel" />
+              <input name="phone" type="tel" autoComplete="tel" disabled={submitting} />
             </label>
             <label>
               <span>Message</span>
               <textarea
                 name="message"
                 rows={4}
+                disabled={submitting}
                 defaultValue={`I would like more information about the ${vehicle.year} ${vehicle.make} ${vehicle.model}.`}
               />
             </label>
-            <button type="submit" className="vehicleDetail__primaryBtn">
-              <Send size={16} />
-              Submit demo inquiry
+            {submitError && (
+              <p className="vehicleDetail__formError" role="alert">
+                {submitError}
+              </p>
+            )}
+            <button type="submit" className="vehicleDetail__primaryBtn" disabled={submitting}>
+              {submitting ? <Loader2 size={16} aria-hidden="true" /> : <Send size={16} />}
+              {submitting ? "Sending inquiry…" : "Send inquiry"}
             </button>
           </form>
         )}
@@ -344,7 +435,7 @@ export default function VehicleDetailPage({
                     </p>
                   ) : null}
                   <p className="vehicleDetail__notice">
-                    Concept demo: price and imagery are representative until verified listing data is connected.
+                    Price and availability should be confirmed directly with the dealership.
                   </p>
 
                   <div className="vehicleDetail__actions">
@@ -387,7 +478,7 @@ export default function VehicleDetailPage({
                     <DetailFact label="Exterior" value={vehicle.exteriorColor} />
                     <DetailFact label="Interior" value={vehicle.interiorColor} />
                     <DetailFact label="Location" value={vehicle.sellerCity ? `${vehicle.sellerCity}, ${vehicle.sellerState}` : "N/A"} />
-                    <DetailFact label="Listing" value="Demo data" />
+                    <DetailFact label="Listing" value="Live inventory" />
                   </dl>
                 </div>
               </section>
