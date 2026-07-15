@@ -101,19 +101,18 @@ export async function POST(request: Request): Promise<Response> {
 
   const supabase = createServiceClient();
 
-  // A public inquiry may only reference a currently live vehicle owned by the
-  // resolved tenant. The FK alone cannot prevent a cross-tenant vehicle ID from
-  // being attached to a lead.
+  // The FK cannot prevent a cross-tenant vehicle ID from being attached to a
+  // lead. Browser inquiries additionally require a currently live listing;
+  // authenticated integrations may reference historical tenant inventory.
   if (lead.vehicleId) {
     if (!UUID_PATTERN.test(lead.vehicleId)) {
       return json({ error: "Vehicle is unavailable" }, 400, request);
     }
     const { data: vehicle, error: vehicleError } = await supabase
       .from("vehicles")
-      .select("id, year, make, model, trim")
+      .select("id, status, year, make, model, trim")
       .eq("id", lead.vehicleId)
       .eq("tenant_id", tenant.tenantId)
-      .eq("status", "live")
       .maybeSingle();
     if (vehicleError) {
       captureError("api/leads/vehicle-validation", vehicleError, {
@@ -122,7 +121,9 @@ export async function POST(request: Request): Promise<Response> {
       });
       return json({ error: "Unable to validate vehicle" }, 500, request);
     }
-    if (!vehicle) return json({ error: "Vehicle is unavailable" }, 400, request);
+    if (!vehicle || (!apiKey && vehicle.status !== "live")) {
+      return json({ error: "Vehicle is unavailable" }, 400, request);
+    }
 
     if (sourceContext?.trigger === "vehicle-detail") {
       const canonicalTitle = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
