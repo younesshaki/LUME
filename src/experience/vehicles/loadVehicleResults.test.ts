@@ -51,4 +51,28 @@ describe("loadVehicleResults pagination", () => {
     expect(first.totalCount).toBe(73);
     expect(second.totalCount).toBe(73);
   });
+
+  it("uses one legacy CSV request instead of draining API pages after an API failure", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 503, statusText: "Unavailable" })
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => [
+          "_primaryKey,stockType,year,make,model,trim,mileage,bodyStyle,exteriorColor,interiorColor,drivetrain,fuelType,sellerCity,sellerState",
+          "fallback-1,Used,2022,Toyota,Camry,SE,20000,Sedan,Blue,Black,FWD,Gasoline,Austin,TX",
+        ].join("\n"),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await loadVehicleResults(
+      { ...DEFAULT_FILTERS, make: "BoundedFallbackMake" },
+      "recommended",
+      1,
+      24,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/vehicles");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("vehicles-with-generated-images.csv");
+  });
 });

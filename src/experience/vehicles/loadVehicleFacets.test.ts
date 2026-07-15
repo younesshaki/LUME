@@ -56,6 +56,18 @@ describe("loadVehicleFacets", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("refreshes cached facets after the short TTL", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    const fetchMock = mockFacets({ makes: ["TTLMake"], models: [], states: [], cities: [] });
+
+    await loadVehicleFacets("TTLMake", "WA");
+    await loadVehicleFacets("TTLMake", "WA");
+    now.mockReturnValue(61_001);
+    await loadVehicleFacets("TTLMake", "WA");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("sends make/state as query params", async () => {
     const fetchMock = mockFacets({ makes: [], models: [], states: [], cities: [] });
     await loadVehicleFacets("Ford", "FL");

@@ -349,7 +349,13 @@ export async function loadVehicleResults(
     console.warn("Falling back to local vehicle filtering after API query failed", error);
   }
 
-  const vehicles = await loadVehicles();
+  // Keep the degraded path bounded. Retrying loadVehicles() here would drain
+  // the API in sequential 200-item requests after a transient page failure.
+  // The legacy CSV is valid only for the default tenant; other tenants must
+  // never receive another tenant's fallback catalog.
+  const vehicles = TENANT_SLUG === "default"
+    ? (cached ?? await loadVehiclesFromCsv())
+    : [];
   const filtered = filterVehicles(vehicles, filters);
   const sorted = sortVehicles(filtered, sort);
   const offset = (Math.max(1, page) - 1) * pageSize;
@@ -616,7 +622,8 @@ export function vehicleFiltersToApiSearchParams(
   return params;
 }
 
-const facetsCache = new Map<string, VehicleFacets>();
+const FACETS_CACHE_MS = 60_000;
+const facetsCache = new Map<string, { facets: VehicleFacets; expiresAt: number }>();
 const VEHICLE_COUNT_CACHE_MS = 15_000;
 const vehicleCountCache = new Map<string, { count: number; expiresAt: number }>();
 
@@ -641,18 +648,20 @@ function readCachedVehicleCount(key: string): number | null {
 /**
  * Load filter-dropdown values from the lightweight facets endpoint (distinct
  * sets computed server-side), scoped to the selected make/state. Results are
- * memoized per (make, state) for the session; on failure we derive facets from
- * the cached catalog so the dropdowns still populate (and the default tenant's
- * CSV path keeps working). This replaces deriving facets from a full catalog
- * download on every page/sort change.
+ * memoized briefly per (make, state); on failure we derive facets only from an
+ * already-loaded legacy catalog. The TTL keeps admin catalog changes visible
+ * without downloading the full catalog on every page/sort change.
  */
 export async function loadVehicleFacets(
   make: string,
   sellerState: string,
 ): Promise<VehicleFacets> {
   const key = `${make}\u0000${sellerState}`;
-  const cached = facetsCache.get(key);
-  if (cached) return cached;
+  const cachedFacets = facetsCache.get(key);
+  if (cachedFacets && cachedFacets.expiresAt > Date.now()) {
+    return cachedFacets.facets;
+  }
+  if (cachedFacets) facetsCache.delete(key);
 
   try {
     const params = new URLSearchParams();
@@ -664,7 +673,7 @@ export async function loadVehicleFacets(
     });
     if (!res.ok) throw new Error(`Facets API ${res.status}: ${res.statusText}`);
     const facets = normalizeVehicleFacets((await res.json()) as VehicleFacets);
-    facetsCache.set(key, facets);
+    facetsCache.set(key, { facets, expiresAt: Date.now() + FACETS_CACHE_MS });
     return facets;
   } catch (error) {
     console.warn("Vehicle facets API failed", error);
@@ -674,7 +683,7 @@ export async function loadVehicleFacets(
     const fallback = cached
       ? vehicleFacetsFromVehicles(cached, { make, sellerState })
       : normalizeVehicleFacets(undefined);
-    facetsCache.set(key, fallback);
+    facetsCache.set(key, { facets: fallback, expiresAt: Date.now() + FACETS_CACHE_MS });
     return fallback;
   }
 }

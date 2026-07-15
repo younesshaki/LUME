@@ -11,16 +11,27 @@ create table if not exists public.tenant_inventory_versions (
 
 alter table public.tenant_inventory_versions enable row level security;
 
-drop policy if exists "tenant_inventory_versions_select_public_active" on public.tenant_inventory_versions;
-create policy "tenant_inventory_versions_select_public_active"
-  on public.tenant_inventory_versions for select
-  using (
-    exists (
-      select 1 from public.tenants t
-      where t.id = tenant_inventory_versions.tenant_id
-        and t.status = 'active'
-    )
-  );
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'tenant_inventory_versions'
+      and policyname = 'tenant_inventory_versions_select_public_active'
+  ) then
+    create policy "tenant_inventory_versions_select_public_active"
+      on public.tenant_inventory_versions for select
+      using (
+        exists (
+          select 1 from public.tenants t
+          where t.id = tenant_inventory_versions.tenant_id
+            and t.status = 'active'
+        )
+      );
+  end if;
+end;
+$$;
 
 create or replace function public.bump_tenant_inventory_version()
 returns trigger
@@ -32,6 +43,17 @@ declare
   affected_tenant_id uuid;
 begin
   affected_tenant_id := case when tg_op = 'DELETE' then old.tenant_id else new.tenant_id end;
+
+  -- A tenant reassignment invalidates both catalogs. Ordinary updates, inserts,
+  -- and deletes still touch only one version row.
+  if tg_op = 'UPDATE' and old.tenant_id is distinct from new.tenant_id then
+    insert into public.tenant_inventory_versions (tenant_id, version, updated_at)
+    values (old.tenant_id, 1, now())
+    on conflict (tenant_id) do update
+      set version = public.tenant_inventory_versions.version + 1,
+          updated_at = excluded.updated_at;
+  end if;
+
   insert into public.tenant_inventory_versions (tenant_id, version, updated_at)
   values (affected_tenant_id, 1, now())
   on conflict (tenant_id) do update
@@ -46,13 +68,11 @@ $$;
 
 revoke all on function public.bump_tenant_inventory_version() from public;
 
-drop trigger if exists vehicles_bump_inventory_version on public.vehicles;
-create trigger vehicles_bump_inventory_version
+create or replace trigger vehicles_bump_inventory_version
 after insert or update or delete on public.vehicles
 for each row execute function public.bump_tenant_inventory_version();
 
-drop trigger if exists vehicle_images_bump_inventory_version on public.vehicle_images;
-create trigger vehicle_images_bump_inventory_version
+create or replace trigger vehicle_images_bump_inventory_version
 after insert or update or delete on public.vehicle_images
 for each row execute function public.bump_tenant_inventory_version();
 
@@ -69,7 +89,7 @@ returns table (
   year integer,
   make text,
   model text,
-  trim text,
+  "trim" text,
   price numeric,
   mileage integer,
   body_style text,
