@@ -55,7 +55,6 @@ export function TurnstileField({
 
     return () => {
       cancelled = true;
-      onTokenChange(null);
       if (widgetId && window.turnstile) window.turnstile.remove(widgetId);
     };
   }, [onTokenChange]);
