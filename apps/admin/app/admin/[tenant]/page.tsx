@@ -173,6 +173,12 @@ export default async function TenantOverviewPage({ params }: PageProps) {
               </Link>
             </Button>
             <Button variant="outline" className="justify-between" asChild>
+              <Link href={`/admin/${slug}/customers`}>
+                View registered customers
+                <ArrowRight />
+              </Link>
+            </Button>
+            <Button variant="outline" className="justify-between" asChild>
               <Link href={`/admin/${slug}/persona`}>
                 Tune your AI concierge
                 <ArrowRight />
