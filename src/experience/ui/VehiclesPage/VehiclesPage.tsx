@@ -43,6 +43,7 @@ import {
 } from "@/lib/botActionConsumers";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
+import { useSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { useVehiclesPageStateBridge } from "./VehiclesPage.state";
@@ -50,7 +51,6 @@ import { vehiclePageSoundActions } from "./VehiclesPage.sounds";
 import "./VehiclesPage.css";
 
 const PAGE_SIZE = 24;
-const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
 const SCROLL_STORAGE_PREFIX = "lume.vehicle-scroll:";
 const EMPTY_VEHICLE_FACETS: VehicleFacets = {
@@ -792,6 +792,7 @@ export default function VehiclesPage({
   onSelectVehicle,
 }: VehiclesPageProps) {
   const { play } = useSound();
+  const { savedIds: savedVehicleIds, toggleSaved: togglePersistentSave } = useSavedVehicles();
   const { mode } = useDualMode();
   const isStandard = mode === "standard";
   const initialState = useMemo(() => {
@@ -810,7 +811,6 @@ export default function VehiclesPage({
   const [sort, setSort] = useState<VehicleSort>(initialState.sort);
   const [page, setPage] = useState(initialState.page);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [savedVehicleIds, setSavedVehicleIds] = useState<string[]>(() => readStoredIds(SAVED_STORAGE_KEY));
   const [compareVehicleIds, setCompareVehicleIds] = useState<string[]>(() => readStoredIds(COMPARE_STORAGE_KEY).slice(0, 3));
   const [compareOpen, setCompareOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -885,10 +885,6 @@ export default function VehiclesPage({
   }, [page, safePage]);
 
   useEffect(() => {
-    writeStoredIds(SAVED_STORAGE_KEY, savedVehicleIds);
-  }, [savedVehicleIds]);
-
-  useEffect(() => {
     writeStoredIds(COMPARE_STORAGE_KEY, compareVehicleIds);
   }, [compareVehicleIds]);
 
@@ -943,11 +939,7 @@ export default function VehiclesPage({
   });
 
   const toggleSaved = (vehicleId: string) => {
-    setSavedVehicleIds((ids) =>
-      ids.includes(vehicleId)
-        ? ids.filter((id) => id !== vehicleId)
-        : [...ids, vehicleId]
-    );
+    void togglePersistentSave(vehicleId);
   };
 
   const toggleCompare = (vehicleId: string) => {
