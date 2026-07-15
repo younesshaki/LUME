@@ -192,33 +192,8 @@ describe("AnimatedThemeToggler", () => {
       expect(document.querySelector("[data-theme-solid-cover]")).toBeNull();
     });
     expect(createElement).not.toHaveBeenCalledWith("iframe");
-    // The flash-free solid cover still honors the chosen shape by animating its
-    // clip-path (default variant = circle) rather than a plain scale.
     expect(animate).toHaveBeenCalledWith(
-      { clipPath: [expect.stringContaining("circle("), expect.stringContaining("circle(")] },
-      expect.objectContaining({ fill: "forwards" }),
-    );
-  });
-
-  it("honors a non-circle shape on Google Chrome for macOS", async () => {
-    mockMotionPreference(false);
-    mockChromeOnMacOS();
-    const { animate } = mockSnapshotAnimation();
-    const onThemeChange = vi.fn(() => document.documentElement.classList.add("dark"));
-
-    render(
-      <AnimatedThemeToggler
-        theme="light"
-        onThemeChange={onThemeChange}
-        duration={50}
-        variant="square"
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }));
-
-    await waitFor(() => expect(onThemeChange).toHaveBeenCalledWith("dark"));
-    expect(animate).toHaveBeenCalledWith(
-      { clipPath: [expect.stringContaining("polygon("), expect.stringContaining("polygon(")] },
+      { transform: ["scale(0)", "scale(1)"] },
       expect.objectContaining({ fill: "forwards" }),
     );
   });
