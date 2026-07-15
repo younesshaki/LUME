@@ -75,6 +75,11 @@ type ManagedVehicleImageRow = {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const PUBLIC_VEHICLE_DETAIL_COLUMNS =
+  "id, tenant_id, external_id, stock_type, year, make, model, trim, price, mileage, " +
+  "body_style, exterior_color, interior_color, drivetrain, fuel_type, image_src, " +
+  "seller_city, seller_state, is_special, special_image_src, status, sold_at, sold_price";
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") {
     setCorsHeaders(req, res);
@@ -117,9 +122,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { data: row, error } = await supabase
     .from("vehicles")
-    .select("*")
+    .select(PUBLIC_VEHICLE_DETAIL_COLUMNS)
     .eq("tenant_id", tenant.tenantId)
     .eq("id", vehicleId)
+    .eq("status", "live")
     .maybeSingle();
 
   if (error) {

@@ -55,6 +55,7 @@ export async function GET(
     .select("*")
     .eq("tenant_id", tenant.tenantId)
     .eq("id", vehicleId)
+    .eq("status", "live")
     .maybeSingle();
 
   if (error) {
