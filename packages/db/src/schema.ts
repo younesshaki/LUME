@@ -1461,6 +1461,10 @@ export type Database = {
         Args: { p_tenant_id: string; p_since: string };
         Returns: Array<{ event_name: string; event_count: number; session_count: number }>;
       };
+      tenant_conversion_report: {
+        Args: { p_tenant_id: string; p_since: string };
+        Returns: Record<string, unknown>;
+      };
       archive_due_sold_vehicles: {
         Args: { p_cutoff: string; p_limit?: number };
         Returns: { vehicle_id: string }[];
