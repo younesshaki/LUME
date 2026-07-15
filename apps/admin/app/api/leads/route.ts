@@ -37,13 +37,13 @@ import { captureError } from "@/lib/observability";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeadersFor(request) });
 }
 
 export async function POST(request: Request): Promise<Response> {
-  // SCRUM-106: a presented API key is authoritative — it must verify, and it
-  // binds the tenant. Browser callers (no key) keep the origin gate.
   const presentedKey = apiKeyFromRequest(request);
   const apiKey = presentedKey ? await verifyTenantApiKey(presentedKey, "leads:write") : null;
   if (presentedKey && !apiKey) {
@@ -90,6 +90,21 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const supabase = createServiceClient();
+
+  // A vehicle foreign key only proves that the row exists. Public inquiries
+  // must also prove that it belongs to the resolved tenant and is currently
+  // visible; otherwise one tenant could attach a lead to another tenant's car.
+  if (lead.vehicleId) {
+    const vehicleIsAvailable = await validateInquiryVehicle(
+      supabase,
+      tenant.tenantId,
+      lead.vehicleId,
+    );
+    if (!vehicleIsAvailable) {
+      return json({ error: "This vehicle is no longer available." }, 400, request);
+    }
+  }
+
   const quota = await checkPublicApiQuota(tenant.tenantId, "lead_requests", supabase);
   if (!quota.allowed) return json(quotaExceededPayload(quota), 429, request);
   const quotaHeaders = quotaResponseHeaders(quota);
@@ -102,7 +117,6 @@ export async function POST(request: Request): Promise<Response> {
     return json(response, 200, request, quotaHeaders);
   }
 
-  // SCRUM-178: attribute the lead to a signed-in visitor when one is present.
   const visitor = await resolveVisitor(request, tenant.tenantId, supabase).catch(() => null);
 
   const insert: Database["public"]["Tables"]["leads"]["Insert"] = {
@@ -184,6 +198,26 @@ export async function POST(request: Request): Promise<Response> {
 
   const response: LeadCaptureResponse = { leadId: data.id };
   return json(response, 201, request, quotaHeaders);
+}
+
+async function validateInquiryVehicle(
+  supabase: ReturnType<typeof createServiceClient>,
+  tenantId: string,
+  vehicleId: string,
+): Promise<boolean> {
+  if (!UUID_PATTERN.test(vehicleId)) return false;
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id")
+    .eq("id", vehicleId)
+    .eq("tenant_id", tenantId)
+    .eq("status", "live")
+    .maybeSingle();
+  if (error) {
+    captureError("api/leads/vehicle-validation", error, { tenantId, vehicleId });
+    return false;
+  }
+  return Boolean(data);
 }
 
 function boundedHeader(value: string | null, maxLength: number): string | null {
