@@ -67,7 +67,7 @@ export async function submitVehicleInquiry(
       duplicate: response.status === 200,
     };
   } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
+    if (error instanceof Error && error.name === "AbortError") {
       throw new Error("The inquiry timed out. Please check your connection and try again.");
     }
     throw error;
