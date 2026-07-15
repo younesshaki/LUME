@@ -11,7 +11,7 @@
  * (`Authorization: Bearer lume_sk_…`, scope `leads:write`), which pins the
  * tenant to the key, forces source "api", and skips the browser-only checks.
  */
-import type { LeadCaptureResponse } from "@lume/types";
+import type { LeadCaptureResponse, LeadSourceContext } from "@lume/types";
 import {
   accrueLoyaltyPoints,
   enqueueLeadCreatedWebhooks,
@@ -76,6 +76,14 @@ export async function POST(request: Request): Promise<Response> {
 
   const lead = validation.value;
   if (apiKey) lead.source = "api";
+  let sourceContext: LeadSourceContext | null = lead.sourceContext;
+  if (
+    sourceContext?.trigger === "vehicle-detail" &&
+    sourceContext.vehicleId !== lead.vehicleId
+  ) {
+    return json({ error: "Vehicle inquiry context does not match the requested vehicle" }, 400, request);
+  }
+
   const ip = requestIp(request);
   const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (
@@ -102,7 +110,7 @@ export async function POST(request: Request): Promise<Response> {
     }
     const { data: vehicle, error: vehicleError } = await supabase
       .from("vehicles")
-      .select("id")
+      .select("id, year, make, model, trim")
       .eq("id", lead.vehicleId)
       .eq("tenant_id", tenant.tenantId)
       .eq("status", "live")
@@ -115,6 +123,16 @@ export async function POST(request: Request): Promise<Response> {
       return json({ error: "Unable to validate vehicle" }, 500, request);
     }
     if (!vehicle) return json({ error: "Vehicle is unavailable" }, 400, request);
+
+    if (sourceContext?.trigger === "vehicle-detail") {
+      const canonicalTitle = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+        .filter((part) => part !== null && part !== undefined && String(part).trim())
+        .join(" ");
+      sourceContext = {
+        ...sourceContext,
+        ...(canonicalTitle ? { vehicleTitle: canonicalTitle } : {}),
+      };
+    }
   }
 
   const quota = await checkPublicApiQuota(tenant.tenantId, "lead_requests", supabase);
@@ -149,7 +167,7 @@ export async function POST(request: Request): Promise<Response> {
     utm_campaign: lead.utmCampaign,
     utm_content: lead.utmContent,
     referrer: lead.referrer ?? boundedHeader(request.headers.get("referer"), 2_048),
-    source_context: lead.sourceContext,
+    source_context: sourceContext,
     ip_addr: ip,
     user_agent: request.headers.get("user-agent"),
     lost_reason: null,
