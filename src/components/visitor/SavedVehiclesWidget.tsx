@@ -35,7 +35,7 @@ export function SavedVehiclesWidget() {
   );
 }
 
-function SavedVehicleCard({ vehicle, onRemove }: { vehicle: VisitorSavedVehicle; onRemove: (vehicleId: string) => Promise<void> }) {
+function SavedVehicleCard({ vehicle, onRemove }: { vehicle: VisitorSavedVehicle; onRemove: (vehicleId: string) => Promise<boolean> }) {
   const title = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ") || "Unavailable vehicle";
   const isAvailable = vehicle.status === "live";
   const content = (
