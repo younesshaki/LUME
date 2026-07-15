@@ -44,23 +44,30 @@ function ActiveSavedVehiclesProvider({
   const [status, setStatus] = useState<"loading" | "ready" | "error">("ready");
   const [error, setError] = useState<string | null>(null);
   const syncedVisitorRef = useRef<string | null>(null);
+  const activeVisitorRef = useRef<string | null>(null);
   const inFlight = useRef(new Set<string>());
 
   const refresh = useCallback(async () => {
     if (auth.status !== "authenticated" || !auth.visitor) {
+      activeVisitorRef.current = null;
       setSavedVehicles([]);
       setSavedIds(readSavedVehicleIds());
       setStatus("ready");
       return;
     }
+    const visitorId = auth.visitor.id;
+    activeVisitorRef.current = visitorId;
     setStatus("loading");
     try {
+      const retryIds = await synchronizeSavedVehicleIds(readSavedVehicleIds(), (vehicleId) => client.saveVehicle(vehicleId));
       const saves = await client.getSavedVehicles();
+      if (activeVisitorRef.current !== visitorId) return;
       setSavedVehicles(saves);
       setSavedIds(saves.map((save) => save.vehicleId));
       setStatus("ready");
-      setError(null);
+      setError(retryIds.length ? "Some saved vehicles will be retried later." : null);
     } catch (reason) {
+      if (activeVisitorRef.current !== visitorId) return;
       setStatus("error");
       setError(messageFor(reason));
     }
@@ -69,6 +76,7 @@ function ActiveSavedVehiclesProvider({
   useEffect(() => {
     if (auth.status === "loading") return;
     if (auth.status !== "authenticated" || !auth.visitor) {
+      activeVisitorRef.current = null;
       syncedVisitorRef.current = null;
       setSavedVehicles([]);
       setSavedIds(readSavedVehicleIds());
@@ -81,27 +89,16 @@ function ActiveSavedVehiclesProvider({
     let cancelled = false;
 
     void (async () => {
-      setStatus("loading");
-      const localIds = readSavedVehicleIds();
-      const results = await Promise.allSettled(localIds.map((vehicleId) => client.saveVehicle(vehicleId)));
-      const retryIds = localIds.filter((_, index) => results[index]?.status === "rejected");
-      writeSavedVehicleIds(retryIds);
       try {
-        const saves = await client.getSavedVehicles();
-        if (cancelled) return;
-        setSavedVehicles(saves);
-        setSavedIds(saves.map((save) => save.vehicleId));
-        setStatus("ready");
-        setError(retryIds.length ? "Some saved vehicles will be retried later." : null);
+        await refresh();
       } catch (reason) {
         if (cancelled) return;
-        setSavedIds(uniqueIds([...localIds]));
         setStatus("error");
         setError(messageFor(reason));
       }
     })();
     return () => { cancelled = true; };
-  }, [auth.status, auth.visitor, client]);
+  }, [auth.status, auth.visitor, refresh]);
 
   const toggleSaved = useCallback(async (vehicleId: string) => {
     if (!vehicleId || inFlight.current.has(vehicleId)) return;
@@ -165,6 +162,23 @@ export function writeSavedVehicleIds(ids: readonly string[], storage: Storage | 
   } catch {
     // Storage failures must never block a save interaction.
   }
+}
+
+/**
+ * Sync an anonymous queue after authentication. Only rejected IDs stay in
+ * local storage, so a later refresh can retry them without duplicating the
+ * successful server saves or blocking account rendering.
+ */
+export async function synchronizeSavedVehicleIds(
+  ids: readonly string[],
+  saveVehicle: (vehicleId: string) => Promise<unknown>,
+  storage: Storage | null = browserStorage(),
+): Promise<string[]> {
+  const unique = uniqueIds(ids);
+  const results = await Promise.allSettled(unique.map((vehicleId) => saveVehicle(vehicleId)));
+  const retryIds = unique.filter((_, index) => results[index]?.status === "rejected");
+  writeSavedVehicleIds(retryIds, storage);
+  return retryIds;
 }
 
 function browserStorage(): Storage | null {
