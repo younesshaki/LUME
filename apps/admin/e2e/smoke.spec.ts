@@ -58,9 +58,27 @@ test("admin shell renders sidebar, tenant switcher, and no platform entry", asyn
   await expect(page.getByRole("link", { name: "Platform", exact: true })).toHaveCount(0);
 });
 
+test("theme reveal stays serialized and clean across 24 consecutive toggles", async () => {
+  const root = page.locator("html");
+  const toggle = page.getByRole("button", { name: "Toggle theme" });
+
+  for (let index = 0; index < 24; index += 1) {
+    const wasDark = await root.evaluate((element) => element.classList.contains("dark"));
+    await toggle.click();
+
+    await expect.poll(
+      () => root.evaluate((element) => element.classList.contains("dark")),
+    ).toBe(!wasDark);
+    await expect(page.locator("[data-theme-reveal-overlay]")).toHaveCount(0);
+    await expect(toggle).toBeFocused();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("theme")))
+      .toBe(wasDark ? "light" : "dark");
+  }
+});
+
 test("vehicles page shows the empty state for a fresh tenant", async () => {
   await page.goto(vehiclesUrl());
-  await expect(page.getByText("No vehicles yet")).toBeVisible();
+  await expect(page.getByText("No current vehicles yet")).toBeVisible();
 });
 
 test("CSV import previews and inserts rows", async () => {

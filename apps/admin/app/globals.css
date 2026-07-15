@@ -158,21 +158,27 @@ body {
   }
 }
 
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
+/* The theme reveal is a controlled, inert destination snapshot. It avoids
+   Chrome's browser-generated old/new root textures, which intermittently
+   flashed at the left compositor edge on macOS. */
+[data-theme-reveal-overlay] {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+  isolation: isolate;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: clip-path;
 }
 
-html[data-magicui-theme-vt="active"]::view-transition-old(root) {
-  z-index: 1;
-}
-
-html[data-magicui-theme-vt="active"]::view-transition-new(root) {
-  z-index: 2;
-  clip-path: var(--magicui-theme-vt-clip-from);
-}
-
-html[data-magicui-theme-vt="active"]::view-transition-group(root) {
-  animation-duration: var(--magicui-theme-toggle-vt-duration);
+[data-theme-reveal-overlay] > iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none;
+  color-scheme: light dark;
 }
