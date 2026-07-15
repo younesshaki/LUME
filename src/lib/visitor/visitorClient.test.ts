@@ -53,6 +53,21 @@ describe("visitor client", () => {
     await expect(client.getMe()).resolves.toBeNull();
   });
 
+  it("memoizes concurrent session checks", async () => {
+    let resolveResponse: ((response: Response) => void) | undefined;
+    const fetcher = vi.fn(() => new Promise<Response>((resolve) => {
+      resolveResponse = resolve;
+    }));
+    const client = createVisitorClient({ fetcher, tenantSlug: "default" });
+
+    const first = client.getMe();
+    const second = client.getMe();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    resolveResponse?.(jsonResponse({ visitor }));
+    await expect(Promise.all([first, second])).resolves.toEqual([visitor, visitor]);
+  });
+
   it("parses loyalty balances, tiers, and transactions", async () => {
     const loyalty = {
       points: 720,

@@ -1,14 +1,18 @@
 type InvitationCTAProps = {
   onClick: () => void;
+  onIntent?: () => void;
   className?: string;
   /** Configurable per tenant (theme.header.ctaLabel). */
   label?: string;
 };
 
-export function InvitationCTA({ onClick, className = "", label }: InvitationCTAProps) {
+export function InvitationCTA({ onClick, onIntent, className = "", label }: InvitationCTAProps) {
   return (
     <button
       onClick={onClick}
+      onMouseEnter={onIntent}
+      onFocus={onIntent}
+      onPointerDown={onIntent}
       className={`relative group px-5 py-2 text-xs tracking-[0.2em] uppercase text-[#C9A84C]
         border border-[#C9A84C]/60 hover:border-[#C9A84C] rounded-full
         transition-all duration-300 overflow-hidden cursor-pointer

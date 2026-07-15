@@ -5,6 +5,7 @@ export type DockItemData = {
   icon: React.ReactNode;
   label: React.ReactNode;
   onClick: () => void;
+  onIntent?: () => void;
   className?: string;
 };
 

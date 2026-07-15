@@ -1,5 +1,6 @@
 import "./App.scss";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import {
   Suspense,
   lazy,
@@ -46,48 +47,25 @@ import {
 import { SeoProvider } from "./lib/seo/SeoProvider";
 import { ThemeProvider } from "./lib/theme/ThemeContext";
 import { VisitorAuthProvider } from "./lib/visitor/VisitorAuthContext";
-
-if (isPageRendererEnabled) {
-  void import("./lib/pageBuilder/registerBlocks").then(({ registerBlocks }) => {
-    registerBlocks();
-  });
-}
-
-const loadAdminRouter = () => import("./admin/AdminRouter");
-const loadAccountPage = () => import("./experience/ui/AccountPage");
-const loadContactPage = () => import("./experience/ui/ContactPage");
-const loadExperience = () => import("./experience/Experience");
-const loadProductDetailPage = () => import("./experience/ui/ProductDetailPage");
-const loadProductsPage = () => import("./experience/ui/ProductsPage");
-const loadVehicleDetailPage = () => import("./experience/ui/VehicleDetailPage");
-const loadVehiclesPage = () => import("./experience/ui/VehiclesPage");
-const loadShowcasePage = () => import("./experience/ui/ShowcasePage");
-const loadShowcaseTitleCard = () => import("./experience/ui/ShowcaseTitleCard");
-const loadStoryHomePage = () => import("./experience/ui/StoryHomePage");
-const loadPageRendererRoutes = () => import("./lib/pageBuilder/PageRendererRoutes");
-const loadPagePreviewBridge = () => import("./lib/pageBuilder/PagePreviewBridge");
+import {
+  loadAccountPage,
+  loadAdminRouter,
+  loadContactPage,
+  loadExperience,
+  loadPagePreviewBridge,
+  loadPageRendererRoutes,
+  loadProductDetailPage,
+  loadProductsPage,
+  loadShowcasePage,
+  loadShowcaseTitleCard,
+  loadStoryHomePage,
+  loadVehicleDetailPage,
+  loadVehiclesPage,
+} from "./app-shell/routeModules";
 
 // The admin embeds this route in an iframe and streams draft blocks in over
 // postMessage. It renders the real block components with no site chrome.
 const PAGE_PREVIEW_PATH = "/__preview";
-
-/** Run a callback when the browser is idle; returns a cleanup that cancels it. */
-function whenIdle(callback: () => void): () => void {
-  if (typeof window === "undefined") return () => {};
-  const ric = (
-    window as unknown as {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    }
-  ).requestIdleCallback;
-  if (ric) {
-    const id = ric(callback, { timeout: 2000 });
-    return () =>
-      (window as unknown as { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
-  }
-  const id = window.setTimeout(callback, 1200);
-  return () => window.clearTimeout(id);
-}
 
 const AdminRouter = lazy(loadAdminRouter);
 const AccountPage = lazy(loadAccountPage);
@@ -278,26 +256,6 @@ export default function App() {
   const [cookieConsent, setCookieConsent] = useState<CookieConsent | null>(
     readCookieConsent
   );
-
-  // Prefetch only the routes a visitor is likely to reach next, and only when
-  // the browser is idle. Deliberately route-scoped: the Three.js Experience and
-  // the admin bundle are never pulled onto a light public route like /vehicles —
-  // they load on demand when actually navigated to.
-  useEffect(() => {
-    const common = [loadStoryHomePage, loadProductsPage, loadVehiclesPage, loadContactPage];
-    const bySection: Record<string, Array<() => Promise<unknown>>> = {
-      home: [...common, loadShowcasePage, loadVehicleDetailPage, loadProductDetailPage],
-      products: [loadProductDetailPage, loadStoryHomePage, loadVehiclesPage],
-      vehicles: [loadVehicleDetailPage, loadStoryHomePage, loadProductsPage],
-      showcase: [loadShowcaseTitleCard, loadExperience, loadStoryHomePage],
-      contact: [loadStoryHomePage, loadVehiclesPage],
-      account: [loadStoryHomePage],
-    };
-    const loaders = bySection[currentRouteConfig.section] ?? common;
-    return whenIdle(() => {
-      for (const load of loaders) void load();
-    });
-  }, [currentRouteConfig.section]);
 
   useEffect(() => {
     setActiveRoute(routeId);
@@ -675,7 +633,12 @@ export default function App() {
           <PreloadGate onStart={handleGateStart} />
         </>
       )}
-      {cookieConsent === "accepted" && <Analytics />}
+      {cookieConsent === "accepted" && (
+        <>
+          <Analytics />
+          <SpeedInsights />
+        </>
+      )}
       </div>
         </SeoProvider>
       </VisitorAuthProvider>

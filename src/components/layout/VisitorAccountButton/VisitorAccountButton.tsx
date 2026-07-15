@@ -1,6 +1,7 @@
 import { CircleUserRound } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTE_PATHS } from "@/app-shell/routePaths";
+import { preloadRouteModule } from "@/app-shell/routeModules";
 import { useVisitorAuth } from "@/lib/visitor/VisitorAuthContext";
 import "./VisitorAccountButton.css";
 
@@ -23,6 +24,9 @@ export function VisitorAccountButton() {
       aria-label={accessibleLabel}
       aria-current={isAccountRoute ? "page" : undefined}
       onClick={() => navigate(ROUTE_PATHS.account)}
+      onMouseEnter={() => preloadRouteModule("account")}
+      onFocus={() => preloadRouteModule("account")}
+      onPointerDown={() => preloadRouteModule("account")}
     >
       <CircleUserRound size={17} strokeWidth={1.8} aria-hidden="true" />
       <span>{shortLabel}</span>

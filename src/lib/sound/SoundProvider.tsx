@@ -2,7 +2,7 @@
  * LUME Sound System — provider
  *
  * Mount once at the app root. Initializes the engine (autoplay-policy
- * unlock listener + sound preload). Renders children unchanged — no
+ * unlock listener only). Renders children unchanged — no
  * wrapping markup, no context value (engine is module-global).
  */
 

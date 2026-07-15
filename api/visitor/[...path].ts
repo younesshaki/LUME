@@ -1,5 +1,25 @@
 /** Credential-preserving proxy from the public Vite deployment to admin visitor APIs. */
-import { visitorSessionCookieHeader } from "../visitorSessionCookie";
+
+// Inlined on purpose: this standalone Vercel function is bundled without its
+// relative deps, and root package.json is "type":"module", so a
+// `../visitorSessionCookie` import fails at runtime (ERR_MODULE_NOT_FOUND).
+const VISITOR_SESSION_COOKIE_NAME = "lume_visitor_session";
+
+/** Forward only the visitor session token; never proxy unrelated browser cookies. */
+function visitorSessionCookieHeader(rawCookie: string | undefined): string | undefined {
+  if (!rawCookie) return undefined;
+  for (const part of rawCookie.split(";")) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf("=");
+    if (separator < 1) continue;
+    const name = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1);
+    if (name === VISITOR_SESSION_COOKIE_NAME && value) {
+      return `${VISITOR_SESSION_COOKIE_NAME}=${value}`;
+    }
+  }
+  return undefined;
+}
 
 const CHAT_UPSTREAM_URL = process.env.LUME_CHAT_UPSTREAM_URL;
 const BYPASS_SECRET = process.env.LUME_CHAT_BYPASS_SECRET;
@@ -24,6 +44,7 @@ const RESPONSE_HEADERS = [
 
 type VercelRequest = {
   method?: string;
+  url?: string;
   body?: unknown;
   headers: Record<string, string | string[] | undefined>;
   query: Record<string, string | string[] | undefined>;
@@ -41,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!req.method || !["GET", "POST", "OPTIONS"].includes(req.method)) {
     return res.status(405).json({ error: "Method not allowed" });
   }
-  const path = query(req, "path")?.replace(/^\/+|\/+$/g, "");
+  const path = extractVisitorPath(req);
   if (!path || !ALLOWED_PATHS.has(path)) {
     return res.status(404).json({ error: "Visitor endpoint not found" });
   }
@@ -92,6 +113,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     reader.releaseLock();
     res.end();
   }
+}
+
+/**
+ * Resolve the visitor sub-path (e.g. "signup"). Parse the request URL first —
+ * that is deterministic — and only fall back to the [...path] catch-all query
+ * param, whose shape (string vs array vs absent) has varied across Vercel Node
+ * runtimes and was returning empty here, yielding a spurious 404.
+ */
+function extractVisitorPath(req: VercelRequest): string {
+  if (typeof req.url === "string" && req.url) {
+    try {
+      const pathname = new URL(req.url, "http://localhost").pathname;
+      const match = pathname.match(/\/api\/visitor\/(.+)$/);
+      if (match?.[1]) return decodeURIComponent(match[1].replace(/^\/+|\/+$/g, ""));
+    } catch {
+      // fall through to the query param
+    }
+  }
+  const raw = req.query?.path;
+  const joined = Array.isArray(raw) ? raw.join("/") : raw ?? "";
+  return joined.replace(/^\/+|\/+$/g, "");
 }
 
 function header(req: VercelRequest, name: string): string | undefined {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import VehicleGallery from "./VehicleGallery";
 import type { VehicleGalleryImage } from "@/experience/vehicles/catalog";
@@ -27,6 +27,7 @@ describe("VehicleGallery", () => {
     render(<VehicleGallery images={images} title="2022 BMW X5" />);
     await user.click(screen.getByRole("button", { name: "Next photo" }));
     expect(main().src).toContain("b.webp");
+    expect(main()).toHaveAttribute("loading", "lazy");
     expect(screen.getByText("2 / 3")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Previous photo" }));
     await user.click(screen.getByRole("button", { name: "Previous photo" }));
@@ -57,6 +58,26 @@ describe("VehicleGallery", () => {
     expect(within(dialog).getByRole("button", { name: "Close photo viewer" })).toBeInTheDocument();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View photo full screen" })).toHaveFocus();
+  });
+
+  it("keeps focus restoration stable after lightbox navigation", async () => {
+    const user = userEvent.setup();
+    render(<VehicleGallery images={images} title="2022 BMW X5" />);
+    const expand = screen.getByRole("button", { name: "View photo full screen" });
+    await user.click(expand);
+    await user.keyboard("{ArrowRight}{Escape}");
+    expect(expand).toHaveFocus();
+  });
+
+  it("supports swipe navigation in the lightbox", async () => {
+    const user = userEvent.setup();
+    render(<VehicleGallery images={images} title="2022 BMW X5" />);
+    await user.click(screen.getByRole("button", { name: "View photo full screen" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.touchStart(dialog, { touches: [{ clientX: 180 }] });
+    fireEvent.touchEnd(dialog, { changedTouches: [{ clientX: 80 }] });
+    expect(within(dialog).getByRole("img").getAttribute("src")).toContain("b.webp");
   });
 
   it("hides navigation chrome for a single image", () => {

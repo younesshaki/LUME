@@ -2,6 +2,7 @@ import { mediaUrl } from "@/config/cdn";
 import { openCookiePreferences } from "@/components/CookieBanner/CookieBanner";
 import { Separator } from "@/components/ui/separator";
 import { SITE_NAV_ITEMS, type SiteScreen } from "../siteNavigation";
+import { preloadRouteModule } from "@/app-shell/routeModules";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
 
 const SOCIAL_LINKS = [
@@ -84,6 +85,9 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
               <button
                 key={item.screen}
                 onClick={() => onNavigate(item.screen)}
+                onMouseEnter={() => preloadRouteModule(item.screen)}
+                onFocus={() => preloadRouteModule(item.screen)}
+                onPointerDown={() => preloadRouteModule(item.screen)}
                 className="text-xs tracking-[0.18em] uppercase text-white/50
                   hover:text-[#C9A84C] transition-colors duration-200 cursor-pointer"
               >
