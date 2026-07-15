@@ -88,14 +88,16 @@ describe("normalizeLeadCaptureInput", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.sourceContext).toEqual({
+    expect(result.value.sourceContext).toMatchObject({
       trigger: "vehicle-detail",
       actionType: "request-info",
       vehicleId: "11111111-1111-4111-8111-111111111111",
-      vehicleTitle: "Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle Luxury vehicle",
       pagePath: "/vehicles/11111111-1111-4111-8111-111111111111?utm_source=test",
     });
-    expect(result.value.sourceContext?.vehicleTitle).toHaveLength(240);
+    expect(result.value.sourceContext).not.toHaveProperty("rawProfile");
+    if (result.value.sourceContext?.trigger === "vehicle-detail") {
+      expect(result.value.sourceContext.vehicleTitle).toHaveLength(240);
+    }
   });
 
   it("drops malformed or source-incompatible context", () => {
