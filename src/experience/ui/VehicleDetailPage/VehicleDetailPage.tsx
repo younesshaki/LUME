@@ -9,6 +9,7 @@ import {
   type VehiclePriceSignal,
 } from "@/experience/vehicles/catalog";
 import { submitVehicleInquiry } from "@/experience/leads/vehicleInquiry";
+import { isTurnstileConfigured, TurnstileField } from "@/components/forms/TurnstileField";
 import { useSound } from "@/lib/sound";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -112,7 +113,10 @@ function InquiryModal({
   const [submitting, setSubmitting] = useState(false);
   const [submission, setSubmission] = useState<{ duplicate: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileVersion, setTurnstileVersion] = useState(0);
   const dialogRef = useDialogKeyboard(open, onClose);
+  const turnstileRequired = isTurnstileConfigured();
   const vehicleTitle = `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}`;
 
   useEffect(() => {
@@ -120,6 +124,8 @@ function InquiryModal({
     setSubmitting(false);
     setSubmission(null);
     setError(null);
+    setTurnstileToken(null);
+    setTurnstileVersion((version) => version + 1);
   }, [open, vehicle.id]);
 
   if (!open) return null;
@@ -127,6 +133,10 @@ function InquiryModal({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submitting) return;
+    if (turnstileRequired && !turnstileToken) {
+      setError("Complete the bot verification before sending your inquiry.");
+      return;
+    }
 
     const fields = new FormData(event.currentTarget);
     setSubmitting(true);
@@ -140,6 +150,7 @@ function InquiryModal({
         message: String(fields.get("message") ?? ""),
         vehicleId: vehicle.id,
         vehicleTitle,
+        turnstileToken: turnstileToken ?? undefined,
       });
       play(vehicleDetailSoundActions.inquirySubmit);
       setSubmission({ duplicate: result.duplicate });
@@ -149,6 +160,10 @@ function InquiryModal({
           ? submitError.message
           : "Unable to send your inquiry. Please try again.",
       );
+      if (turnstileRequired) {
+        setTurnstileToken(null);
+        setTurnstileVersion((version) => version + 1);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -212,6 +227,7 @@ function InquiryModal({
                 disabled={submitting}
               />
             </label>
+            <TurnstileField key={turnstileVersion} onTokenChange={setTurnstileToken} />
             {error && (
               <p className="vehicleDetail__formError" role="alert" aria-live="assertive">
                 {error}
