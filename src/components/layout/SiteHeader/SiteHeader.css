@@ -1,0 +1,9 @@
+.siteHeader {
+  color: var(--theme-lume-ink, #fff8ec);
+  border-color: var(--theme-lume-line, rgba(255, 248, 236, 0.12));
+  background: color-mix(in srgb, var(--theme-lume-background, #000) 78%, transparent);
+}
+
+:root[data-theme="light"] .siteHeader {
+  box-shadow: 0 1px 0 var(--theme-lume-line), 0 12px 34px rgba(47, 38, 25, 0.08);
+}

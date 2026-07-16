@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  applyTenantSiteDesign,
   applyTenantTheme,
   clearTenantThemeCacheForTests,
+  loadTenantSiteDesign,
   loadTenantTheme,
   tenantThemeToCssVariables,
 } from "./tenantTheme";
+import { createDefaultSiteDesign, getSiteTemplate } from "@lume/types";
 
 describe("tenant theme", () => {
   beforeEach(() => {
@@ -56,8 +59,37 @@ describe("tenant theme", () => {
       rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "function missing" } }),
     };
 
-    await expect(loadTenantTheme("default", client as never)).resolves.toEqual({});
+    await expect(loadTenantTheme("default", client as never)).resolves.toMatchObject({
+      colors: { background: "#000000", ink: "#fff8ec" },
+    });
     expect(client.rpc).toHaveBeenCalledWith("get_tenant_theme", { p_slug: "default" });
+  });
+
+  it("normalizes malformed public documents to Luxury", async () => {
+    const client = {
+      rpc: vi.fn().mockResolvedValue({ data: [{ theme: { schemaVersion: 2, modes: "bad" } }], error: null }),
+    };
+    const design = await loadTenantSiteDesign("malformed", client as never);
+    expect(design.template).toEqual({ key: "luxury", version: 1 });
+    expect(design.modes).toEqual({ dark: { colors: {} }, light: { colors: {} } });
+  });
+
+  it("applies only the active mode background and swaps immediately", () => {
+    const design = createDefaultSiteDesign(getSiteTemplate("luxury"));
+    design.modes.dark.assets = { siteBackground: { url: "https://cdn.example/dark.webp" } };
+    design.modes.light.assets = { siteBackground: { url: "https://cdn.example/light.webp", position: "top" } };
+
+    applyTenantSiteDesign(design, "dark", document.documentElement);
+    expect(document.documentElement.style.getPropertyValue("--theme-site-background-image"))
+      .toContain("dark.webp");
+    expect(document.documentElement.style.getPropertyValue("--theme-site-background-image"))
+      .not.toContain("light.webp");
+
+    applyTenantSiteDesign(design, "light", document.documentElement);
+    expect(document.documentElement.style.getPropertyValue("--theme-site-background-image"))
+      .toContain("light.webp");
+    expect(document.documentElement.style.getPropertyValue("--theme-lume-background")).toBe("#f4efe5");
+    expect(document.documentElement.style.getPropertyValue("--theme-site-background-position")).toBe("top");
   });
 
   it("keeps the public vehicle price-signal opt-in boolean", async () => {

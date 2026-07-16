@@ -166,9 +166,68 @@ test("website hub lists editable surfaces and the live preview", async () => {
   // Entry points into every editable surface.
   await expect(page.getByRole("link", { name: /Pages & content/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Header & navigation/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Branding & theme/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Templates/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Website design/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Logo & favicons/ })).toBeVisible();
   // The true-to-production preview surface.
-  await expect(page.getByText("Live site preview")).toBeVisible();
+  await expect(page.getByText("Published website preview")).toBeVisible();
+});
+
+test("website design publishes separate dark and light backgrounds", async () => {
+  test.skip(
+    process.env.LUME_E2E_SITE_DESIGN !== "1" || !process.env.LUME_E2E_PUBLIC_URL,
+    "requires staging migrations 066/067 and LUME_E2E_PUBLIC_URL",
+  );
+  const tinyPng = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  );
+
+  await page.goto(`/admin/${tenantSlug}/templates`);
+  await page.getByRole("button", { name: "Use template" }).click();
+  await expect(page.getByText(/Nothing changes on the public website/i)).toBeVisible();
+  await page.getByRole("button", { name: "Prepare draft" }).click();
+  await page.waitForURL(`**/admin/${tenantSlug}/design?source=template`);
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "website-dark.png",
+    mimeType: "image/png",
+    buffer: tinyPng,
+  });
+  await expect(page.getByText(/Dark background uploaded to this draft/i)).toBeVisible();
+
+  await page.getByRole("tab", { name: "Website light mode" }).click();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "website-light.png",
+    mimeType: "image/png",
+    buffer: tinyPng,
+  });
+  await expect(page.getByText(/Light background uploaded to this draft/i)).toBeVisible();
+  await expect(page.getByText("Unpublished changes")).toBeVisible();
+
+  await page.getByRole("button", { name: "Publish website design" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText("Pages, inventory, navigation, logo, favicons, and domains remain unchanged");
+  await dialog.getByRole("button", { name: "Publish website design" }).click();
+  await expect(page.getByText("Website design published.")).toBeVisible();
+
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem("lume.gate-passed.v1", "1");
+    window.localStorage.setItem("lume.color-theme.v1", "dark");
+  });
+  const publicUrl = process.env.LUME_E2E_PUBLIC_URL!.replace(/\/+$/, "");
+  await page.goto(`${publicUrl}/home?tenant=${encodeURIComponent(tenantSlug)}`);
+  await expect.poll(() => page.locator("html").evaluate((element) =>
+    getComputedStyle(element).getPropertyValue("--theme-site-background-image"),
+  )).toContain("siteBackground-");
+  const darkBackground = await page.locator("html").evaluate((element) =>
+    getComputedStyle(element).getPropertyValue("--theme-site-background-image"),
+  );
+  await page.getByRole("button", { name: /Color theme: Dark\. Switch to Auto/i }).click();
+  await page.getByRole("button", { name: /Color theme: Auto.*Switch to Light/i }).click();
+  await expect.poll(() => page.locator("html").evaluate((element) =>
+    getComputedStyle(element).getPropertyValue("--theme-site-background-image"),
+  )).not.toBe(darkBackground);
 });
 
 test("navigation settings page previews the published header nav", async () => {

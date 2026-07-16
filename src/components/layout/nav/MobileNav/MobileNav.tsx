@@ -44,22 +44,22 @@ export function MobileNav({
     <Sheet open={open} onOpenChange={setMenuOpen}>
       <SheetTrigger
         aria-label="Open navigation menu"
-        className="md:hidden p-2 text-white/70 hover:text-white transition-colors cursor-pointer
+        className="md:hidden p-2 text-[var(--theme-lume-muted)] hover:text-[var(--theme-lume-ink)] transition-colors cursor-pointer
           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C9A84C] rounded"
       >
         <Menu size={22} />
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="w-72 bg-[#080808] border-l border-[#C9A84C]/20 p-0 flex flex-col"
+        className="w-72 bg-[var(--theme-lume-panel)] text-[var(--theme-lume-ink)] border-l border-[var(--theme-lume-line)] p-0 flex flex-col"
       >
         <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
-          <span className="text-xs tracking-[0.25em] uppercase text-white/40">Menu</span>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--theme-lume-line)]">
+          <span className="text-xs tracking-[0.25em] uppercase text-[var(--theme-lume-soft)]">Menu</span>
           <button
             onClick={() => setMenuOpen(false)}
             aria-label="Close menu"
-            className="p-1 text-white/50 hover:text-white transition-colors cursor-pointer"
+            className="p-1 text-[var(--theme-lume-muted)] hover:text-[var(--theme-lume-ink)] transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -73,9 +73,9 @@ export function MobileNav({
                 onClick={() => handleNavigate(item.screen)}
                 onFocus={() => onIntent?.(item.screen)}
                 onPointerDown={() => onIntent?.(item.screen)}
-                className={`text-left py-4 text-base tracking-[0.15em] uppercase border-b border-white/5
+                className={`text-left py-4 text-base tracking-[0.15em] uppercase border-b border-[var(--theme-lume-line)]
                   transition-colors duration-150 cursor-pointer
-                  ${isActive ? "text-[#C9A84C]" : "text-white/60 hover:text-white/90"}`}
+                  ${isActive ? "text-[var(--theme-lume-gold)]" : "text-[var(--theme-lume-muted)] hover:text-[var(--theme-lume-ink)]"}`}
                 aria-current={isActive ? "page" : undefined}
               >
                 {item.label}

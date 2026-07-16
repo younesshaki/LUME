@@ -6,7 +6,6 @@ import { AuthProvider } from './app-shell/AuthProvider'
 import { NavigationProvider } from './app-shell/NavigationProvider'
 import { DualModeProvider } from './lib/DualModeContext'
 import { SoundProvider } from './lib/sound'
-import { TenantThemeProvider } from './lib/TenantThemeProvider'
 import { getLeadAttribution } from './lib/leadAttribution'
 import './index.css'
 
@@ -15,8 +14,7 @@ getLeadAttribution()
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <TenantThemeProvider>
-      <DualModeProvider>
+    <DualModeProvider>
         <SoundProvider>
           <BrowserRouter>
             <AuthProvider>
@@ -27,7 +25,6 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
             </AuthProvider>
           </BrowserRouter>
         </SoundProvider>
-      </DualModeProvider>
-    </TenantThemeProvider>
+    </DualModeProvider>
   </React.StrictMode>,
 )

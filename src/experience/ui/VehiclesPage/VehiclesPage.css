@@ -6,6 +6,42 @@
   font-display: swap;
 }
 
+:root[data-theme="light"] .vehiclesPage {
+  --lume-panel-solid: color-mix(in srgb, var(--theme-lume-panel, #fffaf0) 96%, var(--theme-lume-background, #f4efe5));
+  scrollbar-color: var(--lume-line) transparent;
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__toolbar,
+  .vehiclesPage__search,
+  .vehiclesPage__select,
+  .vehiclesPage__filterToggle,
+  .vehiclesPage__card,
+  .vehiclesPage__drawer,
+  .vehiclesPage__comparisonBar,
+  .vehiclesPage__state
+) {
+  border-color: var(--lume-line);
+  color: var(--lume-ink);
+  background-color: color-mix(in srgb, var(--lume-panel) 94%, transparent);
+}
+
+:root[data-theme="light"] :is(.vehiclesPage__search, .vehiclesPage__select) {
+  background-image: none;
+}
+
+:root[data-theme="light"] :is(.vehiclesPage__navLink, .vehiclesPage__navActive) {
+  color: var(--lume-muted);
+}
+
+:root[data-theme="light"] .vehiclesPage__navActive {
+  color: var(--lume-gold);
+}
+
+:root[data-theme="light"] .vehiclesPage__title {
+  text-shadow: 0 12px 36px color-mix(in srgb, var(--lume-ink) 14%, transparent);
+}
+
 @font-face {
   font-family: "Montserrat";
   src: url("../assets/fonts/montserrat/Montserrat-Light.otf") format("opentype");
