@@ -28,4 +28,27 @@ describe("website background assets", () => {
     expect(isTenantSiteDesignAssetUrl("javascript:alert(1)", "tenant-a")).toBe(false);
     expect(isTenantSiteDesignAssetUrl("/built-in/luxury.webp", "tenant-a")).toBe(true);
   });
+
+  it("pins the storage host when an allowed origin is given (blocks SSRF/external hosts)", () => {
+    const origin = "https://project.supabase.co";
+    const okUrl = "https://project.supabase.co/storage/v1/object/public/tenant-media/tenant-a/site-design/dark/x.webp";
+    expect(isTenantSiteDesignAssetUrl(okUrl, "tenant-a", origin)).toBe(true);
+    // Right path, wrong host — a crafted internal/external target is rejected.
+    expect(
+      isTenantSiteDesignAssetUrl(
+        "http://169.254.169.254/storage/v1/object/public/tenant-media/tenant-a/site-design/dark/x.webp",
+        "tenant-a",
+        origin,
+      ),
+    ).toBe(false);
+    expect(
+      isTenantSiteDesignAssetUrl(
+        "https://evil.example/storage/v1/object/public/tenant-media/tenant-a/site-design/dark/x.webp",
+        "tenant-a",
+        origin,
+      ),
+    ).toBe(false);
+    // http is rejected even without an allowed origin.
+    expect(isTenantSiteDesignAssetUrl(okUrl.replace("https:", "http:"), "tenant-a")).toBe(false);
+  });
 });

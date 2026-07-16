@@ -27,10 +27,26 @@ export function siteBackgroundObjectKey(
   return `${tenantId}/site-design/${mode}/siteBackground-${id}.${extension}`;
 }
 
-export function isTenantSiteDesignAssetUrl(url: string, tenantId: string): boolean {
+/**
+ * Whether a background URL is a legitimate asset for this tenant.
+ *
+ * Root-relative product assets are allowed. An absolute URL must be https AND
+ * (when `allowedOrigin` is supplied) live on the tenant-media storage origin —
+ * pinning the host, not just the path substring, so a privileged user cannot
+ * point the background at an arbitrary or internal host (blind SSRF via the
+ * server-side upload verification) or reference another tenant's prefix.
+ */
+export function isTenantSiteDesignAssetUrl(
+  url: string,
+  tenantId: string,
+  allowedOrigin?: string,
+): boolean {
   if (url.startsWith("/") && !url.startsWith("//")) return true;
   try {
-    const path = decodeURIComponent(new URL(url).pathname);
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    if (allowedOrigin && parsed.origin !== allowedOrigin) return false;
+    const path = decodeURIComponent(parsed.pathname);
     return path.includes(`/storage/v1/object/public/tenant-media/${tenantId}/site-design/`);
   } catch {
     return false;

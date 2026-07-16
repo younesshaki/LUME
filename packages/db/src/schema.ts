@@ -1495,6 +1495,15 @@ export type Database = {
           operational_event_id: string | null;
         }[];
       };
+      publish_site_design: {
+        Args: {
+          p_tenant_id: string;
+          p_design: Record<string, unknown>;
+          p_actor: string;
+          p_max_revisions: number;
+        };
+        Returns: Record<string, unknown>;
+      };
       tenant_conversion_funnel: {
         Args: { p_tenant_id: string; p_since: string };
         Returns: Array<{ event_name: string; event_count: number; session_count: number }>;
