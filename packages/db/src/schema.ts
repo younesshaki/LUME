@@ -1295,6 +1295,27 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      site_design_revisions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          design: Record<string, unknown>;
+          template_key: string;
+          template_version: number;
+          published_by: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["site_design_revisions"]["Row"],
+          "id" | "published_by" | "created_at"
+        > & {
+          id?: string;
+          published_by?: string | null;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       tenant_api_keys: {
         Row: {
           id: string;
