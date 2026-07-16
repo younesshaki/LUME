@@ -1,6 +1,7 @@
 {
   "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "npm run build",
+  "buildCommand": "node scripts/verify-deployment-env.mjs && npm run build",
+  "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,

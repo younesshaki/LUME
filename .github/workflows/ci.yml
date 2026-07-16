@@ -4,12 +4,18 @@ on:
   push:
     branches:
       - main
-      - aceternity-updates
-      - codex-max
+      - staging
   pull_request:
     branches:
       - main
-      - aceternity-updates
+      - staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -28,11 +34,17 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Typecheck
-        run: npm run typecheck
+      - name: Validate migration sequence
+        run: npm run check:migrations
+
+      - name: Typecheck all workspaces
+        run: npm run typecheck:all
 
       - name: Test
         run: npm test
 
-      - name: Build
+      - name: Build public site
         run: npm run build
+
+      - name: Build admin
+        run: npm run build:admin

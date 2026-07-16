@@ -29,14 +29,22 @@ describe("isAllowedOrigin", () => {
     ).toBe(false);
   });
 
-  it("allows same-origin requests that omit the Origin header", () => {
-    // Browsers drop Origin on same-origin GETs (e.g. the public site's
-    // inventory fetch behind the local dev proxy). A cross-site attacker always
-    // sends Origin, so an absent Origin is not a cross-site request and is
-    // allowed — matching the public root api/*.ts origin check.
+  it("allows originless safe reads", () => {
     vi.stubEnv("ALLOWED_CHAT_ORIGINS", "https://allowed.example");
 
     expect(isAllowedOrigin(new Request("https://api.example/chat"))).toBe(true);
+  });
+
+  it("rejects originless state-changing requests", () => {
+    vi.stubEnv("ALLOWED_CHAT_ORIGINS", "https://allowed.example");
+
+    expect(
+      isAllowedOrigin(
+        new Request("https://api.example/chat", {
+          method: "POST",
+        })
+      )
+    ).toBe(false);
   });
 
   it("allows empty configuration in development only", () => {
@@ -81,5 +89,11 @@ describe("corsHeadersFor", () => {
         })
       )
     ).toEqual({});
+  });
+
+  it("does not emit an empty allow-origin header for originless reads", () => {
+    vi.stubEnv("ALLOWED_CHAT_ORIGINS", "https://allowed.example");
+
+    expect(corsHeadersFor(new Request("https://api.example/vehicles"))).toEqual({});
   });
 });

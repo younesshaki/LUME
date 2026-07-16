@@ -1,6 +1,7 @@
 {
   "installCommand": "cd ../.. && npm install --legacy-peer-deps",
-  "buildCommand": "next build",
+  "buildCommand": "node ../../scripts/verify-deployment-env.mjs && next build",
+  "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs",
   "outputDirectory": ".next",
   "framework": "nextjs"
 }

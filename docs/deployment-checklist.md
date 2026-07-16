@@ -2,8 +2,13 @@
 
 Use this before publishing a production build.
 
+Normal releases flow through `staging`; see
+[`deployment-environments.md`](deployment-environments.md).
+
 ## Environment
 
+- `LUME_ENVIRONMENT=production` on both Vercel projects.
+- The release batch passed on `staging` using an isolated Supabase project.
 - `VITE_R2_PUBLIC_BASE_URL` points to the production Cloudflare R2/CDN base URL.
 - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` point to the production Supabase project.
 - Supabase migrations in `supabase/migrations/` have been applied.
@@ -21,9 +26,11 @@ Use this before publishing a production build.
 
 ## Verification
 
-- `npm run typecheck`
-- `npm test`
+- `npm run check:migrations`
+- `npm run typecheck:all`
+- `npm test -- --run`
 - `npm run build`
+- `npm run build:admin`
 - Open the deployed preview and verify:
   - gate auth
   - homepage
