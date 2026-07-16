@@ -4,14 +4,20 @@
  * Public, tenant-scoped single-vehicle detail. Returns the full ordered
  * managed-image gallery (primary first, then sort_order, then created_at),
  * unlike the list endpoint which returns only the primary image per vehicle.
- * Reads via the anon client + RLS; the .eq("tenant_id") is defense-in-depth.
+ *
+ * The vehicle row is read via the anon client + RLS. The gallery metadata is
+ * read with the SERVICE-role client, mirroring the root api/vehicles/[id].ts
+ * function: the anon RLS policy on vehicle_images gates on the tenants table,
+ * which anon cannot read, so an anon gallery read always comes back empty (the
+ * placeholder bug). The .eq("tenant_id")/.eq("vehicle_id") filters keep it
+ * tenant-scoped for defense in depth.
  *
  * This mirrors the standalone root serverless function api/vehicles/[id].ts
  * so local dev (Vite proxies /api/* here) matches production behavior.
  */
 import type { VehicleDetailResponse, VehicleGalleryImage } from "@lume/types";
 import { quotaExceededPayload, quotaResponseHeaders, rowToVehicle } from "@lume/db";
-import { createAnonServerClient } from "@lume/db/server";
+import { createAnonServerClient, createServiceClient } from "@lume/db/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { readR2PublicBaseUrl } from "@/lib/r2Config";
@@ -66,7 +72,9 @@ export async function GET(
     return json({ error: "Vehicle not found" }, 404, request, quotaHeaders);
   }
 
-  const gallery = await loadGallery(supabase, tenant.tenantId, vehicleId);
+  // Service-role read for image metadata (see file header) — anon RLS on
+  // vehicle_images is unreadable, so anon returns an empty gallery.
+  const gallery = await loadGallery(createServiceClient(), tenant.tenantId, vehicleId);
   const primary = gallery[0];
   const response: VehicleDetailResponse = {
     vehicle: {
