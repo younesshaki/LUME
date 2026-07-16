@@ -103,7 +103,7 @@ describe("standalone public vehicle detail", () => {
     vi.stubEnv("SUPABASE_ANON_KEY", "anon");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role");
     vi.stubEnv("R2_PUBLIC_BASE_URL", "https://cdn.example");
-    const { default: handler } = await import("./[id]");
+    const { default: handler } = await import("../../api/vehicles/[id]");
     let status = 0;
     let payload: unknown;
     const response = {

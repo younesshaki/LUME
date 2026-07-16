@@ -19,7 +19,7 @@ describe("public lead proxy", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const { default: handler } = await import("./leads");
+    const { default: handler } = await import("../../api/leads");
     const response = responseRecorder();
     await handler({
       method: "POST",
@@ -32,8 +32,7 @@ describe("public lead proxy", () => {
     }, response.value);
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const url = fetchMock.mock.calls[0]?.[0];
-    const init = fetchMock.mock.calls[0]?.[1];
+    const [url, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
     expect(url).toBe("https://admin.example/api/leads?tenant=atelier");
     expect(init.headers).toMatchObject({
       "x-lume-tenant": "atelier",
@@ -49,7 +48,7 @@ describe("public lead proxy", () => {
     vi.stubEnv("LUME_CHAT_UPSTREAM_URL", "https://admin.example/api/chat?legacy=1");
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ leadId: "lead-1" }, { status: 201 })));
 
-    const { default: handler } = await import("./leads");
+    const { default: handler } = await import("../../api/leads");
     const response = responseRecorder();
     await handler({ method: "POST", body: {}, headers: {}, query: {} }, response.value);
 
