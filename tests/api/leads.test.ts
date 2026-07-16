@@ -19,7 +19,7 @@ describe("public lead proxy", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const { default: handler } = await import("./leads");
+    const { default: handler } = await import("../../api/leads");
     const response = responseRecorder();
     await handler({
       method: "POST",
@@ -48,7 +48,7 @@ describe("public lead proxy", () => {
     vi.stubEnv("LUME_CHAT_UPSTREAM_URL", "https://admin.example/api/chat?legacy=1");
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ leadId: "lead-1" }, { status: 201 })));
 
-    const { default: handler } = await import("./leads");
+    const { default: handler } = await import("../../api/leads");
     const response = responseRecorder();
     await handler({ method: "POST", body: {}, headers: {}, query: {} }, response.value);
 

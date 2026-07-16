@@ -22,7 +22,7 @@ describe("public chat proxy quota responses", () => {
       },
     }));
     vi.stubGlobal("fetch", fetchMock);
-    const { default: handler } = await import("./chat");
+    const { default: handler } = await import("../../api/chat");
     const response = responseRecorder();
 
     await handler({
@@ -57,7 +57,7 @@ describe("public chat proxy quota responses", () => {
         "Access-Control-Expose-Headers": "X-Lume-Quota-Warning",
       },
     })));
-    const { default: handler } = await import("./chat");
+    const { default: handler } = await import("../../api/chat");
     const response = responseRecorder();
 
     await handler({

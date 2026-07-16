@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { recordPublicUsage, type UsageRpc } from "./usage";
+import { recordPublicUsage, type UsageRpc } from "../../api/usage";
 
 describe("root API usage metering", () => {
   it("records one tenant-scoped event through the atomic RPC", async () => {
