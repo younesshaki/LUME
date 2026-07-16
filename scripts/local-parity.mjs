@@ -9,6 +9,7 @@ import {
   supabaseProjectRef,
   validateDeploymentEnvironment,
 } from "./verify-deployment-env.mjs";
+import { mergeParityRuntimeEnvironment } from "./local-parity-env.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const adminDirectory = path.join(root, "apps/admin");
@@ -133,7 +134,7 @@ async function runParityStack() {
   const currentScript = fileURLToPath(import.meta.url);
   const admin = spawn(process.execPath, [currentScript, "--service=admin"], {
     cwd: adminDirectory,
-    env: { ...process.env, ...adminEnvironment },
+    env: mergeParityRuntimeEnvironment(process.env, adminEnvironment),
     stdio: "inherit",
   });
   const children = [admin];
@@ -149,7 +150,7 @@ async function runParityStack() {
     await waitFor("http://127.0.0.1:3100/api/health", admin);
     const publicSite = spawn(process.execPath, [currentScript, "--service=public"], {
       cwd: root,
-      env: { ...process.env, ...publicEnvironment },
+      env: mergeParityRuntimeEnvironment(process.env, publicEnvironment),
       stdio: "inherit",
     });
     children.push(publicSite);

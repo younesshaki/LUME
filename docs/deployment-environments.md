@@ -84,6 +84,10 @@ If a required staging secret is sensitive, place its staging-only value in
 `apps/admin/.env.staging.local`, matching the owning project. These files are
 gitignored. Never copy production credentials into them; the parity command
 still validates the Supabase project identity after applying local overrides.
+As an alternative, export `SUPABASE_SERVICE_ROLE_KEY` only for the parity
+command. An explicitly supplied value is retained when Vercel's pulled value
+is the expected empty Sensitive placeholder; other empty pulled variables do
+not inherit unrelated local secrets.
 
 This command:
 
