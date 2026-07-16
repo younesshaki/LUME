@@ -32,8 +32,7 @@ describe("public lead proxy", () => {
     }, response.value);
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const url = fetchMock.mock.calls[0]?.[0];
-    const init = fetchMock.mock.calls[0]?.[1];
+    const [url, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
     expect(url).toBe("https://admin.example/api/leads?tenant=atelier");
     expect(init.headers).toMatchObject({
       "x-lume-tenant": "atelier",
