@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { visitorSessionCookieHeader } from "./visitorSessionCookie";
+import { visitorSessionCookieHeader } from "../../api/visitorSessionCookie";
 
 describe("visitor session proxy cookie", () => {
   it("forwards only the visitor session cookie", () => {
