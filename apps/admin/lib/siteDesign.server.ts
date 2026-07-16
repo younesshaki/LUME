@@ -8,7 +8,7 @@
  * validator (@lume/types) so arbitrary CSS/keys/URLs can't be persisted, and
  * background asset URLs are ownership-checked against the tenant's storage
  * prefix. Publishing snapshots the previous document into site_design_revisions
- * (migration 066) for rollback, then prunes to a bounded history.
+ * (migration 067) for rollback, then prunes to a bounded history.
  *
  * The admin design UI (Phase 3, Codex) calls these; it does not re-implement
  * validation or the registry.
@@ -22,8 +22,16 @@ import {
   type SiteDesign,
 } from "@lume/types";
 import { createServiceClient } from "@lume/db/server";
+import { TENANT_BUCKETS } from "@lume/db";
 import { auditWrite } from "@/lib/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  siteBackgroundObjectKey,
+  isTenantSiteDesignAssetUrl,
+  validateSiteBackgroundCandidate,
+  type SiteBackgroundCandidate,
+} from "@/lib/siteDesignAssets";
+import { validateStoredSiteBackground } from "@/lib/siteDesignAssets.server";
 
 export const MAX_DESIGN_REVISIONS = 20;
 
@@ -40,6 +48,10 @@ export type DesignRevisionSummary = {
 };
 
 type AuthorizedTenant = { tenantId: string; userId: string };
+
+export type SiteBackgroundUploadResult =
+  | { ok: true; objectKey: string; token: string; publicUrl: string }
+  | { ok: false; error: string };
 
 /** Owner/admin gate + tenant resolution. Returns null when unauthorized. */
 async function authorizeDesignMutation(slug: string): Promise<AuthorizedTenant | null> {
@@ -64,23 +76,25 @@ async function authorizeDesignMutation(slug: string): Promise<AuthorizedTenant |
  * cross-tenant or arbitrary external URL and is rejected.
  */
 function isOwnedBackgroundUrl(url: string, tenantId: string): boolean {
-  if (url.startsWith("/") && !url.startsWith("//")) return true;
-  try {
-    const { pathname } = new URL(url);
-    return pathname.split("/").includes(tenantId);
-  } catch {
-    return false;
-  }
+  return isTenantSiteDesignAssetUrl(url, tenantId);
 }
 
-function assertOwnedBackgrounds(design: SiteDesign, tenantId: string): DesignResult {
+async function assertOwnedBackgrounds(design: SiteDesign, tenantId: string): Promise<DesignResult> {
   for (const mode of ["dark", "light"] as const) {
     const url = design.modes[mode]?.assets?.siteBackground?.url;
     if (url && !isOwnedBackgroundUrl(url, tenantId)) {
       return { ok: false, error: `The ${mode}-mode background image must be one you uploaded to this dealership.` };
     }
+    if (url && !url.startsWith("/")) {
+      const validationError = await validateStoredSiteBackground(url);
+      if (validationError) return { ok: false, error: `${capitalize(mode)} background: ${validationError}` };
+    }
   }
   return { ok: true, design };
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 /** Read + normalize the tenant's currently published design (RLS read). */
@@ -116,6 +130,35 @@ export async function applyTemplateDraft(slug: string, templateKey: string): Pro
   return { ok: true, design: applied };
 }
 
+/** Authorize direct-to-storage upload and generate the fixed tenant/mode key. */
+export async function prepareSiteBackgroundUpload(
+  slug: string,
+  mode: "dark" | "light",
+  candidate: SiteBackgroundCandidate,
+): Promise<SiteBackgroundUploadResult> {
+  const authorized = await authorizeDesignMutation(slug);
+  if (!authorized) return { ok: false, error: "Owner or admin access is required." };
+  const validationError = validateSiteBackgroundCandidate(candidate);
+  if (validationError) return { ok: false, error: validationError };
+
+  const service = createServiceClient();
+  const objectKey = siteBackgroundObjectKey(
+    authorized.tenantId,
+    mode,
+    candidate.type,
+    crypto.randomUUID(),
+  );
+  const bucket = service.storage.from(TENANT_BUCKETS.media);
+  const { data, error } = await bucket.createSignedUploadUrl(objectKey);
+  if (error || !data?.token) return { ok: false, error: "Unable to prepare the background upload." };
+  return {
+    ok: true,
+    objectKey,
+    token: data.token,
+    publicUrl: bucket.getPublicUrl(objectKey).data.publicUrl,
+  };
+}
+
 /**
  * Validate + publish a design document. Snapshots the previous document into
  * site_design_revisions, writes the new one, prunes history, audits.
@@ -129,9 +172,9 @@ export async function publishSiteDesign(slug: string, incoming: unknown): Promis
       ? (incoming as { template?: { key?: unknown } }).template?.key
       : undefined;
   const template = getSiteTemplate(typeof key === "string" ? key : undefined);
-  const normalized = normalizeSiteDesign(incoming, template);
+  let normalized = normalizeSiteDesign(incoming, template);
 
-  const owned = assertOwnedBackgrounds(normalized, authorized.tenantId);
+  const owned = await assertOwnedBackgrounds(normalized, authorized.tenantId);
   if (!owned.ok) return owned;
 
   const service = createServiceClient();
@@ -143,6 +186,19 @@ export async function publishSiteDesign(slug: string, incoming: unknown): Promis
     .eq("id", authorized.tenantId)
     .maybeSingle();
   const previous = normalizeFromRaw(currentRow?.theme);
+  // Design owns only schema/template/shared/modes. Re-read and preserve every
+  // other current key so a concurrent Navigation/Branding save cannot be
+  // overwritten by a stale design draft, and future keys round-trip safely.
+  const preserved = Object.fromEntries(
+    Object.entries(asRecord(currentRow?.theme)).filter(
+      ([key]) => ![
+        "schemaVersion", "template", "shared", "modes", "colors", "fonts",
+        "dock", "dockVariant", "cinematic", "cinematicIntensity",
+      ].includes(key),
+    ),
+  );
+  const publishDocument = { ...normalized, ...preserved };
+  normalized = normalizeSiteDesign(publishDocument, template);
   const { error: snapshotError } = await service.from("site_design_revisions").insert({
     tenant_id: authorized.tenantId,
     design: (currentRow?.theme ?? {}) as Record<string, unknown>,
@@ -154,7 +210,7 @@ export async function publishSiteDesign(slug: string, incoming: unknown): Promis
 
   const { error: writeError } = await service
     .from("tenants")
-    .update({ theme: normalized as unknown as Record<string, unknown> })
+    .update({ theme: publishDocument })
     .eq("id", authorized.tenantId);
   if (writeError) return { ok: false, error: "Unable to publish website design." };
 
@@ -169,6 +225,12 @@ export async function publishSiteDesign(slug: string, incoming: unknown): Promis
   }).catch(() => undefined);
 
   return { ok: true, design: normalized };
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
 /** List a tenant's design revision history (RLS read; members allowed). */

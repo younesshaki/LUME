@@ -18,19 +18,19 @@ export function NavLink({ label, active, onClick, onIntent, layoutId = "nav-indi
       onFocus={onIntent}
       onPointerDown={onIntent}
       className={`relative px-1 py-0.5 text-sm tracking-widest uppercase transition-colors duration-200 cursor-pointer
-        ${active ? "text-[#C9A84C]" : "text-white/60 hover:text-white/90"}`}
+        ${active ? "text-[var(--theme-lume-gold,#C9A84C)]" : "text-[var(--theme-lume-muted,rgba(255,255,255,.6))] hover:text-[var(--theme-lume-ink,#fff)]"}`}
       aria-current={active ? "page" : undefined}
     >
       {label}
       {active && !shouldReduce && (
         <motion.span
           layoutId={layoutId}
-          className="absolute inset-x-0 -bottom-px h-px bg-[#C9A84C]"
+          className="absolute inset-x-0 -bottom-px h-px bg-[var(--theme-lume-gold,#C9A84C)]"
           transition={{ type: "spring", stiffness: 380, damping: 30 }}
         />
       )}
       {active && shouldReduce && (
-        <span className="absolute inset-x-0 -bottom-px h-px bg-[#C9A84C]" />
+        <span className="absolute inset-x-0 -bottom-px h-px bg-[var(--theme-lume-gold,#C9A84C)]" />
       )}
     </button>
   );

@@ -48,11 +48,11 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
   const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
 
   return (
-    <footer className="relative bg-black border-t border-white/10 mt-auto">
+    <footer className="relative bg-[var(--theme-lume-background,#000)] text-[var(--theme-lume-ink,#fff8ec)] border-t border-[var(--theme-lume-line)] mt-auto">
       {/* Top gradient bleed */}
       <div
         className="absolute top-0 left-0 right-0 h-20 pointer-events-none"
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)" }}
+        style={{ background: "linear-gradient(to bottom, transparent 0%, var(--theme-lume-background, #000) 100%)" }}
         aria-hidden
       />
 
@@ -65,7 +65,7 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
             className="h-10 w-auto object-contain opacity-90"
             draggable={false}
           />
-          <p className="text-[11px] tracking-[0.25em] uppercase text-white/35"
+          <p className="text-[11px] tracking-[0.25em] uppercase text-[var(--theme-lume-soft)]"
             style={{ fontFamily: "Mileast, serif" }}>
             The only hotel you cannot book.
           </p>
@@ -73,9 +73,9 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
 
         {/* Separator with gold center accent */}
         <div className="relative flex items-center gap-4 mb-10">
-          <Separator className="flex-1 bg-white/10" />
+          <Separator className="flex-1 bg-[var(--theme-lume-line)]" />
           <span className="w-1.5 h-1.5 rounded-full bg-[#C9A84C]/60 animate-pulse flex-shrink-0" />
-          <Separator className="flex-1 bg-white/10" />
+          <Separator className="flex-1 bg-[var(--theme-lume-line)]" />
         </div>
 
         {/* Nav + Social */}
@@ -88,8 +88,8 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
                 onMouseEnter={() => preloadRouteModule(item.screen)}
                 onFocus={() => preloadRouteModule(item.screen)}
                 onPointerDown={() => preloadRouteModule(item.screen)}
-                className="text-xs tracking-[0.18em] uppercase text-white/50
-                  hover:text-[#C9A84C] transition-colors duration-200 cursor-pointer"
+                className="text-xs tracking-[0.18em] uppercase text-[var(--theme-lume-muted)]
+                  hover:text-[var(--theme-lume-gold)] transition-colors duration-200 cursor-pointer"
               >
                 {item.label}
               </button>
@@ -104,7 +104,7 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={social.label}
-                className="text-white/40 hover:text-[#C9A84C] transition-colors duration-200"
+                className="text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-gold)] transition-colors duration-200"
               >
                 {social.icon}
               </a>
@@ -113,21 +113,21 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
         </div>
 
         {/* Address */}
-        <p className="text-center text-[11px] tracking-widest uppercase text-white/25 mb-10">
+        <p className="text-center text-[11px] tracking-widest uppercase text-[var(--theme-lume-soft)] mb-10">
           Monaco, Principauté de Monaco &nbsp;·&nbsp; Invitation by referral only
         </p>
 
         {/* Legal bar */}
-        <Separator className="bg-white/5 mb-5" />
+        <Separator className="bg-[var(--theme-lume-line)] mb-5" />
         <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="text-[11px] text-white/25 tracking-wide">
+          <p className="text-[11px] text-[var(--theme-lume-soft)] tracking-wide">
             © {new Date().getFullYear()} LUME. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             {["Privacy", "Legal"].map((label) => (
               <button
                 key={label}
-                className="text-[11px] text-white/30 hover:text-white/60 transition-colors duration-200
+                className="text-[11px] text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-ink)] transition-colors duration-200
                   tracking-wide cursor-pointer"
               >
                 {label}
@@ -135,7 +135,7 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
             ))}
             <button
               onClick={openCookiePreferences}
-              className="text-[11px] text-white/30 hover:text-white/60 transition-colors duration-200
+              className="text-[11px] text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-ink)] transition-colors duration-200
                 tracking-wide cursor-pointer"
             >
               Cookie preferences

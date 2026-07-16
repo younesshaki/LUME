@@ -147,8 +147,10 @@ const SECTIONS = [
     children: [
       { slug: "website", label: "Overview", icon: LayoutDashboard },
       { slug: "pages", label: "Pages", icon: FileText },
+      { slug: "templates", label: "Templates", icon: LayoutTemplate },
+      { slug: "design", label: "Design", icon: Palette },
       { slug: "navigation", label: "Navigation", icon: PanelTop },
-      { slug: "branding", label: "Branding", icon: Palette },
+      { slug: "branding", label: "Brand assets", icon: ImageIcon },
       { slug: "assets", label: "Assets", icon: ImageIcon },
     ],
   },

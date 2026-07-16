@@ -10,6 +10,28 @@
   color: var(--lume-ink);
 }
 
+:root[data-theme="light"] :is(
+  .vehicleDetail__media,
+  .vehicleDetail__panel,
+  .vehicleDetail__state,
+  .vehicleDetail__modal,
+  .vehicleDetail__fact
+) {
+  border-color: var(--lume-line);
+  color: var(--lume-ink);
+  background: color-mix(in srgb, var(--theme-lume-panel, #fffaf0) 96%, transparent);
+}
+
+:root[data-theme="light"] :is(.vehicleDetail__nav button, .vehicleDetail__backLink) {
+  color: var(--lume-muted);
+}
+
+:root[data-theme="light"] :is(.vehicleDetail__input, .vehicleDetail__textarea) {
+  border-color: var(--lume-line);
+  color: var(--lume-ink);
+  background: color-mix(in srgb, var(--lume-ink) 4%, transparent);
+}
+
 .vehicleDetail__floatingLogo {
   position: fixed;
   top: 0.85rem;
