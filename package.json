@@ -15,6 +15,9 @@
     "dev:admin": "npm run dev --workspace=@lume/admin",
     "typecheck": "tsc --noEmit",
     "typecheck:all": "npm run typecheck && npm run typecheck --workspaces --if-present",
+    "check:migrations": "node scripts/check-migrations.mjs",
+    "check:deployment-env": "node scripts/verify-deployment-env.mjs",
+    "check:all": "npm run check:migrations && npm run typecheck:all && npm test -- --run && npm run build && npm run build:admin",
     "check:assets": "node scripts/check-r2-assets.mjs",
     "check:assets:strict": "node scripts/check-r2-assets.mjs --strict",
     "test": "vitest run",
@@ -24,6 +27,7 @@
     "build": "tsc && vite build",
     "build:admin": "npm run build --workspace=@lume/admin",
     "preview": "vite preview",
+    "parity:staging": "node scripts/local-parity.mjs",
     "embed": "tsx scripts/generateEmbeddings.ts",
     "seed:default-tenant": "tsx scripts/seed-default-tenant.ts",
     "create:tenant": "tsx scripts/create-tenant.ts"

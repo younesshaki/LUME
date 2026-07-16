@@ -23,13 +23,8 @@ function computePublicTenantSlug(): string {
   if (typeof window === "undefined") return buildDefault;
 
   try {
-    const parts = window.location.hostname.split(".");
-    if (parts.length >= 3) {
-      const sub = normalizeTenantSlug(parts[0]);
-      if (sub && !RESERVED_SUBDOMAINS.has(sub) && !window.location.hostname.endsWith(".vercel.app")) {
-        return sub;
-      }
-    }
+    const hostnameSlug = publicTenantSlugFromHostname(window.location.hostname);
+    if (hostnameSlug) return hostnameSlug;
 
     const param = new URLSearchParams(window.location.search).get("tenant");
     if (param !== null) {
@@ -99,6 +94,35 @@ export function clearTenantIdCacheForTests(): void {
 
 function normalizeTenantSlug(slug: string): string {
   return slug.trim().toLowerCase();
+}
+
+/** Return a real tenant subdomain, never a local/IP or Vercel preview label. */
+export function publicTenantSlugFromHostname(hostname: string): string | null {
+  const normalizedHostname = hostname.trim().toLowerCase().replace(/\.$/, "");
+  if (
+    !normalizedHostname ||
+    normalizedHostname === "localhost" ||
+    normalizedHostname.endsWith(".localhost") ||
+    normalizedHostname.endsWith(".vercel.app") ||
+    normalizedHostname.includes(":") ||
+    isIpv4Address(normalizedHostname)
+  ) {
+    return null;
+  }
+
+  const parts = normalizedHostname.split(".");
+  if (parts.length < 3) return null;
+  const subdomain = normalizeTenantSlug(parts[0]);
+  if (!subdomain || RESERVED_SUBDOMAINS.has(subdomain)) return null;
+  return subdomain;
+}
+
+function isIpv4Address(hostname: string): boolean {
+  const parts = hostname.split(".");
+  return (
+    parts.length === 4 &&
+    parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255)
+  );
 }
 
 async function lookupTenant(

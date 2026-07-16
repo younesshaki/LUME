@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearTenantIdCacheForTests,
+  publicTenantSlugFromHostname,
   resolvePublicTenant,
   resolveTenantId,
 } from "./publicTenant";
@@ -65,5 +66,19 @@ describe("resolveTenantId", () => {
     await expect(resolveTenantId("default", client)).resolves.toBeNull();
 
     expect(client.rpc).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("publicTenantSlugFromHostname", () => {
+  it("resolves customer subdomains on real hostnames", () => {
+    expect(publicTenantSlugFromHostname("atelier.lume.example")).toBe("atelier");
+  });
+
+  it("ignores local, IP, Vercel preview, and reserved hostnames", () => {
+    expect(publicTenantSlugFromHostname("127.0.0.1")).toBeNull();
+    expect(publicTenantSlugFromHostname("::1")).toBeNull();
+    expect(publicTenantSlugFromHostname("tenant.localhost")).toBeNull();
+    expect(publicTenantSlugFromHostname("lume-git-staging.example.vercel.app")).toBeNull();
+    expect(publicTenantSlugFromHostname("www.lume.example")).toBeNull();
   });
 });

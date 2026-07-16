@@ -47,6 +47,8 @@ moving it is task #10 in the foundation plan and is *not* trivial — see
 | Admin e2e smoke suite (Playwright) | `npm run test:e2e` — starts the admin dev server itself; needs `apps/admin/.env.local` (service role) and network; creates+deletes a throwaway user/tenant on the real Supabase project |
 | Build public site | `npm run build` |
 | Build admin | `npm run build:admin` |
+| Full release gate | `npm run check:all` |
+| Local production-shaped staging stack | `npm run parity:staging` |
 | Seed default tenant | `npm run seed:default-tenant` (needs env, see below) |
 | Provision a tenant (blank, one command) | `npm run create:tenant -- --slug x --owner-email y` |
 | Regenerate embeddings | `npm run embed` (Ollama) — legacy; prefer the seed script + DB |
@@ -54,6 +56,10 @@ moving it is task #10 in the foundation plan and is *not* trivial — see
 The Vite dev server proxies `/api/*` to `http://127.0.0.1:3000` (the
 admin Next.js server). Without admin running, chat will fail — that's
 expected.
+
+Normal releases batch feature branches into `staging`, validate both Vercel
+projects there, then promote one `staging` to `main` PR. Only `staging` and
+`main` trigger Vercel builds. See `docs/deployment-environments.md`.
 
 ## Environment
 
