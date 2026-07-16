@@ -62,16 +62,6 @@ export async function POST(request: Request): Promise<Response> {
       }).catch((error: unknown) => {
         captureError("api/visitor/saved-vehicles/loyalty", error, { tenantId: context.tenantId, visitorId: context.visitorId, vehicleId });
       });
-      await context.client.from("conversion_events").insert({
-        tenant_id: context.tenantId,
-        visitor_id: context.visitorId,
-        vehicle_id: vehicleId,
-        event_name: "vehicle_saved",
-        event_category: "operational",
-        metadata: {},
-      }).then(({ error }) => {
-        if (error) captureError("api/visitor/saved-vehicles/conversion-event", error, { tenantId: context.tenantId, visitorId: context.visitorId, vehicleId });
-      });
     }
     return json(request, { savedVehicle: result.saved, created: result.created }, result.created ? 201 : 200);
   } catch (error) {

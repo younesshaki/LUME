@@ -8,6 +8,6 @@ type RelationError = { code?: unknown; message?: unknown };
 export function isMissingOptionalCustomerRelation(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   const { code, message } = error as RelationError;
-  if (code === "42P01" || code === "PGRST205") return true;
-  return typeof message === "string" && /(?:relation|table).+(?:does not exist|could not find)/i.test(message);
+  if (code === "42P01" || code === "42703" || code === "PGRST204" || code === "PGRST205") return true;
+  return typeof message === "string" && /(?:relation|table|column).+(?:does not exist|could not find)/i.test(message);
 }
