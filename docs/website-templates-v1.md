@@ -20,7 +20,7 @@ Schema and registry defined here are canonical — do not redefine or duplicate 
 | Admin IA | Website hub (`/admin/[tenant]/website`) already links: Pages & content, Header & navigation, Branding & theme, Media assets, plus a live-site iframe preview (`?preview=lume`) |
 | Provisioning | `packages/db/src/provisioning.ts` seeds `DEFAULT_TENANT_THEME` on tenant insert |
 | Admin dashboard's own appearance | separate system (`apps/admin/lib/themeTransition.ts`) — must never be conflated with Website design in UI copy |
-| Migrations | Latest applied anywhere: `065`. New migrations start at `066`. Additive only |
+| Migrations | Latest before this work: `065`; Phase 1 adds `066_customer_saved_vehicle_history`, so this foundation uses `067`. Additive only |
 
 ## 2. What a template controls / does not control
 
@@ -174,7 +174,7 @@ contact, inventory, domains."
 
 ## 8. Publishing, revisions & rollback
 
-New table (migration `066`, additive):
+New table (migration `067`, additive):
 
 ```sql
 site_design_revisions (
@@ -227,7 +227,7 @@ server operations in the admin app:
 
 ## 11. Migration & rollback plan (this release)
 
-- `066_site_design_revisions.sql` — table + RLS + indexes. Additive; no edits
+- `067_site_design_revisions.sql` — table + RLS + indexes. Additive; no edits
   to applied migrations.
 - Applied to **staging Supabase only** during this release. **Not applied to
   production** (release rule); production apply happens with the
@@ -240,7 +240,7 @@ server operations in the admin app:
 ## 12. Phase boundaries (who builds what)
 
 - **Foundation (Claude, this branch):** shared types + validator, Luxury
-  registry, normalization, migration 066, server read/write/apply/publish/
+  registry, normalization, migration 067, server read/write/apply/publish/
   restore ops, focused tests, this document. No admin design UI.
 - **Experience (Codex, after foundation merges):** Templates/Design screens in
   the Website hub, mode tabs (labels must say "Website … mode" to avoid
