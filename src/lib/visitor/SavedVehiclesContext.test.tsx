@@ -1,5 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { SAVED_VEHICLE_STORAGE_KEY, readSavedVehicleIds, synchronizeSavedVehicleIds, writeSavedVehicleIds } from "./SavedVehiclesContext";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { VisitorAuthProvider } from "./VisitorAuthContext";
+import {
+  SAVED_VEHICLE_STORAGE_KEY,
+  SavedVehiclesProvider,
+  readSavedVehicleIds,
+  synchronizeSavedVehicleIds,
+  useSavedVehicles,
+  writeSavedVehicleIds,
+} from "./SavedVehiclesContext";
+import type { VisitorClient } from "./visitorClient";
 
 function storageWith(value: string | null) {
   const values = new Map<string, string>();
@@ -32,5 +42,89 @@ describe("saved vehicle local storage", () => {
     expect(attempted).toEqual(["vehicle-1", "vehicle-2"]);
     expect(retryIds).toEqual(["vehicle-2"]);
     expect(readSavedVehicleIds(storage)).toEqual(["vehicle-2"]);
+  });
+});
+
+const visitor = {
+  id: "visitor-1",
+  email: "visitor@example.com",
+  firstName: "Visitor",
+  lastName: "Example",
+  createdAt: "2026-07-17T00:00:00.000Z",
+};
+
+function SavedVehiclesProbe() {
+  const { savedIds, toggleSaved } = useSavedVehicles();
+  return (
+    <>
+      <output>{savedIds.join(",") || "none"}</output>
+      <button type="button" onClick={() => void toggleSaved("vehicle-2")}>Save vehicle</button>
+    </>
+  );
+}
+
+describe("SavedVehiclesProvider", () => {
+  it("uses the authenticated visitor API instead of a second local saved-vehicle state", async () => {
+    const getSavedVehicles = vi.fn()
+      .mockResolvedValueOnce([{
+        id: "save-1",
+        vehicleId: "vehicle-1",
+        savedAt: "2026-07-17T00:00:00.000Z",
+        year: 2026,
+        make: "Lume",
+        model: "One",
+        trim: null,
+        price: null,
+        status: "live" as const,
+        imageSrc: null,
+      }])
+      .mockResolvedValueOnce([{
+        id: "save-1",
+        vehicleId: "vehicle-1",
+        savedAt: "2026-07-17T00:00:00.000Z",
+        year: 2026,
+        make: "Lume",
+        model: "One",
+        trim: null,
+        price: null,
+        status: "live" as const,
+        imageSrc: null,
+      }, {
+        id: "save-2",
+        vehicleId: "vehicle-2",
+        savedAt: "2026-07-17T00:01:00.000Z",
+        year: 2026,
+        make: "Lume",
+        model: "Two",
+        trim: null,
+        price: null,
+        status: "live" as const,
+        imageSrc: null,
+      }]);
+    const saveVehicle = vi.fn().mockResolvedValue({ created: true });
+    const client: VisitorClient = {
+      signup: vi.fn().mockResolvedValue({ visitorId: visitor.id }),
+      login: vi.fn().mockResolvedValue(visitor),
+      logout: vi.fn().mockResolvedValue(undefined),
+      getMe: vi.fn().mockResolvedValue(visitor),
+      getLoyalty: vi.fn().mockResolvedValue({ points: 0, tier: null, transactions: [] }),
+      getSavedVehicles,
+      saveVehicle,
+      removeSavedVehicle: vi.fn().mockResolvedValue(undefined),
+    };
+
+    render(
+      <VisitorAuthProvider client={client}>
+        <SavedVehiclesProvider client={client}>
+          <SavedVehiclesProbe />
+        </SavedVehiclesProvider>
+      </VisitorAuthProvider>,
+    );
+
+    await screen.findByText("vehicle-1");
+    fireEvent.click(screen.getByRole("button", { name: "Save vehicle" }));
+
+    await waitFor(() => expect(saveVehicle).toHaveBeenCalledWith("vehicle-2"));
+    await screen.findByText("vehicle-1,vehicle-2");
   });
 });
