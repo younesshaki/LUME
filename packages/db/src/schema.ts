@@ -46,6 +46,25 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["tenant_members"]["Insert"]>;
         Relationships: [];
       };
+      tenant_member_preferences: {
+        Row: {
+          tenant_id: string;
+          user_id: string;
+          sidebar_single_expand: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["tenant_member_preferences"]["Row"],
+          "sidebar_single_expand" | "created_at" | "updated_at"
+        > & {
+          sidebar_single_expand?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tenant_member_preferences"]["Insert"]>;
+        Relationships: [];
+      };
       tenant_settings: {
         Row: {
           tenant_id: string;

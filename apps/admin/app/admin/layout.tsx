@@ -54,15 +54,26 @@ export default async function AdminLayout({
       .eq("tenant_id", tenantId)
       .is("read_at", null),
   );
-  const [tenantResult, notificationResult, unreadCountResults] = tenantIds.length
-    ? await Promise.all([tenantQuery, notificationQuery, Promise.all(unreadCountQueries)])
-    : [null, null, []];
+  const preferencesQuery = supabase
+    .from("tenant_member_preferences")
+    .select("tenant_id, sidebar_single_expand")
+    .eq("user_id", user.id)
+    .in("tenant_id", tenantIds);
+  const [tenantResult, notificationResult, unreadCountResults, preferencesResult] = tenantIds.length
+    ? await Promise.all([tenantQuery, notificationQuery, Promise.all(unreadCountQueries), preferencesQuery])
+    : [null, null, [], null];
   const tenants = tenantResult?.data ?? [];
   // Missing migration or an unavailable notification query must never block
   // the admin shell during a staggered deployment.
   const notifications: ShellNotification[] = notificationResult?.data ?? [];
   const unreadCounts = new Map(
     tenantIds.map((tenantId, index) => [tenantId, unreadCountResults[index]?.count ?? 0]),
+  );
+  const sidebarPreferences = new Map(
+    (preferencesResult?.data ?? []).map((preference) => [
+      preference.tenant_id,
+      preference.sidebar_single_expand,
+    ]),
   );
   const tenantsById = new Map((tenants ?? []).map((tenant) => [tenant.id, tenant]));
 
@@ -86,6 +97,7 @@ export default async function AdminLayout({
       role: membership.role,
       siteUrl: tenantSiteUrl(tenant.slug),
       unreadCount: unreadCounts.get(tenant.id) ?? 0,
+      sidebarSingleExpand: sidebarPreferences.get(tenant.id) ?? true,
     });
   }
   shellTenants.sort((a, b) => a.name.localeCompare(b.name));
