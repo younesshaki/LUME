@@ -3,7 +3,15 @@ import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@lume/db/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
-import { buildCustomerTimeline, customerEngagement, summarizeVehicleInterest } from "@/lib/customer360";
+import { CustomerDateTime } from "@/components/CustomerDateTime";
+import {
+  buildCustomerTimeline,
+  canonicalVehicleTitle,
+  customerEngagement,
+  CUSTOMER_EVENT_PROJECTION,
+  CUSTOMER_VISITOR_PROJECTION,
+  summarizeVehicleInterest,
+} from "@/lib/customer360";
 import { isMissingOptionalCustomerRelation } from "@/lib/customerProfileOptionalData";
 import { captureError } from "@/lib/observability";
 
@@ -12,6 +20,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const LIST_LIMIT = 25;
 const EVENT_LIMIT = 50;
 const TIMELINE_LIMIT = 50;
+
+export const dynamic = "force-dynamic";
 
 type VehicleRow = { id: string; year: number; make: string; model: string; trim: string | null; price: number; status: string };
 
@@ -33,7 +43,7 @@ export default async function CustomerProfilePage({ params }: Props) {
   // Authorize before using the service client, and keep the projection explicit.
   const service = createServiceClient();
   const { data: visitor } = await service.from("visitors")
-    .select("id, first_name, last_name, email, created_at, updated_at")
+    .select(CUSTOMER_VISITOR_PROJECTION)
     .eq("tenant_id", tenant.id).eq("id", visitorId).maybeSingle();
   if (!visitor) notFound();
 
@@ -43,7 +53,7 @@ export default async function CustomerProfilePage({ params }: Props) {
     service.from("chat_sessions").select("id, created_at, updated_at").eq("tenant_id", tenant.id).eq("visitor_id", visitorId).order("updated_at", { ascending: false }).limit(LIST_LIMIT),
     service.from("loyalty_accounts").select("id, points_balance, tier, updated_at").eq("tenant_id", tenant.id).eq("visitor_id", visitorId).maybeSingle(),
     service.from("loyalty_accounts").select("id, points_balance, tier, updated_at").eq("tenant_id", tenant.id).is("visitor_id", null).ilike("email", visitor.email).order("updated_at", { ascending: false }).limit(1),
-    service.from("conversion_events").select("event_name, vehicle_id, occurred_at").eq("tenant_id", tenant.id).eq("visitor_id", visitorId).order("occurred_at", { ascending: false }).limit(EVENT_LIMIT),
+    service.from("conversion_events").select(CUSTOMER_EVENT_PROJECTION).eq("tenant_id", tenant.id).eq("visitor_id", visitorId).order("occurred_at", { ascending: false }).limit(EVENT_LIMIT),
   ]);
   for (const [source, result] of [
     ["leads", leadsResult], ["chat_sessions", chatsResult], ["loyalty_accounts", linkedLoyaltyResult], ["legacy_loyalty_accounts", legacyLoyaltyResult],
@@ -82,6 +92,7 @@ export default async function CustomerProfilePage({ params }: Props) {
   const interest = summarizeVehicleInterest(events, savedVehicleIds, leadVehicleIds);
   const engagement = customerEngagement(events, saves.length, leads.length, chats.length);
   const adminRoot = `/admin/${tenant.slug}`;
+  const vehicleTitles = new Map((vehicleResult.data ?? []).map((vehicle) => [vehicle.id, canonicalVehicleTitle(vehicle)]));
   const timeline = buildCustomerTimeline({
     accountCreatedAt: visitor.created_at,
     events,
@@ -89,39 +100,36 @@ export default async function CustomerProfilePage({ params }: Props) {
     leads,
     leadActivities: leadActivityResult.data ?? [],
     chats,
-    loyaltyTransactions: loyaltyTransactionResult.data ?? [],
     adminSlug: adminRoot,
-    tenantSlug: tenant.slug,
-    vehicleIds: new Set(vehicleById.keys()),
+    vehicleTitles,
   });
   const name = `${visitor.first_name} ${visitor.last_name}`.trim() || visitor.email;
 
   return <div className="space-y-6">
     <Link className="text-sm text-muted-foreground hover:underline" href={`${adminRoot}/customers`}>← Customers</Link>
-    <header><h1 className="text-2xl font-semibold">{name}</h1><p className="mt-1 text-sm text-muted-foreground">{visitor.email} · Joined {format(visitor.created_at)} · Last account update {format(visitor.updated_at)}</p></header>
+    <header><h1 className="text-2xl font-semibold">{name}</h1><p className="mt-1 text-sm text-muted-foreground">{visitor.email} · Joined <CustomerDateTime value={visitor.created_at}/> · Last account update <CustomerDateTime value={visitor.updated_at}/></p></header>
     <section className="grid gap-4 md:grid-cols-4">
       <Card label="Loyalty" value={`${loyalty?.points_balance ?? 0} points`} helper={loyalty?.tier ?? "No tier"}/>
       <Card label="Leads" value={String(leads.length)} helper="Recent tenant-scoped leads"/>
       <Card label="Chat sessions" value={String(chats.length)} helper="Bounded recent history"/>
       <Card label="Engagement" value={engagement.label} helper={engagement.explanation}/>
     </section>
-    <section className="rounded-xl border p-4"><h2 className="font-semibold">Saved vehicles</h2><p className="mt-1 text-sm text-muted-foreground">Most recent {LIST_LIMIT}; sold and archived vehicles remain visible.</p>{!saves.length ? <Empty>No saved vehicles.</Empty> : <ul className="mt-3 space-y-2 text-sm">{saves.map((save) => <li key={save.vehicle_id} className="flex justify-between gap-4"><VehicleLink vehicle={vehicleById.get(save.vehicle_id)} adminRoot={adminRoot}/><time>{format(save.created_at)}</time></li>)}</ul>}</section>
-    <section className="rounded-xl border p-4"><h2 className="font-semibold">Vehicle interest</h2>{!events.length ? <Empty>Vehicle-interest data is unavailable because this customer has no consented analytics activity.</Empty> : !interest.length ? <Empty>No vehicle views have been recorded.</Empty> : <ul className="mt-3 space-y-2 text-sm">{interest.slice(0, LIST_LIMIT).map((item) => <li key={item.vehicleId} className="flex flex-wrap items-center justify-between gap-2"><span><VehicleLink vehicle={vehicleById.get(item.vehicleId)} adminRoot={adminRoot}/><span className="ml-2 text-muted-foreground">{item.viewCount} view{item.viewCount === 1 ? "" : "s"} · first {format(item.firstViewedAt)} · last {format(item.lastViewedAt)}</span>{item.isSaved ? <Badge variant="outline" className="ml-2">saved</Badge> : null}{item.hasInquiry ? <Badge variant="outline" className="ml-2">inquiry</Badge> : null}</span></li>)}</ul>}</section>
-    <section className="rounded-xl border p-4"><h2 className="font-semibold">Leads</h2>{!leads.length ? <Empty>No linked leads.</Empty> : <ul className="mt-3 space-y-2 text-sm">{leads.map((lead) => <li key={lead.id} className="flex flex-wrap justify-between gap-2"><span><Link className="hover:underline" href={`${adminRoot}/leads/${lead.id}`}>{lead.source} inquiry</Link><Badge variant="outline" className="ml-2">{lead.status}</Badge>{lead.vehicle_id ? <span className="ml-2"><VehicleLink vehicle={vehicleById.get(lead.vehicle_id)} adminRoot={adminRoot}/></span> : null}</span><time className="text-muted-foreground">{format(lead.created_at)}</time></li>)}</ul>}</section>
-    <section className="rounded-xl border p-4"><h2 className="font-semibold">Chats</h2>{!chats.length ? <Empty>No linked chat sessions.</Empty> : <ul className="mt-3 space-y-2 text-sm">{chats.map((chat) => <li key={chat.id} className="flex justify-between gap-4"><span>{messageCountBySession.get(chat.id) ?? 0} recent message{(messageCountBySession.get(chat.id) ?? 0) === 1 ? "" : "s"}</span><time className="text-muted-foreground">Last activity {format(chat.updated_at)}</time></li>)}</ul>}<p className="mt-3 text-xs text-muted-foreground">Message counts are limited to the recent profile read; chat content is never loaded here.</p></section>
-    <section className="rounded-xl border p-4"><h2 className="font-semibold">Loyalty activity</h2>{!loyaltyTransactionResult.data?.length ? <Empty>No loyalty transactions.</Empty> : <ul className="mt-3 space-y-2 text-sm">{loyaltyTransactionResult.data.map((transaction) => <li key={transaction.id} className="flex justify-between gap-4"><span>{transaction.description ?? "Loyalty adjustment"} <span className={transaction.points_delta >= 0 ? "text-emerald-600" : "text-destructive"}>{transaction.points_delta >= 0 ? "+" : ""}{transaction.points_delta.toLocaleString()} points</span></span><time>{format(transaction.occurred_at)}</time></li>)}</ul>}</section>
-    <section className="rounded-xl border p-4"><h2 className="font-semibold">Activity timeline</h2><p className="mt-1 text-sm text-muted-foreground">Newest first; shown from real account, consented analytics, lead, chat, and loyalty records.</p>{!timeline.length ? <Empty>No customer activity is available.</Empty> : <ol className="mt-3 space-y-2 text-sm">{timeline.map((item) => <li key={item.id} className="flex justify-between gap-4"><span>{item.href ? <Link className="hover:underline" href={item.href}>{item.label}</Link> : item.label}</span><time>{format(item.occurredAt)}</time></li>)}</ol>}</section>
+    <section className="rounded-xl border p-4"><h2 className="font-semibold">Saved vehicles</h2><p className="mt-1 text-sm text-muted-foreground">Most recent {LIST_LIMIT}; sold and archived vehicles remain visible.</p>{!saves.length ? <Empty>No saved vehicles.</Empty> : <ul className="mt-3 space-y-2 text-sm">{saves.map((save) => <li key={save.vehicle_id} className="flex justify-between gap-4"><VehicleLink vehicle={vehicleById.get(save.vehicle_id)} adminRoot={adminRoot}/><CustomerDateTime value={save.created_at}/></li>)}</ul>}</section>
+    <section className="rounded-xl border p-4"><h2 className="font-semibold">Vehicle interest</h2>{!events.length ? <Empty>Vehicle-interest data is unavailable because this customer has no consented analytics activity.</Empty> : !interest.length ? <Empty>No vehicle views have been recorded.</Empty> : <ul className="mt-3 space-y-2 text-sm">{interest.slice(0, LIST_LIMIT).map((item) => <li key={item.vehicleId} className="flex flex-wrap items-center justify-between gap-2"><span><VehicleLink vehicle={vehicleById.get(item.vehicleId)} adminRoot={adminRoot}/><span className="ml-2 text-muted-foreground">{item.viewCount} view{item.viewCount === 1 ? "" : "s"} · first <CustomerDateTime value={item.firstViewedAt}/> · last <CustomerDateTime value={item.lastViewedAt}/></span>{item.isSaved ? <Badge variant="outline" className="ml-2">saved</Badge> : null}{item.hasInquiry ? <Badge variant="outline" className="ml-2">inquiry</Badge> : null}</span></li>)}</ul>}</section>
+    <section className="rounded-xl border p-4"><h2 className="font-semibold">Leads</h2>{!leads.length ? <Empty>No linked leads.</Empty> : <ul className="mt-3 space-y-2 text-sm">{leads.map((lead) => <li key={lead.id} className="flex flex-wrap justify-between gap-2"><span><Link className="hover:underline" href={`${adminRoot}/leads/${lead.id}`}>{lead.source} inquiry</Link><Badge variant="outline" className="ml-2">{lead.status}</Badge>{lead.vehicle_id ? <span className="ml-2"><VehicleLink vehicle={vehicleById.get(lead.vehicle_id)} adminRoot={adminRoot}/></span> : null}</span><CustomerDateTime className="text-muted-foreground" value={lead.created_at}/></li>)}</ul>}</section>
+    <section className="rounded-xl border p-4"><h2 className="font-semibold">Chats</h2>{!chats.length ? <Empty>No linked chat sessions.</Empty> : <ul className="mt-3 space-y-2 text-sm">{chats.map((chat) => <li key={chat.id} className="flex justify-between gap-4"><span>{messageCountBySession.get(chat.id) ?? 0} recent message{(messageCountBySession.get(chat.id) ?? 0) === 1 ? "" : "s"}</span><span className="text-muted-foreground">Last activity <CustomerDateTime value={chat.updated_at}/></span></li>)}</ul>}<p className="mt-3 text-xs text-muted-foreground">Message counts are limited to the recent profile read; chat content is never loaded here.</p></section>
+    <section className="rounded-xl border p-4"><h2 className="font-semibold">Loyalty activity</h2>{!loyaltyTransactionResult.data?.length ? <Empty>No loyalty transactions.</Empty> : <ul className="mt-3 space-y-2 text-sm">{loyaltyTransactionResult.data.map((transaction) => <li key={transaction.id} className="flex justify-between gap-4"><span>{transaction.description ?? "Loyalty adjustment"} <span className={transaction.points_delta >= 0 ? "text-emerald-600" : "text-destructive"}>{transaction.points_delta >= 0 ? "+" : ""}{transaction.points_delta.toLocaleString()} points</span></span><CustomerDateTime value={transaction.occurred_at}/></li>)}</ul>}</section>
+    <section className="rounded-xl border p-4"><h2 className="font-semibold">Activity timeline</h2><p className="mt-1 text-sm text-muted-foreground">Newest first; shown from trusted account actions, consented analytics, leads, and chats. Loyalty points remain in Loyalty activity.</p>{!timeline.length ? <Empty>No customer activity is available.</Empty> : <ol className="mt-3 space-y-2 text-sm">{timeline.map((item) => <li key={item.id} className="flex justify-between gap-4"><span>{item.href ? <Link className="hover:underline" href={item.href}>{item.label}</Link> : item.label}{item.unavailable ? <Badge variant="outline" className="ml-2">unavailable</Badge> : null}</span><CustomerDateTime value={item.occurredAt}/></li>)}</ol>}</section>
   </div>;
 }
 
 function VehicleLink({ vehicle, adminRoot }: { vehicle: VehicleRow | undefined; adminRoot: string }) {
   if (!vehicle) return <span>Unavailable vehicle <Badge variant="outline" className="ml-2">unavailable</Badge></span>;
-  const title = `${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim ?? ""}`.trim();
+  const title = canonicalVehicleTitle(vehicle);
   return <span><Link className="hover:underline" href={`${adminRoot}/vehicles/${vehicle.id}`}>{title}</Link><span className="ml-2 text-muted-foreground">${vehicle.price.toLocaleString()}</span><Badge variant="outline" className="ml-2">{vehicle.status}</Badge></span>;
 }
 function Empty({ children }: { children: React.ReactNode }) { return <p className="mt-3 text-sm text-muted-foreground">{children}</p>; }
 function Card({ label, value, helper }: { label: string; value: string; helper: string }) { return <div className="rounded-xl border p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p><p className="mt-1 text-xs text-muted-foreground">{helper}</p></div>; }
-function format(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date); }
 
 function optionalRows<T>(
   result: { data: T[] | null; error: { code?: string; message?: string } | null },

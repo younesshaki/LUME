@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import type { TenantTheme } from "@lume/types";
+import type { SiteDesign, TenantTheme } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildBrandingPreviewUrl } from "@/lib/brandingAssets";
 import BrandingClient from "./BrandingClient";
@@ -42,7 +42,7 @@ export default async function BrandingPage({ params }: PageProps) {
       tenantId={tenant.id}
       tenantSlug={tenant.slug}
       tenantName={tenant.name}
-      initialTheme={(themeResult.data?.theme ?? {}) as TenantTheme}
+      initialTheme={(themeResult.data?.theme ?? {}) as TenantTheme | SiteDesign}
       migrationWarning={migrationWarning}
       canManageBranding={manageResult.data === true}
       previewUrl={buildBrandingPreviewUrl(publicSiteBaseUrl, tenant.slug)}

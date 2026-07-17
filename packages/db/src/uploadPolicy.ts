@@ -26,7 +26,7 @@ export const BUCKET_UPLOAD_POLICIES: Record<string, UploadBucketPolicy> = {
     maxBytes: 2 * 1024 * 1024,
   },
   "tenant-media": {
-    allowedTypes: ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"],
+    allowedTypes: ["image/png", "image/jpeg", "image/webp", "image/avif", "image/gif", "image/svg+xml"],
     maxBytes: 10 * 1024 * 1024,
   },
   "tenant-csvs": {
@@ -93,6 +93,13 @@ export function sniffContentType(bytes: Uint8Array): string | null {
   ) {
     return "image/webp";
   }
+  if (
+    bytes.length >= 12 &&
+    ascii(bytes, 4, 8) === "ftyp" &&
+    (ascii(bytes, 8, 12) === "avif" || ascii(bytes, 8, 12) === "avis")
+  ) {
+    return "image/avif";
+  }
   if (bytes.length >= 6) {
     const header = ascii(bytes, 0, 6);
     if (header === "GIF87a" || header === "GIF89a") return "image/gif";
@@ -132,6 +139,7 @@ export function validateUploadWithBytes(
     "image/png",
     "image/jpeg",
     "image/webp",
+    "image/avif",
     "image/gif",
     "image/svg+xml",
     "model/gltf-binary",

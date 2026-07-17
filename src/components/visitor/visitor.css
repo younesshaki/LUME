@@ -10,7 +10,12 @@
   color: var(--visitor-ink);
   background:
     radial-gradient(circle at 80% 12%, color-mix(in srgb, var(--visitor-accent) 12%, transparent), transparent 34rem),
+    linear-gradient(var(--theme-site-background-overlay), var(--theme-site-background-overlay)),
+    var(--theme-site-background-image, none),
     var(--theme-lume-background, #000);
+  background-position: center, center, var(--theme-site-background-position), center;
+  background-repeat: no-repeat;
+  background-size: cover, cover, var(--theme-site-background-size), cover;
   scrollbar-width: thin;
   scrollbar-color: var(--visitor-line) transparent;
 }

@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="https://pub-da3069790c6443f883e3991be965f766.r2.dev/LUMElogo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("lume.color-theme.v1");
+          const dark = saved === "dark" || (saved !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+        } catch {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
 
     <!-- Warm up CDN connections for videos/audio (loaded with CORS fetch) -->
     <link rel="preconnect" href="https://pub-3a8f85adfce6494097551ac5c045b121.r2.dev" crossorigin="anonymous" />
@@ -15,11 +26,8 @@
       rel="stylesheet"
     />
     <style>
-      html,
-      body,
-      #root {
-        background: #000;
-      }
+      html[data-theme="dark"], html[data-theme="dark"] body, html[data-theme="dark"] #root { background-color: #000; }
+      html[data-theme="light"], html[data-theme="light"] body, html[data-theme="light"] #root { background-color: #f4efe5; }
     </style>
     <title>LUME</title>
   </head>

@@ -5,8 +5,13 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import type { TenantTheme } from "@lume/types";
-import { applyTenantTheme, loadTenantTheme } from "./tenantTheme";
+import type { SiteDesign, TenantTheme } from "@lume/types";
+import { useTheme } from "./theme/ThemeContext";
+import {
+  applyTenantSiteDesign,
+  applyTenantTheme,
+  loadTenantSiteDesign,
+} from "./tenantTheme";
 
 const TenantThemeContext = createContext<TenantTheme>({});
 
@@ -14,17 +19,26 @@ export function useTenantTheme(): TenantTheme {
   return useContext(TenantThemeContext);
 }
 
-export function TenantThemeProvider({ children }: PropsWithChildren) {
+export function TenantThemeProvider({
+  children,
+  enabled = true,
+}: PropsWithChildren<{ enabled?: boolean }>) {
+  if (!enabled) return <>{children}</>;
+  return <ActiveTenantThemeProvider>{children}</ActiveTenantThemeProvider>;
+}
+
+function ActiveTenantThemeProvider({ children }: PropsWithChildren) {
+  const { resolvedTheme } = useTheme();
+  const [design, setDesign] = useState<SiteDesign | null>(null);
   const [theme, setTheme] = useState<TenantTheme>({});
 
   useEffect(() => {
     let cancelled = false;
 
     async function applyTheme() {
-      const loadedTheme = await loadTenantTheme();
+      const design = await loadTenantSiteDesign();
       if (!cancelled) {
-        setTheme(loadedTheme);
-        applyTenantTheme(loadedTheme);
+        setDesign(design);
       }
     }
 
@@ -34,6 +48,11 @@ export function TenantThemeProvider({ children }: PropsWithChildren) {
       applyTenantTheme({});
     };
   }, []);
+
+  useEffect(() => {
+    if (!design) return;
+    setTheme(applyTenantSiteDesign(design, resolvedTheme));
+  }, [design, resolvedTheme]);
 
   return (
     <TenantThemeContext.Provider value={theme}>
