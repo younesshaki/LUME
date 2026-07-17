@@ -1264,6 +1264,7 @@ export type Database = {
           visitor_id: string | null;
           anonymous_session_id: string | null;
           vehicle_id: string | null;
+          vehicle_title: string | null;
           event_name: "inventory_view" | "search_performed" | "filter_applied" | "vehicle_view" | "vehicle_saved" | "vehicle_unsaved" | "compare_added" | "compare_removed" | "inquiry_opened" | "inquiry_started" | "inquiry_submitted" | "chat_started" | "account_created";
           event_category: "analytics" | "operational";
           utm_source: string | null;
@@ -1275,12 +1276,13 @@ export type Database = {
           occurred_at: string;
           created_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["conversion_events"]["Row"], "id" | "event_id" | "visitor_id" | "anonymous_session_id" | "vehicle_id" | "utm_source" | "utm_medium" | "utm_campaign" | "utm_content" | "referrer" | "metadata" | "occurred_at" | "created_at"> & {
+        Insert: Omit<Database["public"]["Tables"]["conversion_events"]["Row"], "id" | "event_id" | "visitor_id" | "anonymous_session_id" | "vehicle_id" | "vehicle_title" | "utm_source" | "utm_medium" | "utm_campaign" | "utm_content" | "referrer" | "metadata" | "occurred_at" | "created_at"> & {
           id?: string;
           event_id?: string;
           visitor_id?: string | null;
           anonymous_session_id?: string | null;
           vehicle_id?: string | null;
+          vehicle_title?: string | null;
           utm_source?: string | null;
           utm_medium?: string | null;
           utm_campaign?: string | null;
@@ -1288,6 +1290,27 @@ export type Database = {
           referrer?: string | null;
           metadata?: Record<string, unknown>;
           occurred_at?: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      site_design_revisions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          design: Record<string, unknown>;
+          template_key: string;
+          template_version: number;
+          published_by: string | null;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["site_design_revisions"]["Row"],
+          "id" | "published_by" | "created_at"
+        > & {
+          id?: string;
+          published_by?: string | null;
           created_at?: string;
         };
         Update: never;
@@ -1456,6 +1479,30 @@ export type Database = {
           balance_after: number;
           transaction_id: string | null;
         }[];
+      };
+      mutate_visitor_saved_vehicle: {
+        Args: {
+          p_tenant_id: string;
+          p_visitor_id: string;
+          p_vehicle_id: string;
+          p_operation: "save" | "unsave";
+        };
+        Returns: {
+          changed: boolean;
+          saved_id: string | null;
+          vehicle_id: string;
+          saved_at: string | null;
+          operational_event_id: string | null;
+        }[];
+      };
+      publish_site_design: {
+        Args: {
+          p_tenant_id: string;
+          p_design: Record<string, unknown>;
+          p_actor: string;
+          p_max_revisions: number;
+        };
+        Returns: Record<string, unknown>;
       };
       tenant_conversion_funnel: {
         Args: { p_tenant_id: string; p_since: string };

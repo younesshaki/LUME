@@ -8,10 +8,13 @@
  * user only.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { DEFAULT_TENANT_THEME } from "@lume/types";
+import { createDefaultSiteDesign, getSiteTemplate } from "@lume/types";
 import type { Database } from "./schema";
 
 type DbClient = SupabaseClient<Database, "public">;
+
+/** v2 Luxury design (no overrides) seeded into every new tenant's theme. */
+const STARTER_SITE_DESIGN = createDefaultSiteDesign(getSiteTemplate("luxury"));
 
 export type PageSeed = {
   slug: string;
@@ -93,9 +96,10 @@ export async function provisionTenant(
     if (RESERVED_SLUGS.has(candidate)) continue;
     const { data, error } = await client
       .from("tenants")
-      // Starter theme so a brand-new public site never renders unthemed;
-      // the owner customizes it later in the branding editor.
-      .insert({ slug: candidate, name, status: "active", theme: DEFAULT_TENANT_THEME })
+      // Seed a v2 Luxury SiteDesign (no overrides → resolves to Luxury
+      // defaults), so a brand-new public site renders the signature look in both
+      // modes. The owner customizes it later in Website > Design.
+      .insert({ slug: candidate, name, status: "active", theme: STARTER_SITE_DESIGN })
       .select("id, slug, name")
       .maybeSingle();
     if (!error && data) {

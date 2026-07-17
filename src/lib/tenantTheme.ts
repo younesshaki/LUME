@@ -1,6 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@lume/db";
-import type { TenantDockVariant, TenantTheme } from "@lume/types";
+import {
+  getSiteTemplate,
+  normalizeSiteDesign,
+  resolveModeBackground,
+  siteDesignToTenantTheme,
+  type SiteDesign,
+  type SiteMode,
+  type TenantDockVariant,
+  type TenantTheme,
+} from "@lume/types";
 import { publicTenantSlug } from "./publicTenant";
 import { isSupabaseConfigured, supabase } from "./supabase";
 
@@ -8,7 +17,7 @@ export type { TenantDockVariant, TenantTheme };
 
 type ThemeLookupClient = Pick<SupabaseClient<Database>, "rpc">;
 
-const themeCache = new Map<string, Promise<TenantTheme>>();
+const themeCache = new Map<string, Promise<SiteDesign>>();
 const THEME_CSS_VARIABLES = [
   "--theme-lume-ink",
   "--theme-lume-muted",
@@ -23,18 +32,24 @@ const THEME_CSS_VARIABLES = [
   "--lume-dock-item-bg",
   "--lume-dock-item-color",
   "--lume-dock-item-border",
+  "--theme-site-background-image",
+  "--theme-site-background-position",
+  "--theme-site-background-size",
+  "--theme-site-background-overlay",
 ] as const;
 
 /**
  * Read the public tenant theme through the anon-safe RPC added by migration 019.
  * If the migration is not applied yet, the RPC error is treated as "no theme".
  */
-export async function loadTenantTheme(
+export async function loadTenantSiteDesign(
   slug = publicTenantSlug,
   client: ThemeLookupClient = supabase
-): Promise<TenantTheme> {
+): Promise<SiteDesign> {
   const normalizedSlug = slug.trim().toLowerCase();
-  if (!normalizedSlug || (!isSupabaseConfigured && client === supabase)) return {};
+  if (!normalizedSlug || (!isSupabaseConfigured && client === supabase)) {
+    return normalizeSiteDesign(null, getSiteTemplate("luxury"));
+  }
 
   const cached = themeCache.get(normalizedSlug);
   if (cached) return cached;
@@ -42,6 +57,18 @@ export async function loadTenantTheme(
   const lookup = lookupTenantTheme(normalizedSlug, client);
   themeCache.set(normalizedSlug, lookup);
   return lookup;
+}
+
+/**
+ * Compatibility read for consumers that only need shared/header/branding data.
+ * Visual rendering should use loadTenantSiteDesign + applyTenantSiteDesign.
+ */
+export async function loadTenantTheme(
+  slug = publicTenantSlug,
+  client: ThemeLookupClient = supabase
+): Promise<TenantTheme> {
+  const design = await loadTenantSiteDesign(slug, client);
+  return siteDesignToTenantTheme(design, getSiteTemplate(design.template.key), "dark");
 }
 
 export function applyTenantTheme(
@@ -63,6 +90,32 @@ export function applyTenantTheme(
   }
 
   applyTenantFavicons(theme, root.ownerDocument);
+}
+
+/** Apply one resolved website mode without loading the inactive background. */
+export function applyTenantSiteDesign(
+  design: SiteDesign,
+  mode: SiteMode,
+  root: HTMLElement = document.documentElement
+): TenantTheme {
+  const template = getSiteTemplate(design.template.key);
+  const theme = siteDesignToTenantTheme(design, template, mode);
+  applyTenantTheme(theme, root);
+
+  const background = resolveModeBackground(design, template, mode);
+  if (background?.url) {
+    root.style.setProperty("--theme-site-background-image", `url(${JSON.stringify(background.url)})`);
+  }
+  root.style.setProperty("--theme-site-background-position", background?.position ?? "center");
+  root.style.setProperty("--theme-site-background-size", background?.size ?? "cover");
+  const opacity = background?.overlayOpacity ?? (mode === "dark" ? 0.42 : 0.12);
+  const overlayColor = background?.overlayColor ?? (mode === "dark" ? "#000" : "#f4efe5");
+  root.style.setProperty(
+    "--theme-site-background-overlay",
+    `color-mix(in srgb, ${overlayColor} ${Math.round(opacity * 100)}%, transparent)`
+  );
+  root.dataset.lumeSiteMode = mode;
+  return theme;
 }
 
 export function applyTenantFavicons(theme: TenantTheme, target: Document = document): void {
@@ -108,15 +161,22 @@ export function tenantThemeToCssVariables(theme: TenantTheme): Record<string, st
   return variables;
 }
 
-async function lookupTenantTheme(slug: string, client: ThemeLookupClient): Promise<TenantTheme> {
+async function lookupTenantTheme(slug: string, client: ThemeLookupClient): Promise<SiteDesign> {
   const { data, error } = await client.rpc("get_tenant_theme", { p_slug: slug });
   if (error) {
     console.warn("[theme] get_tenant_theme RPC failed; using defaults", error);
     themeCache.delete(slug);
-    return {};
+    return normalizeSiteDesign(null, getSiteTemplate("luxury"));
   }
 
-  return normalizeTenantTheme(data?.[0]?.theme);
+  const raw = data?.[0]?.theme;
+  const templateKey = readTemplateKey(raw);
+  return normalizeSiteDesign(raw, getSiteTemplate(templateKey));
+}
+
+function readTemplateKey(value: unknown): string | undefined {
+  if (!isRecord(value) || !isRecord(value.template)) return undefined;
+  return typeof value.template.key === "string" ? value.template.key : undefined;
 }
 
 function normalizeTenantTheme(value: unknown): TenantTheme {

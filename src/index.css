@@ -14,6 +14,9 @@
   --lume-dock-item-bg: #272727;
   --lume-dock-item-color: #efede6;
   --lume-dock-item-border: #e9c31b27;
+  --theme-site-background-position: center;
+  --theme-site-background-size: cover;
+  --theme-site-background-overlay: rgba(0, 0, 0, 0.42);
 }
 
 :root[data-theme="dark"] {
@@ -22,15 +25,16 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --theme-lume-ink: #211d16 !important;
-  --theme-lume-muted: rgba(33, 29, 22, 0.66) !important;
-  --theme-lume-soft: rgba(33, 29, 22, 0.46) !important;
-  --theme-lume-line: rgba(47, 38, 25, 0.16) !important;
-  --theme-lume-background: #f4efe5 !important;
-  --theme-lume-panel: rgba(255, 252, 246, 0.88) !important;
-  --lume-dock-item-bg: #fffaf0 !important;
-  --lume-dock-item-color: #211d16 !important;
-  --lume-dock-item-border: rgba(154, 117, 39, 0.2) !important;
+  --theme-lume-ink: #211d16;
+  --theme-lume-muted: rgba(33, 29, 22, 0.66);
+  --theme-lume-soft: rgba(33, 29, 22, 0.46);
+  --theme-lume-line: rgba(47, 38, 25, 0.16);
+  --theme-lume-background: #f4efe5;
+  --theme-lume-panel: rgba(255, 252, 246, 0.88);
+  --lume-dock-item-bg: #fffaf0;
+  --lume-dock-item-color: #211d16;
+  --lume-dock-item-border: rgba(154, 117, 39, 0.2);
+  --theme-site-background-overlay: rgba(244, 239, 229, 0.12);
 }
 
 @font-face {
@@ -53,6 +57,12 @@ body {
   margin: 0;
   font-family: var(--experience-font-family);
   background: var(--theme-lume-background, #000);
+  background-image:
+    linear-gradient(var(--theme-site-background-overlay), var(--theme-site-background-overlay)),
+    var(--theme-site-background-image, none);
+  background-position: center, var(--theme-site-background-position);
+  background-repeat: no-repeat;
+  background-size: cover, var(--theme-site-background-size);
   color: var(--theme-lume-ink, #fff8ec);
   transition: background-color 180ms ease, color 180ms ease;
 }

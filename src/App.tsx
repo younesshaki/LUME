@@ -46,6 +46,7 @@ import {
 } from "./components/CookieBanner/CookieBanner";
 import { SeoProvider } from "./lib/seo/SeoProvider";
 import { ThemeProvider } from "./lib/theme/ThemeContext";
+import { TenantThemeProvider } from "./lib/TenantThemeProvider";
 import { VisitorAuthProvider } from "./lib/visitor/VisitorAuthContext";
 import { SavedVehiclesProvider } from "./lib/visitor/SavedVehiclesContext";
 import {
@@ -415,6 +416,7 @@ export default function App() {
 
   return (
     <ThemeProvider enabled={!isAdminPath}>
+      <TenantThemeProvider enabled={!isAdminPath}>
       <VisitorAuthProvider enabled={!isAdminPath}>
         <SavedVehiclesProvider enabled={!isAdminPath}>
         <SeoProvider pathname={location.pathname} enabled={!isAdminPath}>
@@ -645,6 +647,7 @@ export default function App() {
         </SeoProvider>
         </SavedVehiclesProvider>
       </VisitorAuthProvider>
+      </TenantThemeProvider>
     </ThemeProvider>
   );
 }

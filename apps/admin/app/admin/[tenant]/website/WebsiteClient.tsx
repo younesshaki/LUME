@@ -9,6 +9,7 @@ import {
   Monitor,
   PanelTop,
   Palette,
+  LayoutTemplate,
   Plus,
   RefreshCw,
   Smartphone,
@@ -66,6 +67,18 @@ export default function WebsiteClient({
       description: "Add, edit, and publish pages. Arrange the blocks that make up each page.",
     },
     {
+      href: `/admin/${tenantSlug}/templates`,
+      icon: LayoutTemplate,
+      title: "Templates",
+      description: "Preview and prepare a versioned visual starting point without changing the live site.",
+    },
+    {
+      href: `/admin/${tenantSlug}/design`,
+      icon: Palette,
+      title: "Website design",
+      description: "Edit shared settings and separate Website dark and light modes, then publish explicitly.",
+    },
+    {
       href: `/admin/${tenantSlug}/navigation`,
       icon: PanelTop,
       title: "Header & navigation",
@@ -73,9 +86,9 @@ export default function WebsiteClient({
     },
     {
       href: `/admin/${tenantSlug}/branding`,
-      icon: Palette,
-      title: "Branding & theme",
-      description: "Set colors, logo, and typography that flow through the whole site.",
+      icon: ImageIcon,
+      title: "Logo & favicons",
+      description: "Manage dealership identity assets separately from the website visual design.",
     },
     {
       href: `/admin/${tenantSlug}/assets`,
@@ -110,7 +123,7 @@ export default function WebsiteClient({
         )}
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {editableSurfaces.map((surface) => (
           <Link
             key={surface.href}
@@ -126,7 +139,10 @@ export default function WebsiteClient({
 
       <section className="rounded-xl border border-neutral-200 dark:border-neutral-800">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 p-3 dark:border-neutral-800">
-          <h2 className="text-sm font-semibold">Live site preview</h2>
+          <div>
+            <h2 className="text-sm font-semibold">Published website preview</h2>
+            <p className="text-xs text-muted-foreground">Draft template and design changes appear only after publishing.</p>
+          </div>
           <div className="flex items-center gap-1">
             <div className="mr-1 flex items-center gap-0.5 rounded-lg border border-neutral-200 p-0.5 dark:border-neutral-800">
               {DEVICES.map(({ id, label, icon: Icon }) => (

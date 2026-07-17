@@ -14,6 +14,11 @@ const WEBP = new Uint8Array([
   0, 0, 0, 0,
   ...("WEBP".split("").map((c) => c.charCodeAt(0))),
 ]);
+const AVIF = new Uint8Array([
+  0, 0, 0, 24,
+  ...("ftyp".split("").map((c) => c.charCodeAt(0))),
+  ...("avif".split("").map((c) => c.charCodeAt(0))),
+]);
 const GLB = new Uint8Array([...("glTF".split("").map((c) => c.charCodeAt(0))), 2, 0, 0, 0]);
 const SVG = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
 const EXE = new Uint8Array([0x4d, 0x5a, 0x90, 0x00]); // MZ header — recognized by nothing
@@ -25,6 +30,7 @@ describe("sniffContentType", () => {
     expect(sniffContentType(JPEG)).toBe("image/jpeg");
     expect(sniffContentType(GIF)).toBe("image/gif");
     expect(sniffContentType(WEBP)).toBe("image/webp");
+    expect(sniffContentType(AVIF)).toBe("image/avif");
     expect(sniffContentType(GLB)).toBe("model/gltf-binary");
     expect(sniffContentType(SVG)).toBe("image/svg+xml");
   });
@@ -70,6 +76,9 @@ describe("validateUploadWithBytes", () => {
   it("accepts when declared type matches the sniffed signature", () => {
     expect(
       validateUploadWithBytes("tenant-media", { type: "image/png", size: 10 }, PNG).ok,
+    ).toBe(true);
+    expect(
+      validateUploadWithBytes("tenant-media", { type: "image/avif", size: 12 }, AVIF).ok,
     ).toBe(true);
   });
 

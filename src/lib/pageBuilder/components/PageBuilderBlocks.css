@@ -45,3 +45,9 @@
 .pageBuilderHero--left .pageBuilderHero__ctas {
   justify-content: flex-start;
 }
+
+:root[data-theme="light"] .pageBuilderHero__cta--secondary {
+  border-color: var(--theme-lume-line, rgba(47, 38, 25, 0.16));
+  color: var(--theme-lume-ink, #211d16);
+  background: color-mix(in srgb, var(--theme-lume-ink, #211d16) 5%, transparent);
+}
