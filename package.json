@@ -28,6 +28,7 @@
     "build:admin": "npm run build --workspace=@lume/admin",
     "preview": "vite preview",
     "parity:staging": "node scripts/local-parity.mjs",
+    "staging:refresh-from-prod": "node scripts/staging-refresh-from-prod.mjs",
     "embed": "tsx scripts/generateEmbeddings.ts",
     "seed:default-tenant": "tsx scripts/seed-default-tenant.ts",
     "create:tenant": "tsx scripts/create-tenant.ts"
