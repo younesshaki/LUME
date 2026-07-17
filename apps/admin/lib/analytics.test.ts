@@ -52,19 +52,27 @@ describe("niceBucketSize", () => {
 });
 
 describe("priceHistogram", () => {
-  it("buckets prices with zero-filled interior gaps", () => {
-    // Range 17.8k–129.9k over ≤8 buckets → 20k-wide buckets from $0k to $140k.
-    const buckets = priceHistogram([17800, 21500, 38900, 44900, 129900], 8);
-    expect(buckets).toHaveLength(7);
-    expect(buckets.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(5);
-    expect(buckets.map((bucket) => bucket.count)).toEqual([1, 2, 1, 0, 0, 0, 1]);
-    expect(buckets[0].label).toBe("$0–$20K");
+  it("buckets prices into the fixed asking-price ranges with an open top bucket", () => {
+    const buckets = priceHistogram([9000, 17800, 21500, 38900, 44900, 129900]);
+    expect(buckets.map((bucket) => bucket.label)).toEqual([
+      "$0–$15K",
+      "$15K–$25K",
+      "$25K–$40K",
+      "$40K–$60K",
+      "$60K–$100K",
+      "$100K+",
+    ]);
+    // 9k→b0, 17.8k+21.5k→b1, 38.9k→b2, 44.9k→b3, 60–100k empty, 129.9k→b5.
+    expect(buckets.map((bucket) => bucket.count)).toEqual([1, 2, 1, 1, 0, 1]);
+    expect(buckets.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(6);
   });
 
-  it("keeps a single bucket for identical prices and handles empties", () => {
+  it("keeps every bucket zero-filled and handles empties", () => {
     expect(priceHistogram([])).toEqual([]);
     const single = priceHistogram([5000, 5000]);
-    expect(single).toHaveLength(1);
+    expect(single).toHaveLength(6);
+    expect(single[0].label).toBe("$0–$15K");
     expect(single[0].count).toBe(2);
+    expect(single.slice(1).every((bucket) => bucket.count === 0)).toBe(true);
   });
 });

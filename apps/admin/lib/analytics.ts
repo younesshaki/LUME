@@ -106,30 +106,39 @@ function compactUsd(value: number): string {
 }
 
 /**
- * Histogram of prices in ~`targetBuckets` friendly-width buckets from 0 (or
- * the lowest bucket containing the min) up to the max price. Empty buckets
- * inside the range are kept so the shape reads honestly.
+ * Fixed lower edges (USD) for the asking-price buckets. Each bucket runs
+ * [edge, nextEdge); the final edge is open-ended ($100K+). Ranges are
+ * intentionally non-uniform to match how used-car inventory actually clusters.
  */
-export function priceHistogram(prices: number[], targetBuckets = 8): PriceBucket[] {
+const PRICE_BUCKET_EDGES = [0, 15_000, 25_000, 40_000, 60_000, 100_000] as const;
+
+/**
+ * Histogram of prices across the fixed business buckets:
+ * $0–$15K, $15K–$25K, $25K–$40K, $40K–$60K, $60K–$100K, $100K+.
+ * All buckets are kept (zero-filled) so the shape reads honestly; an empty
+ * input returns no bars at all.
+ */
+export function priceHistogram(prices: number[]): PriceBucket[] {
   const valid = prices.filter((price) => Number.isFinite(price) && price >= 0);
   if (valid.length === 0) return [];
 
-  const max = Math.max(...valid);
-  const min = Math.min(...valid);
-  const size = niceBucketSize(Math.max(1, (max - min) / targetBuckets || 1));
-
-  const firstBucket = Math.floor(min / size);
-  const lastBucket = Math.floor(max / size);
-  const buckets: PriceBucket[] = [];
-  for (let bucket = firstBucket; bucket <= lastBucket; bucket++) {
-    const from = bucket * size;
-    buckets.push({
-      label: `${compactUsd(from)}–${compactUsd(from + size)}`,
+  const buckets: PriceBucket[] = PRICE_BUCKET_EDGES.map((from, index) => {
+    const to = PRICE_BUCKET_EDGES[index + 1];
+    return {
+      label: to === undefined ? `${compactUsd(from)}+` : `${compactUsd(from)}–${compactUsd(to)}`,
       count: 0,
-    });
-  }
+    };
+  });
+
   for (const price of valid) {
-    buckets[Math.floor(price / size) - firstBucket].count += 1;
+    let index = PRICE_BUCKET_EDGES.length - 1;
+    for (let i = 0; i < PRICE_BUCKET_EDGES.length - 1; i++) {
+      if (price < PRICE_BUCKET_EDGES[i + 1]) {
+        index = i;
+        break;
+      }
+    }
+    buckets[index].count += 1;
   }
   return buckets;
 }
