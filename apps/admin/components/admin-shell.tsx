@@ -107,6 +107,7 @@ export type ShellTenant = {
   role: string;
   siteUrl: string;
   unreadCount: number;
+  sidebarSingleExpand: boolean;
 };
 
 export type ShellNotification = {
@@ -172,6 +173,7 @@ const SECTIONS = [
       { slug: "settings/billing", label: "Billing", icon: CreditCard },
       { slug: "settings/api-keys", label: "API Keys", icon: KeyRound },
       { slug: "settings/integrations", label: "Integrations", icon: WebhookIcon },
+      { slug: "settings/system-preferences", label: "System preferences", icon: Settings },
     ],
   },
 ] as const;
@@ -208,6 +210,41 @@ export function AdminShell({
 }: AdminShellProps) {
   const pathname = usePathname();
   const activeTenant = useActiveTenant(tenants, pathname);
+  const [expandedSections, setExpandedSections] = React.useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const activeSection = activeTenant
+    ? SECTIONS.find(
+        (section) =>
+          "children" in section &&
+          section.children.some((child) =>
+            pathname.startsWith(`/admin/${activeTenant.slug}/${child.slug}`),
+          ),
+      )?.label ?? null
+    : null;
+
+  React.useEffect(() => {
+    if (!activeSection) return;
+    setExpandedSections((previous) => {
+      if (activeTenant?.sidebarSingleExpand) return new Set([activeSection]);
+      if (previous.has(activeSection)) return previous;
+      return new Set([...previous, activeSection]);
+    });
+  }, [activeSection, activeTenant?.id, activeTenant?.sidebarSingleExpand]);
+
+  const setSectionOpen = React.useCallback(
+    (sectionLabel: string, open: boolean) => {
+      setExpandedSections((previous) => {
+        const next = new Set(previous);
+        if (!open) {
+          next.delete(sectionLabel);
+          return next;
+        }
+        return activeTenant?.sidebarSingleExpand ? new Set([sectionLabel]) : next.add(sectionLabel);
+      });
+    },
+    [activeTenant?.sidebarSingleExpand],
+  );
 
   return (
     // This shadcn sidebar version does not mount its own TooltipProvider;
@@ -259,7 +296,8 @@ export function AdminShell({
                         <Collapsible
                           key={section.label}
                           asChild
-                          defaultOpen={groupActive}
+                          open={expandedSections.has(section.label)}
+                          onOpenChange={(open) => setSectionOpen(section.label, open)}
                           className="group/collapsible"
                         >
                           <SidebarMenuItem>
@@ -492,7 +530,7 @@ function ShellHeader({
   const crumbs = buildCrumbs(pathname, activeTenant);
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+    <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-1 h-4" />
       <Breadcrumb>

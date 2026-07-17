@@ -18,8 +18,6 @@ import {
 } from "react-router-dom";
 import { OutsideShowcaseMusic } from "./experience/audio/OutsideShowcaseMusic";
 import { StoryProvider } from "./experience/story/StoryProvider";
-import PreloadGate from "./experience/ui/PreloadGate";
-import PhoneExperienceNotice from "./experience/ui/PhoneExperienceNotice";
 import { MediaQualitySettings } from "./experience/ui/MediaQualitySettings";
 import { SiteHeader } from "./components/layout/SiteHeader";
 import { BottomDock } from "./components/layout/BottomDock";
@@ -123,7 +121,6 @@ type ShowcaseEntryState = {
 };
 
 const MEDIA_QUALITY_STORAGE_KEY = "nomad.media-quality.v1";
-const GATE_SESSION_STORAGE_KEY = "lume.gate-passed.v1";
 const LOCAL_CHAT_ENABLED = import.meta.env.VITE_ENABLE_LOCAL_CHAT === "true";
 const PAGE_RENDERER_ENABLED = isPageRendererEnabled;
 
@@ -164,12 +161,6 @@ function readInitialMediaQuality(): ShowcaseVideoQuality {
   return stored === "normal" || stored === "high"
     ? stored
     : getRecommendedMediaQuality();
-}
-
-function readInitialGatePassed(): boolean {
-  if (typeof window === "undefined") return false;
-
-  return window.sessionStorage.getItem(GATE_SESSION_STORAGE_KEY) === "1";
 }
 
 function readShowcaseEntryState(search: string): ShowcaseEntryState {
@@ -250,7 +241,6 @@ export default function App() {
   const setActiveRoute = useUIStore((state) => state.setActiveRoute);
   const { partIndex: currentPartIndex, chapterIndex: currentChapterIndex } =
     readShowcaseEntryState(location.search);
-  const [gatePassed, setGatePassed] = useState(readInitialGatePassed);
   const [showcaseChapterRevealed, setShowcaseChapterRevealed] = useState(false);
   const [mediaQuality, setMediaQuality] = useState<ShowcaseVideoQuality>(
     readInitialMediaQuality
@@ -273,11 +263,6 @@ export default function App() {
       }
     );
   }, [navigateTo]);
-
-  const handleGateStart = useCallback(() => {
-    window.sessionStorage.setItem(GATE_SESSION_STORAGE_KEY, "1");
-    setGatePassed(true);
-  }, []);
 
   const handleEnterExperience = useCallback(
     (partIndex: number, chapterIndex: number) => {
@@ -398,12 +383,10 @@ export default function App() {
       getChapterDefinition(currentPartIndex + 1, currentChapterIndex + 1)?.id
     );
   const isAdminPath = currentRouteConfig.section === "admin";
-  const showGateOverlay = !gatePassed && !isAdminPath;
+  const showSiteHeader = currentRouteConfig.chrome.showHeader;
+  const showSiteDock = currentRouteConfig.chrome.showDock;
 
-  const showSiteHeader = currentRouteConfig.chrome.showHeader && !showGateOverlay;
-  const showSiteDock = currentRouteConfig.chrome.showDock && !showGateOverlay;
-
-  // The live-preview iframe endpoint: no site chrome, no gate, no audio — just
+  // The live-preview iframe endpoint: no site chrome or audio — just
   // the block canvas the admin editor streams into. Kept out of the route-config
   // union on purpose; it is an internal surface, not a navigable page.
   if (location.pathname === PAGE_PREVIEW_PATH) {
@@ -436,12 +419,11 @@ export default function App() {
       <ModeToggle className={showSiteHeader ? "modeToggle--belowHeader" : ""} />
       {/* Ambient music only mounts on the home and showcase sections, so light
           public routes like /vehicles never instantiate (and fetch) the audio. */}
-      {!showGateOverlay &&
-        (currentRouteConfig.section === "home" ||
-          currentRouteConfig.section === "showcase") && (
+      {(currentRouteConfig.section === "home" ||
+        currentRouteConfig.section === "showcase") && (
           <OutsideShowcaseMusic enabled={!(isShowcaseExperience && showcaseChapterRevealed)} />
         )}
-      {LOCAL_CHAT_ENABLED && !showGateOverlay && (
+      {LOCAL_CHAT_ENABLED && (
         <Suspense fallback={null}>
           <OllamaChat />
         </Suspense>
@@ -631,12 +613,6 @@ export default function App() {
           <Route path="*" element={<Navigate to={ROUTE_PATHS.home} replace />} />
         </Routes>
       </Suspense>
-      {showGateOverlay && (
-        <>
-          <PhoneExperienceNotice />
-          <PreloadGate onStart={handleGateStart} />
-        </>
-      )}
       {cookieConsent === "accepted" && (
         <>
           <Analytics />
