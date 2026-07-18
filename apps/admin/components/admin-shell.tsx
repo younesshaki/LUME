@@ -95,6 +95,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { NavLoaderProvider, useNavLoader } from "@/components/navigation-loader";
 import {
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
@@ -247,8 +248,9 @@ export function AdminShell({
   );
 
   return (
-    // This shadcn sidebar version does not mount its own TooltipProvider;
-    // the collapsed-rail tooltips crash without one.
+    <NavLoaderProvider>
+    {/* This shadcn sidebar version does not mount its own TooltipProvider;
+        the collapsed-rail tooltips crash without one. */}
     <TooltipProvider delayDuration={0}>
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -381,11 +383,13 @@ export function AdminShell({
       </SidebarInset>
     </SidebarProvider>
     </TooltipProvider>
+    </NavLoaderProvider>
   );
 }
 
 function TenantSwitcher({ tenants, active }: { tenants: ShellTenant[]; active: ShellTenant | null }) {
   const router = useRouter();
+  const { start } = useNavLoader();
 
   if (!active) {
     return (
@@ -421,7 +425,7 @@ function TenantSwitcher({ tenants, active }: { tenants: ShellTenant[]; active: S
           <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-56" align="start">
             <DropdownMenuLabel className="text-xs text-muted-foreground">Tenants</DropdownMenuLabel>
             {tenants.map((tenant) => (
-              <DropdownMenuItem key={tenant.id} onSelect={() => router.push(`/admin/${tenant.slug}`)}>
+              <DropdownMenuItem key={tenant.id} onSelect={() => { start(); router.push(`/admin/${tenant.slug}`); }}>
                 <div className="flex size-6 items-center justify-center rounded-sm border font-medium">
                   {tenant.name.charAt(0).toUpperCase()}
                 </div>
@@ -432,7 +436,7 @@ function TenantSwitcher({ tenants, active }: { tenants: ShellTenant[]; active: S
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => router.push("/admin/onboarding")}>
+            <DropdownMenuItem onSelect={() => { start(); router.push("/admin/onboarding"); }}>
               <Plus className="size-4" />
               New site
             </DropdownMenuItem>
@@ -604,6 +608,7 @@ function NotificationMenu({
   notifications: ShellNotification[];
 }) {
   const router = useRouter();
+  const { start } = useNavLoader();
   const [pending, startTransition] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
   const unreadCount = tenant?.unreadCount ?? 0;
@@ -619,7 +624,7 @@ function NotificationMenu({
           return;
         }
       }
-      if (notification.link?.startsWith("/admin/")) router.push(notification.link);
+      if (notification.link?.startsWith("/admin/")) { start(); router.push(notification.link); }
       router.refresh();
     });
   };
@@ -762,8 +767,10 @@ function CommandPalette({
   isPlatformAdmin: boolean;
 }) {
   const router = useRouter();
+  const { start } = useNavLoader();
   const go = (href: string) => {
     onOpenChange(false);
+    start();
     router.push(href);
   };
 

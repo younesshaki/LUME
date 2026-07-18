@@ -5,7 +5,6 @@ import ContactPage from "@/experience/ui/ContactPage";
 import ProductsPage from "@/experience/ui/ProductsPage";
 import ShowcasePage from "@/experience/ui/ShowcasePage";
 import StoryHomePage from "@/experience/ui/StoryHomePage";
-import VehiclesPage from "@/experience/ui/VehiclesPage";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { PageRenderer } from "./PageRenderer";
 
@@ -23,14 +22,6 @@ type ProductsPageRendererRouteProps = {
   onNavigateToVehicles: () => void;
   onNavigateToShowcase: () => void;
   onNavigateToContact: () => void;
-};
-
-type VehiclesPageRendererRouteProps = {
-  onGoHome: () => void;
-  onNavigateToProducts: () => void;
-  onNavigateToShowcase: () => void;
-  onNavigateToContact: () => void;
-  onSelectVehicle: (vehicleId: string) => void;
 };
 
 type ShowcasePageRendererRouteProps = {
@@ -114,42 +105,6 @@ export function ProductsPageRendererRoute({
           onNavigate={(screen) => {
             if (screen === "home") onGoHome();
             else if (screen === "vehicles") onNavigateToVehicles();
-            else if (screen === "showcase") onNavigateToShowcase();
-            else if (screen === "contact") onNavigateToContact();
-          }}
-        />
-      }
-    />
-  );
-}
-
-export function VehiclesPageRendererRoute({
-  onGoHome,
-  onNavigateToProducts,
-  onNavigateToShowcase,
-  onNavigateToContact,
-  onSelectVehicle,
-}: VehiclesPageRendererRouteProps) {
-  const fallback = (
-    <VehiclesPage
-      onGoHome={onGoHome}
-      onNavigateToProducts={onNavigateToProducts}
-      onNavigateToShowcase={onNavigateToShowcase}
-      onNavigateToContact={onNavigateToContact}
-      onSelectVehicle={onSelectVehicle}
-    />
-  );
-
-  return (
-    <PageRenderer
-      slug="vehicles"
-      fallback={fallback}
-      context={{ onSelectVehicle }}
-      footer={
-        <SiteFooter
-          onNavigate={(screen) => {
-            if (screen === "home") onGoHome();
-            else if (screen === "products") onNavigateToProducts();
             else if (screen === "showcase") onNavigateToShowcase();
             else if (screen === "contact") onNavigateToContact();
           }}

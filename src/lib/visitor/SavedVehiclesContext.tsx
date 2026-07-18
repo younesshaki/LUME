@@ -147,6 +147,16 @@ export function useSavedVehicles(): SavedVehiclesContextValue {
   return value;
 }
 
+/**
+ * The public page renderer is wrapped in SavedVehiclesProvider, while the
+ * Admin's isolated page-preview iframe intentionally is not. Components that
+ * are shared by both surfaces can use this hook to opt into the authoritative
+ * visitor state without making the preview depend on visitor authentication.
+ */
+export function useOptionalSavedVehicles(): SavedVehiclesContextValue | null {
+  return useContext(SavedVehiclesContext);
+}
+
 export function readSavedVehicleIds(storage: Storage | null = browserStorage()): string[] {
   if (!storage) return [];
   try {

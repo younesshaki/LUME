@@ -30,6 +30,9 @@ import {
 } from "@/lib/botActionConsumers";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
+import { useOptionalSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
+import { useNavLoaderHold } from "@/lib/navLoader/PublicNavLoader";
+import { trackConversion } from "@/lib/conversionAnalytics";
 import { vehiclePageSoundActions } from "@/experience/ui/VehiclesPage/VehiclesPage.sounds";
 import type { BlockComponentProps } from "../registry";
 import { usePageBuilderRenderContext } from "../renderContext";
@@ -269,18 +272,22 @@ function Pagination({
 export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const { onSelectVehicle } = usePageBuilderRenderContext();
   const { play } = useSound();
+  const visitorSaves = useOptionalSavedVehicles();
   const isStandard = mode === "standard";
   const title = stringProp(block, "title");
   const showFilters = booleanProp(block, "showFilters", true);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  // Hold the branded nav loader (if the tenant enabled it) until the first
+  // page of vehicles is actually loaded, not just when the route mounts.
+  useNavLoaderHold(loading);
   const [filters, setFilters] = useState<VehicleFilters>(
     () => consumePendingInventoryFilter() ?? DEFAULT_FILTERS
   );
   const [sort, setSort] = useState<VehicleSort>("recommended");
   const [page, setPage] = useState(1);
-  const [savedVehicleIds, setSavedVehicleIds] = useState<string[]>(() =>
+  const [previewSavedVehicleIds, setPreviewSavedVehicleIds] = useState<string[]>(() =>
     readStoredIds(SAVED_STORAGE_KEY)
   );
   const [compareVehicleIds, setCompareVehicleIds] = useState<string[]>(() =>
@@ -302,8 +309,11 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   }, []);
 
   useEffect(() => {
-    writeStoredIds(SAVED_STORAGE_KEY, savedVehicleIds);
-  }, [savedVehicleIds]);
+    // The page-preview iframe has no visitor session provider. Keep its
+    // existing local-only interaction, but never let it overwrite the public
+    // visitor queue once the authoritative provider is available.
+    if (!visitorSaves) writeStoredIds(SAVED_STORAGE_KEY, previewSavedVehicleIds);
+  }, [previewSavedVehicleIds, visitorSaves]);
 
   useEffect(() => {
     writeStoredIds(COMPARE_STORAGE_KEY, compareVehicleIds);
@@ -345,8 +355,17 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
     console.warn(`[pageBuilder] vehicle selected without route handler: ${vehicleId}`);
   };
 
+  const savedVehicleIds = visitorSaves?.savedIds ?? previewSavedVehicleIds;
+
   const toggleSaved = (vehicleId: string) => {
-    setSavedVehicleIds((ids) =>
+    if (visitorSaves) {
+      const wasSaved = visitorSaves.savedIds.includes(vehicleId);
+      void visitorSaves.toggleSaved(vehicleId).then((changed) => {
+        if (changed) trackConversion(wasSaved ? "vehicle_unsaved" : "vehicle_saved", { vehicleId });
+      });
+      return;
+    }
+    setPreviewSavedVehicleIds((ids) =>
       ids.includes(vehicleId)
         ? ids.filter((id) => id !== vehicleId)
         : [...ids, vehicleId]

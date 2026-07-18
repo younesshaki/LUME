@@ -17,7 +17,6 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { OutsideShowcaseMusic } from "./experience/audio/OutsideShowcaseMusic";
-import { StoryProvider } from "./experience/story/StoryProvider";
 import { MediaQualitySettings } from "./experience/ui/MediaQualitySettings";
 import { SiteHeader } from "./components/layout/SiteHeader";
 import { BottomDock } from "./components/layout/BottomDock";
@@ -45,6 +44,7 @@ import {
 import { SeoProvider } from "./lib/seo/SeoProvider";
 import { ThemeProvider } from "./lib/theme/ThemeContext";
 import { TenantThemeProvider } from "./lib/TenantThemeProvider";
+import { PublicNavLoader, NavLoaderSettle } from "./lib/navLoader/PublicNavLoader";
 import { VisitorAuthProvider } from "./lib/visitor/VisitorAuthContext";
 import { SavedVehiclesProvider } from "./lib/visitor/SavedVehiclesContext";
 import {
@@ -61,6 +61,8 @@ import {
   loadStoryHomePage,
   loadVehicleDetailPage,
   loadVehiclesPage,
+  loadVehiclesPageRendererRoute,
+  preloadVehiclesRoute,
 } from "./app-shell/routeModules";
 
 // The admin embeds this route in an iframe and streams draft blocks in over
@@ -69,6 +71,9 @@ const PAGE_PREVIEW_PATH = "/__preview";
 
 const AdminRouter = lazy(loadAdminRouter);
 const AccountPage = lazy(loadAccountPage);
+const StoryProvider = lazy(() =>
+  import("./experience/story/StoryProvider").then((module) => ({ default: module.StoryProvider }))
+);
 const ContactPage = lazy(loadContactPage);
 const Experience = lazy(loadExperience);
 const ProductDetailPage = lazy(loadProductDetailPage);
@@ -99,11 +104,7 @@ const ProductsPageRendererRoute = lazy(() =>
     default: module.ProductsPageRendererRoute,
   }))
 );
-const VehiclesPageRendererRoute = lazy(() =>
-  loadPageRendererRoutes().then((module) => ({
-    default: module.VehiclesPageRendererRoute,
-  }))
-);
+const VehiclesPageRendererRoute = lazy(loadVehiclesPageRendererRoute);
 const ShowcasePageRendererRoute = lazy(() =>
   loadPageRendererRoutes().then((module) => ({
     default: module.ShowcasePageRendererRoute,
@@ -386,6 +387,12 @@ export default function App() {
   const showSiteHeader = currentRouteConfig.chrome.showHeader;
   const showSiteDock = currentRouteConfig.chrome.showDock;
 
+  useEffect(() => {
+    if (location.pathname === ROUTE_PATHS.vehicles) {
+      preloadVehiclesRoute();
+    }
+  }, [location.pathname]);
+
   // The live-preview iframe endpoint: no site chrome or audio — just
   // the block canvas the admin editor streams into. Kept out of the route-config
   // union on purpose; it is an internal surface, not a navigable page.
@@ -430,8 +437,10 @@ export default function App() {
       )}
       <LeadCaptureBridge />
       {!isAdminPath && <CookieBanner onConsentChange={setCookieConsent} />}
+      {!isAdminPath && <PublicNavLoader />}
       <Suspense fallback={null}>
         {/* Phase 3: pages now render from real URLs instead of the old screen ternary. */}
+        <NavLoaderSettle />
         <Routes>
           <Route
             path={ROUTE_PATHS.gate}
