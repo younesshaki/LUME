@@ -112,6 +112,10 @@ imports Home, Products, Showcase, and Contact route modules. The page-builder
 document check uses the fully functional inventory as its loading fallback, so
 published blocks can enhance the route without delaying cards.
 
+The cinematic story provider is also route-lazy. A normal inventory visit no
+longer pulls the showcase story service and its backend integration into the
+initial application chunk.
+
 Concurrent requests for the same visible page are coalesced in the catalog
 client. This protects against React development Strict Mode and route fallback
 mounts producing duplicate first-page requests, while intentionally retaining

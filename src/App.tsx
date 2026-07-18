@@ -17,7 +17,6 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { OutsideShowcaseMusic } from "./experience/audio/OutsideShowcaseMusic";
-import { StoryProvider } from "./experience/story/StoryProvider";
 import { MediaQualitySettings } from "./experience/ui/MediaQualitySettings";
 import { SiteHeader } from "./components/layout/SiteHeader";
 import { BottomDock } from "./components/layout/BottomDock";
@@ -70,6 +69,9 @@ const PAGE_PREVIEW_PATH = "/__preview";
 
 const AdminRouter = lazy(loadAdminRouter);
 const AccountPage = lazy(loadAccountPage);
+const StoryProvider = lazy(() =>
+  import("./experience/story/StoryProvider").then((module) => ({ default: module.StoryProvider }))
+);
 const ContactPage = lazy(loadContactPage);
 const Experience = lazy(loadExperience);
 const ProductDetailPage = lazy(loadProductDetailPage);
