@@ -16,9 +16,43 @@
       })();
     </script>
 
-    <!-- Warm up CDN connections for videos/audio (loaded with CORS fetch) -->
-    <link rel="preconnect" href="https://pub-3a8f85adfce6494097551ac5c045b121.r2.dev" crossorigin="anonymous" />
-    <link rel="dns-prefetch" href="https://pub-3a8f85adfce6494097551ac5c045b121.r2.dev" />
+    <!--
+      The marketplace's images come from R2. Warm that cross-origin connection
+      only on Home, where a visitor is most likely to navigate to Vehicles next.
+      The inventory API is same-origin in production, so it already reuses the
+      document connection and does not need a redundant preconnect. This runs
+      before React so it complements (rather than delays) route-intent fetches.
+    -->
+    <script>
+      (() => {
+        const isHome = window.location.pathname === "/" || window.location.pathname === "/home";
+        if (!isHome) return;
+
+        const candidates = ["%VITE_R2_PUBLIC_BASE_URL%"];
+        const seen = new Set();
+
+        for (const candidate of candidates) {
+          // Vite preserves unknown placeholders. Ignore those instead of
+          // emitting an invalid network hint in environments without an override.
+          if (!candidate || candidate.startsWith("%")) continue;
+
+          try {
+            const origin = new URL(candidate, window.location.origin).origin;
+            if (origin === window.location.origin || seen.has(origin)) continue;
+            seen.add(origin);
+
+            const link = document.createElement("link");
+            link.rel = "preconnect";
+            link.href = origin;
+            link.crossOrigin = "anonymous";
+            link.dataset.lumeVehiclePreconnect = origin;
+            document.head.append(link);
+          } catch {
+            // A malformed optional public host must never block first paint.
+          }
+        }
+      })();
+    </script>
     <link rel="dns-prefetch" href="https://spheqdcagzndypxmqvuh.supabase.co" />
 
     <link
