@@ -77,6 +77,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!path || !ALLOWED_PATHS.has(route)) {
     return res.status(404).json({ error: "Visitor endpoint not found" });
   }
+
+  // Most inventory visitors are anonymous. Their `/me` response is
+  // deterministically 401 when the public-origin session cookie is absent, so
+  // do not pay an extra public-function → Admin-function network round trip
+  // merely to learn that fact. Authenticated sessions continue through the
+  // trusted upstream path and retain its tenant/session validation.
+  if (path === "me" && req.method === "GET" && !visitorSessionCookieHeader(header(req, "cookie"))) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
   if (!CHAT_UPSTREAM_URL) {
     return res.status(503).json({ error: "Visitor API upstream not configured" });
   }

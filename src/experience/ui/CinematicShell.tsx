@@ -4,9 +4,15 @@ import sharedBackgroundImage from "../assets/images/lume-homepage-background.png
 
 type CinematicShellProps = PropsWithChildren<{
   className?: string;
+  /** Delay the large shared artwork when content has a more important network path. */
+  loadBackground?: boolean;
 }>;
 
-export default function CinematicShell({ children, className }: CinematicShellProps) {
+export default function CinematicShell({
+  children,
+  className,
+  loadBackground = true,
+}: CinematicShellProps) {
   const { mode } = useDualMode();
 
   return (
@@ -25,7 +31,7 @@ export default function CinematicShell({ children, className }: CinematicShellPr
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: `url(${sharedBackgroundImage})`,
+          backgroundImage: loadBackground ? `url(${sharedBackgroundImage})` : "none",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
           backgroundSize: "cover",

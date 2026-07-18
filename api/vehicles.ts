@@ -71,6 +71,10 @@ type RootDatabase = {
         Args: { p_tenant_id: string };
         Returns: InventoryRow[];
       };
+      public_vehicle_inventory_by_slug: {
+        Args: { p_slug: string };
+        Returns: InventoryRow[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -107,19 +111,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     : null;
 
-  const tenant = await getTenantFromRequest(req, supabase);
-  if (!tenant) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
-
-  // Usage metering is best-effort and must not extend the public response's
-  // critical path. Quota enforcement remains in the Next API implementation.
-  if (serviceClient) {
-    void Promise.resolve(serviceClient.rpc("increment_usage_event", {
-      p_tenant_id: tenant.tenantId,
-      p_event_type: "vehicle_requests",
-      p_period_start: null,
-      p_increment: 1,
-    })).catch(() => undefined);
-  }
+  const tenantSlug = extractTenantSlugFromRequest(req);
+  if (!tenantSlug) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
 
   const limit = clamp(parseInt(query(req, "limit") || "") || DEFAULT_LIMIT, 1, MAX_LIMIT);
   const offset = Math.max(0, parseInt(query(req, "offset") || "") || 0);
@@ -130,15 +123,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (first !== undefined) params.set(key, first);
   }
 
-  let inventoryQuery = buildVehicleQuery(supabase, tenant.tenantId, params, {
-    limit,
-    offset,
-    includeCount,
-    useFullTextSearch: true,
-  });
+  const useSlugFastPath = inventorySlugFastPathEnabled();
+  let resolvedTenant: { tenantId: string; slug: string } | null = null;
+  if (!useSlugFastPath) {
+    resolvedTenant = await getTenantFromRequest(req, supabase);
+    if (!resolvedTenant) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
+  }
+
+  let inventoryQuery = buildVehicleQuery(
+    supabase,
+    resolvedTenant ? { tenantId: resolvedTenant.tenantId } : { slug: tenantSlug },
+    params,
+    {
+      limit,
+      offset,
+      includeCount,
+      useFullTextSearch: true,
+    },
+  );
   let { data, count, error } = await inventoryQuery;
+  if (useSlugFastPath && error && slugFastPathUnavailable(error.message)) {
+    resolvedTenant = await getTenantFromRequest(req, supabase);
+    if (!resolvedTenant) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
+    inventoryQuery = buildVehicleQuery(supabase, { tenantId: resolvedTenant.tenantId }, params, {
+      limit,
+      offset,
+      includeCount,
+      useFullTextSearch: true,
+    });
+    ({ data, count, error } = await inventoryQuery);
+  }
   if (error && searchTerm(params) && searchVectorMissing(error.message)) {
-    inventoryQuery = buildVehicleQuery(supabase, tenant.tenantId, params, {
+    inventoryQuery = buildVehicleQuery(supabase, resolvedTenant ? { tenantId: resolvedTenant.tenantId } : { slug: tenantSlug }, params, {
       limit,
       offset,
       includeCount,
@@ -153,6 +169,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const pageRows = (data ?? []) as InventoryRow[];
+  if (pageRows.length === 0 && !resolvedTenant) {
+    resolvedTenant = await getTenantFromRequest(req, supabase);
+    if (!resolvedTenant) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
+  }
+  const tenantId = pageRows[0]?.tenant_id ?? resolvedTenant?.tenantId ?? null;
+
+  // Usage metering is best-effort and must not extend the public response's
+  // critical path. Quota enforcement remains in the Next API implementation.
+  if (serviceClient && tenantId) {
+    void Promise.resolve(serviceClient.rpc("increment_usage_event", {
+      p_tenant_id: tenantId,
+      p_event_type: "vehicle_requests",
+      p_period_start: null,
+      p_increment: 1,
+    })).catch(() => undefined);
+  }
+
   const hasMore = pageRows.length > limit;
   const rows = hasMore ? pageRows.slice(0, limit) : pageRows;
   const r2PublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.trim()
@@ -165,9 +198,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ...(includeCount && count !== null ? { totalCount: count } : {}),
   };
 
-  const etag = rows[0] ? `W/"inventory-${tenant.tenantId}-${rows[0].catalog_version}"` : null;
-  res.setHeader("Cache-Control", "private, no-cache");
-  res.setHeader("Vary", "Origin, X-Lume-Tenant");
+  const etag = rows[0] && tenantId ? `W/"inventory-${tenantId}-${rows[0].catalog_version}"` : null;
+  res.setHeader("Cache-Control", inventoryCacheControl(req));
+  res.setHeader("Vary", "Origin");
   if (etag) res.setHeader("ETag", etag);
   if (etag && header(req, "if-none-match") === etag) {
     setCorsHeaders(req, res);
@@ -178,7 +211,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 function buildVehicleQuery(
   supabase: RootSupabaseClient,
-  tenantId: string,
+  tenant: { tenantId: string } | { slug: string },
   sp: URLSearchParams,
   options: {
     limit: number;
@@ -187,13 +220,18 @@ function buildVehicleQuery(
     useFullTextSearch: boolean;
   },
 ) {
-  let vehicleQuery = supabase
-    .rpc(
-      "public_vehicle_inventory",
-      { p_tenant_id: tenantId },
-      options.includeCount ? { count: "exact" } : {},
-    )
-    .select("*");
+  let vehicleQuery = ("tenantId" in tenant
+    ? supabase.rpc(
+        "public_vehicle_inventory",
+        { p_tenant_id: tenant.tenantId },
+        options.includeCount ? { count: "exact" } : {},
+      )
+    : supabase.rpc(
+        "public_vehicle_inventory_by_slug",
+        { p_slug: tenant.slug },
+        options.includeCount ? { count: "exact" } : {},
+      )
+  ).select("*");
 
   const search = searchTerm(sp);
   if (search) {
@@ -347,7 +385,39 @@ function setCorsHeaders(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Lume-Tenant");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.setHeader("Vary", "Origin, X-Lume-Tenant");
+  res.setHeader("Vary", "Origin");
+}
+
+/**
+ * A tenant embedded in the URL gives the CDN a stable, tenant-scoped cache
+ * key. Header-only tenant resolution remains supported, but deliberately
+ * stays private because a shared cache cannot safely key on arbitrary headers.
+ *
+ * Ten seconds is short enough that an admin vehicle or image mutation is
+ * visible promptly, while repeated public inventory visits avoid a database
+ * round trip entirely.
+ */
+export function inventoryCacheControl(req: VercelRequest): string {
+  return hasStableTenantCacheKey(req)
+    ? "public, max-age=0, s-maxage=10, must-revalidate"
+    : "private, no-cache";
+}
+
+export function hasStableTenantCacheKey(req: VercelRequest): boolean {
+  const querySlug = query(req, "tenant")?.trim();
+  const headerSlug = header(req, "x-lume-tenant")?.trim();
+  return Boolean(querySlug) && (!headerSlug || headerSlug === querySlug);
+}
+
+/**
+ * Migration 071 adds the slug-aware RPCs. Keep this deployment flag off until
+ * that migration is present, so a code-first rollout never adds a failed RPC
+ * request to the public critical path.
+ */
+export function inventorySlugFastPathEnabled(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return env.LUME_INVENTORY_SLUG_FAST_PATH === "true";
 }
 
 function json(req: VercelRequest, res: VercelResponse, payload: unknown, status: number) {
@@ -380,4 +450,8 @@ function sanitizeLikeSearch(search: string): string {
 function searchVectorMissing(message: string): boolean {
   const normalized = message.toLowerCase();
   return normalized.includes("search_vector") || normalized.includes("websearch_to_tsquery");
+}
+
+function slugFastPathUnavailable(message: string): boolean {
+  return message.toLowerCase().includes("public_vehicle_inventory_by_slug");
 }

@@ -10,6 +10,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { logStoryEvent } from "../lib/eventsService";
 import { play } from "../lib/sound";
 import { useAuth } from "./AuthProvider";
+import { preloadVehiclesRoute } from "./routeModules";
 import {
   resolveNavigatePath,
   type NavigateMeta,
@@ -47,6 +48,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         target.route === "admin" || target.route === "adminDashboard";
       const resolvedPath =
         adminAuthRequired && !loading && !user ? ROUTE_PATHS.adminLogin : toPath;
+
+      // Start the public inventory request before route rendering. Bot-driven
+      // navigation can carry a pending filter that the destination consumes,
+      // so it deliberately waits for the route to resolve that filter first.
+      if (target.route === "vehicles" && meta?.source !== "bot") {
+        preloadVehiclesRoute();
+      }
 
       navigate(resolvedPath, {
         replace: meta?.replace,

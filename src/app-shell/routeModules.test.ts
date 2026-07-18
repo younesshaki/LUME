@@ -9,7 +9,7 @@ describe("route module intent", () => {
   });
 
   it("uses the shared page-renderer chunk for configured and custom pages", () => {
-    expect(routeModuleIntentFor("vehicles", true)).toBe("page-renderer");
+    expect(routeModuleIntentFor("vehicles", true)).toBe("vehicles-page-renderer");
     expect(routeModuleIntentFor("about-us", false)).toBe("page-renderer");
   });
 

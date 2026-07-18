@@ -24,6 +24,7 @@ import {
   YEAR_MIN,
   countActiveFilters,
   formatVehiclePrice,
+  loadVehicleCount,
   loadVehicleFacets,
   loadVehicleResults,
   vehicleDisplayImage,
@@ -91,6 +92,17 @@ function mergeVehicleLookup(
   const next = { ...current };
   for (const vehicle of vehicles) next[vehicle.id] = vehicle;
   return next;
+}
+
+function scheduleAfterPaint(callback: () => void): () => void {
+  let secondFrame = 0;
+  const firstFrame = window.requestAnimationFrame(() => {
+    secondFrame = window.requestAnimationFrame(callback);
+  });
+  return () => {
+    window.cancelAnimationFrame(firstFrame);
+    if (secondFrame) window.cancelAnimationFrame(secondFrame);
+  };
 }
 
 function getScrollStorageKey(filters: VehicleFilters, sort: VehicleSort, page: number): string {
@@ -191,6 +203,7 @@ function VehicleCard({
   onViewDetails,
   onToggleSaved,
   onToggleCompare,
+  prioritizeImage,
 }: {
   vehicle: Vehicle;
   saved: boolean;
@@ -199,6 +212,7 @@ function VehicleCard({
   onViewDetails: () => void;
   onToggleSaved: () => void;
   onToggleCompare: () => void;
+  prioritizeImage: boolean;
 }) {
   const { play } = useSound();
 
@@ -219,6 +233,9 @@ function VehicleCard({
           <img
             src={vehicleDisplayImage(vehicle)}
             alt={vehicle.primaryImageAlt || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+            loading={prioritizeImage ? "eager" : "lazy"}
+            fetchPriority={prioritizeImage ? "high" : "low"}
+            decoding="async"
           />
         ) : (
           <div className="vehiclesPage__cardImagePlaceholder">
@@ -805,13 +822,14 @@ export default function VehiclesPage({
   }, []);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleLookup, setVehicleLookup] = useState<Record<string, Vehicle>>({});
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [facets, setFacets] = useState<VehicleFacets>(EMPTY_VEHICLE_FACETS);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   // Hold the branded nav loader (if enabled) until the first page of vehicles
   // is loaded — this is the component the /vehicles route actually renders.
   useNavLoaderHold(loading);
+  const [backgroundReady, setBackgroundReady] = useState(false);
   const [filters, setFilters] = useState<VehicleFilters>(initialState.filters);
   const [sort, setSort] = useState<VehicleSort>(initialState.sort);
   const [page, setPage] = useState(initialState.page);
@@ -822,17 +840,23 @@ export default function VehiclesPage({
   const restoredScrollRef = useRef(false);
   const inventoryTrackedRef = useRef(false);
   const analyticsFiltersInitializedRef = useRef(false);
+  const [loadedQueryKey, setLoadedQueryKey] = useState("");
+  const queryKey = useMemo(
+    () => encodeVehicleUrlState(filters, sort, page),
+    [filters, page, sort],
+  );
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setTotalCount(null);
     loadVehicleResults(filters, sort, page, PAGE_SIZE)
       .then((result) => {
         if (cancelled) return;
         setVehicles(result.vehicles);
-        if (result.totalCount !== null) setTotalCount(result.totalCount);
         setVehicleLookup((current) => mergeVehicleLookup(current, result.vehicles));
         setLoadError(false);
+        setLoadedQueryKey(queryKey);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -846,7 +870,7 @@ export default function VehiclesPage({
     return () => {
       cancelled = true;
     };
-  }, [filters, page, sort]);
+  }, [filters, page, queryKey, sort]);
 
   useEffect(() => {
     if (loading || loadError || inventoryTrackedRef.current) return;
@@ -870,21 +894,39 @@ export default function VehiclesPage({
     return () => window.clearTimeout(timer);
   }, [filters, sort]);
 
-  // Filter-dropdown values load from the lightweight facets endpoint and only
-  // refetch when the make/state scope changes — not on every page or sort.
+  // Exact counts and filter values are useful, but neither should compete with
+  // the first card response. Both start only after React has painted the list.
   useEffect(() => {
+    if (loading || loadError || loadedQueryKey !== queryKey) return;
     let cancelled = false;
-    loadVehicleFacets(filters.make, filters.sellerState)
-      .then((next) => {
-        if (!cancelled) setFacets(next);
-      })
-      .catch((error) => {
-        if (!cancelled) console.error("Unable to load filter options", error);
-      });
+    const cancelAfterPaint = scheduleAfterPaint(() => {
+      void loadVehicleCount(filters, sort).then(
+        (count) => {
+          if (!cancelled) setTotalCount(count);
+        },
+        () => undefined,
+      );
+      void loadVehicleFacets(filters.make, filters.sellerState).then(
+        (next) => {
+          if (!cancelled) setFacets(next);
+        },
+        () => undefined,
+      );
+    });
     return () => {
       cancelled = true;
+      cancelAfterPaint();
     };
-  }, [filters.make, filters.sellerState]);
+  }, [filters, loadedQueryKey, loadError, loading, queryKey, sort]);
+
+  // Do not let the shared cinematic artwork begin its large image request in
+  // the same commit as the first cards. Unlike metadata, it is purely visual,
+  // so wait until a completed card frame is on screen. Once enabled, it stays
+  // mounted through filters and pagination to avoid visual flicker.
+  useEffect(() => {
+    if (backgroundReady || (loading && !loadError)) return;
+    return scheduleAfterPaint(() => setBackgroundReady(true));
+  }, [backgroundReady, loadError, loading]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -893,7 +935,7 @@ export default function VehiclesPage({
     return () => window.clearTimeout(timeout);
   }, [filters, page, sort]);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const totalPages = totalCount === null ? Math.max(1, page) : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
   const compareVehicles = useMemo(
@@ -994,7 +1036,7 @@ export default function VehiclesPage({
   };
 
   return (
-    <CinematicShell>
+    <CinematicShell loadBackground={backgroundReady || loadError}>
       <div className="vehiclesPage">
         <main className="vehiclesPage__main" style={{ paddingTop: "72px", paddingBottom: "160px" }}>
           <div className="vehiclesPage__hero">
@@ -1027,7 +1069,7 @@ export default function VehiclesPage({
               <DemoNotice />
 
               <div className="vehiclesPage__resultsBar" ref={gridRef}>
-                {!loading && (
+                {!loading && totalCount !== null && (
                   <span className="vehiclesPage__resultCount">
                     {totalCount} vehicle{totalCount !== 1 ? "s" : ""}
                     {activeCount > 0 ? " matching filters" : ""}
@@ -1055,7 +1097,7 @@ export default function VehiclesPage({
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: isStandard ? 0.18 : 0.3 }}
                   >
-                    {vehicles.map((vehicle) => {
+                    {vehicles.map((vehicle, index) => {
                       const compared = compareVehicleIds.includes(vehicle.id);
                       return (
                         <VehicleCard
@@ -1067,12 +1109,13 @@ export default function VehiclesPage({
                           onViewDetails={() => handleViewDetails(vehicle.id)}
                           onToggleSaved={() => toggleSaved(vehicle.id)}
                           onToggleCompare={() => toggleCompare(vehicle.id)}
+                          prioritizeImage={index < 4}
                         />
                       );
                     })}
                   </motion.div>
 
-                  <Pagination page={safePage} totalPages={totalPages} onPage={handlePage} />
+                  {totalCount !== null && <Pagination page={safePage} totalPages={totalPages} onPage={handlePage} />}
                 </>
               )}
             </>
