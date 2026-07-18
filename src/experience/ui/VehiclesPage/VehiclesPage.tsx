@@ -46,7 +46,6 @@ import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import { useSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
 import { trackConversion } from "@/lib/conversionAnalytics";
-import { useNavLoaderHold } from "@/lib/navLoader/PublicNavLoader";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { useVehiclesPageStateBridge } from "./VehiclesPage.state";
@@ -826,9 +825,6 @@ export default function VehiclesPage({
   const [facets, setFacets] = useState<VehicleFacets>(EMPTY_VEHICLE_FACETS);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  // Hold the branded nav loader (if enabled) until the first page of vehicles
-  // is loaded — this is the component the /vehicles route actually renders.
-  useNavLoaderHold(loading);
   const [backgroundReady, setBackgroundReady] = useState(false);
   const [filters, setFilters] = useState<VehicleFilters>(initialState.filters);
   const [sort, setSort] = useState<VehicleSort>(initialState.sort);

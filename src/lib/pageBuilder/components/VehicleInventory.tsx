@@ -13,14 +13,13 @@ import {
   DEFAULT_FILTERS,
   VEHICLE_SORT_OPTIONS,
   countActiveFilters,
-  filterVehicles,
   formatVehiclePrice,
-  getModelsForMake,
-  getUniqueMakes,
-  loadVehicles,
-  sortVehicles,
+  loadVehicleCount,
+  loadVehicleFacets,
+  loadVehicleResults,
   vehicleDisplayImage,
   type Vehicle,
+  type VehicleFacets,
   type VehicleFilters,
   type VehicleSort,
 } from "@/experience/vehicles/catalog";
@@ -31,7 +30,6 @@ import {
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import { useOptionalSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
-import { useNavLoaderHold } from "@/lib/navLoader/PublicNavLoader";
 import { trackConversion } from "@/lib/conversionAnalytics";
 import { vehiclePageSoundActions } from "@/experience/ui/VehiclesPage/VehiclesPage.sounds";
 import type { BlockComponentProps } from "../registry";
@@ -42,6 +40,23 @@ import "@/experience/ui/VehiclesPage/VehiclesPage.css";
 const PAGE_SIZE = 24;
 const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
+const EMPTY_VEHICLE_FACETS: VehicleFacets = {
+  makes: [],
+  models: [],
+  states: [],
+  cities: [],
+};
+
+function scheduleAfterPaint(callback: () => void): () => void {
+  let secondFrame = 0;
+  const firstFrame = window.requestAnimationFrame(() => {
+    secondFrame = window.requestAnimationFrame(callback);
+  });
+  return () => {
+    window.cancelAnimationFrame(firstFrame);
+    if (secondFrame) window.cancelAnimationFrame(secondFrame);
+  };
+}
 
 function formatMileage(miles: number | null): string {
   if (miles === null) return "N/A";
@@ -277,11 +292,10 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const title = stringProp(block, "title");
   const showFilters = booleanProp(block, "showFilters", true);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [facets, setFacets] = useState<VehicleFacets>(EMPTY_VEHICLE_FACETS);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  // Hold the branded nav loader (if the tenant enabled it) until the first
-  // page of vehicles is actually loaded, not just when the route mounts.
-  useNavLoaderHold(loading);
   const [filters, setFilters] = useState<VehicleFilters>(
     () => consumePendingInventoryFilter() ?? DEFAULT_FILTERS
   );
@@ -294,19 +308,63 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
     readStoredIds(COMPARE_STORAGE_KEY).slice(0, 3)
   );
   const gridRef = useRef<HTMLDivElement>(null);
+  const queryKey = useMemo(
+    () => JSON.stringify({ filters, sort, page }),
+    [filters, page, sort],
+  );
+  const [loadedQueryKey, setLoadedQueryKey] = useState("");
 
   useEffect(() => {
-    loadVehicles()
-      .then((loadedVehicles) => {
-        setVehicles(loadedVehicles);
+    let cancelled = false;
+    setLoading(true);
+    setTotalCount(null);
+    loadVehicleResults(filters, sort, page, PAGE_SIZE)
+      .then((result) => {
+        if (cancelled) return;
+        setVehicles(result.vehicles);
         setLoadError(false);
+        setLoadedQueryKey(queryKey);
       })
       .catch((error) => {
+        if (cancelled) return;
         console.error("Unable to load vehicle inventory", error);
         setLoadError(true);
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, page, queryKey, sort]);
+
+  // Page-builder previews use the same bounded API path as the public
+  // marketplace. Counts and filter options are secondary metadata, so defer
+  // them until the visible card page has painted instead of loading a complete
+  // catalog to derive them in the browser.
+  useEffect(() => {
+    if (loading || loadError || loadedQueryKey !== queryKey) return;
+    let cancelled = false;
+    const cancelAfterPaint = scheduleAfterPaint(() => {
+      void loadVehicleCount(filters, sort).then(
+        (count) => {
+          if (!cancelled) setTotalCount(count);
+        },
+        () => undefined,
+      );
+      void loadVehicleFacets(filters.make, filters.sellerState).then(
+        (next) => {
+          if (!cancelled) setFacets(next);
+        },
+        () => undefined,
+      );
+    });
+    return () => {
+      cancelled = true;
+      cancelAfterPaint();
+    };
+  }, [filters, loadedQueryKey, loadError, loading, queryKey, sort]);
 
   useEffect(() => {
     // The page-preview iframe has no visitor session provider. Keep its
@@ -319,16 +377,8 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
     writeStoredIds(COMPARE_STORAGE_KEY, compareVehicleIds);
   }, [compareVehicleIds]);
 
-  const makes = useMemo(() => getUniqueMakes(vehicles), [vehicles]);
-  const models = useMemo(
-    () => (filters.make ? getModelsForMake(vehicles, filters.make) : []),
-    [filters.make, vehicles]
-  );
-  const filtered = useMemo(() => filterVehicles(vehicles, filters), [filters, vehicles]);
-  const sorted = useMemo(() => sortVehicles(filtered, sort), [filtered, sort]);
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const totalPages = totalCount === null ? Math.max(1, page) : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paginated = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
 
   useEffect(() => {
@@ -443,7 +493,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                   onChange={(event) => handleFilterChange({ make: event.target.value, model: "" })}
                 >
                   <option value="">All Makes</option>
-                  {makes.map((make) => <option key={make} value={make}>{make}</option>)}
+                  {facets.makes.map((make) => <option key={make} value={make}>{make}</option>)}
                 </select>
               </label>
 
@@ -455,7 +505,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                   onChange={(event) => handleFilterChange({ model: event.target.value })}
                 >
                   <option value="">All Models</option>
-                  {models.map((model) => <option key={model} value={model}>{model}</option>)}
+                  {facets.models.map((model) => <option key={model} value={model}>{model}</option>)}
                 </select>
               </label>
 
@@ -470,9 +520,9 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
           </p>
 
           <div className="vehiclesPage__resultsBar" ref={gridRef}>
-            {!loading && (
+            {!loading && totalCount !== null && (
               <span className="vehiclesPage__resultCount">
-                {sorted.length} vehicle{sorted.length !== 1 ? "s" : ""}
+                {totalCount} vehicle{totalCount !== 1 ? "s" : ""}
                 {activeCount > 0 ? " matching filters" : ""}
               </span>
             )}
@@ -482,7 +532,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
             <div className="vehiclesPage__loading">
               <span>Loading vehicles...</span>
             </div>
-          ) : sorted.length === 0 ? (
+          ) : vehicles.length === 0 ? (
             <div className="vehiclesPage__empty">
               <p>No vehicles match your filters.</p>
               <button
@@ -505,7 +555,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: isStandard ? 0.18 : 0.3 }}
               >
-                {paginated.map((vehicle) => {
+                {vehicles.map((vehicle) => {
                   const compared = compareVehicleIds.includes(vehicle.id);
                   return (
                     <VehicleCard
@@ -522,14 +572,16 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                 })}
               </motion.div>
 
-              <Pagination
-                page={safePage}
-                totalPages={totalPages}
-                onPage={(nextPage) => {
-                  setPage(nextPage);
-                  gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-              />
+              {totalCount !== null && (
+                <Pagination
+                  page={safePage}
+                  totalPages={totalPages}
+                  onPage={(nextPage) => {
+                    setPage(nextPage);
+                    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                />
+              )}
             </>
           )}
         </>

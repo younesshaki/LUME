@@ -44,7 +44,7 @@ import {
 import { SeoProvider } from "./lib/seo/SeoProvider";
 import { ThemeProvider } from "./lib/theme/ThemeContext";
 import { TenantThemeProvider } from "./lib/TenantThemeProvider";
-import { PublicNavLoader, NavLoaderSettle } from "./lib/navLoader/PublicNavLoader";
+import { PublicNavLoader } from "./lib/navLoader/PublicNavLoader";
 import { VisitorAuthProvider } from "./lib/visitor/VisitorAuthContext";
 import { SavedVehiclesProvider } from "./lib/visitor/SavedVehiclesContext";
 import {
@@ -440,7 +440,6 @@ export default function App() {
       {!isAdminPath && <PublicNavLoader />}
       <Suspense fallback={null}>
         {/* Phase 3: pages now render from real URLs instead of the old screen ternary. */}
-        <NavLoaderSettle />
         <Routes>
           <Route
             path={ROUTE_PATHS.gate}
