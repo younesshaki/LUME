@@ -32,7 +32,8 @@ const SPIN_DELAY = 1200; // logo begins spinning only after this (from click)
 const MIN_VISIBLE = 350; // once shown, stay at least this long (no ugly flash-out)
 const MAX_DURATION = 10000; // safety: force-hide if a navigation never settles
 
-const LOADER_ENABLED = process.env.NEXT_PUBLIC_ADMIN_NAV_LOADER === "true";
+// Always on: the admin route-transition loader is a standard part of the shell.
+const LOADER_ENABLED = true;
 
 type LoaderState = { visible: boolean; spinning: boolean };
 type Subscriber = (state: LoaderState) => void;
