@@ -153,28 +153,37 @@ export function PublicNavLoader() {
 
   useEffect(() => {
     if (!enabled) return;
-    const onClick = (event: MouseEvent) => {
-      if (event.defaultPrevented) return;
-      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const anchor = (event.target as Element | null)?.closest("a");
-      if (!anchor) return;
-      const href = anchor.getAttribute("href");
-      if (!href) return;
-      if (anchor.hasAttribute("download")) return;
-      const target = anchor.getAttribute("target");
-      if (target && target !== "_self") return;
-      let url: URL;
-      try {
-        url = new URL(href, window.location.href);
-      } catch {
-        return;
-      }
-      if (url.origin !== window.location.origin) return;
-      if (url.pathname === window.location.pathname) return; // same page / hash / query
-      controller.start();
+    // The public header/dock navigate programmatically (react-router
+    // useNavigate → history), not via <a>. Patch pushState/replaceState so we
+    // catch every in-app navigation — link clicks AND programmatic — and only
+    // start the cover when the pathname actually changes.
+    const original = {
+      push: window.history.pushState.bind(window.history),
+      replace: window.history.replaceState.bind(window.history),
     };
-    document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
+    const wrap = (orig: History["pushState"]): History["pushState"] =>
+      function patched(this: History, ...args: Parameters<History["pushState"]>) {
+        const before = window.location.pathname;
+        const result = orig(...args);
+        try {
+          const nextUrl = args[2];
+          if (nextUrl != null) {
+            const next = new URL(String(nextUrl), window.location.href);
+            if (next.origin === window.location.origin && next.pathname !== before) {
+              controller.start();
+            }
+          }
+        } catch {
+          // A malformed URL simply means no cover — never break navigation.
+        }
+        return result;
+      };
+    window.history.pushState = wrap(original.push);
+    window.history.replaceState = wrap(original.replace);
+    return () => {
+      window.history.pushState = original.push;
+      window.history.replaceState = original.replace;
+    };
   }, [enabled]);
 
   if (!enabled) return null;
