@@ -26,7 +26,8 @@ export default async function WebsitePage({ params }: PageProps) {
       : {};
   const navLoader =
     theme.navLoader && typeof theme.navLoader === "object" ? (theme.navLoader as Record<string, unknown>) : {};
-  const navLoaderEnabled = navLoader.enabled === true;
+  // On by default; a tenant opts out by setting enabled === false.
+  const navLoaderEnabled = navLoader.enabled !== false;
 
   return (
     <WebsiteClient
