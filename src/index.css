@@ -17,6 +17,17 @@
   --theme-site-background-position: center;
   --theme-site-background-size: cover;
   --theme-site-background-overlay: rgba(0, 0, 0, 0.42);
+  /* Shared public-surface roles. Pages can remain expressive without assuming
+     that the active website mode is always a dark canvas. */
+  --lume-surface: rgba(12, 11, 13, 0.82);
+  --lume-surface-raised: rgba(18, 14, 15, 0.9);
+  --lume-surface-subtle: rgba(255, 248, 236, 0.06);
+  --lume-control: rgba(255, 248, 236, 0.07);
+  --lume-shadow: rgba(0, 0, 0, 0.38);
+  --lume-focus-ring: color-mix(in srgb, var(--theme-lume-gold) 42%, transparent);
+  --lume-danger: #ffb3a6;
+  --lume-primary-action: var(--theme-lume-gold);
+  --lume-on-primary: #17130d;
 }
 
 :root[data-theme="dark"] {
@@ -35,6 +46,15 @@
   --lume-dock-item-color: #211d16;
   --lume-dock-item-border: rgba(154, 117, 39, 0.2);
   --theme-site-background-overlay: rgba(244, 239, 229, 0.12);
+  --lume-surface: color-mix(in srgb, var(--theme-lume-panel) 94%, var(--theme-lume-background));
+  --lume-surface-raised: color-mix(in srgb, var(--theme-lume-panel) 98%, var(--theme-lume-background));
+  --lume-surface-subtle: color-mix(in srgb, var(--theme-lume-ink) 4%, transparent);
+  --lume-control: color-mix(in srgb, var(--theme-lume-ink) 5%, var(--theme-lume-panel));
+  --lume-shadow: color-mix(in srgb, #372810 16%, transparent);
+  --lume-focus-ring: color-mix(in srgb, var(--theme-lume-gold) 44%, transparent);
+  --lume-danger: #a6382b;
+  --lume-primary-action: color-mix(in srgb, var(--theme-lume-gold) 76%, #3a280d);
+  --lume-on-primary: #fffaf0;
 }
 
 @font-face {

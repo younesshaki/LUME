@@ -1,0 +1,521 @@
+/*
+ * Public website light-mode polish
+ *
+ * The website template already resolves a complete light palette into the
+ * --theme-lume-* roles. This layer intentionally consumes those semantic
+ * roles instead of changing tenant data or inverting the dark design. It
+ * converts dark-only canvas, card, form, and dialog treatments into a warm,
+ * readable Luxury light treatment on every public route.
+ */
+
+:root[data-theme="light"] :is(
+  .vehiclesPage,
+  .vehicleDetail,
+  .productsPage,
+  .productDetail,
+  .contactPage,
+  .storyHome,
+  .showcasePage
+) {
+  scrollbar-color: var(--theme-lume-line) transparent;
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage,
+  .vehicleDetail,
+  .productsPage,
+  .productDetail,
+  .contactPage,
+  .storyHome,
+  .showcasePage
+)::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--theme-lume-ink) 18%, transparent);
+}
+
+/* Legacy route headers are still used by Page Builder and standalone screen
+   variants. Keep them readable over both the light fallback and custom art. */
+:root[data-theme="light"] :is(
+  .vehiclesPage__header,
+  .vehicleDetail__header,
+  .productsPage__header,
+  .productDetail__header,
+  .contactPage__header,
+  .storyHome__header,
+  .showcasePage__header
+) {
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-lume-line) 92%, transparent);
+  background: color-mix(in srgb, var(--theme-lume-background) 82%, transparent);
+  box-shadow: 0 8px 28px color-mix(in srgb, #372810 8%, transparent);
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__navLink,
+  .productsPage__navLink,
+  .contactPage__navLink,
+  .storyHome__nav a,
+  .showcasePage__nav button,
+  .productDetail__nav button,
+  .vehicleDetail__nav button,
+  .vehicleDetail__backLink
+) {
+  color: var(--theme-lume-muted);
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__navLink:hover,
+  .vehiclesPage__navLink:focus-visible,
+  .productsPage__navLink:hover,
+  .productsPage__navLink:focus-visible,
+  .contactPage__navLink:hover,
+  .contactPage__navLink:focus-visible,
+  .storyHome__nav a:hover,
+  .storyHome__nav a:focus-visible,
+  .showcasePage__nav button:hover,
+  .showcasePage__nav button:focus-visible,
+  .productDetail__nav button:hover,
+  .productDetail__nav button:focus-visible,
+  .vehicleDetail__nav button:hover,
+  .vehicleDetail__nav button:focus-visible,
+  .vehicleDetail__backLink:hover,
+  .vehicleDetail__backLink:focus-visible
+) {
+  color: var(--theme-lume-ink);
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__title,
+  .productsPage__title,
+  .contactPage__title,
+  .storyHome__title
+) {
+  text-shadow: 0 12px 32px color-mix(in srgb, var(--theme-lume-background) 72%, transparent);
+}
+
+/* Inventory ---------------------------------------------------------------- */
+:root[data-theme="light"] .vehiclesPage {
+  --lume-panel-solid: var(--lume-surface-raised);
+}
+
+:root[data-theme="light"] .vehiclesPage__toolbar {
+  border-color: var(--theme-lume-line);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-lume-gold) 7%, transparent), transparent 54%),
+    var(--lume-surface);
+  box-shadow: 0 18px 44px var(--lume-shadow);
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__search,
+  .vehiclesPage__toolbarField select,
+  .vehiclesPage__select,
+  .vehiclesPage__iconBtn,
+  .vehiclesPage__pageBtn,
+  .vehiclesPage__pill,
+  .vehiclesPage__compareColumn
+) {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+  background: var(--lume-control);
+}
+
+:root[data-theme="light"] .vehiclesPage__search input::placeholder {
+  color: var(--theme-lume-soft);
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__toolbarField option,
+  .vehiclesPage__select option
+) {
+  color: var(--theme-lume-ink);
+  background: var(--theme-lume-panel);
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__filterToggle,
+  .vehiclesPage__detailsBtn,
+  .vehiclesPage__applyBtn
+) {
+  border-color: var(--lume-primary-action);
+  color: var(--lume-on-primary);
+  background: var(--lume-primary-action);
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__filterToggle:hover,
+  .vehiclesPage__detailsBtn:hover,
+  .vehiclesPage__applyBtn:hover
+) {
+  border-color: color-mix(in srgb, var(--lume-primary-action) 85%, #000);
+  background: color-mix(in srgb, var(--lume-primary-action) 85%, #000);
+}
+
+:root[data-theme="light"] .vehiclesPage__filterToggle span {
+  color: var(--lume-on-primary);
+  background: color-mix(in srgb, var(--lume-on-primary) 16%, transparent);
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__loading,
+  .vehiclesPage__empty,
+  .vehiclesPage__error,
+  .vehiclesPage__drawer,
+  .vehiclesPage__compareModal
+) {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+  background: var(--lume-surface-raised);
+  box-shadow: 0 24px 70px var(--lume-shadow);
+}
+
+:root[data-theme="light"] .vehiclesPage__card {
+  border-color: var(--theme-lume-line);
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--theme-lume-gold) 12%, transparent), transparent 32%),
+    linear-gradient(160deg, color-mix(in srgb, var(--theme-lume-panel) 98%, var(--theme-lume-background)), var(--lume-surface-raised));
+  box-shadow: 0 14px 34px color-mix(in srgb, #372810 9%, transparent);
+}
+
+:root[data-theme="light"] .vehiclesPage__card:hover {
+  border-color: color-mix(in srgb, var(--theme-lume-gold) 48%, var(--theme-lume-line));
+  box-shadow: 0 24px 58px color-mix(in srgb, #372810 16%, transparent);
+}
+
+:root[data-theme="light"] .vehiclesPage__cardImagePlaceholder {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-lume-gold) 18%, var(--theme-lume-panel)), var(--lume-surface));
+}
+
+:root[data-theme="light"] .vehiclesPage__cardImagePlaceholder span {
+  color: var(--theme-lume-muted);
+}
+
+:root[data-theme="light"] .vehiclesPage__demoNotice {
+  color: var(--theme-lume-muted);
+}
+
+:root[data-theme="light"] .vehiclesPage__badge--used {
+  border-color: color-mix(in srgb, var(--theme-lume-ink) 16%, transparent);
+  color: var(--theme-lume-ink);
+  background: color-mix(in srgb, var(--theme-lume-panel) 92%, transparent);
+}
+
+:root[data-theme="light"] .vehiclesPage__cardStat {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-muted);
+  background: color-mix(in srgb, var(--theme-lume-ink) 3%, transparent);
+}
+
+:root[data-theme="light"] :is(
+  .vehiclesPage__iconBtn:hover:not(:disabled),
+  .vehiclesPage__iconBtn--active,
+  .vehiclesPage__pageBtn:hover:not(:disabled),
+  .vehiclesPage__pageBtn--active,
+  .vehiclesPage__pill:hover,
+  .vehiclesPage__pill--active
+) {
+  border-color: color-mix(in srgb, var(--theme-lume-gold) 58%, var(--theme-lume-line));
+  color: var(--theme-lume-ink);
+  background: color-mix(in srgb, var(--theme-lume-gold) 14%, var(--theme-lume-panel));
+}
+
+:root[data-theme="light"] .vehiclesPage__clearBtn {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+}
+
+:root[data-theme="light"] .vehiclesPage__compareBar {
+  border-color: color-mix(in srgb, var(--theme-lume-gold) 32%, var(--theme-lume-line));
+  background: color-mix(in srgb, var(--theme-lume-panel) 94%, var(--theme-lume-background));
+  box-shadow: 0 18px 48px var(--lume-shadow);
+}
+
+:root[data-theme="light"] .vehiclesPage__compareColumn div {
+  border-color: var(--theme-lume-line);
+}
+
+/* Vehicle detail ----------------------------------------------------------- */
+:root[data-theme="light"] :is(
+  .vehicleDetail__media,
+  .vehicleDetail__panel,
+  .vehicleDetail__state,
+  .vehicleDetail__modal,
+  .vehicleDetail__fact
+) {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-lume-gold) 7%, transparent), transparent 58%),
+    var(--lume-surface-raised);
+  box-shadow: 0 18px 48px var(--lume-shadow);
+}
+
+:root[data-theme="light"] .vehicleDetail__notice {
+  color: var(--theme-lume-soft);
+}
+
+:root[data-theme="light"] :is(
+  .vehicleDetail__input,
+  .vehicleDetail__textarea
+) {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+  background: var(--lume-control);
+}
+
+:root[data-theme="light"] :is(
+  .vehicleDetail__primaryBtn,
+  .vehicleDetail__priceSignal
+) {
+  border-color: var(--lume-primary-action);
+  color: var(--lume-on-primary);
+  background: var(--lume-primary-action);
+}
+
+:root[data-theme="light"] .vehicleDetail__secondaryBtn {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+  background: var(--lume-control);
+}
+
+:root[data-theme="light"] .vehicleDetail__badge--used {
+  border-color: color-mix(in srgb, var(--theme-lume-ink) 18%, transparent);
+  color: var(--theme-lume-ink);
+  background: color-mix(in srgb, var(--theme-lume-panel) 94%, transparent);
+}
+
+:root[data-theme="light"] .vehicleDetail__formError {
+  color: var(--lume-danger);
+}
+
+/* Products and product detail --------------------------------------------- */
+:root[data-theme="light"] .luxuryTabs {
+  border-color: color-mix(in srgb, var(--theme-lume-gold) 30%, var(--theme-lume-line));
+  background: var(--lume-surface);
+  box-shadow: 0 14px 34px var(--lume-shadow);
+}
+
+:root[data-theme="light"] .luxuryTabs__active {
+  background: var(--lume-primary-action);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-lume-gold) 75%, #fff), 0 4px 14px var(--lume-shadow);
+}
+
+:root[data-theme="light"] .luxuryTabs__button {
+  color: var(--theme-lume-muted);
+}
+
+:root[data-theme="light"] .luxuryTabs__button--active {
+  color: var(--lume-on-primary);
+  text-shadow: none;
+}
+
+:root[data-theme="light"] .productsPage__card {
+  border-color: var(--theme-lume-line);
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--theme-lume-gold) 12%, transparent), transparent 30%),
+    linear-gradient(160deg, color-mix(in srgb, var(--theme-lume-panel) 99%, var(--theme-lume-background)), var(--lume-surface-raised));
+  box-shadow: 0 14px 34px color-mix(in srgb, #372810 9%, transparent);
+}
+
+:root[data-theme="light"] .productsPage__card--live:hover {
+  border-color: color-mix(in srgb, var(--theme-lume-gold) 48%, var(--theme-lume-line));
+  box-shadow: 0 24px 58px color-mix(in srgb, #372810 16%, transparent);
+}
+
+:root[data-theme="light"] .productsPage__cardImagePlaceholder {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-lume-gold) 18%, var(--theme-lume-panel)), var(--lume-surface));
+}
+
+:root[data-theme="light"] .productsPage__cardImagePlaceholder span {
+  color: var(--theme-lume-muted);
+}
+
+:root[data-theme="light"] :is(
+  .productsPage__cardCta,
+  .productsPage__cardSoon
+) {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+  background: var(--lume-control);
+}
+
+:root[data-theme="light"] .productsPage__card--live:hover .productsPage__cardCta {
+  border-color: var(--lume-primary-action);
+  color: var(--lume-on-primary);
+  background: var(--lume-primary-action);
+}
+
+:root[data-theme="light"] .productDetail__media {
+  border-color: var(--theme-lume-line);
+  background:
+    radial-gradient(circle at 20% 12%, color-mix(in srgb, var(--theme-lume-gold) 14%, transparent), transparent 34%),
+    var(--lume-surface-raised);
+  box-shadow: 0 22px 58px var(--lume-shadow);
+}
+
+:root[data-theme="light"] .productDetail__placeholder,
+:root[data-theme="light"] .productDetail__detail {
+  color: var(--theme-lume-muted);
+}
+
+:root[data-theme="light"] :is(
+  .productDetail__primaryAction,
+  .productDetail__missing button
+) {
+  border-color: var(--lume-primary-action);
+  color: var(--lume-on-primary);
+  background: var(--lume-primary-action);
+}
+
+:root[data-theme="light"] :is(
+  .productDetail__secondaryAction,
+  .productDetail__soon
+) {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+  background: var(--lume-control);
+}
+
+/* Story, showcase, and Page Builder content -------------------------------- */
+:root[data-theme="light"] .storyHome__tracingBeam {
+  background: color-mix(in srgb, var(--theme-lume-ink) 12%, transparent);
+}
+
+:root[data-theme="light"] :is(
+  .storyHome__option3dBody,
+  .storyHome__flatCard
+) {
+  border-color: var(--theme-lume-line);
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--theme-lume-gold) 13%, transparent), transparent 32%),
+    var(--lume-surface-raised);
+  box-shadow: 0 16px 42px var(--lume-shadow);
+}
+
+:root[data-theme="light"] .storyHome__option3dBody::before {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #fff 56%, transparent), transparent 38%),
+    radial-gradient(circle at 80% 92%, color-mix(in srgb, var(--theme-lume-gold) 12%, transparent), transparent 42%);
+}
+
+:root[data-theme="light"] :is(
+  .storyHome__option3dTitle,
+  .storyHome__flatCardTitle
+) {
+  color: var(--theme-lume-ink);
+  text-shadow: none;
+}
+
+:root[data-theme="light"] .storyHome__option3dImage {
+  border-color: var(--theme-lume-line);
+  box-shadow: 0 12px 30px var(--lume-shadow);
+}
+
+:root[data-theme="light"] :is(
+  .storyHome__option3dAction,
+  .storyHome__flatCardAction
+) {
+  border-color: color-mix(in srgb, var(--theme-lume-gold) 36%, var(--theme-lume-line));
+  color: var(--theme-lume-ink);
+  background: var(--lume-control);
+}
+
+:root[data-theme="light"] :is(
+  .storyHome__title,
+  .showcasePage__hero h1
+) {
+  text-shadow: 0 12px 32px color-mix(in srgb, var(--theme-lume-background) 74%, transparent);
+}
+
+/* Contact ------------------------------------------------------------------ */
+:root[data-theme="light"] :is(
+  .contactPage__form input,
+  .contactPage__form textarea
+) {
+  border-color: var(--theme-lume-line);
+  background: var(--lume-control);
+}
+
+:root[data-theme="light"] :is(
+  .contactPage__form input:focus,
+  .contactPage__form textarea:focus
+) {
+  border-color: var(--theme-lume-gold);
+  background: color-mix(in srgb, var(--theme-lume-gold) 8%, var(--theme-lume-panel));
+}
+
+:root[data-theme="light"] .contactPage__formStatus--error {
+  color: var(--lume-danger);
+}
+
+:root[data-theme="light"] .contactPage__submit {
+  border-color: var(--lume-primary-action);
+  color: var(--lume-on-primary);
+  background: var(--lume-primary-action);
+}
+
+/* Visitor account ---------------------------------------------------------- */
+:root[data-theme="light"] :is(
+  .visitorAccount__loading,
+  .visitorAuth,
+  .visitorAccount__profile,
+  .visitorLoyalty,
+  .visitorSavedVehicles
+) {
+  box-shadow: 0 20px 48px var(--lume-shadow);
+}
+
+:root[data-theme="light"] .visitorAccount__status--error {
+  color: var(--lume-danger);
+}
+
+/* Chat --------------------------------------------------------------------- */
+:root[data-theme="light"] .ollamaChat {
+  --lc-gold: var(--theme-lume-gold);
+  --lc-gold-dark: var(--lume-on-primary);
+  --lc-gold-border-strong: color-mix(in srgb, var(--theme-lume-gold) 78%, transparent);
+  --lc-gold-border: color-mix(in srgb, var(--theme-lume-gold) 32%, var(--theme-lume-line));
+  --lc-gold-border-md: color-mix(in srgb, var(--theme-lume-gold) 26%, var(--theme-lume-line));
+  --lc-gold-border-soft: color-mix(in srgb, var(--theme-lume-gold) 20%, var(--theme-lume-line));
+  --lc-gold-border-faint: var(--theme-lume-line);
+  --lc-gold-border-subtle: var(--theme-lume-line);
+  --lc-gold-border-dim: var(--theme-lume-line);
+  --lc-gold-glow: color-mix(in srgb, var(--theme-lume-gold) 46%, transparent);
+  --lc-gold-glow-hover: color-mix(in srgb, var(--theme-lume-gold) 70%, transparent);
+  --lc-gold-tint: color-mix(in srgb, var(--theme-lume-gold) 12%, transparent);
+  --lc-gold-tint-md: color-mix(in srgb, var(--theme-lume-gold) 16%, transparent);
+  --lc-gold-tint-strong: color-mix(in srgb, var(--theme-lume-gold) 10%, transparent);
+  --lc-gold-scroll: color-mix(in srgb, var(--theme-lume-gold) 40%, transparent);
+  --lc-gold-toggle-border: color-mix(in srgb, var(--theme-lume-gold) 34%, var(--theme-lume-line));
+  --lc-text: var(--theme-lume-ink);
+  --lc-text-title: var(--theme-lume-ink);
+  --lc-text-muted: var(--theme-lume-muted);
+  --lc-text-dim: color-mix(in srgb, var(--theme-lume-ink) 58%, transparent);
+  --lc-text-faint: var(--theme-lume-soft);
+  --lc-text-ghost: var(--theme-lume-soft);
+  --lc-text-strong: color-mix(in srgb, var(--theme-lume-ink) 84%, transparent);
+  --lc-text-near: color-mix(in srgb, var(--theme-lume-ink) 92%, transparent);
+  --lc-text-near2: var(--theme-lume-muted);
+  --lc-text-near3: color-mix(in srgb, var(--theme-lume-ink) 76%, transparent);
+  --lc-text-near4: var(--theme-lume-muted);
+  --lc-bg-toggle: var(--lume-surface-raised);
+  --lc-bg-panel-a: color-mix(in srgb, var(--theme-lume-panel) 98%, var(--theme-lume-background));
+  --lc-bg-panel-b: var(--lume-surface-raised);
+  --lc-bg-surface: var(--lume-control);
+  --lc-bg-surface-faint: color-mix(in srgb, var(--theme-lume-ink) 3%, transparent);
+  --lc-bg-surface-xs: color-mix(in srgb, var(--theme-lume-ink) 2%, transparent);
+  --lc-bg-user-msg: var(--lume-primary-action);
+  --lc-bg-error: color-mix(in srgb, var(--lume-danger) 12%, transparent);
+  --lc-error-border: color-mix(in srgb, var(--lume-danger) 46%, transparent);
+  --lc-error-text: var(--lume-danger);
+  --lc-shadow-panel: 0 22px 58px var(--lume-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="light"] :is(
+    .vehiclesPage__card,
+    .productsPage__card,
+    .storyHome__option3dBody,
+    .cinematicShell__image
+  ) {
+    transition: none;
+  }
+}

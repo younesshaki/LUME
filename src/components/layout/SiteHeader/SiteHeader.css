@@ -4,6 +4,15 @@
   background: color-mix(in srgb, var(--theme-lume-background, #000) 78%, transparent);
 }
 
+.siteHeader--overlayPressure {
+  background: color-mix(in srgb, var(--theme-lume-background, #000) 88%, transparent);
+}
+
 :root[data-theme="light"] .siteHeader {
+  background: color-mix(in srgb, var(--theme-lume-background, #f4efe5) 92%, transparent);
   box-shadow: 0 1px 0 var(--theme-lume-line), 0 12px 34px rgba(47, 38, 25, 0.08);
+}
+
+:root[data-theme="light"] .siteHeader--overlayPressure {
+  background: color-mix(in srgb, var(--theme-lume-background, #f4efe5) 97%, transparent);
 }
