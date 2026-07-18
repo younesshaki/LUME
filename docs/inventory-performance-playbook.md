@@ -19,6 +19,28 @@ The original live baseline on 2026-07-18 showed that the document load event
 could finish well before cards appeared. The relevant metric is therefore
 **first real inventory card**, not `window.onload`.
 
+## Staging validation — 2026-07-18
+
+The full first-card optimization set was deployed to `staging` at commit
+`ad8a86a` and measured with fresh headless-Chromium contexts at 1440×900
+against the staging `demo` tenant. This is a staging measurement, not a
+production claim.
+
+| Milestone | Result |
+| --- | ---: |
+| Earlier staging median, before route-intent prefetch | 2.94 s |
+| Later warm first-card samples | 1.06 s, 1.12 s, 1.17 s |
+| Median across the five most recent samples | 1.17 s |
+| Initial visible card page | 24 vehicles, one request |
+
+Cold edge/network conditions still produced slower outliers (3.17 s and
+8.32 s), so record a sample set rather than treating a single number as a
+release criterion.
+
+The staging database has migrations 070 and 071 applied, and the staging-only
+`LUME_INVENTORY_SLUG_FAST_PATH=true` flag is enabled. Before enabling that
+flag elsewhere, verify both migrations are present in that environment first.
+
 ## Inventory critical path
 
 The first card path is now deliberately narrow:
@@ -76,23 +98,24 @@ invalidation or a versioned URL strategy.
 
 ### 3. Keep database work index-friendly
 
-Migration `070_inventory_fast_path_indexes.sql` is additive and unapplied. It
-adds indexes for:
+Migration `070_inventory_fast_path_indexes.sql` is additive. It is applied on
+staging and adds indexes for:
 
 - the common `tenant + live + recommended sort` listing path;
 - the lateral lookup of the ordered managed primary image.
 
 It does not change tables, RLS, function grants, or tenant filters. Apply it
 through the normal reviewed migration process before expecting the database
-portion of this optimization in hosted environments.
+portion of this optimization in any environment where it is not already
+present.
 
-Migration `071_public_inventory_slug_fast_path.sql` is also additive and
-unapplied. It introduces slug-aware, public-read RPCs that combine active
-tenant lookup with the inventory or facets projection. Keep
-`LUME_INVENTORY_SLUG_FAST_PATH=false` until 071 has been applied, then enable
-it deliberately. This avoids even a single failed RPC attempt during a
-code-first deployment; the existing UUID-based path remains unchanged until
-the fast path is ready.
+Migration `071_public_inventory_slug_fast_path.sql` is also additive. It is
+applied on staging and introduces slug-aware, public-read RPCs that combine
+active tenant lookup with the inventory or facets projection. Keep
+`LUME_INVENTORY_SLUG_FAST_PATH=false` until 071 has been applied in the target
+environment, then enable it deliberately. This avoids even a single failed
+RPC attempt during a code-first deployment; the existing UUID-based path
+remains unchanged until the fast path is ready.
 
 ### 4. Avoid competing large downloads
 
@@ -149,6 +172,23 @@ does this before contacting the Admin service. Authenticated requests still
 use the trusted upstream session/tenant validation path. This keeps visitor
 account correctness intact while removing a non-critical cross-service call
 from an anonymous inventory visit.
+
+The card request and visitor check may still overlap during a direct cold
+visit. Do not reintroduce an auth gate around inventory rendering: saved state
+can resolve after visible cards render.
+
+## Important Page Builder caveat
+
+Normal public inventory uses the hand-built `VehiclesPage` when preview mode is
+off. Opening a URL with `?preview=lume` enables Page Builder preview mode; a
+published `VehicleInventory` block can still use the legacy `loadVehicles()`
+path, which requests 200-vehicle pages and may drain the full catalog.
+
+This does not affect the normal public `preview=off` route measured above, but
+it must be corrected before Page Builder inventory rendering is enabled as the
+default public experience. The fix should make that block consume the same
+server-paginated `loadVehicleResults()` path and route-prefetch handoff—never
+`loadVehicles()`.
 
 ## Reusable rules for future routes
 
