@@ -21,6 +21,7 @@ const SHOW_DELAY = 150;
 const SPIN_DELAY = 1200;
 const MIN_VISIBLE = 350;
 const MAX_DURATION = 10000;
+const CONTENT_HOLD_CAP = 2500; // max time a page may hold the cover for its data
 const FALLBACK_LOGO = "/brand/loader-logo.png";
 
 type LoaderState = { visible: boolean; spinning: boolean };
@@ -35,6 +36,9 @@ function createController() {
   let spinTimer: ReturnType<typeof setTimeout> | undefined;
   let maxTimer: ReturnType<typeof setTimeout> | undefined;
   let outroTimer: ReturnType<typeof setTimeout> | undefined;
+  const holds = new Set<number>();
+  let holdSeq = 0;
+  let routeReady = false;
 
   const set = (patch: Partial<LoaderState>) => {
     const next = { ...state, ...patch };
@@ -49,9 +53,11 @@ function createController() {
     clearTimeout(outroTimer);
   };
 
-  const finish = () => {
+  const performFinish = () => {
     if (!active) return;
     active = false;
+    routeReady = false;
+    holds.clear();
     clearTimeout(showTimer);
     clearTimeout(spinTimer);
     clearTimeout(maxTimer);
@@ -63,9 +69,43 @@ function createController() {
     outroTimer = setTimeout(() => set({ visible: false, spinning: false }), wait);
   };
 
+  // Hide only once the route has committed AND no page is still holding the
+  // cover for its data.
+  const maybeFinish = () => {
+    if (active && routeReady && holds.size === 0) performFinish();
+  };
+
+  // Called when the next route has actually rendered (from inside Suspense). A
+  // microtask defer lets same-commit holds register before we decide to hide.
+  const routeSettled = () => {
+    routeReady = true;
+    queueMicrotask(maybeFinish);
+  };
+
+  // A data-heavy page keeps the cover up until its content is ready. Auto-
+  // released after CONTENT_HOLD_CAP so slow data falls back to the page's own
+  // skeletons instead of a stuck cover.
+  const acquireHold = () => {
+    const id = ++holdSeq;
+    holds.add(id);
+    let released = false;
+    let cap: ReturnType<typeof setTimeout>;
+    const release = () => {
+      if (released) return;
+      released = true;
+      clearTimeout(cap);
+      holds.delete(id);
+      maybeFinish();
+    };
+    cap = setTimeout(release, CONTENT_HOLD_CAP);
+    return release;
+  };
+
   const start = () => {
     clearAll();
     active = true;
+    routeReady = false;
+    holds.clear();
     if (!state.visible) {
       showTimer = setTimeout(() => {
         shownAt = Date.now();
@@ -73,12 +113,13 @@ function createController() {
       }, SHOW_DELAY);
     }
     spinTimer = setTimeout(() => set({ spinning: true }), SPIN_DELAY);
-    maxTimer = setTimeout(() => finish(), MAX_DURATION);
+    maxTimer = setTimeout(() => performFinish(), MAX_DURATION);
   };
 
   return {
     start,
-    finish,
+    routeSettled,
+    acquireHold,
     subscribe: (fn: Subscriber) => {
       subscribers.add(fn);
       return () => {
@@ -179,7 +220,21 @@ function NavLoaderOverlay({ logo }: { logo: string }) {
 export function NavLoaderSettle() {
   const location = useLocation();
   useEffect(() => {
-    controller.finish();
+    controller.routeSettled();
   }, [location.pathname]);
   return null;
+}
+
+/**
+ * Data-heavy pages/blocks call this to hold the cover open until their first
+ * meaningful content is ready. Pass the page's own loading flag; the cover
+ * lifts when it flips false (or after the controller's content-hold cap).
+ * When no navigation is in flight the hold is a harmless no-op.
+ */
+export function useNavLoaderHold(isLoading: boolean) {
+  useEffect(() => {
+    if (!isLoading) return;
+    const release = controller.acquireHold();
+    return release;
+  }, [isLoading]);
 }

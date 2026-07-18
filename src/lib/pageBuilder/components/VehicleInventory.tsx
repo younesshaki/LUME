@@ -31,6 +31,7 @@ import {
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import { useOptionalSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
+import { useNavLoaderHold } from "@/lib/navLoader/PublicNavLoader";
 import { trackConversion } from "@/lib/conversionAnalytics";
 import { vehiclePageSoundActions } from "@/experience/ui/VehiclesPage/VehiclesPage.sounds";
 import type { BlockComponentProps } from "../registry";
@@ -278,6 +279,9 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  // Hold the branded nav loader (if the tenant enabled it) until the first
+  // page of vehicles is actually loaded, not just when the route mounts.
+  useNavLoaderHold(loading);
   const [filters, setFilters] = useState<VehicleFilters>(
     () => consumePendingInventoryFilter() ?? DEFAULT_FILTERS
   );
