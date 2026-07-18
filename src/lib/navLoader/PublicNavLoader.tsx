@@ -3,16 +3,18 @@
  *
  * Same perceived-performance design as the admin loader (show@150 / spin@1.2s /
  * min-visible@350 / outro@240), ported to the public stack:
- *  - Nav START: a capture-phase click listener on internal links.
+ *  - Nav START: a change in react-router's useLocation() pathname (detected in
+ *    a component OUTSIDE the routes' Suspense, so it fires the moment navigation
+ *    begins — catches link clicks, programmatic navigate(), and back/forward).
  *  - Nav END: <NavLoaderSettle/> lives INSIDE the routes' Suspense boundary, so
  *    it only commits after the next lazy route resolves — masking the real gap.
- *  - Per-tenant: only active when the tenant enabled it (tenants.theme.navLoader).
+ *  - Per-tenant: on by default; a tenant can disable it (tenants.theme.navLoader).
  *  - Logo: the tenant's own branding logo, falling back to the LUME mark.
  *
  * The overlay state lives in a module-singleton controller pushed to one
  * subscriber; the app tree never re-renders on show/hide. Pure CSS animation.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTenantTheme } from "../TenantThemeProvider";
 import { loadNavLoaderEnabled } from "./navLoaderConfig";
@@ -134,12 +136,16 @@ const controller = createController();
 
 /**
  * Mount inside the tenant theme provider (persistent, outside the routes'
- * Suspense). Installs the click interceptor and renders the overlay only when
- * the tenant has enabled the loader.
+ * Suspense). Drives the cover from react-router's location and renders the
+ * overlay unless the tenant explicitly disabled it.
  */
 export function PublicNavLoader() {
   const theme = useTenantTheme();
-  const [enabled, setEnabled] = useState(false);
+  const location = useLocation();
+  // On by default (optimistic) so the loader works without any per-tenant
+  // configuration; the async check only turns it OFF if a tenant disabled it.
+  const [enabled, setEnabled] = useState(true);
+  const previousPathRef = useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -151,40 +157,24 @@ export function PublicNavLoader() {
     };
   }, []);
 
+  // Nav START: react-router's pathname changed. This component lives OUTSIDE the
+  // routes' Suspense, so it re-renders the moment navigation begins — catching
+  // link clicks, programmatic navigate(), and back/forward alike. The first run
+  // (initial page load) is skipped so we never cover the first paint.
   useEffect(() => {
-    if (!enabled) return;
-    // The public header/dock navigate programmatically (react-router
-    // useNavigate → history), not via <a>. Patch pushState/replaceState so we
-    // catch every in-app navigation — link clicks AND programmatic — and only
-    // start the cover when the pathname actually changes.
-    const original = {
-      push: window.history.pushState.bind(window.history),
-      replace: window.history.replaceState.bind(window.history),
-    };
-    const wrap = (orig: History["pushState"]): History["pushState"] =>
-      function patched(this: History, ...args: Parameters<History["pushState"]>) {
-        const before = window.location.pathname;
-        const result = orig(...args);
-        try {
-          const nextUrl = args[2];
-          if (nextUrl != null) {
-            const next = new URL(String(nextUrl), window.location.href);
-            if (next.origin === window.location.origin && next.pathname !== before) {
-              controller.start();
-            }
-          }
-        } catch {
-          // A malformed URL simply means no cover — never break navigation.
-        }
-        return result;
-      };
-    window.history.pushState = wrap(original.push);
-    window.history.replaceState = wrap(original.replace);
-    return () => {
-      window.history.pushState = original.push;
-      window.history.replaceState = original.replace;
-    };
-  }, [enabled]);
+    if (!enabled) {
+      previousPathRef.current = location.pathname;
+      return;
+    }
+    if (previousPathRef.current === null) {
+      previousPathRef.current = location.pathname;
+      return;
+    }
+    if (previousPathRef.current !== location.pathname) {
+      previousPathRef.current = location.pathname;
+      controller.start();
+    }
+  }, [enabled, location.pathname]);
 
   if (!enabled) return null;
   return <NavLoaderOverlay logo={theme.branding?.logoUrl ?? FALLBACK_LOGO} />;
