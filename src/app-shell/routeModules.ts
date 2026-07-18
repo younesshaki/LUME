@@ -8,6 +8,7 @@ export const loadProductDetailPage = () => import("@/experience/ui/ProductDetail
 export const loadProductsPage = () => import("@/experience/ui/ProductsPage");
 export const loadVehicleDetailPage = () => import("@/experience/ui/VehicleDetailPage");
 export const loadVehiclesPage = () => import("@/experience/ui/VehiclesPage");
+export const loadVehiclesPageRendererRoute = () => import("@/lib/pageBuilder/VehiclesPageRendererRoute");
 export const loadShowcasePage = () => import("@/experience/ui/ShowcasePage");
 export const loadShowcaseTitleCard = () => import("@/experience/ui/ShowcaseTitleCard");
 export const loadStoryHomePage = () => import("@/experience/ui/StoryHomePage");
@@ -41,6 +42,7 @@ export type RouteModuleIntent =
   | "contact"
   | "account"
   | "page-renderer"
+  | "vehicles-page-renderer"
   | "none";
 
 export function routeModuleIntentFor(
@@ -51,6 +53,7 @@ export function routeModuleIntentFor(
     return "none";
   }
   if (routeKey === "account") return "account";
+  if (routeKey === "vehicles" && pageRendererEnabled) return "vehicles-page-renderer";
   if (["home", "products", "vehicles", "showcase", "contact"].includes(routeKey)) {
     return pageRendererEnabled ? "page-renderer" : routeKey as RouteModuleIntent;
   }
@@ -81,6 +84,9 @@ export function preloadRouteModule(routeKey: string): void {
       break;
     case "account":
       loader = loadAccountPage;
+      break;
+    case "vehicles-page-renderer":
+      loader = loadVehiclesPageRendererRoute;
       break;
     case "none":
       return;

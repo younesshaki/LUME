@@ -61,6 +61,7 @@ import {
   loadStoryHomePage,
   loadVehicleDetailPage,
   loadVehiclesPage,
+  loadVehiclesPageRendererRoute,
 } from "./app-shell/routeModules";
 
 // The admin embeds this route in an iframe and streams draft blocks in over
@@ -99,11 +100,7 @@ const ProductsPageRendererRoute = lazy(() =>
     default: module.ProductsPageRendererRoute,
   }))
 );
-const VehiclesPageRendererRoute = lazy(() =>
-  loadPageRendererRoutes().then((module) => ({
-    default: module.VehiclesPageRendererRoute,
-  }))
-);
+const VehiclesPageRendererRoute = lazy(loadVehiclesPageRendererRoute);
 const ShowcasePageRendererRoute = lazy(() =>
   loadPageRendererRoutes().then((module) => ({
     default: module.ShowcasePageRendererRoute,

@@ -311,6 +311,7 @@ function parseCSV(text: string): Record<string, string>[] {
 }
 
 let cached: Vehicle[] | null = null;
+const vehicleResultRequests = new Map<string, Promise<VehicleResults>>();
 
 export async function loadVehicles(): Promise<Vehicle[]> {
   if (cached) return cached;
@@ -343,6 +344,41 @@ export async function loadVehicleResults(
   page: number,
   pageSize: number
 ): Promise<VehicleResults> {
+  // React development Strict Mode, a page-builder fallback, and an immediate
+  // route retry can all ask for the same visible page at once. Share that
+  // in-flight request rather than sending duplicate catalog reads. Completed
+  // results are deliberately not retained here, so admin mutations remain
+  // visible on the next page load (with the CDN's short server TTL as the
+  // only shared cache).
+  const requestKey = vehicleFiltersToApiSearchParams(
+    filters,
+    sort,
+    (Math.max(1, page) - 1) * pageSize,
+    pageSize,
+  ).toString();
+  const existing = vehicleResultRequests.get(requestKey);
+  if (existing) return existing;
+
+  const request = loadVehicleResultsUncached(filters, sort, page, pageSize);
+  vehicleResultRequests.set(requestKey, request);
+  void request.then(() => {
+    if (vehicleResultRequests.get(requestKey) === request) {
+      vehicleResultRequests.delete(requestKey);
+    }
+  }, () => {
+    if (vehicleResultRequests.get(requestKey) === request) {
+      vehicleResultRequests.delete(requestKey);
+    }
+  });
+  return request;
+}
+
+async function loadVehicleResultsUncached(
+  filters: VehicleFilters,
+  sort: VehicleSort,
+  page: number,
+  pageSize: number,
+): Promise<VehicleResults> {
   try {
     return await loadVehicleResultsFromApi(filters, sort, page, pageSize);
   } catch (error) {
@@ -367,6 +403,37 @@ export async function loadVehicleResults(
     facets: vehicleFacetsFromVehicles(vehicles, filters),
     source: "fallback",
   };
+}
+
+/**
+ * Exact counts are useful for pagination but are not needed to render the
+ * first inventory cards. Keep this separate from the critical page query so a
+ * count scan can never hold up the marketplace's first useful paint.
+ */
+export async function loadVehicleCount(
+  filters: VehicleFilters,
+  sort: VehicleSort,
+): Promise<number | null> {
+  const params = vehicleFiltersToApiSearchParams(filters, sort, 0, 1);
+  const countKey = vehicleCountCacheKey(params);
+  const cachedCount = readCachedVehicleCount(countKey);
+  if (cachedCount !== null) return cachedCount;
+
+  params.set("includeCount", "true");
+  const response = await fetchPublicInventory(createVehiclesApiUrl(params));
+  if (!response.ok) {
+    throw new Error(`Vehicle count API ${response.status}: ${response.statusText}`);
+  }
+
+  const payload = (await response.json()) as VehicleApiResponse;
+  if (typeof payload.totalCount !== "number" || !Number.isFinite(payload.totalCount)) {
+    return null;
+  }
+  vehicleCountCache.set(countKey, {
+    count: payload.totalCount,
+    expiresAt: Date.now() + VEHICLE_COUNT_CACHE_MS,
+  });
+  return payload.totalCount;
 }
 
 export function normalizeVehiclePriceSignalPayload(
@@ -520,11 +587,7 @@ async function loadVehiclesFromApi(): Promise<Vehicle[]> {
     params.set("limit", String(API_PAGE_SIZE));
     params.set("offset", String(offset));
     const url = createVehiclesApiUrl(params);
-    const res = await fetch(url, {
-      headers: {
-        "X-Lume-Tenant": TENANT_SLUG,
-      },
-    });
+    const res = await fetchPublicInventory(url);
 
     if (!res.ok) {
       throw new Error(`Vehicle API ${res.status}: ${res.statusText}`);
@@ -551,17 +614,7 @@ async function loadVehicleResultsFromApi(
 ): Promise<VehicleResults> {
   const offset = (Math.max(1, page) - 1) * pageSize;
   const params = vehicleFiltersToApiSearchParams(filters, sort, offset, pageSize);
-  const countKey = vehicleCountCacheKey(params);
-  const cachedCount = readCachedVehicleCount(countKey);
-  // The initial page refreshes the count (and therefore reflects admin
-  // mutations promptly); subsequent pages reuse it instead of repeating an
-  // exact count query.
-  if (offset === 0 || cachedCount === null) params.set("includeCount", "true");
-  const res = await fetch(createVehiclesApiUrl(params), {
-    headers: {
-      "X-Lume-Tenant": TENANT_SLUG,
-    },
-  });
+  const res = await fetchPublicInventory(createVehiclesApiUrl(params));
 
   if (!res.ok) {
     throw new Error(`Vehicle API ${res.status}: ${res.statusText}`);
@@ -571,16 +624,9 @@ async function loadVehicleResultsFromApi(
   const vehicles = Array.isArray(payload.vehicles)
     ? payload.vehicles.map(normalizeApiVehicle).filter((vehicle): vehicle is Vehicle => Boolean(vehicle))
     : [];
-  if (typeof payload.totalCount === "number") {
-    vehicleCountCache.set(countKey, {
-      count: payload.totalCount,
-      expiresAt: Date.now() + VEHICLE_COUNT_CACHE_MS,
-    });
-  }
-
   return {
     vehicles,
-    totalCount: payload.totalCount ?? cachedCount,
+    totalCount: null,
     hasMore: Boolean(payload.hasMore),
     facets: normalizeVehicleFacets(payload.facets),
     source: "api",
@@ -668,9 +714,7 @@ export async function loadVehicleFacets(
     params.set("tenant", TENANT_SLUG);
     if (make) params.set("make", make);
     if (sellerState) params.set("sellerState", sellerState);
-    const res = await fetch(createVehiclesApiUrl(params, "/facets"), {
-      headers: { "X-Lume-Tenant": TENANT_SLUG },
-    });
+    const res = await fetchPublicInventory(createVehiclesApiUrl(params, "/facets"));
     if (!res.ok) throw new Error(`Facets API ${res.status}: ${res.statusText}`);
     const facets = normalizeVehicleFacets((await res.json()) as VehicleFacets);
     facetsCache.set(key, { facets, expiresAt: Date.now() + FACETS_CACHE_MS });
@@ -696,6 +740,15 @@ function createVehiclesApiUrl(params: URLSearchParams, subPath = ""): string {
   const url = new URL(`${ADMIN_API_HOST ?? ""}${VEHICLES_API_PATH}${subPath}`, origin);
   params.forEach((value, key) => url.searchParams.set(key, value));
   return ADMIN_API_HOST ? url.toString() : `${url.pathname}${url.search}`;
+}
+
+/**
+ * The tenant is deliberately encoded in the URL. That makes a public GET
+ * safely cacheable at the CDN without varying a cache entry on an arbitrary
+ * request header, while preserving the same tenant-scoped API contract.
+ */
+function fetchPublicInventory(url: string): Promise<Response> {
+  return fetch(url);
 }
 
 function normalizeVehicleFacets(facets: VehicleFacets | undefined): VehicleFacets {

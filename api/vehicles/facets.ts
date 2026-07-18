@@ -88,6 +88,10 @@ type FacetsDatabase = {
         Args: { p_tenant_id: string; p_make?: string | null; p_state?: string | null };
         Returns: FacetRow[];
       };
+      vehicle_facets_by_slug: {
+        Args: { p_slug: string; p_make?: string | null; p_state?: string | null };
+        Returns: FacetRow[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -122,22 +126,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const tenant = await getTenantFromRequest(req, supabase);
-  if (!tenant) {
-    return json(req, res, { error: "Unknown or inactive tenant" }, 404);
-  }
+  const tenantSlug = extractTenantSlugFromRequest(req);
+  if (!tenantSlug) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
 
   const make = query(req, "make")?.trim() || "";
   const state = query(req, "sellerState")?.trim() || "";
-  const result = await loadFacets(supabase, tenant.tenantId, make, state);
+  let result = await loadFacetsBySlug(supabase, tenantSlug, make, state);
+  if (!result) {
+    const tenant = await getTenantFromRequest(req, supabase);
+    if (!tenant) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
+    result = await loadFacets(supabase, tenant.tenantId, make, state);
+  }
 
   // Browser caches may retain the public payload, but must revalidate it. The
   // per-tenant version changes after every vehicle or managed-image mutation.
   const etag = result.catalogVersion === null
     ? null
-    : `W/"inventory-facets-${tenant.tenantId}-${result.catalogVersion}"`;
-  res.setHeader("Cache-Control", "private, no-cache");
-  res.setHeader("Vary", "Origin, X-Lume-Tenant");
+    : `W/"inventory-facets-${tenantSlug}-${result.catalogVersion}"`;
+  res.setHeader("Cache-Control", inventoryCacheControl(req));
+  res.setHeader("Vary", "Origin");
   if (etag) res.setHeader("ETag", etag);
   if (etag && header(req, "if-none-match") === etag) {
     setCorsHeaders(req, res);
@@ -168,6 +175,31 @@ async function loadFacets(
     console.warn("[/api/vehicles/facets] RPC unavailable, scanning columns:", error.message);
   }
   return { facets: await scanFacets(supabase, tenantId, make, state), catalogVersion: null };
+}
+
+async function loadFacetsBySlug(
+  supabase: FacetsClient,
+  slug: string,
+  make: string,
+  state: string,
+): Promise<FacetResult | null> {
+  const { data, error } = await supabase.rpc("vehicle_facets_by_slug", {
+    p_slug: slug,
+    p_make: make || null,
+    p_state: state || null,
+  });
+  if (error) {
+    if (!slugFastPathUnavailable(error.message)) {
+      console.warn("[/api/vehicles/facets] slug fast path failed:", error.message);
+    }
+    return null;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    facets: normalizeFacets(row),
+    catalogVersion: finiteNumber(row.catalog_version),
+  };
 }
 
 async function scanFacets(
@@ -310,6 +342,22 @@ function setCorsHeaders(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Lume-Tenant");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Vary", "Origin");
+}
+
+function inventoryCacheControl(req: VercelRequest): string {
+  return hasStableTenantCacheKey(req)
+    ? "public, max-age=0, s-maxage=10, must-revalidate"
+    : "private, no-cache";
+}
+
+function hasStableTenantCacheKey(req: VercelRequest): boolean {
+  const querySlug = query(req, "tenant")?.trim();
+  const headerSlug = header(req, "x-lume-tenant")?.trim();
+  return Boolean(querySlug) && (!headerSlug || headerSlug === querySlug);
+}
+
+function slugFastPathUnavailable(message: string): boolean {
+  return message.toLowerCase().includes("vehicle_facets_by_slug");
 }
 
 function json(req: VercelRequest, res: VercelResponse, payload: unknown, status: number) {
