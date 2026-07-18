@@ -218,20 +218,22 @@ body {
 .nav-loader[data-state="visible"] .nav-loader__logo {
   opacity: 1;
   transform: scale(1);
+  /* First rotation begins at 2s; then a 250ms pause between each full turn. */
+  animation: nav-loader-step-spin 850ms linear 2000ms infinite;
 }
-.nav-loader[data-spin="true"] .nav-loader__logo {
-  animation: nav-loader-spin 1s linear infinite;
-}
-@keyframes nav-loader-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* One full turn (0 -> 70.588% of the cycle = 600ms), then hold upright for the
+   remaining 250ms pause, repeat. */
+@keyframes nav-loader-step-spin {
+  0% { transform: rotate(0deg); }
+  70.588% { transform: rotate(360deg); }
+  100% { transform: rotate(360deg); }
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-loader,
   .nav-loader__logo {
     transition-duration: 90ms !important;
   }
-  .nav-loader[data-spin="true"] .nav-loader__logo {
+  .nav-loader[data-state="visible"] .nav-loader__logo {
     animation: none !important;
   }
 }
