@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { setSiteNavLoaderEnabled } from "./actions";
 import {
   ExternalLink,
   FileText,
@@ -22,6 +25,7 @@ type WebsiteClientProps = {
   tenantName: string;
   publicSiteBaseUrl: string;
   pages: Page[];
+  navLoaderEnabled: boolean;
 };
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -48,9 +52,26 @@ export default function WebsiteClient({
   tenantName,
   publicSiteBaseUrl,
   pages,
+  navLoaderEnabled,
 }: WebsiteClientProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [reloadKey, setReloadKey] = useState(0);
+  const [loaderEnabled, setLoaderEnabled] = useState(navLoaderEnabled);
+  const [loaderPending, startLoaderTransition] = useTransition();
+
+  const changeLoaderEnabled = (next: boolean) => {
+    const previous = loaderEnabled;
+    setLoaderEnabled(next);
+    startLoaderTransition(async () => {
+      const result = await setSiteNavLoaderEnabled(tenantSlug, next);
+      if (result.error) {
+        setLoaderEnabled(previous);
+        toast.error(result.error);
+        return;
+      }
+      toast.success(next ? "Loading animation is on for your website." : "Loading animation is off.");
+    });
+  };
 
   const base = publicSiteBaseUrl.replace(/\/+$/, "");
   const previewUrl = useMemo(
@@ -135,6 +156,27 @@ export default function WebsiteClient({
             <p className="mt-1 text-xs text-muted-foreground">{surface.description}</p>
           </Link>
         ))}
+      </section>
+
+      <section className="rounded-xl border border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-start justify-between gap-4 p-4">
+          <div>
+            <label htmlFor="site-nav-loader" className="text-sm font-semibold">
+              Loading animation
+            </label>
+            <p id="site-nav-loader-help" className="mt-1 text-xs text-muted-foreground">
+              Show a branded loading animation with your logo when a visitor moves between pages on your
+              website. Applies immediately — no publish needed.
+            </p>
+          </div>
+          <Switch
+            id="site-nav-loader"
+            checked={loaderEnabled}
+            disabled={loaderPending}
+            onCheckedChange={changeLoaderEnabled}
+            aria-describedby="site-nav-loader-help"
+          />
+        </div>
       </section>
 
       <section className="rounded-xl border border-neutral-200 dark:border-neutral-800">

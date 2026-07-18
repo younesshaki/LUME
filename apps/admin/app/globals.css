@@ -182,3 +182,56 @@ body {
   pointer-events: none;
   color-scheme: light dark;
 }
+
+/* ---- Admin navigation loader (branded route-transition cover) ---------------
+   Perceived-performance overlay. All animation is CSS/compositor-driven; the
+   React layer only flips data-state / data-spin. Intro 180ms, outro 240ms. */
+.nav-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482000; /* below the theme-toggle reveal (2147483000), above all else */
+  display: grid;
+  place-items: center;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 240ms ease, visibility 0s linear 240ms, backdrop-filter 240ms ease;
+}
+.nav-loader[data-state="visible"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto; /* block interaction while the next page loads */
+  transition: opacity 180ms ease, backdrop-filter 180ms ease;
+}
+.nav-loader__logo {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 200ms ease, transform 200ms ease;
+  will-change: transform, opacity;
+  user-select: none;
+}
+.nav-loader[data-state="visible"] .nav-loader__logo {
+  opacity: 1;
+  transform: scale(1);
+}
+.nav-loader[data-spin="true"] .nav-loader__logo {
+  animation: nav-loader-spin 1s linear infinite;
+}
+@keyframes nav-loader-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-loader,
+  .nav-loader__logo {
+    transition-duration: 90ms !important;
+  }
+  .nav-loader[data-spin="true"] .nav-loader__logo {
+    animation: none !important;
+  }
+}
