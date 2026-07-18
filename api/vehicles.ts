@@ -123,15 +123,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (first !== undefined) params.set(key, first);
   }
 
+  const useSlugFastPath = inventorySlugFastPathEnabled();
   let resolvedTenant: { tenantId: string; slug: string } | null = null;
-  let inventoryQuery = buildVehicleQuery(supabase, { slug: tenantSlug }, params, {
-    limit,
-    offset,
-    includeCount,
-    useFullTextSearch: true,
-  });
+  if (!useSlugFastPath) {
+    resolvedTenant = await getTenantFromRequest(req, supabase);
+    if (!resolvedTenant) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
+  }
+
+  let inventoryQuery = buildVehicleQuery(
+    supabase,
+    resolvedTenant ? { tenantId: resolvedTenant.tenantId } : { slug: tenantSlug },
+    params,
+    {
+      limit,
+      offset,
+      includeCount,
+      useFullTextSearch: true,
+    },
+  );
   let { data, count, error } = await inventoryQuery;
-  if (error && slugFastPathUnavailable(error.message)) {
+  if (useSlugFastPath && error && slugFastPathUnavailable(error.message)) {
     resolvedTenant = await getTenantFromRequest(req, supabase);
     if (!resolvedTenant) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
     inventoryQuery = buildVehicleQuery(supabase, { tenantId: resolvedTenant.tenantId }, params, {
@@ -396,6 +407,17 @@ export function hasStableTenantCacheKey(req: VercelRequest): boolean {
   const querySlug = query(req, "tenant")?.trim();
   const headerSlug = header(req, "x-lume-tenant")?.trim();
   return Boolean(querySlug) && (!headerSlug || headerSlug === querySlug);
+}
+
+/**
+ * Migration 071 adds the slug-aware RPCs. Keep this deployment flag off until
+ * that migration is present, so a code-first rollout never adds a failed RPC
+ * request to the public critical path.
+ */
+export function inventorySlugFastPathEnabled(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return env.LUME_INVENTORY_SLUG_FAST_PATH === "true";
 }
 
 function json(req: VercelRequest, res: VercelResponse, payload: unknown, status: number) {

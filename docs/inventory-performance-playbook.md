@@ -88,10 +88,11 @@ portion of this optimization in hosted environments.
 
 Migration `071_public_inventory_slug_fast_path.sql` is also additive and
 unapplied. It introduces slug-aware, public-read RPCs that combine active
-tenant lookup with the inventory or facets projection. The root Vercel
-functions automatically fall back to the existing UUID-based RPC path until
-071 is present, so deploying application code before the migration does not
-break inventory.
+tenant lookup with the inventory or facets projection. Keep
+`LUME_INVENTORY_SLUG_FAST_PATH=false` until 071 has been applied, then enable
+it deliberately. This avoids even a single failed RPC attempt during a
+code-first deployment; the existing UUID-based path remains unchanged until
+the fast path is ready.
 
 ### 4. Avoid competing large downloads
 

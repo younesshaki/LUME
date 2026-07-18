@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { hasStableTenantCacheKey, inventoryCacheControl } from "./vehicles";
+import {
+  hasStableTenantCacheKey,
+  inventoryCacheControl,
+  inventorySlugFastPathEnabled,
+} from "./vehicles";
 
 type RequestLike = Parameters<typeof inventoryCacheControl>[0];
 
@@ -17,5 +21,11 @@ describe("public inventory cache key", () => {
   it("keeps header-only and conflicting tenant requests private", () => {
     expect(inventoryCacheControl(request({}, { "x-lume-tenant": "demo" }))).toBe("private, no-cache");
     expect(inventoryCacheControl(request({ tenant: "demo" }, { "x-lume-tenant": "other" }))).toBe("private, no-cache");
+  });
+
+  it("keeps the migration-dependent slug RPC disabled until explicitly enabled", () => {
+    expect(inventorySlugFastPathEnabled({})).toBe(false);
+    expect(inventorySlugFastPathEnabled({ LUME_INVENTORY_SLUG_FAST_PATH: "false" })).toBe(false);
+    expect(inventorySlugFastPathEnabled({ LUME_INVENTORY_SLUG_FAST_PATH: "true" })).toBe(true);
   });
 });

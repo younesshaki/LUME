@@ -131,7 +131,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const make = query(req, "make")?.trim() || "";
   const state = query(req, "sellerState")?.trim() || "";
-  let result = await loadFacetsBySlug(supabase, tenantSlug, make, state);
+  const useSlugFastPath = process.env.LUME_INVENTORY_SLUG_FAST_PATH === "true";
+  let result = useSlugFastPath
+    ? await loadFacetsBySlug(supabase, tenantSlug, make, state)
+    : null;
   if (!result) {
     const tenant = await getTenantFromRequest(req, supabase);
     if (!tenant) return json(req, res, { error: "Unknown or inactive tenant" }, 404);
