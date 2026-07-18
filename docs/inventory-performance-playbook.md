@@ -96,8 +96,9 @@ break inventory.
 ### 4. Avoid competing large downloads
 
 The inventory route defers the shared 1.9 MB cinematic artwork until inventory
-cards have rendered. The visual treatment still appears immediately afterward,
-but it cannot compete with the API response on a constrained connection.
+cards have completed a browser paint. The visual treatment still appears
+immediately afterward, but it cannot compete with the API response or the
+first card images on a constrained connection.
 
 The first four card images are eager/high priority; later card images are lazy
 and asynchronously decoded. CSS already reserves the card image aspect ratio,

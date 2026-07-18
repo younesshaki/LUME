@@ -825,6 +825,7 @@ export default function VehiclesPage({
   const [facets, setFacets] = useState<VehicleFacets>(EMPTY_VEHICLE_FACETS);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [backgroundReady, setBackgroundReady] = useState(false);
   const [filters, setFilters] = useState<VehicleFilters>(initialState.filters);
   const [sort, setSort] = useState<VehicleSort>(initialState.sort);
   const [page, setPage] = useState(initialState.page);
@@ -913,6 +914,15 @@ export default function VehiclesPage({
       cancelAfterPaint();
     };
   }, [filters, loadedQueryKey, loadError, loading, queryKey, sort]);
+
+  // Do not let the shared cinematic artwork begin its large image request in
+  // the same commit as the first cards. Unlike metadata, it is purely visual,
+  // so wait until a completed card frame is on screen. Once enabled, it stays
+  // mounted through filters and pagination to avoid visual flicker.
+  useEffect(() => {
+    if (backgroundReady || (loading && !loadError)) return;
+    return scheduleAfterPaint(() => setBackgroundReady(true));
+  }, [backgroundReady, loadError, loading]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -1022,7 +1032,7 @@ export default function VehiclesPage({
   };
 
   return (
-    <CinematicShell loadBackground={!loading || loadError}>
+    <CinematicShell loadBackground={backgroundReady || loadError}>
       <div className="vehiclesPage">
         <main className="vehiclesPage__main" style={{ paddingTop: "72px", paddingBottom: "160px" }}>
           <div className="vehiclesPage__hero">
