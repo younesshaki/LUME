@@ -21,7 +21,7 @@
  *    per-link changes) plus an explicit start() for programmatic router.push.
  *    Navigation END is the pathname settling. A max-duration timer is a safety
  *    net so the cover can never get stuck.
- *  - Pure CSS animation (GPU compositor); the logo is a 10 KB webp kept in the
+ *  - Pure CSS animation (GPU compositor); the logo is a small PNG kept in the
  *    DOM so it is cached before the first navigation ever needs it.
  */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -188,7 +188,7 @@ function NavLoaderOverlay({ controller }: { controller: LoaderController }) {
       {/* Kept mounted so the browser caches it before the first navigation. */}
       <img
         className="nav-loader__logo"
-        src="/brand/loader-logo.webp"
+        src="/brand/loader-logo.png"
         alt=""
         width={112}
         height={112}

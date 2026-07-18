@@ -47,6 +47,7 @@ dist-ssr
 !apps/admin/public/fonts/**/*.ttf
 *.png
 !src/experience/assets/images/lume-homepage-background.png
+!apps/admin/public/brand/loader-logo.png
 *.jpg
 *.jpeg
 *.gif
