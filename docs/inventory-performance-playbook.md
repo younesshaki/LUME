@@ -116,6 +116,15 @@ client. This protects against React development Strict Mode and route fallback
 mounts producing duplicate first-page requests, while intentionally retaining
 no completed browser cache that could conceal a recent Admin mutation.
 
+### 6. Short-circuit deterministic anonymous account checks
+
+The public visitor proxy returns the correct `401 Unauthorized` for
+`GET /api/visitor/me` when the browser has no LUME visitor-session cookie. It
+does this before contacting the Admin service. Authenticated requests still
+use the trusted upstream session/tenant validation path. This keeps visitor
+account correctness intact while removing a non-critical cross-service call
+from an anonymous inventory visit.
+
 ## Reusable rules for future routes
 
 1. Define the first useful visitor action, then optimize that—not a generic
