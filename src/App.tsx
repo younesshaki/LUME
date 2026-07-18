@@ -61,6 +61,7 @@ import {
   loadVehicleDetailPage,
   loadVehiclesPage,
   loadVehiclesPageRendererRoute,
+  preloadVehiclesRoute,
 } from "./app-shell/routeModules";
 
 // The admin embeds this route in an iframe and streams draft blocks in over
@@ -384,6 +385,12 @@ export default function App() {
   const isAdminPath = currentRouteConfig.section === "admin";
   const showSiteHeader = currentRouteConfig.chrome.showHeader;
   const showSiteDock = currentRouteConfig.chrome.showDock;
+
+  useEffect(() => {
+    if (location.pathname === ROUTE_PATHS.vehicles) {
+      preloadVehiclesRoute();
+    }
+  }, [location.pathname]);
 
   // The live-preview iframe endpoint: no site chrome or audio — just
   // the block canvas the admin editor streams into. Kept out of the route-config

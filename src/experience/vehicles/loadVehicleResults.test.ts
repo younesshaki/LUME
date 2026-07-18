@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_FILTERS, loadVehicleCount, loadVehicleResults } from "./catalog";
+import {
+  DEFAULT_FILTERS,
+  loadVehicleCount,
+  loadVehicleResults,
+  prefetchVehicleResults,
+} from "./catalog";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -81,6 +86,26 @@ describe("loadVehicleResults pagination", () => {
       expect.objectContaining({ vehicles: [expect.objectContaining({ id: vehicle.id })] }),
       expect.objectContaining({ vehicles: [expect.objectContaining({ id: vehicle.id })] }),
     ]);
+  });
+
+  it("hands a completed route prefetch to the first visible page request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ vehicles: [vehicle], hasMore: false }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const filters = { ...DEFAULT_FILTERS, make: "PrefetchMake" };
+
+    await prefetchVehicleResults(filters, "recommended", 1, 24);
+    const [result] = await Promise.all([
+      loadVehicleResults(filters, "recommended", 1, 24),
+      // React Strict Mode can replay the mount effect after a fast prefetch.
+      // The bounded handoff must still avoid a duplicate visible-page request.
+      loadVehicleResults(filters, "recommended", 1, 24),
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.vehicles).toEqual([expect.objectContaining({ id: vehicle.id })]);
   });
 
   it("uses one legacy CSV request instead of draining API pages after an API failure", async () => {

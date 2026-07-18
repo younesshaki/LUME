@@ -119,10 +119,29 @@ initial application chunk.
 
 Concurrent requests for the same visible page are coalesced in the catalog
 client. This protects against React development Strict Mode and route fallback
-mounts producing duplicate first-page requests, while intentionally retaining
-no completed browser cache that could conceal a recent Admin mutation.
+mounts producing duplicate first-page requests.
 
-### 6. Short-circuit deterministic anonymous account checks
+### 6. Start first-card data on confirmed route intent
+
+The Vehicles navigation link already receives high-confidence hover, focus,
+and pointer-down signals. On those signals—and immediately when a visitor
+enters `/vehicles` directly—the app starts two independent tasks in parallel:
+
+- loading the route module;
+- fetching the exact visible page of 24 cards.
+
+The catalog holds that prefetched response for at most eight seconds. This is
+long enough for the destination component (including React Strict Mode's
+development replay) to consume the same response without a duplicate request,
+but short enough that it is not a general browser cache. Failed speculative
+requests are discarded and the route's normal API/legacy fallback remains the
+source of truth.
+
+Do not prefetch a bot-directed inventory navigation until the destination has
+resolved its pending bot filters; otherwise the default page and filtered page
+would compete unnecessarily.
+
+### 7. Short-circuit deterministic anonymous account checks
 
 The public visitor proxy returns the correct `401 Unauthorized` for
 `GET /api/visitor/me` when the browser has no LUME visitor-session cookie. It
@@ -173,5 +192,7 @@ deployment, investigate in this order:
 
 1. explicit CDN tag/purge invalidation, allowing a longer edge TTL safely;
 2. responsive image variants/AVIF for card thumbnails;
-3. deferring nonessential global providers and chat initialization until the
+3. removing the remaining route-start dependency between visitor-session
+   resolution and the first card request;
+4. deferring nonessential global providers and chat initialization until the
    first cards are visible.

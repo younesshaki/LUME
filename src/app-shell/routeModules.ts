@@ -65,6 +65,11 @@ export function routeModuleIntentFor(
  * cached, so repeated hover/focus/pointer events remain a single request.
  */
 export function preloadRouteModule(routeKey: string): void {
+  if (routeKey === "vehicles") {
+    preloadVehiclesRoute();
+    return;
+  }
+
   let loader: (() => Promise<unknown>) | undefined;
   switch (routeModuleIntentFor(routeKey)) {
     case "home":
@@ -72,9 +77,6 @@ export function preloadRouteModule(routeKey: string): void {
       break;
     case "products":
       loader = loadProductsPage;
-      break;
-    case "vehicles":
-      loader = loadVehiclesPage;
       break;
     case "showcase":
       loader = loadShowcasePage;
@@ -97,4 +99,22 @@ export function preloadRouteModule(routeKey: string): void {
       loader = loadPageRendererRoutes;
   }
   void loader();
+}
+
+/**
+ * A Vehicles navigation intent has enough confidence to load both its route
+ * module and first card page. These independent operations intentionally run
+ * in parallel and are coalesced by the catalog layer when the route mounts.
+ */
+export function preloadVehiclesRoute(): void {
+  const routeLoader = routeModuleIntentFor("vehicles") === "vehicles-page-renderer"
+    ? loadVehiclesPageRendererRoute
+    : loadVehiclesPage;
+  void routeLoader();
+  void import("@/experience/vehicles/prefetch")
+    .then(({ prefetchInitialVehicleResults }) => prefetchInitialVehicleResults())
+    .catch(() => {
+      // Speculative work must never surface an unhandled rejection. The route
+      // keeps its normal API error and legacy fallback behavior on mount.
+    });
 }

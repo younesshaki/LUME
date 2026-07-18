@@ -4,6 +4,7 @@ import { R2, mediaUrl, fallbackMediaUrl } from "@/config/cdn";
 const CSV_KEY = "vehicles-with-generated-images.csv";
 const VEHICLES_API_PATH = "/api/vehicles";
 const API_PAGE_SIZE = 200;
+export const INITIAL_VEHICLE_PAGE_SIZE = 24;
 const TENANT_SLUG = publicTenantSlug;
 const ADMIN_API_HOST = (import.meta.env.VITE_ADMIN_API_HOST as string | undefined)?.replace(/\/$/, "");
 
@@ -312,6 +313,11 @@ function parseCSV(text: string): Record<string, string>[] {
 
 let cached: Vehicle[] | null = null;
 const vehicleResultRequests = new Map<string, Promise<VehicleResults>>();
+const prefetchedVehicleResults = new Map<string, {
+  request: Promise<VehicleResults>;
+  expiresAt: number;
+}>();
+const VEHICLE_PREFETCH_RESULT_TTL_MS = 8_000;
 
 export async function loadVehicles(): Promise<Vehicle[]> {
   if (cached) return cached;
@@ -350,12 +356,9 @@ export async function loadVehicleResults(
   // results are deliberately not retained here, so admin mutations remain
   // visible on the next page load (with the CDN's short server TTL as the
   // only shared cache).
-  const requestKey = vehicleFiltersToApiSearchParams(
-    filters,
-    sort,
-    (Math.max(1, page) - 1) * pageSize,
-    pageSize,
-  ).toString();
+  const requestKey = vehicleResultRequestKey(filters, sort, page, pageSize);
+  const prefetched = readPrefetchedVehicleResults(requestKey);
+  if (prefetched) return prefetched;
   const existing = vehicleResultRequests.get(requestKey);
   if (existing) return existing;
 
@@ -371,6 +374,56 @@ export async function loadVehicleResults(
     }
   });
   return request;
+}
+
+/**
+ * Starts the visible card request before the Vehicles route has mounted.
+ * A completed response remains available only for the short route-transition
+ * window. It is not a broad catalog cache, so admin inventory changes remain
+ * visible on a later visit.
+ */
+export function prefetchVehicleResults(
+  filters: VehicleFilters,
+  sort: VehicleSort = "recommended",
+  page = 1,
+  pageSize = INITIAL_VEHICLE_PAGE_SIZE,
+): Promise<VehicleResults> {
+  const requestKey = vehicleResultRequestKey(filters, sort, page, pageSize);
+  const existing = prefetchedVehicleResults.get(requestKey);
+  if (existing && existing.expiresAt > Date.now()) return existing.request;
+
+  const request = loadVehicleResults(filters, sort, page, pageSize);
+  prefetchedVehicleResults.set(requestKey, {
+    request,
+    expiresAt: Date.now() + VEHICLE_PREFETCH_RESULT_TTL_MS,
+  });
+  void request.catch(() => {
+    const current = prefetchedVehicleResults.get(requestKey);
+    if (current?.request === request) prefetchedVehicleResults.delete(requestKey);
+  });
+  return request;
+}
+
+function vehicleResultRequestKey(
+  filters: VehicleFilters,
+  sort: VehicleSort,
+  page: number,
+  pageSize: number,
+): string {
+  return vehicleFiltersToApiSearchParams(
+    filters,
+    sort,
+    (Math.max(1, page) - 1) * pageSize,
+    pageSize,
+  ).toString();
+}
+
+function readPrefetchedVehicleResults(requestKey: string): Promise<VehicleResults> | null {
+  const prefetched = prefetchedVehicleResults.get(requestKey);
+  if (!prefetched) return null;
+  if (prefetched.expiresAt > Date.now()) return prefetched.request;
+  prefetchedVehicleResults.delete(requestKey);
+  return null;
 }
 
 async function loadVehicleResultsUncached(
