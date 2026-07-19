@@ -24,9 +24,9 @@ import {
   type VehicleSort,
 } from "@/experience/vehicles/catalog";
 import {
-  consumePendingInventoryFilter,
   vehicleFiltersFromBotAction,
 } from "@/lib/botActionConsumers";
+import { readVehicleUrlState } from "@/experience/vehicles/urlState";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import { useOptionalSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
@@ -296,11 +296,10 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const [facets, setFacets] = useState<VehicleFacets>(EMPTY_VEHICLE_FACETS);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [filters, setFilters] = useState<VehicleFilters>(
-    () => consumePendingInventoryFilter() ?? DEFAULT_FILTERS
-  );
-  const [sort, setSort] = useState<VehicleSort>("recommended");
-  const [page, setPage] = useState(1);
+  const initialState = useMemo(() => readVehicleUrlState(), []);
+  const [filters, setFilters] = useState<VehicleFilters>(initialState.filters);
+  const [sort, setSort] = useState<VehicleSort>(initialState.sort);
+  const [page, setPage] = useState(initialState.page);
   const [previewSavedVehicleIds, setPreviewSavedVehicleIds] = useState<string[]>(() =>
     readStoredIds(SAVED_STORAGE_KEY)
   );

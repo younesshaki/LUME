@@ -35,8 +35,8 @@ import { LeadCaptureBridge } from "./lib/LeadCaptureBridge";
 import { useBotAction } from "./lib/useBotAction";
 import {
   resolveBotNavigationRoute,
-  storePendingInventoryFilter,
   storePendingLeadFormPrefill,
+  vehicleRouteFromBotAction,
 } from "./lib/botActionConsumers";
 import {
   activatePendingConciergeTarget,
@@ -413,12 +413,9 @@ export default function App() {
   });
 
   useBotAction("filter_inventory", (action) => {
-    if (location.pathname !== ROUTE_PATHS.vehicles) {
-      storePendingInventoryFilter(action);
-    }
     setShowcaseChapterRevealed(false);
     navigateTo(
-      { route: "vehicles" },
+      vehicleRouteFromBotAction(action),
       { source: "bot", analytics: { action: "bot_filter_inventory" } }
     );
   });

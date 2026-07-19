@@ -7,6 +7,7 @@ import {
   DEFAULT_FILTERS,
   type VehicleFilters,
 } from "@/experience/vehicles/catalog";
+import { encodeVehicleUrlState } from "@/experience/vehicles/urlState";
 import type { AppRouteLocation } from "@/app-shell/routePaths";
 
 export type LeadFormPrefill = Partial<{
@@ -17,12 +18,10 @@ export type LeadFormPrefill = Partial<{
   message: string;
 }>;
 
-const PENDING_INVENTORY_FILTER_KEY = "lume.bot.pending-inventory-filter.v1";
 const PENDING_LEAD_FORM_PREFILL_KEY = "lume.bot.pending-lead-form-prefill.v1";
 const PENDING_LEAD_FORM_CONTEXT_KEY = "lume.bot.pending-lead-form-context.v1";
 const LEAD_FORM_FIELDS = ["firstName", "lastName", "email", "phone", "message"] as const;
 
-let pendingInventoryFilterFallback: VehicleFilters | null = null;
 let pendingLeadFormPrefillFallback: LeadFormPrefill | null = null;
 let pendingLeadFormContextFallback: LeadSourceContext | null = null;
 
@@ -90,20 +89,21 @@ export function vehicleFiltersFromBotAction(
   };
 }
 
-/** Stores a bot inventory filter so the vehicles route can consume it after navigation. */
-export function storePendingInventoryFilter(action: BotInventoryFilterAction): void {
-  const filters = vehicleFiltersFromBotAction(action);
-  pendingInventoryFilterFallback = filters;
-  writeSessionJson(PENDING_INVENTORY_FILTER_KEY, filters);
-}
-
-/** Reads and clears one pending bot inventory filter. */
-export function consumePendingInventoryFilter(): VehicleFilters | null {
-  const stored = readSessionJson<VehicleFilters>(PENDING_INVENTORY_FILTER_KEY);
-  removeSessionItem(PENDING_INVENTORY_FILTER_KEY);
-  const fallback = pendingInventoryFilterFallback;
-  pendingInventoryFilterFallback = null;
-  return stored ?? fallback;
+/**
+ * Carries bot filters in the existing inventory URL state. Unlike a one-shot
+ * session value, this survives lazy fallback → published block renderer swaps.
+ */
+export function vehicleRouteFromBotAction(
+  action: BotInventoryFilterAction,
+): Extract<AppRouteLocation, { route: "vehicles" }> {
+  return {
+    route: "vehicles",
+    inventoryState: encodeVehicleUrlState(
+      vehicleFiltersFromBotAction(action),
+      "recommended",
+      1,
+    ),
+  };
 }
 
 /** Extracts string fields from the bot lead-form payload and drops unsupported keys. */

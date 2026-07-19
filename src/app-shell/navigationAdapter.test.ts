@@ -4,6 +4,12 @@ import { resolveNavigatePath } from "./navigationAdapter";
 describe("navigationAdapter", () => {
   it("resolves canonical and legacy navigation targets to browser paths", () => {
     expect(resolveNavigatePath({ route: "products" })).toBe("/products");
+    expect(
+      resolveNavigatePath({
+        route: "vehicles",
+        inventoryState: "#vehicles?make=BMW&priceMax=50000",
+      }),
+    ).toBe("/vehicles#vehicles?make=BMW&priceMax=50000");
     expect(resolveNavigatePath({ route: "adminDashboard" })).toBe(
       "/admin/dashboard"
     );
