@@ -4,6 +4,8 @@ import { DEFAULT_BOT_PERSONA_CAPABILITIES } from "./persona";
 import {
   actionOnlyAcknowledgement,
   exactGroundedVehicleId,
+  filterModelNavigationActionsByUserIntent,
+  isImmediateSiteNavigation,
   recentVehicleIdFromAssistantHistory,
   recentVehicleIdFromToolResults,
   resolveDeterministicConciergeNavigation,
@@ -70,6 +72,15 @@ describe("deterministic concierge navigation", () => {
     expect(resolve([{ role: "user", content }])).toEqual([
       { type: "navigate-target", targetKey },
     ]);
+  });
+
+  it("accepts a terse named destination but not a statement about one", () => {
+    expect(resolve([{ role: "user", content: "contact page" }])).toEqual([
+      { type: "navigate-target", targetKey: "contact-lead-form" },
+    ]);
+    expect(
+      resolve([{ role: "user", content: "there is a showcase page" }]),
+    ).toEqual([]);
   });
 
   it("uses the grounded selected vehicle for referential page navigation", () => {
@@ -205,6 +216,29 @@ describe("deterministic concierge navigation", () => {
       type: "filter_inventory",
       make: "BMW",
       priceMax: 50_000,
+    }]);
+  });
+
+  it("applies inherited trusted filters for a short price refinement", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [
+          { role: "user", content: "any BMWs for less than $20k" },
+          {
+            role: "assistant",
+            content: "There are three matching BMWs.",
+          },
+          { role: "user", content: "for less than $40k?" },
+        ],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { make: "BMW", priceMax: 40_000 },
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "filter_inventory",
+      make: "BMW",
+      priceMax: 40_000,
     }]);
   });
 
@@ -406,5 +440,52 @@ describe("action-only acknowledgement", () => {
       ]),
     ).toBe("Taking you there now.");
     expect(actionOnlyAcknowledgement([])).toBe("");
+  });
+});
+
+describe("model navigation grounding", () => {
+  it("drops model navigation when the visitor did not request it", () => {
+    expect(
+      filterModelNavigationActionsByUserIntent(
+        [{ type: "navigate-target", targetKey: "products" }],
+        [{ role: "user", content: "there is a showcase page" }],
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps explicit and terse model navigation requests", () => {
+    const actions = [{ type: "navigate-target", targetKey: "products" }] as const;
+    expect(
+      filterModelNavigationActionsByUserIntent(actions, [
+        { role: "user", content: "take me to products" },
+      ]),
+    ).toEqual(actions);
+    expect(
+      filterModelNavigationActionsByUserIntent(actions, [
+        { role: "user", content: "products page" },
+      ]),
+    ).toEqual(actions);
+  });
+
+  it("recognizes only non-vehicle deterministic site navigation as immediate", () => {
+    expect(
+      isImmediateSiteNavigation([
+        { type: "navigate-target", targetKey: "contact-lead-form" },
+      ]),
+    ).toBe(true);
+    expect(
+      isImmediateSiteNavigation([
+        {
+          type: "navigate-target",
+          targetKey: "vehicle-detail",
+          params: { vehicleId: VEHICLE_ID },
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isImmediateSiteNavigation([
+        { type: "filter_inventory", make: "BMW" },
+      ]),
+    ).toBe(false);
   });
 });

@@ -78,7 +78,10 @@ export function extractVehicleFilters(
   const filters: VehicleQueryFilters = {};
   const tokens = q.split(/\s+/);
 
-  const canonicalMake = canonicalMakeFromText(corrected);
+  // Make matching must be grounded in the visitor's original words. The
+  // generic typo corrector is intentionally broad and can turn common words
+  // into vehicle terms (for example, "less" into "lexus").
+  const canonicalMake = canonicalMakeFromText(query);
   if (canonicalMake) {
     const availableMakes = uniqueTerms([
       ...vehicles.map((vehicle) => vehicle.make),
@@ -120,16 +123,9 @@ export function extractVehicleFilters(
     }
   }
 
-  if (!filters.drivetrain) {
-    for (const token of tokens) {
-      if (token.length > 1) {
-        const drivetrain = fuzzyLookup(token, DRIVETRAIN_ALIASES);
-        if (drivetrain) {
-          filters.drivetrain = drivetrain.toUpperCase();
-          break;
-        }
-      }
-    }
+  const drivetrain = exactAliasFromText(query, DRIVETRAIN_ALIASES);
+  if (drivetrain) {
+    filters.drivetrain = drivetrain.toUpperCase();
   }
 
   const yearMatch = q.match(/\b(20\d{2})\b/);
@@ -236,6 +232,47 @@ export function mergeTrustedVehicleQuery(
   };
 }
 
+export function hasVehicleFilterConstraint(
+  filters: VehicleQueryFilters,
+): boolean {
+  return Object.values(filters).some((value) => value !== undefined);
+}
+
+/**
+ * Carry trusted visitor-authored scope into a short refinement such as
+ * "for less than $40k?". Explicit scope in the current message wins and
+ * numeric bounds never leak forward from an older request.
+ */
+export function inheritVehicleFilterContext(
+  current: VehicleQueryFilters,
+  previous: VehicleQueryFilters | null | undefined,
+): VehicleQueryFilters {
+  if (!previous) return current;
+
+  if (current.make) return current;
+
+  const inherited: VehicleQueryFilters = {
+    ...current,
+    ...(previous.make ? { make: previous.make } : {}),
+  };
+
+  const hasCurrentScope =
+    current.model !== undefined ||
+    current.bodyStyle !== undefined ||
+    current.stockType !== undefined ||
+    current.fuelType !== undefined ||
+    current.drivetrain !== undefined ||
+    current.sellerState !== undefined ||
+    current.sellerCity !== undefined ||
+    current.year !== undefined;
+
+  if (!hasCurrentScope && previous.model) {
+    inherited.model = previous.model;
+  }
+
+  return inherited;
+}
+
 export type VehicleMatchResult = { results: Vehicle[]; totalMatched: number };
 
 export function matchVehicles(
@@ -308,12 +345,27 @@ function canonicalMakeFromText(value: string): string | null {
     }
   }
 
-  for (const token of normalized.split(" ")) {
-    if (token.length <= 2) continue;
-    const make = fuzzyLookup(token, MAKE_ALIASES);
-    if (make) return make;
-  }
   return null;
+}
+
+function exactAliasFromText<T extends string>(
+  value: string,
+  aliasesByCanonical: Record<T, string[]>,
+): T | null {
+  const normalized = normalizePhrase(value);
+  const aliases = (
+    Object.entries(aliasesByCanonical) as Array<[T, string[]]>
+  )
+    .flatMap(([canonical, aliases]) =>
+      aliases.map((alias) => ({
+        canonical,
+        alias: normalizePhrase(alias),
+      })),
+    )
+    .sort((left, right) => right.alias.length - left.alias.length);
+
+  return aliases.find(({ alias }) => containsPhrase(normalized, alias))
+    ?.canonical ?? null;
 }
 
 function canonicalMakeFromValue(value: string): string | null {
@@ -369,6 +421,28 @@ function matchesCatalogState(query: string, state: string): boolean {
 function extractPriceRange(
   query: string,
 ): Pick<VehicleQueryFilters, "priceMin" | "priceMax"> {
+  const comparison = /\b(under|below|less than|up to|at most|max(?:imum)?|over|above|more than|at least|min(?:imum)?)\s+\$?\s*([\d][\d,]*(?:\.\d+)?)\s*([km])?\b/gi;
+  for (const match of query.matchAll(comparison)) {
+    const end = (match.index ?? 0) + match[0].length;
+    if (/^\s*(?:miles?|mi)\b/i.test(query.slice(end))) continue;
+    const amount = parseAbbreviatedNumber(match[2] ?? "", match[3]);
+    if (amount === null) continue;
+    if (
+      !match[0].includes("$") &&
+      !match[3] &&
+      amount >= 1900 &&
+      amount <= 2099
+    ) {
+      continue;
+    }
+    const direction = (match[1] ?? "").toLowerCase();
+    return /^(?:under|below|less than|up to|at most|max(?:imum)?)$/.test(
+      direction,
+    )
+      ? { priceMax: amount }
+      : { priceMin: amount };
+  }
+
   const amounts = [...query.matchAll(
     /(?:\$\s*([\d][\d,]*(?:\.\d+)?)\s*([km])?|([\d][\d,]*(?:\.\d+)?)\s*([km])?\s*(?:usd|dollars?))/gi,
   )].flatMap((match) => {
@@ -417,8 +491,11 @@ function extractPriceRange(
 }
 
 function extractMileageMaximum(query: string): number | null {
-  const match = /\b([\d][\d,]*)\s*(?:miles?|mi)\b/i.exec(query);
-  return match ? parseAbbreviatedNumber(match[1] ?? "") : null;
+  const match =
+    /\b([\d][\d,]*(?:\.\d+)?)\s*([km])?\s*(?:miles?|mi)\b/i.exec(query);
+  return match
+    ? parseAbbreviatedNumber(match[1] ?? "", match[2])
+    : null;
 }
 
 function parseAbbreviatedNumber(
