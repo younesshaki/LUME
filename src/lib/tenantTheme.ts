@@ -18,7 +18,7 @@ export type { TenantDockVariant, TenantTheme };
 type ThemeLookupClient = Pick<SupabaseClient<Database>, "rpc">;
 
 const themeCache = new Map<string, Promise<SiteDesign>>();
-const THEME_CSS_VARIABLES = [
+export const TENANT_THEME_CSS_VARIABLES = [
   "--theme-lume-ink",
   "--theme-lume-muted",
   "--theme-lume-soft",
@@ -37,6 +37,11 @@ const THEME_CSS_VARIABLES = [
   "--theme-site-background-size",
   "--theme-site-background-overlay",
 ] as const;
+
+export type TenantSiteDesignStyles = {
+  theme: TenantTheme;
+  variables: Record<string, string>;
+};
 
 /**
  * Read the public tenant theme through the anon-safe RPC added by migration 019.
@@ -75,7 +80,7 @@ export function applyTenantTheme(
   theme: TenantTheme,
   root: HTMLElement = document.documentElement
 ): void {
-  for (const variable of THEME_CSS_VARIABLES) root.style.removeProperty(variable);
+  for (const variable of TENANT_THEME_CSS_VARIABLES) root.style.removeProperty(variable);
 
   const variables = tenantThemeToCssVariables(theme);
   for (const [name, value] of Object.entries(variables)) {
@@ -98,24 +103,38 @@ export function applyTenantSiteDesign(
   mode: SiteMode,
   root: HTMLElement = document.documentElement
 ): TenantTheme {
+  const styles = getTenantSiteDesignStyles(design, mode);
+  applyTenantTheme(styles.theme, root);
+  applyCssVariables(root, styles.variables);
+  root.dataset.lumeSiteMode = mode;
+  return styles.theme;
+}
+
+/**
+ * Resolve all active-mode variables without mutating the page. Theme-reveal
+ * snapshots use this so a tenant's destination background and tokens are
+ * represented before the visible document switches mode.
+ */
+export function getTenantSiteDesignStyles(
+  design: SiteDesign,
+  mode: SiteMode
+): TenantSiteDesignStyles {
   const template = getSiteTemplate(design.template.key);
   const theme = siteDesignToTenantTheme(design, template, mode);
-  applyTenantTheme(theme, root);
-
+  const variables = tenantThemeToCssVariables(theme);
   const background = resolveModeBackground(design, template, mode);
+
   if (background?.url) {
-    root.style.setProperty("--theme-site-background-image", `url(${JSON.stringify(background.url)})`);
+    variables["--theme-site-background-image"] = `url(${JSON.stringify(background.url)})`;
   }
-  root.style.setProperty("--theme-site-background-position", background?.position ?? "center");
-  root.style.setProperty("--theme-site-background-size", background?.size ?? "cover");
+  variables["--theme-site-background-position"] = background?.position ?? "center";
+  variables["--theme-site-background-size"] = background?.size ?? "cover";
   const opacity = background?.overlayOpacity ?? (mode === "dark" ? 0.42 : 0.12);
   const overlayColor = background?.overlayColor ?? (mode === "dark" ? "#000" : "#f4efe5");
-  root.style.setProperty(
-    "--theme-site-background-overlay",
-    `color-mix(in srgb, ${overlayColor} ${Math.round(opacity * 100)}%, transparent)`
-  );
-  root.dataset.lumeSiteMode = mode;
-  return theme;
+  variables["--theme-site-background-overlay"] =
+    `color-mix(in srgb, ${overlayColor} ${Math.round(opacity * 100)}%, transparent)`;
+
+  return { theme, variables };
 }
 
 export function applyTenantFavicons(theme: TenantTheme, target: Document = document): void {
@@ -228,6 +247,12 @@ function normalizeTenantTheme(value: unknown): TenantTheme {
 function setCssValue(target: Record<string, string>, name: string, value: string | undefined) {
   const safe = safeCssValue(value);
   if (safe) target[name] = safe;
+}
+
+function applyCssVariables(root: HTMLElement, variables: Record<string, string>): void {
+  for (const [name, value] of Object.entries(variables)) {
+    root.style.setProperty(name, value);
+  }
 }
 
 function safeCssValue(value: unknown): string | undefined {

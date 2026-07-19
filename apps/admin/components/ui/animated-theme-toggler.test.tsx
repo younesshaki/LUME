@@ -1,9 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AnimatedThemeToggler,
-  isGoogleChromeOnMacOS,
-} from "./animated-theme-toggler";
+import { AnimatedThemeToggler } from "./animated-theme-toggler";
 
 let originalSrcdoc: PropertyDescriptor | undefined;
 let originalAnimate: PropertyDescriptor | undefined;
@@ -106,29 +103,6 @@ function mockSnapshotAnimation(finished: Promise<unknown> = Promise.resolve()): 
   return { cancel, animate };
 }
 
-describe("isGoogleChromeOnMacOS", () => {
-  it("uses UA client hints to target Google Chrome on macOS", () => {
-    mockChromeOnMacOS();
-
-    expect(isGoogleChromeOnMacOS()).toBe(true);
-  });
-
-  it("does not target Opera-style Chromium identities", () => {
-    Object.defineProperty(window.navigator, "userAgentData", {
-      configurable: true,
-      value: {
-        platform: "macOS",
-        brands: [
-          { brand: "Chromium", version: "112" },
-          { brand: "Opera", version: "98" },
-        ],
-      },
-    });
-
-    expect(isGoogleChromeOnMacOS()).toBe(false);
-  });
-});
-
 describe("AnimatedThemeToggler", () => {
   it("switches immediately without an overlay for reduced motion", () => {
     mockMotionPreference(true);
@@ -139,7 +113,6 @@ describe("AnimatedThemeToggler", () => {
 
     expect(onThemeChange).toHaveBeenCalledWith("dark");
     expect(document.querySelector("[data-theme-reveal-overlay]")).toBeNull();
-    expect(document.querySelector("[data-theme-solid-cover]")).toBeNull();
   });
 
   it("serializes rapid clicks and removes the destination snapshot after commit", async () => {
@@ -170,7 +143,7 @@ describe("AnimatedThemeToggler", () => {
     expect(startViewTransition).not.toHaveBeenCalled();
   });
 
-  it("uses the solid cover instead of an iframe on Google Chrome for macOS", async () => {
+  it("uses the same iframe clip reveal when the browser identifies as Chrome on macOS", async () => {
     mockMotionPreference(false);
     mockChromeOnMacOS();
     const { animate } = mockSnapshotAnimation();
@@ -189,11 +162,12 @@ describe("AnimatedThemeToggler", () => {
 
     await waitFor(() => expect(onThemeChange).toHaveBeenCalledWith("dark"));
     await waitFor(() => {
-      expect(document.querySelector("[data-theme-solid-cover]")).toBeNull();
+      expect(document.querySelector("[data-theme-reveal-overlay]")).toBeNull();
     });
-    expect(createElement).not.toHaveBeenCalledWith("iframe");
+    expect(createElement).toHaveBeenCalledWith("iframe");
+    expect(document.querySelector("[data-theme-solid-cover]")).toBeNull();
     expect(animate).toHaveBeenCalledWith(
-      { transform: ["scale(0)", "scale(1)"] },
+      { clipPath: expect.any(Array) },
       expect.objectContaining({ fill: "forwards" }),
     );
   });

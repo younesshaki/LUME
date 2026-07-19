@@ -1,27 +1,36 @@
-export type ThemeMode = "light" | "dark" | "auto";
-export type ResolvedTheme = Exclude<ThemeMode, "auto">;
+export type ThemeMode = "light" | "dark";
+export type ResolvedTheme = ThemeMode;
 
 export const THEME_STORAGE_KEY = "lume.color-theme.v1";
 export const THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)";
+export const DEFAULT_THEME_MODE: ThemeMode = "dark";
 
-export function resolveTheme(
-  mode: ThemeMode,
-  systemPrefersDark: boolean
-): ResolvedTheme {
-  if (mode === "auto") return systemPrefersDark ? "dark" : "light";
+export function resolveTheme(mode: ThemeMode): ResolvedTheme {
   return mode;
 }
 
 export function readThemeMode(
-  storage: Pick<Storage, "getItem"> | null = browserStorage()
+  storage: Pick<Storage, "getItem" | "setItem"> | null = browserStorage(),
+  systemPrefersDark?: boolean
 ): ThemeMode {
-  if (!storage) return "auto";
+  if (!storage) return DEFAULT_THEME_MODE;
 
   try {
     const stored = storage.getItem(THEME_STORAGE_KEY);
-    return isThemeMode(stored) ? stored : "auto";
+    if (isThemeMode(stored)) return stored;
+
+    // Older public releases offered an Auto mode. Keep its visible result on
+    // the first binary-only release, then persist that concrete choice so the
+    // setting no longer follows future OS preference changes.
+    if (stored === "auto") {
+      const migrated = (systemPrefersDark ?? readSystemPrefersDark()) ? "dark" : "light";
+      storage.setItem(THEME_STORAGE_KEY, migrated);
+      return migrated;
+    }
+
+    return DEFAULT_THEME_MODE;
   } catch {
-    return "auto";
+    return DEFAULT_THEME_MODE;
   }
 }
 
@@ -45,7 +54,7 @@ export function readSystemPrefersDark(): boolean {
 }
 
 function isThemeMode(value: string | null): value is ThemeMode {
-  return value === "light" || value === "dark" || value === "auto";
+  return value === "light" || value === "dark";
 }
 
 function browserStorage(): Storage | null {

@@ -223,8 +223,7 @@ test("website design publishes separate dark and light backgrounds", async () =>
   const darkBackground = await page.locator("html").evaluate((element) =>
     getComputedStyle(element).getPropertyValue("--theme-site-background-image"),
   );
-  await page.getByRole("button", { name: /Color theme: Dark\. Switch to Auto/i }).click();
-  await page.getByRole("button", { name: /Color theme: Auto.*Switch to Light/i }).click();
+  await page.getByRole("button", { name: /Switch website color theme to light/i }).click();
   await expect.poll(() => page.locator("html").evaluate((element) =>
     getComputedStyle(element).getPropertyValue("--theme-site-background-image"),
   )).not.toBe(darkBackground);

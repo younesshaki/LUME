@@ -3,6 +3,7 @@ import {
   applyTenantSiteDesign,
   applyTenantTheme,
   clearTenantThemeCacheForTests,
+  getTenantSiteDesignStyles,
   loadTenantSiteDesign,
   loadTenantTheme,
   tenantThemeToCssVariables,
@@ -90,6 +91,19 @@ describe("tenant theme", () => {
       .toContain("light.webp");
     expect(document.documentElement.style.getPropertyValue("--theme-lume-background")).toBe("#f4efe5");
     expect(document.documentElement.style.getPropertyValue("--theme-site-background-position")).toBe("top");
+  });
+
+  it("resolves destination-mode tokens without mutating the current document", () => {
+    const design = createDefaultSiteDesign(getSiteTemplate("luxury"));
+    design.modes.dark.assets = { siteBackground: { url: "https://cdn.example/dark.webp" } };
+    design.modes.light.assets = { siteBackground: { url: "https://cdn.example/light.webp" } };
+
+    const styles = getTenantSiteDesignStyles(design, "light");
+
+    expect(styles.variables["--theme-site-background-image"]).toContain("light.webp");
+    expect(styles.variables["--theme-site-background-image"]).not.toContain("dark.webp");
+    expect(styles.variables["--theme-lume-background"]).toBe("#f4efe5");
+    expect(document.documentElement.style.getPropertyValue("--theme-site-background-image")).toBe("");
   });
 
   it("keeps the public vehicle price-signal opt-in boolean", async () => {

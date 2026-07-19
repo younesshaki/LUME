@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useState,
   type PropsWithChildren,
 } from "react";
@@ -14,9 +15,15 @@ import {
 } from "./tenantTheme";
 
 const TenantThemeContext = createContext<TenantTheme>({});
+const TenantSiteDesignContext = createContext<SiteDesign | null>(null);
 
 export function useTenantTheme(): TenantTheme {
   return useContext(TenantThemeContext);
+}
+
+/** The current public design is exposed for visual-only consumers, such as the theme reveal snapshot. */
+export function useTenantSiteDesign(): SiteDesign | null {
+  return useContext(TenantSiteDesignContext);
 }
 
 export function TenantThemeProvider({
@@ -49,14 +56,16 @@ function ActiveTenantThemeProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!design) return;
     setTheme(applyTenantSiteDesign(design, resolvedTheme));
   }, [design, resolvedTheme]);
 
   return (
-    <TenantThemeContext.Provider value={theme}>
-      {children}
-    </TenantThemeContext.Provider>
+    <TenantSiteDesignContext.Provider value={design}>
+      <TenantThemeContext.Provider value={theme}>
+        {children}
+      </TenantThemeContext.Provider>
+    </TenantSiteDesignContext.Provider>
   );
 }
