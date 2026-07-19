@@ -19,14 +19,13 @@
  * `messages` with role: "system" is dropped. The tenant is resolved from the
  * X-Lume-Tenant header (or ?tenant= or subdomain — see lib/tenant.ts).
  */
-import type { BotAction, ChatRequest, Vehicle } from "@lume/types";
+import type { BotAction, ChatRequest, Vehicle, VehicleQuery } from "@lume/types";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
 import {
   getTenantVehicle,
   queryTenantVehicles,
   quotaExceededPayload,
   quotaResponseHeaders,
-  rowToVehicle,
 } from "@lume/db";
 import {
   filterBotTools,
@@ -45,8 +44,8 @@ import {
   assembleSystemPrompt,
   extractVehicleFilters,
   isVehicleQuery,
-  matchVehicles,
   retrieveByKeywords,
+  vehicleQueryFromFilters,
 } from "@lume/rag";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
@@ -300,27 +299,41 @@ export async function POST(request: Request): Promise<Response> {
 
     let matchedVehicles;
     let totalMatched: number | undefined;
-    let totalInventory: number | undefined;
     let filters;
 
     if (isVehicleQuery(lastUser.content)) {
-      // Pull this tenant's vehicles for filter extraction + matching.
-      // For very large catalogs, replace this with a server-side filtered
-      // query using the same filter logic.
-      const { data: vehicleRows } = await supabase
-        .from("vehicles")
-        .select("*")
-        .eq("tenant_id", tenant.tenantId)
-        .eq("status", "live");
-      const vehicles = (vehicleRows ?? []).map(rowToVehicle);
-      filters = extractVehicleFilters(lastUser.content, vehicles);
-      const match = matchVehicles(vehicles, filters, lastUser.content);
-      matchedVehicles = match.results;
+      // Resolve catalog vocabulary through the bounded facets RPC, then let
+      // Postgres filter the complete tenant inventory. Pulling ".select(*)"
+      // here silently hit PostgREST's row cap on larger tenants and could turn
+      // a real make (for example Mercedes-Benz) into a false zero-result answer.
+      const initialFilters = extractVehicleFilters(lastUser.content);
+      const { data: facetRows, error: facetError } = await supabase.rpc(
+        "vehicle_facets_v2",
+        {
+          p_tenant_id: tenant.tenantId,
+          p_make: initialFilters.make ?? null,
+          p_state: initialFilters.sellerState ?? null,
+        },
+      );
+      if (facetError) {
+        captureError("api/chat/vehicle-facets", facetError, {
+          tenantId: tenant.tenantId,
+        });
+      }
+      filters = extractVehicleFilters(
+        lastUser.content,
+        [],
+        vehicleFilterVocabulary(facetRows),
+      );
+      const match = await queryTenantVehicles(supabase, tenant.tenantId, {
+        ...vehicleQueryFromFilters(filters),
+        limit: 30,
+      });
+      matchedVehicles = match.vehicles;
       groundedVehicles = matchedVehicles;
       groundedInventoryFilters = filters;
       for (const vehicle of matchedVehicles) groundedVehicleIds.add(vehicle.id);
-      totalMatched = match.totalMatched;
-      totalInventory = vehicles.length;
+      totalMatched = match.totalCount ?? matchedVehicles.length;
       const matchedIds = matchedVehicles.slice(0, 20).map((vehicle) => vehicle.id);
       if (matchedIds.length > 0) {
         const { data: imageDescriptions } = await supabase
@@ -347,7 +360,6 @@ export async function POST(request: Request): Promise<Response> {
       contextChunks,
       matchedVehicles,
       totalMatched,
-      totalInventory,
       filters,
     });
   } catch (err) {
@@ -509,9 +521,17 @@ export async function POST(request: Request): Promise<Response> {
   // Anon client for tool data access: RLS stays the backstop on top of the
   // explicit tenant filter (mirrors /api/vehicles).
   const anonDb = createAnonServerClient();
+  const trustedVehicleQuery = vehicleQueryFromFilters(
+    groundedInventoryFilters ?? {},
+  );
   const ctx: BotToolContext = {
     tenantId: tenant.tenantId,
-    queryVehicles: (q) => queryTenantVehicles(anonDb, tenant.tenantId, q),
+    queryVehicles: (query) =>
+      queryTenantVehicles(
+        anonDb,
+        tenant.tenantId,
+        mergeTrustedVehicleQuery(query, trustedVehicleQuery),
+      ),
     getVehicleById: (id) => getTenantVehicle(anonDb, tenant.tenantId, id),
   };
 
@@ -721,6 +741,44 @@ export async function POST(request: Request): Promise<Response> {
   });
 
   return new Response(stream, { headers: sseHeaders });
+}
+
+function vehicleFilterVocabulary(value: unknown): {
+  makes: string[];
+  models: string[];
+  states: string[];
+  cities: string[];
+} {
+  const row = Array.isArray(value) ? value[0] : value;
+  const record = isRecord(row) ? row : {};
+  return {
+    makes: stringArray(record.makes),
+    models: stringArray(record.models),
+    states: stringArray(record.states),
+    cities: stringArray(record.cities),
+  };
+}
+
+/**
+ * The model may omit or abbreviate a filter it just read from the visitor.
+ * Parsed user filters are trusted over those model-generated arguments, while
+ * tool-only constraints such as price and sorting remain intact.
+ */
+function mergeTrustedVehicleQuery(
+  modelQuery: VehicleQuery,
+  trustedFilters: VehicleQuery,
+): VehicleQuery {
+  return { ...modelQuery, ...trustedFilters };
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function json(

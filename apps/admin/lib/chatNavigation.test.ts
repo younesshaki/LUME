@@ -12,6 +12,7 @@ import {
 const VEHICLE_ID = "5d6df0bd-85db-471e-9c4c-effa3c4938ab";
 const BMW_2016_ID = "877ad1ad-0cdf-47dd-9930-127089b60e10";
 const BMW_2020_ID = "39d724a5-0d3a-4d3e-8918-5ed980855ee0";
+const MERCEDES_ID = "003b1685-725a-4b69-9e21-82806daf1d53";
 const targets = mergeConciergeTargets([]);
 const capabilities = DEFAULT_BOT_PERSONA_CAPABILITIES;
 const groundedBmws = [
@@ -86,6 +87,47 @@ describe("deterministic concierge navigation", () => {
         capabilities,
       }),
     ).toEqual([{ type: "filter_inventory", make: "BMW" }]);
+  });
+
+  it("keeps Mercedes-Benz grounding for the reported Mercedes query", () => {
+    const groundedMercedes = [{
+      id: MERCEDES_ID,
+      year: 2021,
+      make: "Mercedes-Benz",
+      model: "GLB 250",
+      trim: "",
+      price: 121_000,
+      mileage: 34_606,
+    }];
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "do you have any mercedes" }],
+        targets,
+        groundedVehicles: groundedMercedes,
+        inventoryFilters: { make: "Mercedes-Benz" },
+        capabilities,
+      }),
+    ).toEqual([{ type: "filter_inventory", make: "Mercedes-Benz" }]);
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{
+          role: "user",
+          content: "open the 2021 Mercedes GLB 250 with 34,606 miles",
+        }],
+        targets,
+        groundedVehicles: groundedMercedes,
+        inventoryFilters: {
+          make: "Mercedes-Benz",
+          model: "GLB 250",
+          year: 2021,
+        },
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "navigate-target",
+      targetKey: "vehicle-detail",
+      params: { vehicleId: MERCEDES_ID },
+    }]);
   });
 
   it("resolves both exact BMW requests from the reported transcript", () => {

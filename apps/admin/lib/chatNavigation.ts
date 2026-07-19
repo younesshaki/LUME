@@ -51,7 +51,7 @@ const AFFIRMATIVE_PATTERN =
 const EXPLICIT_NAVIGATION_PATTERN =
   /\b(?:take|bring|send|navigate|go|open|visit|show|view)\b/;
 const INVENTORY_DISCOVERY_PATTERN =
-  /\b(?:do you have|have any|available|availability|browse|find|inventory|looking for|show|take|open|view)\b/;
+  /\b(?:do you have|have any|are there|any|available|availability|browse|carry|find|inventory|looking for|offer|show|stock|take|open|view)\b/;
 const IGNORED_TARGET_WORDS = new Set([
   "and",
   "form",
@@ -196,7 +196,7 @@ export function exactGroundedVehicleId(
     const makeTokens = meaningfulVehicleTokens(vehicle.make);
     if (
       makeTokens.length === 0 ||
-      !makeTokens.every((token) => userTokens.has(token))
+      !makeTokens.some((token) => userTokens.has(token))
     ) {
       return [];
     }

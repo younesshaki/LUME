@@ -139,6 +139,22 @@ as “do you have any BMWs?” deterministically emit the same canonical make
 filter used to ground the answer, so cross-route navigation cannot lose the
 filter while the inventory screen mounts.
 
+Make detection uses the shared vehicle alias dictionary, including common
+short forms and plurals. The chat route resolves the result against the
+tenant's bounded facets vocabulary, so a visitor saying “Mercedes” produces
+the exact stored/public filter `Mercedes-Benz` rather than a near-match that
+returns zero.
+
+Inventory grounding is server-filtered. The chat route does not download the
+tenant's full vehicle table and attempt to match it in memory; that approach is
+both expensive and incomplete once PostgREST's response row cap is reached.
+It loads the bounded facet vocabulary, then runs a tenant- and live-status
+scoped vehicle query with an exact count. The same parsed filters are merged
+into any model-requested vehicle tool query, preventing a tool from dropping
+or abbreviating the visitor's make. A verified zero is explicitly included in
+the model context; database failures surface as errors and are never presented
+as “no vehicles.”
+
 An explicitly named vehicle is resolved only from that turn’s tenant-scoped
 live matches. Year, price, and mileage anchors must match exactly; make and
 model/trim tokens must also be present, and equal-scoring matches fail closed.
