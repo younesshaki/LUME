@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Vehicle } from "@lume/types";
 import {
   extractVehicleFilters,
+  hasVehicleFilterConstraint,
+  inheritVehicleFilterContext,
   isVehicleQuery,
   matchVehicles,
   mergeTrustedVehicleQuery,
@@ -45,6 +47,27 @@ describe("vehicle query intent", () => {
 
   it("does not mistake a make substring inside an unrelated word for intent", () => {
     expect(isVehicleQuery("What does your program include?")).toBe(false);
+  });
+
+  it("does not fuzzy-match the comparison word 'less' as Lexus", () => {
+    expect(isVehicleQuery("for less than $40k")).toBe(false);
+    expect(extractVehicleFilters("for less than $40k")).toEqual({
+      priceMax: 40_000,
+    });
+    expect(
+      extractVehicleFilters("any BMWs for less than $20k"),
+    ).toEqual({
+      make: "BMW",
+      priceMax: 20_000,
+    });
+  });
+
+  it("does not fuzzy-match the conjunction 'and' as AWD", () => {
+    expect(
+      extractVehicleFilters(
+        "BMW 5 Series 535i xDrive and BMW 3 Series 328i xDrive",
+      ).drivetrain,
+    ).toBeUndefined();
   });
 
   it("uses the tenant vocabulary for exact make casing and model names", () => {
@@ -118,6 +141,31 @@ describe("vehicle query intent", () => {
       mileageMax: 54_153,
       priceMin: 108_500,
       priceMax: 108_500,
+    });
+  });
+
+  it("understands abbreviated prices without a currency symbol", () => {
+    expect(extractVehicleFilters("BMWs for less than 20k")).toEqual({
+      make: "BMW",
+      priceMax: 20_000,
+    });
+  });
+
+  it("keeps abbreviated mileage distinct from price", () => {
+    expect(extractVehicleFilters("BMWs under 20k miles")).toEqual({
+      make: "BMW",
+      mileageMax: 20_000,
+    });
+  });
+
+  it("does not interpret a model year as a bare price", () => {
+    expect(extractVehicleFilters("BMWs from 2020")).toEqual({
+      make: "BMW",
+      year: 2020,
+    });
+    expect(extractVehicleFilters("BMWs at least 2020 model")).toEqual({
+      make: "BMW",
+      year: 2020,
     });
   });
 });
@@ -214,5 +262,57 @@ describe("vehicle filter grounding", () => {
       priceMax: 108_500,
       limit: 12,
     });
+  });
+
+  it("inherits a trusted make for a short budget refinement", () => {
+    expect(
+      inheritVehicleFilterContext(
+        { priceMax: 40_000 },
+        { make: "BMW", priceMax: 20_000 },
+      ),
+    ).toEqual({
+      make: "BMW",
+      priceMax: 40_000,
+    });
+  });
+
+  it("does not retain an old model when the visitor names a new make", () => {
+    expect(
+      inheritVehicleFilterContext(
+        { make: "Tesla", priceMax: 40_000 },
+        { make: "BMW", model: "X3", year: 2020 },
+      ),
+    ).toEqual({
+      make: "Tesla",
+      priceMax: 40_000,
+    });
+  });
+
+  it("retains an exact model only for a scope-free refinement", () => {
+    expect(
+      inheritVehicleFilterContext(
+        { priceMax: 40_000 },
+        { make: "BMW", model: "X3", year: 2020 },
+      ),
+    ).toEqual({
+      make: "BMW",
+      model: "X3",
+      priceMax: 40_000,
+    });
+    expect(
+      inheritVehicleFilterContext(
+        { bodyStyle: "SUV", priceMax: 40_000 },
+        { make: "BMW", model: "X3" },
+      ),
+    ).toEqual({
+      make: "BMW",
+      bodyStyle: "SUV",
+      priceMax: 40_000,
+    });
+  });
+
+  it("detects whether a parsed message contains a trusted constraint", () => {
+    expect(hasVehicleFilterConstraint({})).toBe(false);
+    expect(hasVehicleFilterConstraint({ priceMax: 20_000 })).toBe(true);
   });
 });

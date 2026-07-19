@@ -49,6 +49,8 @@ import {
 import {
   assembleSystemPrompt,
   extractVehicleFilters,
+  hasVehicleFilterConstraint,
+  inheritVehicleFilterContext,
   isVehicleQuery,
   mergeTrustedVehicleQuery,
   retrieveByKeywords,
@@ -66,6 +68,8 @@ import {
 } from "@/lib/botActions";
 import {
   actionOnlyAcknowledgement,
+  filterModelNavigationActionsByUserIntent,
+  isImmediateSiteNavigation,
   recentVehicleIdFromAssistantHistory,
   recentVehicleIdFromToolResults,
   resolveDeterministicConciergeNavigation,
@@ -317,12 +321,21 @@ export async function POST(request: Request): Promise<Response> {
     let totalMatched: number | undefined;
     let filters;
 
-    if (isVehicleQuery(lastUser.content)) {
+    const initialCurrentFilters = extractVehicleFilters(lastUser.content);
+    const initialPriorFilters = latestPriorVehicleFilters(cleanMessages);
+    const initialFilters = inheritVehicleFilterContext(
+      initialCurrentFilters,
+      initialPriorFilters,
+    );
+    const isTrustedVehicleContinuation =
+      hasVehicleFilterConstraint(initialCurrentFilters) &&
+      Boolean(initialPriorFilters?.make || initialPriorFilters?.model);
+
+    if (isVehicleQuery(lastUser.content) || isTrustedVehicleContinuation) {
       // Resolve catalog vocabulary through the bounded facets RPC, then let
       // Postgres filter the complete tenant inventory. Pulling ".select(*)"
       // here silently hit PostgREST's row cap on larger tenants and could turn
       // a real make (for example Mercedes-Benz) into a false zero-result answer.
-      const initialFilters = extractVehicleFilters(lastUser.content);
       const { data: facetRows, error: facetError } = await supabase.rpc(
         "vehicle_facets_v2",
         {
@@ -336,10 +349,10 @@ export async function POST(request: Request): Promise<Response> {
           tenantId: tenant.tenantId,
         });
       }
-      filters = extractVehicleFilters(
-        lastUser.content,
-        [],
-        vehicleFilterVocabulary(facetRows),
+      const vocabulary = vehicleFilterVocabulary(facetRows);
+      filters = inheritVehicleFilterContext(
+        extractVehicleFilters(lastUser.content, [], vocabulary),
+        latestPriorVehicleFilters(cleanMessages, vocabulary),
       );
       const match = await queryTenantVehicles(supabase, tenant.tenantId, {
         ...vehicleQueryFromFilters(filters),
@@ -398,6 +411,76 @@ export async function POST(request: Request): Promise<Response> {
       })
     : [];
   const hasDeterministicActions = deterministicActions.length > 0;
+  const cors = corsHeadersFor(request);
+  const sseHeaders = new Headers({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Source-Categories": assembled.sourceCategories.join(","),
+    ...quotaHeaders,
+    ...cors,
+  });
+  const metaEvent = sseEvent({
+    type: "meta",
+    sourceCategories: assembled.sourceCategories,
+    botName: persona.name,
+    // Capability level for client display only — enforcement is the
+    // server-side plan gate above, never this hint.
+    capabilities: { actions: chatActionsEnabled },
+    ...(visitorTurn ? { sessionId: visitorTurn.sessionId } : {}),
+  });
+
+  if (isImmediateSiteNavigation(deterministicActions)) {
+    const actions = prepareBotActionsForClient(
+      filterGroundedVehicleActions(
+        groundLeadCaptureActions(
+          filterPlanAllowedActions(chatActionsEnabled, deterministicActions, persona.capabilities),
+          modelMessages,
+        ),
+        conciergeTargets,
+        groundedVehicleIds,
+      ),
+      conciergeTargets,
+      actionAttribution,
+    );
+    const visibleContent = actionOnlyAcknowledgement(actions);
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        controller.enqueue(encoder.encode(metaEvent));
+        for (const action of actions) {
+          controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
+        }
+        if (visibleContent) {
+          controller.enqueue(
+            encoder.encode(
+              sseEvent({ choices: [{ delta: { content: visibleContent } }] }),
+            ),
+          );
+        }
+        if (visitor && visitorTurn && visibleContent) {
+          await completeVisitorPreferenceTurn(supabase, {
+            tenantId: tenant.tenantId,
+            visitorId: visitor.id,
+            sessionId: visitorTurn.sessionId,
+            assistantContent: visibleContent,
+          });
+        }
+        if (memoryKey && visibleContent) {
+          await memoryStore.append(memoryKey, {
+            messages: [lastUser, { role: "assistant", content: visibleContent }],
+          }).catch((error: unknown) => {
+            captureError("api/chat/memory-write", error, {
+              tenantId: tenant.tenantId,
+            });
+          });
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    });
+    return new Response(stream, { headers: sseHeaders });
+  }
 
   const deepseekUrl =
     process.env.DEEPSEEK_API_URL ?? "https://api.deepseek.com/v1/chat/completions";
@@ -463,33 +546,16 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "Malformed model response" }, 502, request, quotaHeaders);
   }
 
-  const cors = corsHeadersFor(request);
-  const sseHeaders = new Headers({
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-    "X-Source-Categories": assembled.sourceCategories.join(","),
-    ...quotaHeaders,
-    ...cors,
-  });
-
-  const metaEvent = sseEvent({
-    type: "meta",
-    sourceCategories: assembled.sourceCategories,
-    botName: persona.name,
-    // Capability level for client display only — enforcement is the
-    // server-side plan gate above, never this hint.
-    capabilities: { actions: chatActionsEnabled },
-    ...(visitorTurn ? { sessionId: visitorTurn.sessionId } : {}),
-  });
-
   // ── No tools requested: re-emit the prose as SSE ──────────────────────────
   if (!phase1Message.tool_calls?.length) {
     const content = phase1Message.content ?? "";
     const filteredContent = stripInlineActions(content);
     const modelActions = hasDeterministicActions
       ? deterministicActions
-      : extractInlineActions(content);
+      : filterModelNavigationActionsByUserIntent(
+          extractInlineActions(content),
+          modelMessages,
+        );
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
         groundLeadCaptureActions(
@@ -619,7 +685,10 @@ export async function POST(request: Request): Promise<Response> {
       const emittedActions: BotAction[] = [];
       const initialActions = hasDeterministicActions
         ? deterministicActions
-        : turn.actions;
+        : filterModelNavigationActionsByUserIntent(
+            turn.actions,
+            modelMessages,
+          );
       for (const action of prepareBotActionsForClient(
         filterGroundedVehicleActions(
           groundLeadCaptureActions(
@@ -649,7 +718,14 @@ export async function POST(request: Request): Promise<Response> {
         for (const action of prepareBotActionsForClient(
           filterGroundedVehicleActions(
             groundLeadCaptureActions(
-              filterPlanAllowedActions(chatActionsEnabled, actions, persona.capabilities),
+              filterPlanAllowedActions(
+                chatActionsEnabled,
+                filterModelNavigationActionsByUserIntent(
+                  actions,
+                  modelMessages,
+                ),
+                persona.capabilities,
+              ),
               modelMessages,
             ),
             conciergeTargets,
@@ -778,6 +854,24 @@ function vehicleFilterVocabulary(value: unknown): {
     states: stringArray(record.states),
     cities: stringArray(record.cities),
   };
+}
+
+function latestPriorVehicleFilters(
+  messages: readonly MemoryMessage[],
+  vocabulary: Parameters<typeof extractVehicleFilters>[2] = {},
+): ReturnType<typeof extractVehicleFilters> | null {
+  let skippedCurrentUser = false;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role !== "user") continue;
+    if (!skippedCurrentUser) {
+      skippedCurrentUser = true;
+      continue;
+    }
+    const filters = extractVehicleFilters(message.content, [], vocabulary);
+    if (filters.make || filters.model) return filters;
+  }
+  return null;
 }
 
 function stringArray(value: unknown): string[] {
