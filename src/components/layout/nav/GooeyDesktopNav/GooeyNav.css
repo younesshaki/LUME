@@ -133,6 +133,24 @@
   animation: gooey-pill 0.3s ease both;
 }
 
+/* The blur + lighten treatment is designed for a black header. On a light
+   website header it produces a dark rectangular compositing artifact and
+   unreadable white labels, so retain the direct pill interaction instead. */
+:root[data-theme="light"] .gooey-nav-container nav ul,
+:root[data-theme="light"] .gooey-nav-container nav ul li {
+  color: var(--theme-lume-muted, rgba(33, 29, 22, 0.66));
+}
+
+:root[data-theme="light"] .gooey-nav-container nav ul li:not(.active):hover,
+:root[data-theme="light"] .gooey-nav-container nav ul li:not(.active):focus-within {
+  color: var(--theme-lume-ink, #211d16);
+}
+
+:root[data-theme="light"] .gooey-nav-container .effect.filter,
+:root[data-theme="light"] .gooey-nav-container .effect.text {
+  display: none;
+}
+
 @keyframes gooey-pill {
   to {
     transform: scale(1);
