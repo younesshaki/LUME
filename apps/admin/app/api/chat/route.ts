@@ -55,8 +55,14 @@ import {
   extractDeepseekTextDelta,
   extractInlineActions,
   InlineActionStreamFilter,
+  normalizeDeepseekAssistantMessage,
   stripInlineActions,
 } from "@/lib/botActions";
+import {
+  recentVehicleIdFromAssistantHistory,
+  recentVehicleIdFromToolResults,
+  resolveDeterministicConciergeNavigation,
+} from "@/lib/chatNavigation";
 import {
   actionSystemPrompt,
   filterAllowedActions,
@@ -131,8 +137,10 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: `messages must be ≤ ${MAX_MESSAGES}` }, 400, request);
   }
 
-  // Drop any client-supplied system messages — only the server defines those.
-  const cleanMessages: MemoryMessage[] = body.messages
+  // Drop client-supplied system messages. Sanitize assistant history as
+  // untrusted display text so an older leaked provider/action protocol cannot
+  // be replayed into a future model turn.
+  const rawConversationMessages: MemoryMessage[] = body.messages
     .flatMap((message): MemoryMessage[] =>
       message.role === "user" || message.role === "assistant"
         ? [{
@@ -140,6 +148,17 @@ export async function POST(request: Request): Promise<Response> {
             content: String(message.content ?? "").slice(0, MAX_USER_CONTENT_LENGTH),
           }]
         : []);
+  const historyVehicleId =
+    recentVehicleIdFromAssistantHistory(rawConversationMessages);
+  const cleanMessages: MemoryMessage[] = rawConversationMessages.flatMap(
+    (message): MemoryMessage[] => {
+      const content =
+        message.role === "assistant"
+          ? stripInlineActions(message.content)
+          : message.content;
+      return content.trim() ? [{ ...message, content }] : [];
+    },
+  );
 
   const lastUser = [...cleanMessages].reverse().find((m) => m.role === "user");
   if (!lastUser) {
@@ -184,8 +203,20 @@ export async function POST(request: Request): Promise<Response> {
         return null;
       })
     : null;
-  const modelMessages: MemoryMessage[] = mergeRememberedMessages(
+  const cleanRememberedMessages: MemoryMessage[] = (
+    remembered?.messages ?? []
+  ).flatMap((message): MemoryMessage[] => {
+    const content =
+      message.role === "assistant"
+        ? stripInlineActions(message.content)
+        : message.content;
+    return content.trim() ? [{ ...message, content }] : [];
+  });
+  const rememberedHistoryVehicleId = recentVehicleIdFromAssistantHistory(
     remembered?.messages ?? [],
+  );
+  const modelMessages: MemoryMessage[] = mergeRememberedMessages(
+    cleanRememberedMessages,
     cleanMessages,
   );
   const visitorTurn = visitor
@@ -204,13 +235,19 @@ export async function POST(request: Request): Promise<Response> {
       (typeof body.sessionId === "string" ? body.sessionId : undefined),
   );
   const currentPageVehicleId = vehicleIdFromPublicPagePath(body.pagePath);
+  const selectedVehicleCandidate =
+    currentPageVehicleId ??
+    recentVehicleIdFromToolResults(remembered?.toolResults ?? []) ??
+    rememberedHistoryVehicleId ??
+    historyVehicleId;
 
   let assembled;
   const groundedVehicleIds = new Set<string>();
+  let selectedVehicleId: string | null = null;
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> = null;
   let visitorPreferenceContext: Awaited<ReturnType<typeof loadVisitorPreferenceContext>> = null;
   try {
-    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext, currentVehicleResult] = await Promise.all([
+    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext, selectedVehicleResult] = await Promise.all([
       supabase
         .from("rag_chunks")
         .select("text, category")
@@ -224,12 +261,12 @@ export async function POST(request: Request): Promise<Response> {
             visitorId: visitor.id,
           })
         : Promise.resolve(null),
-      currentPageVehicleId
+      selectedVehicleCandidate
         ? supabase
             .from("vehicles")
             .select("id, year, make, model, trim")
             .eq("tenant_id", tenant.tenantId)
-            .eq("id", currentPageVehicleId)
+            .eq("id", selectedVehicleCandidate)
             .eq("status", "live")
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
@@ -244,12 +281,16 @@ export async function POST(request: Request): Promise<Response> {
       lastUser.content,
       7
     );
-    if (currentVehicleResult.data) {
-      const currentVehicle = currentVehicleResult.data;
-      groundedVehicleIds.add(currentVehicle.id);
+    if (selectedVehicleResult.data) {
+      const selectedVehicle = selectedVehicleResult.data;
+      selectedVehicleId = selectedVehicle.id;
+      groundedVehicleIds.add(selectedVehicle.id);
       contextChunks.unshift({
-        category: "current-page",
-        text: `Current public page is the live vehicle ${currentVehicle.year} ${currentVehicle.make} ${currentVehicle.model}${currentVehicle.trim ? ` ${currentVehicle.trim}` : ""}. Exact vehicleId: ${currentVehicle.id}.`,
+        category:
+          selectedVehicle.id === currentPageVehicleId
+            ? "current-page"
+            : "recent-selection",
+        text: `${selectedVehicle.id === currentPageVehicleId ? "Current public page is" : "The visitor's most recently selected vehicle is"} the live vehicle ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}${selectedVehicle.trim ? ` ${selectedVehicle.trim}` : ""}. Exact vehicleId: ${selectedVehicle.id}.`,
         score: 2,
       });
     }
@@ -313,6 +354,14 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "Failed to build context" }, 500, request, quotaHeaders);
   }
 
+  const deterministicActions = resolveDeterministicConciergeNavigation({
+    messages: modelMessages,
+    targets: conciergeTargets,
+    selectedVehicleId,
+    capabilities: persona.capabilities,
+  });
+  const hasDeterministicNavigation = deterministicActions.length > 0;
+
   const deepseekUrl =
     process.env.DEEPSEEK_API_URL ?? "https://api.deepseek.com/v1/chat/completions";
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
@@ -358,7 +407,16 @@ export async function POST(request: Request): Promise<Response> {
     const parsed = (await phase1.json()) as DeepseekCompletion;
     const message = parsed.choices?.[0]?.message;
     if (!message) throw new Error("no choices in completion");
-    phase1Message = message;
+    const normalized = normalizeDeepseekAssistantMessage(
+      message,
+      enabledToolNames,
+    );
+    phase1Message = {
+      content: normalized.content,
+      ...(normalized.toolCalls.length > 0
+        ? { tool_calls: normalized.toolCalls }
+        : {}),
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : "bad completion";
     captureError("api/chat/completion-parse", err, {
@@ -389,10 +447,13 @@ export async function POST(request: Request): Promise<Response> {
   if (!phase1Message.tool_calls?.length) {
     const content = phase1Message.content ?? "";
     const visibleContent = stripInlineActions(content);
+    const modelActions = hasDeterministicNavigation
+      ? deterministicActions
+      : extractInlineActions(content);
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
         groundLeadCaptureActions(
-          filterAllowedActions(extractInlineActions(content), persona.capabilities),
+          filterAllowedActions(modelActions, persona.capabilities),
           modelMessages,
         ),
         conciergeTargets,
@@ -505,10 +566,17 @@ export async function POST(request: Request): Promise<Response> {
         }
       }
       const seenActionFingerprints = new Set<string>();
+      const initialActions = hasDeterministicNavigation
+        ? deterministicActions
+        : turn.actions;
       for (const action of prepareBotActionsForClient(
-        groundLeadCaptureActions(
-          filterAllowedActions(turn.actions, persona.capabilities),
-          modelMessages,
+        filterGroundedVehicleActions(
+          groundLeadCaptureActions(
+            filterAllowedActions(initialActions, persona.capabilities),
+            modelMessages,
+          ),
+          conciergeTargets,
+          groundedVehicleIds,
         ),
         conciergeTargets,
         actionAttribution,
@@ -525,6 +593,7 @@ export async function POST(request: Request): Promise<Response> {
       let doneEventSent = false;
 
       const emitActions = (actions: readonly BotAction[]) => {
+        if (hasDeterministicNavigation) return;
         for (const action of prepareBotActionsForClient(
           filterGroundedVehicleActions(
             groundLeadCaptureActions(

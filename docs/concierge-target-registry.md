@@ -91,8 +91,12 @@ Built-in targets:
 
 | Key | Kind | Destination | Conversion |
 | --- | --- | --- | --- |
+| `home` | route | `/home` | no |
+| `products` | route | `/products` | no |
 | `inventory` | route | `/vehicles` | no |
 | `vehicle-detail` | route | `/vehicles/:vehicleId` | no |
+| `showcase` | route | `/showcase` | no |
+| `account` | route | `/account` | no |
 | `contact-lead-form` | form | `/contact#concierge-lead-form` | yes |
 | `vehicle-inquiry` | modal | `/vehicles/:vehicleId#vehicle-inquiry` | yes |
 
@@ -121,10 +125,17 @@ descriptor and the destination passes the shared public-path validator again.
 Route parameters are URL-encoded. `/admin`, `/api`, external URLs, query strings,
 path traversal, arbitrary selectors, and arbitrary scripts are rejected.
 
-For “this car” follow-ups, the browser sends only its current public pathname.
-The server treats it as untrusted and adds VDP context only after an exact
-`tenant_id + live status + UUID` lookup succeeds. A forged or cross-tenant path
-therefore cannot ground an action.
+For “this car” follow-ups, the server prefers the current public VDP, then the
+latest trusted `get_vehicle_details` memory result. Legacy browser history may
+also contain a vehicle ID inside leaked provider control syntax; that value is
+only an untrusted candidate. Every source requires an exact
+`tenant_id + live status + UUID` lookup before it can ground an action, so a
+forged or cross-tenant value cannot navigate.
+
+High-confidence explicit requests such as “take me to the products page,”
+“open the contact page,” and “take me to that vehicle” are also resolved
+deterministically against the enabled registry. This fallback only emits a
+navigation action; it cannot submit a lead or mutate data.
 
 ## Streaming reliability
 
@@ -139,6 +150,11 @@ therefore cannot ground an action.
   memory.
 
 The non-streamed path uses the matching `stripInlineActions()` behavior.
+DeepSeek DSML receives the same treatment: it is removed from complete and
+streamed output. Only bounded function calls whose names were already exposed
+by the tenant's callable-tool allowlist can be recovered; their arguments still
+pass through the normal schema and tenant-scoped executor. Unknown or
+mutation-like DSML is discarded.
 
 ## Client execution
 

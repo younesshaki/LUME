@@ -15,6 +15,17 @@ describe("concierge target registry", () => {
       destination: "/vehicles",
       isConversion: false,
     });
+    expect(targets.find((target) => target.key === "products")).toMatchObject({
+      destination: "/products",
+      isConversion: false,
+    });
+    expect(targets.find((target) => target.key === "contact-lead-form")).toMatchObject({
+      destination: "/contact#concierge-lead-form",
+      isConversion: true,
+    });
+    for (const key of ["home", "products", "inventory", "showcase", "account"]) {
+      expect(targets.find((target) => target.key === key)?.enabled).toBe(true);
+    }
     expect(targets.find((target) => target.key === "vehicle-inquiry")).toMatchObject({
       destination: "/vehicles/:vehicleId#vehicle-inquiry",
       isConversion: true,

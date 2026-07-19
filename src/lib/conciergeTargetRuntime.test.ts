@@ -40,6 +40,26 @@ describe("concierge target runtime", () => {
     });
   });
 
+  it("resolves a trusted products target to the public products route", () => {
+    expect(
+      resolveConciergeTargetAction({
+        type: "navigate-target",
+        targetKey: "products",
+        target: {
+          key: "products",
+          label: "Products page",
+          kind: "route",
+          destination: "/products",
+          isConversion: false,
+        },
+      }),
+    ).toMatchObject({
+      path: "/products",
+      route: { route: "products" },
+      handlerId: null,
+    });
+  });
+
   it("rejects missing params, forged descriptors, and unsafe destinations", () => {
     expect(resolveConciergeTargetAction(action({ params: {} }))).toBeNull();
     expect(

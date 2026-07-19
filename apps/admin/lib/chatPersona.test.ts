@@ -39,19 +39,22 @@ describe("personaBasePrompt", () => {
 });
 
 describe("actionSystemPrompt", () => {
-  it("advertises all shapes for default capabilities", () => {
+  it("advertises the canonical shapes without crowding the prompt with legacy aliases", () => {
     const prompt = actionSystemPrompt(DEFAULT_BOT_PERSONA_CAPABILITIES);
     for (const type of [
       "filter_inventory",
-      "navigate",
       "navigate-target",
-      "highlight-vehicle",
-      "open-lead-form",
       "capture_lead",
       "scroll-to",
     ]) {
       expect(prompt).toContain(`"type":"${type}"`);
     }
+    for (const type of ["navigate", "highlight-vehicle", "open-lead-form"]) {
+      expect(prompt).not.toContain(`"type":"${type}"`);
+    }
+    expect(prompt).toContain("you MUST emit navigate-target");
+    expect(prompt).toContain("must include an email or phone");
+    expect(prompt).toContain("Never claim that a page or form was opened");
   });
 
   it("drops shapes whose capability is disabled", () => {

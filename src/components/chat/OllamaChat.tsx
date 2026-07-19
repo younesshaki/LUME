@@ -18,6 +18,7 @@ import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { messageVariants, panelVariants, toggleVariants } from "./OllamaChat.animations";
 import { chatSounds } from "./OllamaChat.sounds";
 import { useOllamaChatStateBridge } from "./OllamaChat.state";
+import { sanitizeStoredChatMessages } from "./OllamaChat.storage";
 import {
   appendThinkingStep,
   snapshotThinkingSteps,
@@ -70,8 +71,8 @@ function loadStoredMessages(): ChatMessage[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [welcomeMessage];
-    const parsed = JSON.parse(stored) as ChatMessage[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : [welcomeMessage];
+    const parsed = sanitizeStoredChatMessages(JSON.parse(stored) as unknown);
+    return parsed.length > 0 ? parsed : [welcomeMessage];
   } catch {
     return [welcomeMessage];
   }

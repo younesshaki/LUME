@@ -63,6 +63,8 @@ type ActionShape = {
   example: string;
   /** Which capability gates it; null = always available. */
   capability: keyof BotPersonaCapabilities | null;
+  /** Legacy actions remain accepted server-side but need not crowd the prompt. */
+  advertise?: boolean;
   /** A short disambiguation note shown beside the JSON shape. */
   hint?: string;
 };
@@ -75,6 +77,7 @@ const ACTION_SHAPES: Record<string, ActionShape> = {
   navigate: {
     example: `{"type":"navigate","route":"string"}`,
     capability: "navigate",
+    advertise: false,
     hint: "Legacy public-page navigation; prefer navigate-target when an enabled registry key matches.",
   },
   "navigate-target": {
@@ -85,11 +88,13 @@ const ACTION_SHAPES: Record<string, ActionShape> = {
   "highlight-vehicle": {
     example: `{"type":"highlight-vehicle","vehicleId":"string"}`,
     capability: null,
+    advertise: false,
     hint: "Legacy vehicle-detail navigation. vehicleId must be an exact grounded inventory id.",
   },
   "open-lead-form": {
     example: `{"type":"open-lead-form","prefill":{}}`,
     capability: "openLeadForm",
+    advertise: false,
   },
   capture_lead: {
     example: `{"type":"capture_lead","contact":{"email":"string","phone":"string","firstName":"string","lastName":"string","message":"string"},"vehicleId":"string"}`,
@@ -120,7 +125,11 @@ export function actionSystemPrompt(
   ],
 ): string {
   const shapes = Object.values(ACTION_SHAPES)
-    .filter((shape) => capabilityEnabled(capabilities, shape.capability))
+    .filter(
+      (shape) =>
+        shape.advertise !== false &&
+        capabilityEnabled(capabilities, shape.capability),
+    )
     .map((shape) =>
       shape.hint ? `${shape.example}\nUsage note: ${shape.hint}` : shape.example,
     );
@@ -129,8 +138,10 @@ export function actionSystemPrompt(
   if (shapes.length > 0) {
     sections.push(
       "Structured actions:",
-      "When an action would help the user, you may emit exactly one JSON object on its own line. Keep normal helpful text streaming as usual. The JSON line must match one of these shapes:",
+      "When an action would help the user, emit exactly one JSON object on its own line. Keep normal helpful text streaming as usual. The JSON line must match one of these shapes:",
       ...shapes,
+      "If the visitor explicitly asks to open, view, or be taken to a listed destination, you MUST emit navigate-target. Never claim that a page or form was opened unless you emit its action.",
+      "Opening a form uses navigate-target. capture_lead is only for contact details the visitor actually supplied and must include an email or phone; never emit it with an empty contact object.",
       "Only include fields that are useful. Do not wrap action JSON in markdown.",
     );
   }

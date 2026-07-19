@@ -1,13 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
+  extractDeepseekDsmlToolCalls,
   extractDeepseekTextDelta,
   extractInlineActions,
   InlineActionStreamFilter,
   isBotAction,
+  normalizeDeepseekAssistantMessage,
   parseBotActionLine,
+  stripDeepseekDsml,
   stripInlineActions,
   validateBotActionEnvelope,
 } from "./botActions";
+
+const VEHICLE_ID = "5d6df0bd-85db-471e-9c4c-effa3c4938ab";
+const VEHICLE_DSML = [
+  "<｜｜DSML｜｜tool_calls>",
+  '<｜｜DSML｜｜invoke name="get_vehicle_details">',
+  `<｜｜DSML｜｜parameter name="vehicleId" string="true">${VEHICLE_ID}</｜｜DSML｜｜parameter>`,
+  "</｜｜DSML｜｜invoke>",
+  "</｜｜DSML｜｜tool_calls>",
+].join("\n");
 
 describe("extractDeepseekTextDelta", () => {
   it("pulls delta content from a data line", () => {
@@ -19,6 +31,72 @@ describe("extractDeepseekTextDelta", () => {
     expect(extractDeepseekTextDelta("data: [DONE]")).toBeUndefined();
     expect(extractDeepseekTextDelta("event: ping")).toBeUndefined();
     expect(extractDeepseekTextDelta("data: {nope")).toBeUndefined();
+  });
+});
+
+describe("DeepSeek DSML containment", () => {
+  it("recovers an allowlisted tool call and removes provider markup from prose", () => {
+    const normalized = normalizeDeepseekAssistantMessage(
+      {
+        content: `I checked the selected vehicle's current details.\n${VEHICLE_DSML}`,
+      },
+      ["get_vehicle_details"],
+    );
+    expect(normalized.content).toBe(
+      "I checked the selected vehicle's current details.\n",
+    );
+    expect(normalized.recoveredDsmlToolCallCount).toBe(1);
+    expect(normalized.discardedDsml).toBe(true);
+    expect(normalized.toolCalls).toEqual([
+      {
+        id: "recovered_dsml_1",
+        type: "function",
+        function: {
+          name: "get_vehicle_details",
+          arguments: JSON.stringify({ vehicleId: VEHICLE_ID }),
+        },
+      },
+    ]);
+  });
+
+  it("strips but never recovers a non-allowlisted mutation-like call", () => {
+    const captureLead = [
+      "<｜｜DSML｜｜tool_calls>",
+      '<｜｜DSML｜｜invoke name="capture_lead">',
+      `<｜｜DSML｜｜parameter name="vehicleId" string="true">${VEHICLE_ID}</｜｜DSML｜｜parameter>`,
+      '<｜｜DSML｜｜parameter name="contact" string="false">{}</｜｜DSML｜｜parameter>',
+      "</｜｜DSML｜｜invoke>",
+      "</｜｜DSML｜｜tool_calls>",
+    ].join("\n");
+    expect(
+      extractDeepseekDsmlToolCalls(captureLead, ["get_vehicle_details"]),
+    ).toEqual([]);
+    expect(stripDeepseekDsml(`Opening the contact page.\n${captureLead}`)).toBe(
+      "Opening the contact page.\n",
+    );
+  });
+
+  it("prefers real structured calls and fails closed on truncated DSML", () => {
+    const structured = {
+      id: "call_1",
+      type: "function" as const,
+      function: {
+        name: "find_vehicles",
+        arguments: '{"make":"Ferrari"}',
+      },
+    };
+    const normalized = normalizeDeepseekAssistantMessage(
+      {
+        content: `Safe prose\n${VEHICLE_DSML}`,
+        tool_calls: [structured],
+      },
+      ["find_vehicles", "get_vehicle_details"],
+    );
+    expect(normalized.toolCalls).toEqual([structured]);
+    expect(normalized.recoveredDsmlToolCallCount).toBe(0);
+    expect(stripDeepseekDsml("Safe prose\n<｜｜DSML｜｜tool_calls>")).toBe(
+      "Safe prose\n",
+    );
   });
 });
 
@@ -159,6 +237,18 @@ describe("InlineActionStreamFilter", () => {
       actions: [{ type: "navigate-target", targetKey: "inventory" }],
     });
     expect(filter.flush()).toEqual({ visibleText: "", actions: [] });
+  });
+
+  it("never streams DSML even when its marker and block are split across chunks", () => {
+    const filter = new InlineActionStreamFilter();
+    const first = filter.push("Taking you there.\n<");
+    const second = filter.push(`｜｜DSML｜｜tool_calls>\n${VEHICLE_DSML.split("\n").slice(1).join("\n")}\nDone.`);
+    const final = filter.flush();
+    const visible = first.visibleText + second.visibleText + final.visibleText;
+    expect(visible).toBe("Taking you there.\n\nDone.");
+    expect(visible).not.toContain("DSML");
+    expect(visible).not.toContain(VEHICLE_ID);
+    expect([...first.actions, ...second.actions, ...final.actions]).toEqual([]);
   });
 });
 
