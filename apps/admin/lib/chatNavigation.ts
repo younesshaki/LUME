@@ -55,6 +55,8 @@ const EXPLICIT_NAVIGATION_PATTERN =
   /\b(?:take|bring|send|navigate|go|open|visit|show|view)\b/;
 const INVENTORY_DISCOVERY_PATTERN =
   /\b(?:do you have|have any|are there|any|available|availability|browse|carry|find|inventory|looking for|offer|show|stock|take|open|view)\b/;
+const INVENTORY_REFINEMENT_PATTERN =
+  /\b(?:under|below|less than|up to|at most|over|above|more than|at least|between)\b/;
 const IGNORED_TARGET_WORDS = new Set([
   "and",
   "form",
@@ -141,9 +143,10 @@ export function resolveDeterministicConciergeNavigation(
   );
   if (inventoryFilter) return [inventoryFilter];
 
-  if (!explicitNavigation) return [];
-
   const knownKey = knownTargetKey(userText);
+  if (!explicitNavigation && !isTerseKnownTargetRequest(userText, knownKey)) {
+    return [];
+  }
   if (knownKey) {
     return targetAction(
       input.targets,
@@ -168,6 +171,45 @@ export function resolveDeterministicConciergeNavigation(
     custom.key,
     undefined,
     input.capabilities.openLeadForm !== false,
+  );
+}
+
+/**
+ * Model-authored navigation is advisory and must match what the visitor
+ * actually asked to open. Other model/tool actions keep their existing
+ * grounding rules.
+ */
+export function filterModelNavigationActionsByUserIntent(
+  actions: readonly BotAction[],
+  messages: readonly ConversationMessage[],
+): BotAction[] {
+  const lastUser = [...messages]
+    .reverse()
+    .find((message) => message.role === "user");
+  if (!lastUser) return actions.filter((action) => !isNavigationAction(action));
+
+  const userText = normalizeIntentText(lastUser.content);
+  const navigationRequested =
+    EXPLICIT_NAVIGATION_PATTERN.test(userText) ||
+    isTerseKnownTargetRequest(userText, knownTargetKey(userText));
+
+  return actions.filter(
+    (action) => !isNavigationAction(action) || navigationRequested,
+  );
+}
+
+/** Direct site destinations do not need an LLM round trip or inventory tool. */
+export function isImmediateSiteNavigation(
+  actions: readonly BotAction[],
+): boolean {
+  return (
+    actions.length > 0 &&
+    actions.every(
+      (action) =>
+        action.type === "navigate-target" &&
+        action.targetKey !== "vehicle-detail" &&
+        action.targetKey !== "vehicle-inquiry",
+    )
   );
 }
 
@@ -325,6 +367,30 @@ function knownTargetKey(value: string): string | null {
   return null;
 }
 
+function isTerseKnownTargetRequest(
+  value: string,
+  knownKey: string | null,
+): boolean {
+  if (!knownKey) return false;
+  const meaningfulWords = value
+    .split(" ")
+    .filter(
+      (word) =>
+        word &&
+        !IGNORED_TARGET_WORDS.has(word) &&
+        word !== "please",
+    );
+  return meaningfulWords.length === 1;
+}
+
+function isNavigationAction(action: BotAction): boolean {
+  return (
+    action.type === "navigate" ||
+    action.type === "navigate-target" ||
+    action.type === "open-lead-form"
+  );
+}
+
 function targetAction(
   targets: readonly ConciergeTarget[],
   key: string,
@@ -360,7 +426,8 @@ function groundedInventoryFilterAction(
   if (
     !allowed ||
     !filters ||
-    !INVENTORY_DISCOVERY_PATTERN.test(userText) ||
+    (!INVENTORY_DISCOVERY_PATTERN.test(userText) &&
+      !INVENTORY_REFINEMENT_PATTERN.test(userText)) ||
     filters.model ||
     filters.stockType ||
     filters.fuelType ||

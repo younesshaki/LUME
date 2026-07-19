@@ -141,6 +141,7 @@ export function actionSystemPrompt(
       "When an action would help the user, emit exactly one JSON object on its own line. Keep normal helpful text streaming as usual. The JSON line must match one of these shapes:",
       ...shapes,
       "If the visitor explicitly asks to open, view, or be taken to a listed destination, you MUST emit navigate-target. Never claim that a page or form was opened unless you emit its action.",
+      "Do not emit or claim navigation when the visitor is only discussing or describing a page.",
       "Opening a form uses navigate-target. capture_lead is only for contact details the visitor actually supplied and must include an email or phone; never emit it with an empty contact object.",
       "Only include fields that are useful. Do not wrap action JSON in markdown.",
     );
