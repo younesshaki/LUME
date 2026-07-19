@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   PREVIEW_CHANNEL,
@@ -72,8 +72,45 @@ export default function PagePreviewBridge() {
     );
   }
 
-  return <PageBlocksView slug={doc.slug} blocks={doc.blocks as PageBlock[]} mode={mode} />;
+  return (
+    <>
+      <style>{PREVIEW_BLOCK_STYLES}</style>
+      <PageBlocksView
+        slug={doc.slug}
+        blocks={doc.blocks as PageBlock[]}
+        mode={mode}
+        blockWrapper={selectableBlockWrapper}
+      />
+    </>
+  );
+
+  function selectableBlockWrapper(block: PageBlock, children: ReactNode): ReactNode {
+    return (
+      <div
+        data-lume-preview-block={block.id}
+        className="lume-preview-block"
+        onClickCapture={(event) => {
+          // The preview is an editing surface: clicks select blocks in the
+          // editor instead of triggering links/buttons inside the page.
+          event.preventDefault();
+          event.stopPropagation();
+          post({ channel: PREVIEW_CHANNEL, type: "block-selected", blockId: block.id });
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
 }
+
+/** Hover affordance for click-to-select; gold, on-brand, preview-only. */
+const PREVIEW_BLOCK_STYLES = `
+.lume-preview-block { cursor: pointer; }
+.lume-preview-block:hover {
+  outline: 2px solid rgba(201, 162, 39, 0.7);
+  outline-offset: 2px;
+}
+`;
 
 const PLACEHOLDER_STYLE: CSSProperties = {
   display: "flex",

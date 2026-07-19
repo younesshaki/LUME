@@ -92,6 +92,12 @@ describe("queryTenantVehicles", () => {
     expect(calls).toContainEqual(["range", 0, 49]);
     expect(calls).toContainEqual(["order", "is_special", { ascending: false }]);
   });
+
+  it("supports latest-listing order for new-arrival blocks", async () => {
+    const { client, calls } = fakeClient([]);
+    await queryTenantVehicles(client, "t1", { sort: "created_desc", limit: 6 });
+    expect(calls).toContainEqual(["order", "created_at", { ascending: false }]);
+  });
 });
 
 describe("getTenantVehicle", () => {

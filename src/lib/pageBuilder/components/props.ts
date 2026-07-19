@@ -18,6 +18,15 @@ export function booleanProp(
   return typeof value === "boolean" ? value : fallback;
 }
 
+export function numberProp(
+  block: PageBlock,
+  name: string,
+  fallback = 0
+): number {
+  const value = block.props[name];
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
 export function stringArrayProp(block: PageBlock, name: string): string[] {
   const value = block.props[name];
   return Array.isArray(value)
@@ -30,8 +39,11 @@ export type StatementItem = {
   body: string;
 };
 
-export function statementItemsProp(block: PageBlock): StatementItem[] {
-  const value = block.props.items;
+export function labelBodyItemsProp(
+  block: PageBlock,
+  name = "items"
+): StatementItem[] {
+  const value = block.props[name];
   if (!Array.isArray(value)) return [];
 
   return value
@@ -43,4 +55,8 @@ export function statementItemsProp(block: PageBlock): StatementItem[] {
         : null;
     })
     .filter((item): item is StatementItem => Boolean(item));
+}
+
+export function statementItemsProp(block: PageBlock): StatementItem[] {
+  return labelBodyItemsProp(block);
 }
