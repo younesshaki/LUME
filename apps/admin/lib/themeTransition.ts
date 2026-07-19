@@ -1,4 +1,4 @@
-/** Pure geometry and snapshot preparation for the admin theme reveal. */
+/** Pure geometry for the Admin dashboard's View Transition reveal. */
 
 export type TransitionVariant =
   | "circle"
@@ -104,42 +104,4 @@ export function getThemeTransitionClipPaths(
         `circle(${maxRadius}px at ${cx}px ${cy}px)`,
       ];
   }
-}
-
-/**
- * Clone the rendered document into inert, script-free markup and apply the
- * destination theme to that clone. Running it in a same-origin sandboxed
- * iframe isolates light snapshots from a dark parent (and vice versa).
- */
-export function buildThemeSnapshotMarkup(
-  targetTheme: "light" | "dark",
-  source: Document = document,
-): string {
-  const clone = source.documentElement.cloneNode(true) as HTMLElement;
-  clone.classList.toggle("dark", targetTheme === "dark");
-  clone.dataset.theme = targetTheme;
-  clone.dataset.themeRevealSnapshot = targetTheme;
-  clone.style.colorScheme = targetTheme;
-  delete clone.dataset.magicuiThemeVt;
-
-  clone.querySelectorAll(
-    "script, noscript, link[rel='modulepreload'], link[rel='prefetch'], [data-theme-reveal-overlay]",
-  ).forEach((node) => node.remove());
-
-  const head = clone.querySelector("head");
-  if (head) {
-    head.querySelectorAll("base").forEach((node) => node.remove());
-    const base = source.createElement("base");
-    base.href = source.location.href;
-    head.prepend(base);
-    const freeze = source.createElement("style");
-    freeze.textContent = "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}html{scroll-behavior:auto!important}";
-    head.append(freeze);
-  }
-
-  return `<!doctype html>${clone.outerHTML}`;
-}
-
-export function rootMatchesTheme(root: HTMLElement, theme: "light" | "dark"): boolean {
-  return root.classList.contains("dark") === (theme === "dark");
 }

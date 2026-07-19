@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AnimatedThemeToggler } from "./animated-theme-toggler";
 
 let originalAnimate: PropertyDescriptor | undefined;
+let originalUserAgentData: PropertyDescriptor | undefined;
 
 beforeEach(() => {
   document.documentElement.classList.remove("dark");
   originalAnimate = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "animate");
+  originalUserAgentData = Object.getOwnPropertyDescriptor(window.navigator, "userAgentData");
 });
 
 afterEach(() => {
@@ -16,6 +18,11 @@ afterEach(() => {
     Object.defineProperty(HTMLElement.prototype, "animate", originalAnimate);
   } else {
     Reflect.deleteProperty(HTMLElement.prototype, "animate");
+  }
+  if (originalUserAgentData) {
+    Object.defineProperty(window.navigator, "userAgentData", originalUserAgentData);
+  } else {
+    Reflect.deleteProperty(window.navigator, "userAgentData");
   }
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -40,6 +47,19 @@ function mockAnimate(): ReturnType<typeof vi.fn> {
   }) as unknown as Animation);
   Object.defineProperty(HTMLElement.prototype, "animate", { configurable: true, value: animate });
   return animate;
+}
+
+function mockChromeOnMacOS(): void {
+  Object.defineProperty(window.navigator, "userAgentData", {
+    configurable: true,
+    value: {
+      platform: "macOS",
+      brands: [
+        { brand: "Chromium", version: "148" },
+        { brand: "Google Chrome", version: "148" },
+      ],
+    },
+  });
 }
 
 /** Install a View Transitions API that runs the callback and reports the given finished promise. */
@@ -79,12 +99,20 @@ describe("AnimatedThemeToggler", () => {
     expect(createElement).not.toHaveBeenCalledWith("iframe");
   });
 
-  it("uses the View Transitions API and animates the root reveal when available", async () => {
+  it("uses the standard root reveal on Chrome for macOS too", async () => {
     mockMotionPreference(false);
+    mockChromeOnMacOS();
     const animate = mockAnimate();
     const startViewTransition = mockViewTransitions();
     const onThemeChange = vi.fn();
-    render(<AnimatedThemeToggler theme="light" onThemeChange={onThemeChange} duration={50} />);
+    render(
+      <AnimatedThemeToggler
+        theme="light"
+        onThemeChange={onThemeChange}
+        duration={350}
+        variant="circle"
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }));
 
@@ -92,8 +120,17 @@ describe("AnimatedThemeToggler", () => {
     expect(onThemeChange).toHaveBeenCalledWith("dark");
     await waitFor(() =>
       expect(animate).toHaveBeenCalledWith(
-        { clipPath: expect.any(Array) },
-        expect.objectContaining({ pseudoElement: "::view-transition-new(root)" }),
+        {
+          clipPath: [
+            expect.stringMatching(/^circle\(0px at /),
+            expect.stringMatching(/^circle\(\d+px at /),
+          ],
+        },
+        {
+          duration: 350,
+          easing: "ease-in-out",
+          pseudoElement: "::view-transition-new(root)",
+        },
       ),
     );
   });

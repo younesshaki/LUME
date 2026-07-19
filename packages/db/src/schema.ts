@@ -1335,6 +1335,28 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      site_design_drafts: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          template_key: string;
+          design: Record<string, unknown>;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["site_design_drafts"]["Row"],
+          "id" | "updated_by" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["site_design_drafts"]["Insert"]>;
+        Relationships: [];
+      };
       tenant_api_keys: {
         Row: {
           id: string;

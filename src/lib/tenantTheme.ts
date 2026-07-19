@@ -94,6 +94,9 @@ export function applyTenantTheme(
     delete root.dataset.lumeDockVariant;
   }
 
+  delete root.dataset.lumeTemplate;
+  delete root.dataset.lumeTemplateLayout;
+  delete root.dataset.lumeTemplateSpecialty;
   applyTenantFavicons(theme, root.ownerDocument);
 }
 
@@ -104,9 +107,13 @@ export function applyTenantSiteDesign(
   root: HTMLElement = document.documentElement
 ): TenantTheme {
   const styles = getTenantSiteDesignStyles(design, mode);
+  const template = getSiteTemplate(design.template.key);
   applyTenantTheme(styles.theme, root);
   applyCssVariables(root, styles.variables);
   root.dataset.lumeSiteMode = mode;
+  root.dataset.lumeTemplate = template.key;
+  root.dataset.lumeTemplateLayout = template.visual.layout;
+  root.dataset.lumeTemplateSpecialty = template.specialty;
   return styles.theme;
 }
 

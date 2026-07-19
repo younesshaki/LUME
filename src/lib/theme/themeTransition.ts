@@ -1,17 +1,8 @@
-/**
- * Browser-only primitives for the public website's controlled theme reveal.
- * The Admin dashboard uses the same iframe snapshot + clip-path strategy.
- */
+/** Pure geometry for the public website's circular View Transition reveal. */
 
 export type TransitionVariant = "circle" | "square" | "triangle" | "diamond" | "hexagon" | "rectangle" | "star";
 
 export const TRANSITION_OVERSCAN_PX = 24;
-
-export type ThemeSnapshotOptions = {
-  source?: Document;
-  styleOverrides?: Readonly<Record<string, string>>;
-  clearStyleProperties?: readonly string[];
-};
 
 export function polygonCollapsed(cx: number, cy: number, vertexCount: number): string {
   return `polygon(${Array.from({ length: vertexCount }, () => `${cx}px ${cy}px`).join(", ")})`;
@@ -122,52 +113,4 @@ export function getThemeTransitionClipPaths(
         `circle(${maxRadius}px at ${cx}px ${cy}px)`,
       ];
   }
-}
-
-/**
- * Clone the rendered document into inert, script-free markup, then set the
- * destination website mode on the clone. A same-origin sandboxed iframe keeps
- * the snapshot isolated from the still-visible page beneath it.
- */
-export function buildThemeSnapshotMarkup(
-  targetTheme: "light" | "dark",
-  options: ThemeSnapshotOptions = {}
-): string {
-  const source = options.source ?? document;
-  const clone = source.documentElement.cloneNode(true) as HTMLElement;
-  clone.classList.toggle("dark", targetTheme === "dark");
-  clone.dataset.theme = targetTheme;
-  clone.dataset.themeRevealSnapshot = targetTheme;
-  clone.style.colorScheme = targetTheme;
-  delete clone.dataset.magicuiThemeVt;
-
-  for (const property of options.clearStyleProperties ?? []) {
-    clone.style.removeProperty(property);
-  }
-  for (const [property, value] of Object.entries(options.styleOverrides ?? {})) {
-    clone.style.setProperty(property, value);
-  }
-
-  clone
-    .querySelectorAll(
-      "script, noscript, link[rel='modulepreload'], link[rel='prefetch'], [data-theme-reveal-overlay], [data-theme-solid-cover]"
-    )
-    .forEach((node) => node.remove());
-
-  const head = clone.querySelector("head");
-  if (head) {
-    head.querySelectorAll("base").forEach((node) => node.remove());
-    const base = source.createElement("base");
-    base.href = source.location.href;
-    head.prepend(base);
-    const freeze = source.createElement("style");
-    freeze.textContent = "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}html{scroll-behavior:auto!important}";
-    head.append(freeze);
-  }
-
-  return `<!doctype html>${clone.outerHTML}`;
-}
-
-export function rootMatchesTheme(root: HTMLElement, theme: "light" | "dark"): boolean {
-  return root.dataset.theme === theme;
 }

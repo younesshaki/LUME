@@ -130,6 +130,19 @@ describe("normalizeSiteDesign (v2 documents)", () => {
     expect(isSiteDesignDocument({ colors: {} })).toBe(false);
     expect(isSiteDesignDocument(null)).toBe(false);
   });
+
+  it("canonicalizes an unknown template key to the resolved registry fallback", () => {
+    const design = normalizeSiteDesign(
+      {
+        schemaVersion: 2,
+        template: { key: "untrusted-layout", version: 99 },
+        shared: {},
+        modes: { dark: {}, light: {} },
+      },
+      luxury,
+    );
+    expect(design.template.key).toBe("luxury");
+  });
 });
 
 describe("mode isolation & resolution", () => {

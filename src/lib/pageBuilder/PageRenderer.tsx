@@ -12,6 +12,7 @@ import { PageBuilderRenderProvider, type PageBuilderRenderContextValue } from ".
 import { registerBlocks } from "./registerBlocks";
 import { isPageRendererEnabled } from "./featureFlag";
 import { usePublishedPageSeo } from "@/lib/seo/SeoProvider";
+import { TemplateConversionPanel } from "@/components/site/TemplateConversionPanel";
 
 // Always register: custom tenant pages render regardless of the feature flag
 // (force prop), and this module only loads via the lazy renderer chunk anyway.
@@ -210,6 +211,7 @@ export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverri
               </BlockBoundary>
             ))}
           </main>
+          {slug === "home" ? <TemplateConversionPanel /> : null}
           {footer}
         </div>
       </CinematicShell>
