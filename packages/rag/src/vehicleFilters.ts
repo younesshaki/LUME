@@ -2,7 +2,7 @@
  * Extract structured filters from a natural-language query, with typo tolerance.
  * Pure function — runtime-agnostic, no DB access.
  */
-import type { Vehicle } from "@lume/types";
+import type { Vehicle, VehicleQuery } from "@lume/types";
 import { correctQuery } from "./fuzzyMatch";
 import { fuzzyLookup } from "./fuzzyMatch";
 import {
@@ -23,6 +23,16 @@ export type VehicleQueryFilters = {
   sellerState?: string;
   sellerCity?: string;
   year?: number;
+  mileageMax?: number;
+  priceMin?: number;
+  priceMax?: number;
+};
+
+export type VehicleFilterVocabulary = {
+  makes?: readonly string[];
+  models?: readonly string[];
+  states?: readonly string[];
+  cities?: readonly string[];
 };
 
 const US_STATE_NAMES: Record<string, string> = {
@@ -49,30 +59,35 @@ const VEHICLE_INTENT_KEYWORDS = [
 ];
 
 export function isVehicleQuery(query: string): boolean {
-  const q = query.toLowerCase();
+  const q = normalizePhrase(query);
   return (
-    VEHICLE_INTENT_KEYWORDS.some((kw) => q.includes(kw)) ||
-    Object.keys(MAKE_ALIASES).some((make) => q.includes(make))
+    VEHICLE_INTENT_KEYWORDS.some((keyword) =>
+      containsPhrase(q, normalizePhrase(keyword))
+    ) ||
+    canonicalMakeFromText(query) !== null
   );
 }
 
 export function extractVehicleFilters(
   query: string,
-  vehicles: Vehicle[] = []
+  vehicles: readonly Vehicle[] = [],
+  vocabulary: VehicleFilterVocabulary = {},
 ): VehicleQueryFilters {
   const { corrected } = correctQuery(query, ALL_KNOWN_VEHICLE_TERMS);
   const q = corrected.toLowerCase();
   const filters: VehicleQueryFilters = {};
   const tokens = q.split(/\s+/);
 
-  for (const token of tokens) {
-    if (token.length > 2) {
-      const make = fuzzyLookup(token, MAKE_ALIASES);
-      if (make) {
-        filters.make = make.charAt(0).toUpperCase() + make.slice(1);
-        break;
-      }
-    }
+  const canonicalMake = canonicalMakeFromText(corrected);
+  if (canonicalMake) {
+    const availableMakes = uniqueTerms([
+      ...vehicles.map((vehicle) => vehicle.make),
+      ...(vocabulary.makes ?? []),
+    ]);
+    filters.make =
+      availableMakes.find(
+        (make) => canonicalMakeFromValue(make) === canonicalMake,
+      ) ?? formatCanonicalMake(canonicalMake);
   }
 
   if (!filters.bodyStyle) {
@@ -120,33 +135,105 @@ export function extractVehicleFilters(
   const yearMatch = q.match(/\b(20\d{2})\b/);
   if (yearMatch) filters.year = parseInt(yearMatch[1]);
 
-  const states = [...new Set(vehicles.map((v) => v.sellerState).filter(Boolean))];
+  const priceRange = extractPriceRange(query);
+  if (priceRange.priceMin !== undefined) filters.priceMin = priceRange.priceMin;
+  if (priceRange.priceMax !== undefined) filters.priceMax = priceRange.priceMax;
+
+  const mileageMax = extractMileageMaximum(query);
+  if (mileageMax !== null) filters.mileageMax = mileageMax;
+
+  const models = uniqueTerms([
+    ...vehicles.map((vehicle) => vehicle.model),
+    ...(vocabulary.models ?? []),
+  ]).sort((left, right) => right.length - left.length);
+  // Use the original text for catalog-provided model names. The generic typo
+  // corrector can legitimately mistake short models such as "GLC" for a make
+  // acronym such as "GMC".
+  const normalizedQuery = normalizePhrase(query);
+  for (const model of models) {
+    const normalizedModel = normalizePhrase(model);
+    if (normalizedModel.length >= 2 && containsPhrase(normalizedQuery, normalizedModel)) {
+      filters.model = model;
+      break;
+    }
+  }
+
+  const states = uniqueTerms([
+    ...vehicles.map((vehicle) => vehicle.sellerState),
+    ...(vocabulary.states ?? []),
+  ]);
   for (const state of states) {
-    if (new RegExp(`\\b${state.toLowerCase()}\\b`).test(q)) {
+    if (matchesCatalogState(query, state)) {
       filters.sellerState = state;
       break;
     }
   }
   if (!filters.sellerState) {
     for (const [name, abbreviation] of Object.entries(US_STATE_NAMES)) {
-      if (q.includes(name)) {
+      if (containsPhrase(normalizePhrase(query), name)) {
         filters.sellerState = abbreviation;
         break;
       }
     }
   }
 
-  const cities = [...new Set(vehicles.map((v) => v.sellerCity).filter(Boolean))]
+  const cities = uniqueTerms([
+    ...vehicles.map((vehicle) => vehicle.sellerCity),
+    ...(vocabulary.cities ?? []),
+  ])
     .sort((a, b) => b.length - a.length);
   for (const city of cities) {
-    const lowerCity = city.toLowerCase();
-    if (lowerCity.length >= 3 && q.includes(lowerCity)) {
+    const normalizedCity = normalizePhrase(city);
+    if (
+      normalizedCity.length >= 3 &&
+      containsPhrase(normalizePhrase(query), normalizedCity)
+    ) {
       filters.sellerCity = city;
       break;
     }
   }
 
   return filters;
+}
+
+/** Translate trusted natural-language filters to the shared DB query shape. */
+export function vehicleQueryFromFilters(
+  filters: VehicleQueryFilters,
+): VehicleQuery {
+  return {
+    ...(filters.make ? { make: filters.make } : {}),
+    ...(filters.model ? { model: filters.model } : {}),
+    ...(filters.bodyStyle ? { bodyStyle: filters.bodyStyle } : {}),
+    ...(filters.stockType ? { stockType: filters.stockType } : {}),
+    ...(filters.fuelType ? { fuelType: filters.fuelType } : {}),
+    ...(filters.drivetrain ? { drivetrain: filters.drivetrain } : {}),
+    ...(filters.sellerState ? { sellerState: filters.sellerState } : {}),
+    ...(filters.sellerCity ? { sellerCity: filters.sellerCity } : {}),
+    ...(filters.year !== undefined
+      ? { yearMin: filters.year, yearMax: filters.year }
+      : {}),
+    ...(filters.mileageMax !== undefined
+      ? { mileageMax: filters.mileageMax }
+      : {}),
+    ...(filters.priceMin !== undefined ? { priceMin: filters.priceMin } : {}),
+    ...(filters.priceMax !== undefined ? { priceMax: filters.priceMax } : {}),
+  };
+}
+
+/**
+ * Keep the current visitor message authoritative over model-authored tool
+ * arguments. The model may choose presentation controls, but it cannot add a
+ * make, model, year, location, or numeric constraint absent from the message.
+ */
+export function mergeTrustedVehicleQuery(
+  modelQuery: VehicleQuery,
+  trustedFilters: VehicleQuery,
+): VehicleQuery {
+  return {
+    ...(modelQuery.sort ? { sort: modelQuery.sort } : {}),
+    ...(modelQuery.limit !== undefined ? { limit: modelQuery.limit } : {}),
+    ...trustedFilters,
+  };
 }
 
 export type VehicleMatchResult = { results: Vehicle[]; totalMatched: number };
@@ -158,7 +245,15 @@ export function matchVehicles(
 ): VehicleMatchResult {
   let results = vehicles;
 
-  if (filters.make) results = results.filter((v) => v.make.toLowerCase() === filters.make!.toLowerCase());
+  if (filters.make) {
+    const canonicalFilterMake = canonicalMakeFromValue(filters.make);
+    results = results.filter((vehicle) => {
+      const canonicalVehicleMake = canonicalMakeFromValue(vehicle.make);
+      return canonicalFilterMake && canonicalVehicleMake
+        ? canonicalVehicleMake === canonicalFilterMake
+        : normalizePhrase(vehicle.make) === normalizePhrase(filters.make!);
+    });
+  }
   if (filters.model) results = results.filter((v) => v.model.toLowerCase().includes(filters.model!.toLowerCase()));
   if (filters.bodyStyle) results = results.filter((v) => v.bodyStyle === filters.bodyStyle);
   if (filters.stockType) results = results.filter((v) => v.stockType === filters.stockType);
@@ -167,6 +262,18 @@ export function matchVehicles(
   if (filters.sellerState) results = results.filter((v) => v.sellerState === filters.sellerState);
   if (filters.sellerCity) results = results.filter((v) => v.sellerCity.toLowerCase() === filters.sellerCity!.toLowerCase());
   if (filters.year) results = results.filter((v) => v.year === filters.year);
+  if (filters.mileageMax !== undefined) {
+    results = results.filter(
+      (vehicle) =>
+        vehicle.mileage !== null && vehicle.mileage <= filters.mileageMax!,
+    );
+  }
+  if (filters.priceMin !== undefined) {
+    results = results.filter((vehicle) => vehicle.price >= filters.priceMin!);
+  }
+  if (filters.priceMax !== undefined) {
+    results = results.filter((vehicle) => vehicle.price <= filters.priceMax!);
+  }
 
   const totalMatched = results.length;
 
@@ -179,4 +286,159 @@ export function matchVehicles(
 
   const cap = Object.keys(filters).length > 0 ? 30 : 15;
   return { results: results.slice(0, cap), totalMatched };
+}
+
+function canonicalMakeFromText(value: string): string | null {
+  const normalized = normalizePhrase(value);
+  const aliases = Object.entries(MAKE_ALIASES)
+    .flatMap(([canonical, values]) =>
+      [canonical, ...values].map((alias) => ({
+        canonical,
+        alias: normalizePhrase(alias),
+      }))
+    )
+    .sort((left, right) => right.alias.length - left.alias.length);
+
+  for (const { canonical, alias } of aliases) {
+    if (
+      containsPhrase(normalized, alias) ||
+      (!alias.endsWith("s") && containsPhrase(normalized, `${alias}s`))
+    ) {
+      return canonical;
+    }
+  }
+
+  for (const token of normalized.split(" ")) {
+    if (token.length <= 2) continue;
+    const make = fuzzyLookup(token, MAKE_ALIASES);
+    if (make) return make;
+  }
+  return null;
+}
+
+function canonicalMakeFromValue(value: string): string | null {
+  const normalized = normalizePhrase(value);
+  for (const [canonical, aliases] of Object.entries(MAKE_ALIASES)) {
+    if (
+      normalizePhrase(canonical) === normalized ||
+      aliases.some((alias) => normalizePhrase(alias) === normalized)
+    ) {
+      return canonical;
+    }
+  }
+  return null;
+}
+
+function formatCanonicalMake(canonical: string): string {
+  if (canonical === "bmw" || canonical === "gmc" || canonical === "ram") {
+    return canonical.toUpperCase();
+  }
+  return canonical.replace(/(^|[ -])([a-z])/g, (_match, separator: string, letter: string) =>
+    `${separator}${letter.toUpperCase()}`
+  );
+}
+
+function normalizePhrase(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function containsPhrase(haystack: string, needle: string): boolean {
+  return Boolean(needle) && ` ${haystack} `.includes(` ${needle} `);
+}
+
+function matchesCatalogState(query: string, state: string): boolean {
+  const trimmed = state.trim();
+  if (!trimmed) return false;
+  if (/^[A-Za-z]{2}$/.test(trimmed)) {
+    const abbreviation = escapeRegExp(trimmed.toUpperCase());
+    // Two-letter state codes overlap with ordinary language ("me", "in",
+    // "or"). Require an explicitly upper-case code in location context.
+    return new RegExp(
+      `(?:\\b(?:in|near|around|from)\\s+|,\\s*)${abbreviation}\\b`,
+    ).test(query);
+  }
+  return containsPhrase(normalizePhrase(query), normalizePhrase(trimmed));
+}
+
+function extractPriceRange(
+  query: string,
+): Pick<VehicleQueryFilters, "priceMin" | "priceMax"> {
+  const amounts = [...query.matchAll(
+    /(?:\$\s*([\d][\d,]*(?:\.\d+)?)\s*([km])?|([\d][\d,]*(?:\.\d+)?)\s*([km])?\s*(?:usd|dollars?))/gi,
+  )].flatMap((match) => {
+    const amount = parseAbbreviatedNumber(
+      match[1] ?? match[3] ?? "",
+      match[2] ?? match[4],
+    );
+    return amount === null
+      ? []
+      : [{ amount, index: match.index ?? 0, length: match[0].length }];
+  });
+  if (amounts.length === 0) return {};
+
+  if (amounts.length >= 2) {
+    const betweenPrefix = query
+      .slice(Math.max(0, amounts[0]!.index - 20), amounts[0]!.index)
+      .toLowerCase();
+    const separator = query
+      .slice(
+        amounts[0]!.index + amounts[0]!.length,
+        amounts[1]!.index,
+      )
+      .toLowerCase();
+    if (
+      /\bbetween\s*$/.test(betweenPrefix) &&
+      /^\s*(?:and|to|-)\s*$/.test(separator)
+    ) {
+      return {
+        priceMin: Math.min(amounts[0]!.amount, amounts[1]!.amount),
+        priceMax: Math.max(amounts[0]!.amount, amounts[1]!.amount),
+      };
+    }
+  }
+
+  const first = amounts[0]!;
+  const prefix = query
+    .slice(Math.max(0, first.index - 36), first.index)
+    .toLowerCase();
+  if (/\b(?:under|below|less than|up to|at most|max(?:imum)?)\s*$/.test(prefix)) {
+    return { priceMax: first.amount };
+  }
+  if (/\b(?:over|above|more than|at least|min(?:imum)?|from)\s*$/.test(prefix)) {
+    return { priceMin: first.amount };
+  }
+  return { priceMin: first.amount, priceMax: first.amount };
+}
+
+function extractMileageMaximum(query: string): number | null {
+  const match = /\b([\d][\d,]*)\s*(?:miles?|mi)\b/i.exec(query);
+  return match ? parseAbbreviatedNumber(match[1] ?? "") : null;
+}
+
+function parseAbbreviatedNumber(
+  value: string,
+  suffix?: string,
+): number | null {
+  const parsed = Number(value.replace(/,/g, ""));
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  const multiplier = suffix?.toLowerCase() === "m"
+    ? 1_000_000
+    : suffix?.toLowerCase() === "k"
+      ? 1_000
+      : 1;
+  return Math.round(parsed * multiplier);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function uniqueTerms(values: readonly string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }

@@ -6,7 +6,12 @@
  * the public site's action bus remains the execution boundary.
  */
 import type { BotActionResponse } from "@lume/types";
+import { createServiceClient } from "@lume/db/server";
 import { validateBotActionEnvelope } from "@/lib/botActions";
+import {
+  loadConciergeTargets,
+  prepareBotActionForClient,
+} from "@/lib/conciergeTargets";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { recordPublicApiUsage } from "@/lib/usage.server";
@@ -43,10 +48,25 @@ export async function POST(request: Request): Promise<Response> {
   if (!validation.ok) {
     return json(failure("INVALID_ACTION", validation.error), 400, request);
   }
+  const action =
+    validation.value.action.type === "navigate-target"
+      ? prepareBotActionForClient(
+          validation.value.action,
+          (await loadConciergeTargets(createServiceClient(), tenant.tenantId)).targets,
+          {},
+        )
+      : validation.value.action;
+  if (!action) {
+    return json(
+      failure("UNKNOWN_TARGET", "Target is disabled or unavailable"),
+      400,
+      request,
+    );
+  }
   await recordPublicApiUsage(tenant.tenantId, "bot_action_requests");
 
   const response: BotActionResponse = {
-    action: validation.value.action,
+    action,
     status: "success",
     message: "Action validated",
   };

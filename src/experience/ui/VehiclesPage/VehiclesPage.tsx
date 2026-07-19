@@ -38,10 +38,7 @@ import {
   readVehicleUrlState,
   writeVehicleUrlState,
 } from "@/experience/vehicles/urlState";
-import {
-  consumePendingInventoryFilter,
-  vehicleFiltersFromBotAction,
-} from "@/lib/botActionConsumers";
+import { vehicleFiltersFromBotAction } from "@/lib/botActionConsumers";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import { useSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
@@ -813,12 +810,7 @@ export default function VehiclesPage({
   const { savedIds: savedVehicleIds, toggleSaved: togglePersistentSave } = useSavedVehicles();
   const { mode } = useDualMode();
   const isStandard = mode === "standard";
-  const initialState = useMemo(() => {
-    const pendingFilters = consumePendingInventoryFilter();
-    return pendingFilters
-      ? { filters: pendingFilters, sort: "recommended" as const, page: 1 }
-      : readVehicleUrlState();
-  }, []);
+  const initialState = useMemo(() => readVehicleUrlState(), []);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleLookup, setVehicleLookup] = useState<Record<string, Vehicle>>({});
   const [totalCount, setTotalCount] = useState<number | null>(null);

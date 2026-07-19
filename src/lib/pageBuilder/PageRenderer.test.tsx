@@ -118,6 +118,9 @@ describe("PageRenderer", () => {
 
     await screen.findByRole("heading", { name: "Rendered from DB" });
     expect(screen.queryByText("Fallback contact")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Submit request" }),
+    ).toBeInTheDocument();
   });
 
   it("applies SEO returned with the published page", async () => {

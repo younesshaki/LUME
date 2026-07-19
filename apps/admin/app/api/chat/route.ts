@@ -18,18 +18,23 @@
  * The client SHOULD NOT send a system prompt — anything received in
  * `messages` with role: "system" is dropped. The tenant is resolved from the
  * X-Lume-Tenant header (or ?tenant= or subdomain — see lib/tenant.ts).
+ *
+ * Plan gating: the tenant's resolved plan entitlement "chat.actions"
+ * (Basic = informational concierge only; Pro/Ultra = action-capable) decides
+ * whether tool specs are advertised/executable and whether BotActions from
+ * any source reach the client — on top of the tenant tool allowlist and
+ * persona capabilities. See lib/chatEntitlements.ts.
  */
-import type { BotAction, ChatRequest } from "@lume/types";
+import type { BotAction, ChatRequest, Vehicle } from "@lume/types";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
 import {
   getTenantVehicle,
   queryTenantVehicles,
   quotaExceededPayload,
   quotaResponseHeaders,
-  rowToVehicle,
+  resolveTenantPlan,
 } from "@lume/db";
 import {
-  filterBotTools,
   conversationMemoryToolPrompt,
   mergeRememberedMessages,
   parseToolCalls,
@@ -45,8 +50,9 @@ import {
   assembleSystemPrompt,
   extractVehicleFilters,
   isVehicleQuery,
-  matchVehicles,
+  mergeTrustedVehicleQuery,
   retrieveByKeywords,
+  vehicleQueryFromFilters,
 } from "@lume/rag";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
@@ -54,16 +60,36 @@ import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import {
   extractDeepseekTextDelta,
   extractInlineActions,
-  parseBotActionLine,
+  InlineActionStreamFilter,
+  normalizeDeepseekAssistantMessage,
+  stripInlineActions,
 } from "@/lib/botActions";
 import {
+  actionOnlyAcknowledgement,
+  recentVehicleIdFromAssistantHistory,
+  recentVehicleIdFromToolResults,
+  resolveDeterministicConciergeNavigation,
+} from "@/lib/chatNavigation";
+import {
   actionSystemPrompt,
-  filterAllowedActions,
-  isActionAllowed,
   loadActivePersona,
   personaBasePrompt,
 } from "@/lib/chatPersona";
+import {
+  buildBotActionAttribution,
+  conciergeTargetSystemPrompt,
+  filterGroundedVehicleActions,
+  groundLeadCaptureActions,
+  loadConciergeTargets,
+  prepareBotActionsForClient,
+  vehicleIdFromPublicPagePath,
+} from "@/lib/conciergeTargets";
 import { buildToolRequestFields, loadTenantToolAllowlist } from "@/lib/chatTools";
+import {
+  CHAT_ACTIONS_DISABLED_CAPABILITIES,
+  filterPlanAllowedActions,
+  planEnabledTools,
+} from "@/lib/chatEntitlements";
 import { loadChatLoyaltyContext, loyaltySystemPrompt } from "@/lib/chatLoyalty";
 import { resolveVisitor } from "@/lib/visitorSession";
 import { isChatStreamCompletionLine } from "@/lib/chatStreamCompletion";
@@ -122,8 +148,10 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: `messages must be ≤ ${MAX_MESSAGES}` }, 400, request);
   }
 
-  // Drop any client-supplied system messages — only the server defines those.
-  const cleanMessages: MemoryMessage[] = body.messages
+  // Drop client-supplied system messages. Sanitize assistant history as
+  // untrusted display text so an older leaked provider/action protocol cannot
+  // be replayed into a future model turn.
+  const rawConversationMessages: MemoryMessage[] = body.messages
     .flatMap((message): MemoryMessage[] =>
       message.role === "user" || message.role === "assistant"
         ? [{
@@ -131,6 +159,17 @@ export async function POST(request: Request): Promise<Response> {
             content: String(message.content ?? "").slice(0, MAX_USER_CONTENT_LENGTH),
           }]
         : []);
+  const historyVehicleId =
+    recentVehicleIdFromAssistantHistory(rawConversationMessages);
+  const cleanMessages: MemoryMessage[] = rawConversationMessages.flatMap(
+    (message): MemoryMessage[] => {
+      const content =
+        message.role === "assistant"
+          ? stripInlineActions(message.content)
+          : message.content;
+      return content.trim() ? [{ ...message, content }] : [];
+    },
+  );
 
   const lastUser = [...cleanMessages].reverse().find((m) => m.role === "user");
   if (!lastUser) {
@@ -156,12 +195,19 @@ export async function POST(request: Request): Promise<Response> {
 
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.
-  const [persona, toolAllowlist, visitor] = await Promise.all([
+  const [persona, toolAllowlist, visitor, targetRegistry, tenantPlan] = await Promise.all([
     loadActivePersona(supabase, tenant.tenantId),
     loadTenantToolAllowlist(supabase, tenant.tenantId),
     resolveVisitor(request, tenant.tenantId, supabase).catch(() => null),
+    loadConciergeTargets(supabase, tenant.tenantId),
+    resolveTenantPlan(supabase, tenant.tenantId),
   ]);
-  const enabledTools = filterBotTools(toolAllowlist);
+  const conciergeTargets = targetRegistry.targets;
+  // Plan entitlement "chat.actions" (Basic = informational concierge only)
+  // gates tools and BotActions below, on top of the tenant's own allowlist
+  // and persona capabilities. Fails closed to Basic — see lib/chatEntitlements.
+  const chatActionsEnabled = tenantPlan.entitlements["chat.actions"];
+  const enabledTools = planEnabledTools(chatActionsEnabled, toolAllowlist);
   const enabledToolNames = enabledTools.map((tool) => tool.name);
   const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
   const tenantName = tenant.name ?? tenant.slug;
@@ -173,8 +219,20 @@ export async function POST(request: Request): Promise<Response> {
         return null;
       })
     : null;
-  const modelMessages: MemoryMessage[] = mergeRememberedMessages(
+  const cleanRememberedMessages: MemoryMessage[] = (
+    remembered?.messages ?? []
+  ).flatMap((message): MemoryMessage[] => {
+    const content =
+      message.role === "assistant"
+        ? stripInlineActions(message.content)
+        : message.content;
+    return content.trim() ? [{ ...message, content }] : [];
+  });
+  const rememberedHistoryVehicleId = recentVehicleIdFromAssistantHistory(
     remembered?.messages ?? [],
+  );
+  const modelMessages: MemoryMessage[] = mergeRememberedMessages(
+    cleanRememberedMessages,
     cleanMessages,
   );
   const visitorTurn = visitor
@@ -187,12 +245,27 @@ export async function POST(request: Request): Promise<Response> {
         userContent: lastUser.content,
       })
     : null;
+  const actionAttribution = buildBotActionAttribution(
+    modelMessages,
+    visitorTurn?.sessionId ??
+      (typeof body.sessionId === "string" ? body.sessionId : undefined),
+  );
+  const currentPageVehicleId = vehicleIdFromPublicPagePath(body.pagePath);
+  const selectedVehicleCandidate =
+    currentPageVehicleId ??
+    recentVehicleIdFromToolResults(remembered?.toolResults ?? []) ??
+    rememberedHistoryVehicleId ??
+    historyVehicleId;
 
   let assembled;
+  const groundedVehicleIds = new Set<string>();
+  let groundedVehicles: Vehicle[] = [];
+  let groundedInventoryFilters: ReturnType<typeof extractVehicleFilters> | null = null;
+  let selectedVehicleId: string | null = null;
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> = null;
   let visitorPreferenceContext: Awaited<ReturnType<typeof loadVisitorPreferenceContext>> = null;
   try {
-    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext] = await Promise.all([
+    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext, selectedVehicleResult] = await Promise.all([
       supabase
         .from("rag_chunks")
         .select("text, category")
@@ -206,6 +279,15 @@ export async function POST(request: Request): Promise<Response> {
             visitorId: visitor.id,
           })
         : Promise.resolve(null),
+      selectedVehicleCandidate
+        ? supabase
+            .from("vehicles")
+            .select("id, year, make, model, trim")
+            .eq("tenant_id", tenant.tenantId)
+            .eq("id", selectedVehicleCandidate)
+            .eq("status", "live")
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
     chatLoyaltyContext = loadedLoyaltyContext;
     visitorPreferenceContext = loadedPreferenceContext;
@@ -217,27 +299,57 @@ export async function POST(request: Request): Promise<Response> {
       lastUser.content,
       7
     );
+    if (selectedVehicleResult.data) {
+      const selectedVehicle = selectedVehicleResult.data;
+      selectedVehicleId = selectedVehicle.id;
+      groundedVehicleIds.add(selectedVehicle.id);
+      contextChunks.unshift({
+        category:
+          selectedVehicle.id === currentPageVehicleId
+            ? "current-page"
+            : "recent-selection",
+        text: `${selectedVehicle.id === currentPageVehicleId ? "Current public page is" : "The visitor's most recently selected vehicle is"} the live vehicle ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}${selectedVehicle.trim ? ` ${selectedVehicle.trim}` : ""}. Exact vehicleId: ${selectedVehicle.id}.`,
+        score: 2,
+      });
+    }
 
     let matchedVehicles;
     let totalMatched: number | undefined;
-    let totalInventory: number | undefined;
     let filters;
 
     if (isVehicleQuery(lastUser.content)) {
-      // Pull this tenant's vehicles for filter extraction + matching.
-      // For very large catalogs, replace this with a server-side filtered
-      // query using the same filter logic.
-      const { data: vehicleRows } = await supabase
-        .from("vehicles")
-        .select("*")
-        .eq("tenant_id", tenant.tenantId)
-        .eq("status", "live");
-      const vehicles = (vehicleRows ?? []).map(rowToVehicle);
-      filters = extractVehicleFilters(lastUser.content, vehicles);
-      const match = matchVehicles(vehicles, filters, lastUser.content);
-      matchedVehicles = match.results;
-      totalMatched = match.totalMatched;
-      totalInventory = vehicles.length;
+      // Resolve catalog vocabulary through the bounded facets RPC, then let
+      // Postgres filter the complete tenant inventory. Pulling ".select(*)"
+      // here silently hit PostgREST's row cap on larger tenants and could turn
+      // a real make (for example Mercedes-Benz) into a false zero-result answer.
+      const initialFilters = extractVehicleFilters(lastUser.content);
+      const { data: facetRows, error: facetError } = await supabase.rpc(
+        "vehicle_facets_v2",
+        {
+          p_tenant_id: tenant.tenantId,
+          p_make: initialFilters.make ?? null,
+          p_state: initialFilters.sellerState ?? null,
+        },
+      );
+      if (facetError) {
+        captureError("api/chat/vehicle-facets", facetError, {
+          tenantId: tenant.tenantId,
+        });
+      }
+      filters = extractVehicleFilters(
+        lastUser.content,
+        [],
+        vehicleFilterVocabulary(facetRows),
+      );
+      const match = await queryTenantVehicles(supabase, tenant.tenantId, {
+        ...vehicleQueryFromFilters(filters),
+        limit: 30,
+      });
+      matchedVehicles = match.vehicles;
+      groundedVehicles = matchedVehicles;
+      groundedInventoryFilters = filters;
+      for (const vehicle of matchedVehicles) groundedVehicleIds.add(vehicle.id);
+      totalMatched = match.totalCount ?? matchedVehicles.length;
       const matchedIds = matchedVehicles.slice(0, 20).map((vehicle) => vehicle.id);
       if (matchedIds.length > 0) {
         const { data: imageDescriptions } = await supabase
@@ -264,14 +376,28 @@ export async function POST(request: Request): Promise<Response> {
       contextChunks,
       matchedVehicles,
       totalMatched,
-      totalInventory,
       filters,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "RAG failure";
-    console.error("[/api/chat] RAG error:", message);
+    captureError("api/chat/context-build", err, {
+      tenantId: tenant.tenantId,
+      detail: message,
+    });
     return json({ error: "Failed to build context" }, 500, request, quotaHeaders);
   }
+
+  const deterministicActions = chatActionsEnabled
+    ? resolveDeterministicConciergeNavigation({
+        messages: modelMessages,
+        targets: conciergeTargets,
+        selectedVehicleId,
+        groundedVehicles,
+        inventoryFilters: groundedInventoryFilters,
+        capabilities: persona.capabilities,
+      })
+    : [];
+  const hasDeterministicActions = deterministicActions.length > 0;
 
   const deepseekUrl =
     process.env.DEEPSEEK_API_URL ?? "https://api.deepseek.com/v1/chat/completions";
@@ -282,7 +408,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const systemMessage = {
     role: "system" as const,
-    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}${conversationMemoryToolPrompt(remembered?.toolResults ?? [])}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
+    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}${conversationMemoryToolPrompt(remembered?.toolResults ?? [])}${conciergeTargetSystemPrompt(!chatActionsEnabled || persona.capabilities.navigate === false ? [] : conciergeTargets)}\n${actionSystemPrompt(chatActionsEnabled ? persona.capabilities : CHAT_ACTIONS_DISABLED_CAPABILITIES, enabledToolNames)}`,
   };
 
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
@@ -318,10 +444,22 @@ export async function POST(request: Request): Promise<Response> {
     const parsed = (await phase1.json()) as DeepseekCompletion;
     const message = parsed.choices?.[0]?.message;
     if (!message) throw new Error("no choices in completion");
-    phase1Message = message;
+    const normalized = normalizeDeepseekAssistantMessage(
+      message,
+      enabledToolNames,
+    );
+    phase1Message = {
+      content: normalized.content,
+      ...(normalized.toolCalls.length > 0
+        ? { tool_calls: normalized.toolCalls }
+        : {}),
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : "bad completion";
-    console.error("[/api/chat] completion parse error:", message);
+    captureError("api/chat/completion-parse", err, {
+      tenantId: tenant.tenantId,
+      detail: message,
+    });
     return json({ error: "Malformed model response" }, 502, request, quotaHeaders);
   }
 
@@ -339,38 +477,56 @@ export async function POST(request: Request): Promise<Response> {
     type: "meta",
     sourceCategories: assembled.sourceCategories,
     botName: persona.name,
+    // Capability level for client display only — enforcement is the
+    // server-side plan gate above, never this hint.
+    capabilities: { actions: chatActionsEnabled },
     ...(visitorTurn ? { sessionId: visitorTurn.sessionId } : {}),
   });
 
   // ── No tools requested: re-emit the prose as SSE ──────────────────────────
   if (!phase1Message.tool_calls?.length) {
     const content = phase1Message.content ?? "";
+    const filteredContent = stripInlineActions(content);
+    const modelActions = hasDeterministicActions
+      ? deterministicActions
+      : extractInlineActions(content);
+    const actions = prepareBotActionsForClient(
+      filterGroundedVehicleActions(
+        groundLeadCaptureActions(
+          filterPlanAllowedActions(chatActionsEnabled, modelActions, persona.capabilities),
+          modelMessages,
+        ),
+        conciergeTargets,
+        groundedVehicleIds,
+      ),
+      conciergeTargets,
+      actionAttribution,
+    );
+    const visibleContent =
+      filteredContent || actionOnlyAcknowledgement(actions);
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
         controller.enqueue(encoder.encode(metaEvent));
-        for (const action of filterAllowedActions(
-          extractInlineActions(content),
-          persona.capabilities
-        )) {
+        for (const action of actions) {
           controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
         }
-        if (content) {
+        if (visibleContent) {
           controller.enqueue(
-            encoder.encode(sseEvent({ choices: [{ delta: { content } }] }))
+            encoder.encode(sseEvent({ choices: [{ delta: { content: visibleContent } }] }))
           );
         }
-        if (visitor && visitorTurn && content) {
+        if (visitor && visitorTurn && visibleContent) {
           await completeVisitorPreferenceTurn(supabase, {
             tenantId: tenant.tenantId,
             visitorId: visitor.id,
             sessionId: visitorTurn.sessionId,
-            assistantContent: content,
+            assistantContent: visibleContent,
           });
         }
-        if (memoryKey && content) {
+        if (memoryKey && visibleContent) {
           await memoryStore.append(memoryKey, {
-            messages: [lastUser, { role: "assistant", content }],
+            messages: [lastUser, { role: "assistant", content: visibleContent }],
           }).catch((error: unknown) => {
             captureError("api/chat/memory-write", error, { tenantId: tenant.tenantId });
           });
@@ -386,9 +542,17 @@ export async function POST(request: Request): Promise<Response> {
   // Anon client for tool data access: RLS stays the backstop on top of the
   // explicit tenant filter (mirrors /api/vehicles).
   const anonDb = createAnonServerClient();
+  const trustedVehicleQuery = vehicleQueryFromFilters(
+    groundedInventoryFilters ?? {},
+  );
   const ctx: BotToolContext = {
     tenantId: tenant.tenantId,
-    queryVehicles: (q) => queryTenantVehicles(anonDb, tenant.tenantId, q),
+    queryVehicles: (query) =>
+      queryTenantVehicles(
+        anonDb,
+        tenant.tenantId,
+        mergeTrustedVehicleQuery(query, trustedVehicleQuery),
+      ),
     getVehicleById: (id) => getTenantVehicle(anonDb, tenant.tenantId, id),
   };
 
@@ -446,22 +610,83 @@ export async function POST(request: Request): Promise<Response> {
       }
       // Tool-emitted UI actions go out before the prose starts streaming so
       // the interface reacts (filters, highlights) while the model talks.
-      for (const action of filterAllowedActions(turn.actions, persona.capabilities)) {
+      for (const action of turn.actions) {
+        if (action.type === "highlight-vehicle") {
+          groundedVehicleIds.add(action.vehicleId);
+        }
+      }
+      const seenActionFingerprints = new Set<string>();
+      const emittedActions: BotAction[] = [];
+      const initialActions = hasDeterministicActions
+        ? deterministicActions
+        : turn.actions;
+      for (const action of prepareBotActionsForClient(
+        filterGroundedVehicleActions(
+          groundLeadCaptureActions(
+            filterPlanAllowedActions(chatActionsEnabled, initialActions, persona.capabilities),
+            modelMessages,
+          ),
+          conciergeTargets,
+          groundedVehicleIds,
+        ),
+        conciergeTargets,
+        actionAttribution,
+        seenActionFingerprints,
+      )) {
         controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
+        emittedActions.push(action);
       }
 
       const reader = upstreamBody.getReader();
       let sseLineBuffer = "";
-      let actionLineBuffer = "";
-      let pendingActions: BotAction[] = [];
+      const actionFilter = new InlineActionStreamFilter();
       let assistantContent = "";
       let streamCompletionObserved = false;
+      let doneEventSent = false;
 
-      const flushActionEvents = () => {
-        for (const action of pendingActions) {
+      const emitActions = (actions: readonly BotAction[]) => {
+        if (hasDeterministicActions) return;
+        for (const action of prepareBotActionsForClient(
+          filterGroundedVehicleActions(
+            groundLeadCaptureActions(
+              filterPlanAllowedActions(chatActionsEnabled, actions, persona.capabilities),
+              modelMessages,
+            ),
+            conciergeTargets,
+            groundedVehicleIds,
+          ),
+          conciergeTargets,
+          actionAttribution,
+          seenActionFingerprints,
+        )) {
           controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
+          emittedActions.push(action);
         }
-        pendingActions = [];
+      };
+
+      const emitActionOnlyAcknowledgement = () => {
+        if (assistantContent.trim()) return;
+        const acknowledgement = actionOnlyAcknowledgement(emittedActions);
+        if (!acknowledgement) return;
+        assistantContent = acknowledgement;
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({ choices: [{ delta: { content: acknowledgement } }] }),
+          ),
+        );
+      };
+
+      const emitFiltered = ({
+        visibleText,
+        actions,
+      }: ReturnType<InlineActionStreamFilter["push"]>) => {
+        if (visibleText) {
+          assistantContent += visibleText;
+          controller.enqueue(
+            encoder.encode(sseEvent({ choices: [{ delta: { content: visibleText } }] })),
+          );
+        }
+        emitActions(actions);
       };
 
       const processSseLine = (line: string) => {
@@ -469,35 +694,18 @@ export async function POST(request: Request): Promise<Response> {
         if (isChatStreamCompletionLine(line)) streamCompletionObserved = true;
 
         if (trimmed === "data: [DONE]") {
-          const finalAction = parseBotActionLine(actionLineBuffer);
-          if (finalAction && isActionAllowed(finalAction, persona.capabilities)) {
-            pendingActions.push(finalAction);
+          emitFiltered(actionFilter.flush());
+          emitActionOnlyAcknowledgement();
+          if (!doneEventSent) {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            doneEventSent = true;
           }
-          actionLineBuffer = "";
-          flushActionEvents();
-        }
-
-        controller.enqueue(encoder.encode(`${line}\n`));
-
-        if (!trimmed) {
-          flushActionEvents();
           return;
         }
 
         const textDelta = extractDeepseekTextDelta(line);
         if (!textDelta) return;
-
-        assistantContent += textDelta;
-        actionLineBuffer += textDelta;
-        const actionLines = actionLineBuffer.split(/\r?\n/);
-        actionLineBuffer = actionLines.pop() ?? "";
-
-        for (const actionLine of actionLines) {
-          const action = parseBotActionLine(actionLine);
-          if (action && isActionAllowed(action, persona.capabilities)) {
-            pendingActions.push(action);
-          }
-        }
+        emitFiltered(actionFilter.push(textDelta));
       };
 
       try {
@@ -516,11 +724,12 @@ export async function POST(request: Request): Promise<Response> {
         if (sseLineBuffer) {
           processSseLine(sseLineBuffer);
         }
-        const finalAction = parseBotActionLine(actionLineBuffer);
-        if (finalAction && isActionAllowed(finalAction, persona.capabilities)) {
-          pendingActions.push(finalAction);
+        emitFiltered(actionFilter.flush());
+        if (streamCompletionObserved && !doneEventSent) {
+          emitActionOnlyAcknowledgement();
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          doneEventSent = true;
         }
-        flushActionEvents();
       } catch (err) {
         const message = err instanceof Error ? err.message : "stream failure";
         controller.enqueue(
@@ -553,6 +762,32 @@ export async function POST(request: Request): Promise<Response> {
   });
 
   return new Response(stream, { headers: sseHeaders });
+}
+
+function vehicleFilterVocabulary(value: unknown): {
+  makes: string[];
+  models: string[];
+  states: string[];
+  cities: string[];
+} {
+  const row = Array.isArray(value) ? value[0] : value;
+  const record = isRecord(row) ? row : {};
+  return {
+    makes: stringArray(record.makes),
+    models: stringArray(record.models),
+    states: stringArray(record.states),
+    cities: stringArray(record.cities),
+  };
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function json(

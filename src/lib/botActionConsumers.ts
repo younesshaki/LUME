@@ -7,6 +7,7 @@ import {
   DEFAULT_FILTERS,
   type VehicleFilters,
 } from "@/experience/vehicles/catalog";
+import { encodeVehicleUrlState } from "@/experience/vehicles/urlState";
 import type { AppRouteLocation } from "@/app-shell/routePaths";
 
 export type LeadFormPrefill = Partial<{
@@ -17,12 +18,10 @@ export type LeadFormPrefill = Partial<{
   message: string;
 }>;
 
-const PENDING_INVENTORY_FILTER_KEY = "lume.bot.pending-inventory-filter.v1";
 const PENDING_LEAD_FORM_PREFILL_KEY = "lume.bot.pending-lead-form-prefill.v1";
 const PENDING_LEAD_FORM_CONTEXT_KEY = "lume.bot.pending-lead-form-context.v1";
 const LEAD_FORM_FIELDS = ["firstName", "lastName", "email", "phone", "message"] as const;
 
-let pendingInventoryFilterFallback: VehicleFilters | null = null;
 let pendingLeadFormPrefillFallback: LeadFormPrefill | null = null;
 let pendingLeadFormContextFallback: LeadSourceContext | null = null;
 
@@ -31,6 +30,18 @@ let pendingLeadFormContextFallback: LeadSourceContext | null = null;
  * intentionally excluded because chat navigation should stay on public surfaces.
  */
 export function resolveBotNavigationRoute(route: string): AppRouteLocation | null {
+  const path = normalizeRoutePath(route);
+  const vehicleDetail = /^\/vehicles\/([^/]+)$/.exec(path);
+  if (vehicleDetail) {
+    const vehicleId = safeDecodePathSegment(vehicleDetail[1]);
+    return vehicleId ? { route: "vehicleDetail", vehicleId } : null;
+  }
+  const productDetail = /^\/products\/([^/]+)$/.exec(path);
+  if (productDetail) {
+    const productId = safeDecodePathSegment(productDetail[1]);
+    return productId ? { route: "productDetail", productId } : null;
+  }
+
   const normalized = normalizeRouteInput(route);
   switch (normalized) {
     case "home":
@@ -78,20 +89,21 @@ export function vehicleFiltersFromBotAction(
   };
 }
 
-/** Stores a bot inventory filter so the vehicles route can consume it after navigation. */
-export function storePendingInventoryFilter(action: BotInventoryFilterAction): void {
-  const filters = vehicleFiltersFromBotAction(action);
-  pendingInventoryFilterFallback = filters;
-  writeSessionJson(PENDING_INVENTORY_FILTER_KEY, filters);
-}
-
-/** Reads and clears one pending bot inventory filter. */
-export function consumePendingInventoryFilter(): VehicleFilters | null {
-  const stored = readSessionJson<VehicleFilters>(PENDING_INVENTORY_FILTER_KEY);
-  removeSessionItem(PENDING_INVENTORY_FILTER_KEY);
-  const fallback = pendingInventoryFilterFallback;
-  pendingInventoryFilterFallback = null;
-  return stored ?? fallback;
+/**
+ * Carries bot filters in the existing inventory URL state. Unlike a one-shot
+ * session value, this survives lazy fallback → published block renderer swaps.
+ */
+export function vehicleRouteFromBotAction(
+  action: BotInventoryFilterAction,
+): Extract<AppRouteLocation, { route: "vehicles" }> {
+  return {
+    route: "vehicles",
+    inventoryState: encodeVehicleUrlState(
+      vehicleFiltersFromBotAction(action),
+      "recommended",
+      1,
+    ),
+  };
 }
 
 /** Extracts string fields from the bot lead-form payload and drops unsupported keys. */
@@ -124,7 +136,7 @@ export function mergeLeadFormPrefill<T extends LeadFormPrefill>(
 /** Stores lead-form prefill so the contact route can focus and populate after navigation. */
 export function storePendingLeadFormPrefill(action: BotOpenLeadFormAction): void {
   const prefill = leadFormPrefillFromAction(action) ?? {};
-  const context = botLeadFormSourceContext();
+  const context = botLeadFormSourceContext(action);
   pendingLeadFormPrefillFallback = prefill;
   pendingLeadFormContextFallback = context;
   writeSessionJson(PENDING_LEAD_FORM_PREFILL_KEY, prefill);
@@ -149,12 +161,31 @@ export function consumePendingLeadFormSourceContext(): LeadSourceContext | null 
   return isLeadFormSourceContext(stored) ? stored : fallback;
 }
 
-export function botLeadFormSourceContext(): LeadSourceContext {
-  return { trigger: "bot-action", actionType: "open-lead-form" };
+export function botLeadFormSourceContext(
+  action?: Pick<BotOpenLeadFormAction, "vehicleId" | "attribution">,
+): LeadSourceContext {
+  return {
+    trigger: "bot-action",
+    actionType: "open-lead-form",
+    ...(action?.vehicleId ? { vehicleId: action.vehicleId } : {}),
+    ...(action?.attribution?.targetKey
+      ? { targetKey: action.attribution.targetKey }
+      : {}),
+    ...(action?.attribution?.sessionId
+      ? { chatSessionId: action.attribution.sessionId }
+      : {}),
+    ...(action?.attribution?.conversationContext
+      ? { conversationContext: action.attribution.conversationContext }
+      : {}),
+  };
 }
 
 function normalizeRouteInput(route: string): string {
-  const trimmed = route.trim().toLowerCase();
+  return normalizeRoutePath(route).toLowerCase();
+}
+
+function normalizeRoutePath(route: string): string {
+  const trimmed = route.trim();
   if (!trimmed) return "";
 
   try {
@@ -163,6 +194,14 @@ function normalizeRouteInput(route: string): string {
   } catch {
     const [withoutQuery] = trimmed.split(/[?#]/, 1);
     return withoutQuery.replace(/\/+$/, "") || "/";
+  }
+}
+
+function safeDecodePathSegment(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
   }
 }
 

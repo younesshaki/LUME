@@ -28,6 +28,18 @@ describe("routePaths", () => {
     expect(resolvePath({ route: "vehicleDetail", vehicleId: "bmw m3" })).toBe(
       "/vehicles/bmw%20m3"
     );
+    expect(
+      resolvePath({
+        route: "vehicles",
+        inventoryState: "#vehicles?make=BMW&priceMax=50000",
+      }),
+    ).toBe("/vehicles#vehicles?make=BMW&priceMax=50000");
+    expect(
+      resolvePath({
+        route: "vehicles",
+        inventoryState: "#unsafe",
+      }),
+    ).toBe("/vehicles");
   });
 
   it("resolves showcase experience query parameters without requiring both values", () => {

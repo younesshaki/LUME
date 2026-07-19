@@ -18,6 +18,7 @@ import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { messageVariants, panelVariants, toggleVariants } from "./OllamaChat.animations";
 import { chatSounds } from "./OllamaChat.sounds";
 import { useOllamaChatStateBridge } from "./OllamaChat.state";
+import { sanitizeStoredChatMessages } from "./OllamaChat.storage";
 import {
   appendThinkingStep,
   snapshotThinkingSteps,
@@ -27,6 +28,7 @@ import type { ChatMessage, ChatRole, OllamaApiMessage } from "./OllamaChat.types
 
 const STORAGE_KEY = "lume-chat-v1";
 const BOT_NAME_STORAGE_KEY = "lume.chat.bot-name.v1";
+const CHAT_CAPABILITIES_STORAGE_KEY = `lume.chat.capabilities.v1.${publicTenantSlug}`;
 const CHAT_SESSION_STORAGE_KEY = `lume.chat.session.v1.${publicTenantSlug}`;
 
 const SUGGESTIONS = [
@@ -70,8 +72,8 @@ function loadStoredMessages(): ChatMessage[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [welcomeMessage];
-    const parsed = JSON.parse(stored) as ChatMessage[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : [welcomeMessage];
+    const parsed = sanitizeStoredChatMessages(JSON.parse(stored) as unknown);
+    return parsed.length > 0 ? parsed : [welcomeMessage];
   } catch {
     return [welcomeMessage];
   }
@@ -104,6 +106,16 @@ export function OllamaChat() {
       return localStorage.getItem(BOT_NAME_STORAGE_KEY) ?? "LUME";
     } catch {
       return "LUME";
+    }
+  });
+  // Capability level served in the stream's meta event; shown as a plain-language
+  // caption so visitors know what the assistant can do. null = not known yet.
+  const [canPerformActions, setCanPerformActions] = useState<boolean | null>(() => {
+    try {
+      const stored = localStorage.getItem(CHAT_CAPABILITIES_STORAGE_KEY);
+      return stored === "actions" ? true : stored === "info" ? false : null;
+    } catch {
+      return null;
     }
   });
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -236,6 +248,17 @@ export function OllamaChat() {
             setBotName(event.botName);
             try {
               localStorage.setItem(BOT_NAME_STORAGE_KEY, event.botName);
+            } catch {
+              // quota exceeded or private mode
+            }
+          }
+          if (event.capabilities) {
+            setCanPerformActions(event.capabilities.actions);
+            try {
+              localStorage.setItem(
+                CHAT_CAPABILITIES_STORAGE_KEY,
+                event.capabilities.actions ? "actions" : "info",
+              );
             } catch {
               // quota exceeded or private mode
             }
@@ -376,7 +399,13 @@ export function OllamaChat() {
             <header className="ollamaChat__header">
               <div className="ollamaChat__title">
                 <strong>{botName}</strong>
-                <span>Assistant</span>
+                <span>
+                  {canPerformActions === null
+                    ? "Assistant"
+                    : canPerformActions
+                      ? "Assistant — can guide you around the site"
+                      : "Assistant — answers your questions"}
+                </span>
               </div>
               <div className="ollamaChat__headerActions">
                 <button

@@ -1,18 +1,19 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { readVehicleUrlState } from "@/experience/vehicles/urlState";
 import {
-  consumePendingInventoryFilter,
   consumePendingLeadFormPrefill,
   consumePendingLeadFormSourceContext,
   leadFormPrefillFromAction,
   resolveBotNavigationRoute,
-  storePendingInventoryFilter,
   storePendingLeadFormPrefill,
   vehicleFiltersFromBotAction,
+  vehicleRouteFromBotAction,
 } from "./botActionConsumers";
 
 describe("bot action consumers", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/home");
   });
 
   it("maps safe public bot routes", () => {
@@ -22,6 +23,19 @@ describe("bot action consumers", () => {
       route: "showcase",
     });
     expect(resolveBotNavigationRoute("/admin")).toBeNull();
+  });
+
+  it("resolves vehicle and product detail paths while preserving identifier case", () => {
+    expect(resolveBotNavigationRoute("/vehicles/ABC-123")).toEqual({
+      route: "vehicleDetail",
+      vehicleId: "ABC-123",
+    });
+    expect(resolveBotNavigationRoute("/products/Red-Bull?ref=chat")).toEqual({
+      route: "productDetail",
+      productId: "Red-Bull",
+    });
+    expect(resolveBotNavigationRoute("/vehicles/one/extra")).toBeNull();
+    expect(resolveBotNavigationRoute("/vehicles/%E0%A4%A")).toBeNull();
   });
 
   it("normalizes coarse vehicle filters", () => {
@@ -42,18 +56,28 @@ describe("bot action consumers", () => {
     });
   });
 
-  it("stores pending inventory filters once", () => {
-    storePendingInventoryFilter({
+  it("carries inventory filters in the destination URL state", () => {
+    const route = vehicleRouteFromBotAction({
       type: "filter_inventory",
       make: "BMW",
-      priceMax: 100000,
+      priceMax: 50_000,
+    });
+    expect(route).toEqual({
+      route: "vehicles",
+      inventoryState: "#vehicles?make=BMW&priceMax=50000",
     });
 
-    expect(consumePendingInventoryFilter()).toMatchObject({
+    window.history.replaceState({}, "", `/vehicles${route.inventoryState}`);
+    // The loading fallback and published VehicleInventory block can both read
+    // the handoff without the first renderer consuming it.
+    expect(readVehicleUrlState().filters).toMatchObject({
       make: "BMW",
-      priceMax: 100000,
+      priceMax: 50_000,
     });
-    expect(consumePendingInventoryFilter()).toBeNull();
+    expect(readVehicleUrlState().filters).toMatchObject({
+      make: "BMW",
+      priceMax: 50_000,
+    });
   });
 
   it("drops unsupported lead prefill keys and stores the result once", () => {
@@ -72,7 +96,15 @@ describe("bot action consumers", () => {
       email: "ada@example.com",
     });
 
-    storePendingLeadFormPrefill(action);
+    storePendingLeadFormPrefill({
+      ...action,
+      vehicleId: "v1",
+      attribution: {
+        targetKey: "contact-lead-form",
+        sessionId: "chat-1",
+        conversationContext: "user: Please contact me",
+      },
+    });
     expect(consumePendingLeadFormPrefill()).toEqual({
       firstName: "Ada",
       email: "ada@example.com",
@@ -81,6 +113,10 @@ describe("bot action consumers", () => {
     expect(consumePendingLeadFormSourceContext()).toEqual({
       trigger: "bot-action",
       actionType: "open-lead-form",
+      vehicleId: "v1",
+      targetKey: "contact-lead-form",
+      chatSessionId: "chat-1",
+      conversationContext: "user: Please contact me",
     });
     expect(consumePendingLeadFormSourceContext()).toBeNull();
   });
