@@ -61,4 +61,16 @@ export type * from "./tenantDomain";
 export type * from "./tenantInvite";
 export type * from "./botPersona";
 export type * from "./loyalty";
+export type * from "./plans";
+export {
+  PLAN_IDS,
+  PLAN_FEATURES,
+  PLAN_CATALOG,
+  DEFAULT_PLAN_ID,
+  planCatalogEntry,
+  listPlans,
+  planEntitlements,
+  planHasFeature,
+  resolvePlanId,
+} from "./plans";
 export type * from "./visitor";

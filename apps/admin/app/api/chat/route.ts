@@ -18,6 +18,12 @@
  * The client SHOULD NOT send a system prompt — anything received in
  * `messages` with role: "system" is dropped. The tenant is resolved from the
  * X-Lume-Tenant header (or ?tenant= or subdomain — see lib/tenant.ts).
+ *
+ * Plan gating: the tenant's resolved plan entitlement "chat.actions"
+ * (Basic = informational concierge only; Pro/Ultra = action-capable) decides
+ * whether tool specs are advertised/executable and whether BotActions from
+ * any source reach the client — on top of the tenant tool allowlist and
+ * persona capabilities. See lib/chatEntitlements.ts.
  */
 import type { BotAction, ChatRequest, Vehicle } from "@lume/types";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
@@ -26,9 +32,9 @@ import {
   queryTenantVehicles,
   quotaExceededPayload,
   quotaResponseHeaders,
+  resolveTenantPlan,
 } from "@lume/db";
 import {
-  filterBotTools,
   conversationMemoryToolPrompt,
   mergeRememberedMessages,
   parseToolCalls,
@@ -66,7 +72,6 @@ import {
 } from "@/lib/chatNavigation";
 import {
   actionSystemPrompt,
-  filterAllowedActions,
   loadActivePersona,
   personaBasePrompt,
 } from "@/lib/chatPersona";
@@ -80,6 +85,11 @@ import {
   vehicleIdFromPublicPagePath,
 } from "@/lib/conciergeTargets";
 import { buildToolRequestFields, loadTenantToolAllowlist } from "@/lib/chatTools";
+import {
+  CHAT_ACTIONS_DISABLED_CAPABILITIES,
+  filterPlanAllowedActions,
+  planEnabledTools,
+} from "@/lib/chatEntitlements";
 import { loadChatLoyaltyContext, loyaltySystemPrompt } from "@/lib/chatLoyalty";
 import { resolveVisitor } from "@/lib/visitorSession";
 import { isChatStreamCompletionLine } from "@/lib/chatStreamCompletion";
@@ -185,14 +195,19 @@ export async function POST(request: Request): Promise<Response> {
 
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.
-  const [persona, toolAllowlist, visitor, targetRegistry] = await Promise.all([
+  const [persona, toolAllowlist, visitor, targetRegistry, tenantPlan] = await Promise.all([
     loadActivePersona(supabase, tenant.tenantId),
     loadTenantToolAllowlist(supabase, tenant.tenantId),
     resolveVisitor(request, tenant.tenantId, supabase).catch(() => null),
     loadConciergeTargets(supabase, tenant.tenantId),
+    resolveTenantPlan(supabase, tenant.tenantId),
   ]);
   const conciergeTargets = targetRegistry.targets;
-  const enabledTools = filterBotTools(toolAllowlist);
+  // Plan entitlement "chat.actions" (Basic = informational concierge only)
+  // gates tools and BotActions below, on top of the tenant's own allowlist
+  // and persona capabilities. Fails closed to Basic — see lib/chatEntitlements.
+  const chatActionsEnabled = tenantPlan.entitlements["chat.actions"];
+  const enabledTools = planEnabledTools(chatActionsEnabled, toolAllowlist);
   const enabledToolNames = enabledTools.map((tool) => tool.name);
   const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
   const tenantName = tenant.name ?? tenant.slug;
@@ -372,14 +387,16 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "Failed to build context" }, 500, request, quotaHeaders);
   }
 
-  const deterministicActions = resolveDeterministicConciergeNavigation({
-    messages: modelMessages,
-    targets: conciergeTargets,
-    selectedVehicleId,
-    groundedVehicles,
-    inventoryFilters: groundedInventoryFilters,
-    capabilities: persona.capabilities,
-  });
+  const deterministicActions = chatActionsEnabled
+    ? resolveDeterministicConciergeNavigation({
+        messages: modelMessages,
+        targets: conciergeTargets,
+        selectedVehicleId,
+        groundedVehicles,
+        inventoryFilters: groundedInventoryFilters,
+        capabilities: persona.capabilities,
+      })
+    : [];
   const hasDeterministicActions = deterministicActions.length > 0;
 
   const deepseekUrl =
@@ -391,7 +408,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const systemMessage = {
     role: "system" as const,
-    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}${conversationMemoryToolPrompt(remembered?.toolResults ?? [])}${conciergeTargetSystemPrompt(persona.capabilities.navigate === false ? [] : conciergeTargets)}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
+    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}${conversationMemoryToolPrompt(remembered?.toolResults ?? [])}${conciergeTargetSystemPrompt(!chatActionsEnabled || persona.capabilities.navigate === false ? [] : conciergeTargets)}\n${actionSystemPrompt(chatActionsEnabled ? persona.capabilities : CHAT_ACTIONS_DISABLED_CAPABILITIES, enabledToolNames)}`,
   };
 
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
@@ -460,6 +477,9 @@ export async function POST(request: Request): Promise<Response> {
     type: "meta",
     sourceCategories: assembled.sourceCategories,
     botName: persona.name,
+    // Capability level for client display only — enforcement is the
+    // server-side plan gate above, never this hint.
+    capabilities: { actions: chatActionsEnabled },
     ...(visitorTurn ? { sessionId: visitorTurn.sessionId } : {}),
   });
 
@@ -473,7 +493,7 @@ export async function POST(request: Request): Promise<Response> {
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
         groundLeadCaptureActions(
-          filterAllowedActions(modelActions, persona.capabilities),
+          filterPlanAllowedActions(chatActionsEnabled, modelActions, persona.capabilities),
           modelMessages,
         ),
         conciergeTargets,
@@ -603,7 +623,7 @@ export async function POST(request: Request): Promise<Response> {
       for (const action of prepareBotActionsForClient(
         filterGroundedVehicleActions(
           groundLeadCaptureActions(
-            filterAllowedActions(initialActions, persona.capabilities),
+            filterPlanAllowedActions(chatActionsEnabled, initialActions, persona.capabilities),
             modelMessages,
           ),
           conciergeTargets,
@@ -629,7 +649,7 @@ export async function POST(request: Request): Promise<Response> {
         for (const action of prepareBotActionsForClient(
           filterGroundedVehicleActions(
             groundLeadCaptureActions(
-              filterAllowedActions(actions, persona.capabilities),
+              filterPlanAllowedActions(chatActionsEnabled, actions, persona.capabilities),
               modelMessages,
             ),
             conciergeTargets,

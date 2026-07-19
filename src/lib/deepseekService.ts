@@ -30,12 +30,13 @@ type ChatMetaEvent = {
   sourceCategories: string[];
   botName?: string;
   sessionId?: string;
+  capabilities?: { actions?: boolean };
 };
 type ChatActionEvent = { type: "action"; action: BotAction };
 type ChatErrorEvent = { type: "error"; message: string };
 
 export type ChatStreamYield =
-  | { kind: "meta"; sourceCategories: string[]; botName?: string; sessionId?: string }
+  | { kind: "meta"; sourceCategories: string[]; botName?: string; sessionId?: string; capabilities?: { actions: boolean } }
   | { kind: "delta"; text: string }
   | { kind: "action"; action: BotAction }
   | { kind: "thinking"; text: string };
@@ -123,6 +124,10 @@ export async function* streamChat(
               : {}),
             ...(typeof parsed.sessionId === "string" && parsed.sessionId.trim()
               ? { sessionId: parsed.sessionId.trim() }
+              : {}),
+            ...(isRecord(parsed.capabilities) &&
+              typeof parsed.capabilities.actions === "boolean"
+              ? { capabilities: { actions: parsed.capabilities.actions } }
               : {}),
           };
           continue;
