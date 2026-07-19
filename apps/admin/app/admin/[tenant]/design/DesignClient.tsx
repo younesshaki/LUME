@@ -1,8 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, CheckCircle2, Copy, History, ImageIcon, LoaderCircle, RotateCcw, Upload } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  CloudCheck,
+  CloudOff,
+  Copy,
+  History,
+  ImageIcon,
+  LoaderCircle,
+  Moon,
+  Palette,
+  RotateCcw,
+  Sun,
+  Upload,
+} from "lucide-react";
 import type { CSSProperties } from "react";
 import {
   SITE_COLOR_KEYS,
@@ -15,6 +29,7 @@ import {
   type SiteColorKey,
   type SiteDesign,
   type SiteMode,
+  type SiteTemplate,
 } from "@lume/types";
 import { TENANT_BUCKETS, validateUploadWithBytes } from "@lume/db";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -36,10 +51,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FluidTabs from "@/components/animata/tabs/fluid-tabs";
 import {
   clearDesignDraft,
   copyMode,
+  designSignature,
   hasDesignChanges,
   readDesignDraft,
   resetMode,
@@ -57,6 +73,7 @@ import {
   prepareWebsiteBackgroundUploadAction,
   publishWebsiteDesignAction,
   restoreWebsiteDesignAction,
+  saveWebsiteDesignDraftAction,
 } from "./actions";
 
 type DesignTab = "shared" | SiteMode;
@@ -68,11 +85,13 @@ type ConfirmAction =
   | { kind: "restore"; revisionId: string };
 
 type Status = { type: "idle" | "working" | "success" | "error"; message: string };
+type DraftSaveStatus = { type: "idle" | "saving" | "saved" | "error"; message: string };
 
 type DesignClientProps = {
   tenantSlug: string;
   tenantName: string;
   initialPublishedDesign: SiteDesign;
+  initialDraft: SiteDesign;
   initialRevisions: DesignRevisionSummary[];
   canManage: boolean;
   livePreviewUrl: string;
@@ -99,46 +118,85 @@ const FONT_OPTIONS = [
   { label: "System Sans", value: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif' },
 ] as const;
 
+const DESIGN_TABS: readonly DesignTab[] = ["shared", "dark", "light"];
+
 export default function DesignClient({
   tenantSlug,
   tenantName,
   initialPublishedDesign,
+  initialDraft,
   initialRevisions,
   canManage,
   livePreviewUrl,
 }: DesignClientProps) {
   const router = useRouter();
   const [published, setPublished] = useState(initialPublishedDesign);
-  const [draft, setDraft] = useState(initialPublishedDesign);
+  const [draft, setDraft] = useState(initialDraft);
   const [tab, setTab] = useState<DesignTab>("dark");
   const [previewMode, setPreviewMode] = useState<SiteMode>("dark");
   const [hydratedDraft, setHydratedDraft] = useState(false);
   const [status, setStatus] = useState<Status>({ type: "idle", message: "" });
+  const [draftSaveStatus, setDraftSaveStatus] = useState<DraftSaveStatus>({
+    type: "idle",
+    message: "",
+  });
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [uploadingMode, setUploadingMode] = useState<SiteMode | null>(null);
+  const lastServerDraftSignature = useRef(designSignature(initialDraft));
   const template = getSiteTemplate(draft.template.key);
   const dirty = hasDesignChanges(draft, published);
 
   useEffect(() => {
-    const stored = readDesignDraft(window.sessionStorage, tenantSlug, initialPublishedDesign);
+    const stored = readDesignDraft(
+      window.sessionStorage,
+      tenantSlug,
+      initialDraft.template.key,
+    );
     if (stored) setDraft(stored);
     setHydratedDraft(true);
-  }, [initialPublishedDesign, tenantSlug]);
+  }, [initialDraft, tenantSlug]);
 
   useEffect(() => {
     if (!hydratedDraft) return;
-    if (hasDesignChanges(draft, published)) {
-      saveDesignDraft(window.sessionStorage, tenantSlug, draft, published);
-    } else {
-      clearDesignDraft(window.sessionStorage, tenantSlug);
-    }
-  }, [draft, hydratedDraft, published, tenantSlug]);
+    saveDesignDraft(window.sessionStorage, tenantSlug, draft);
+  }, [draft, hydratedDraft, tenantSlug]);
+
+  useEffect(() => {
+    if (!hydratedDraft || !canManage) return;
+    const signature = designSignature(draft);
+    if (signature === lastServerDraftSignature.current) return;
+
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      setDraftSaveStatus({ type: "saving", message: "Saving working draft…" });
+      void saveWebsiteDesignDraftAction(tenantSlug, draft).then((result) => {
+        if (!active) return;
+        if (!result.ok) {
+          setDraftSaveStatus({ type: "error", message: result.error });
+          return;
+        }
+        const normalized = result.draft.design;
+        lastServerDraftSignature.current = designSignature(normalized);
+        setDraft(normalized);
+        setDraftSaveStatus({
+          type: "saved",
+          message: "Working draft saved for this template.",
+        });
+      });
+    }, 900);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [canManage, draft, hydratedDraft, tenantSlug]);
 
   const preview = useMemo(
     () => ({
       colors: resolveModeColors(draft, template, previewMode),
       background: resolveModeBackground(draft, template, previewMode),
       shared: resolveShared(draft, template),
+      template,
     }),
     [draft, previewMode, template],
   );
@@ -212,7 +270,9 @@ export default function DesignClient({
     }
     setPublished(result.design);
     setDraft(result.design);
-    clearDesignDraft(window.sessionStorage, tenantSlug);
+    lastServerDraftSignature.current = designSignature(result.design);
+    clearDesignDraft(window.sessionStorage, tenantSlug, result.design.template.key);
+    setDraftSaveStatus({ type: "saved", message: "Published design saved as this template's working draft." });
     setStatus({ type: "success", message: "Website design published." });
     router.refresh();
   }
@@ -224,9 +284,11 @@ export default function DesignClient({
       setStatus({ type: "error", message: result.error });
       return;
     }
+    clearDesignDraft(window.sessionStorage, tenantSlug, draft.template.key);
     setPublished(result.design);
     setDraft(result.design);
-    clearDesignDraft(window.sessionStorage, tenantSlug);
+    lastServerDraftSignature.current = designSignature(result.design);
+    setDraftSaveStatus({ type: "saved", message: "Restored design saved as a working draft." });
     setStatus({ type: "success", message: "Previous website design restored and published." });
     router.refresh();
   }
@@ -248,7 +310,9 @@ export default function DesignClient({
         title="Website Design"
         description={`Customize ${tenantName}'s public website. These settings do not change the Admin dashboard appearance.`}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Badge variant="outline">{template.name} template</Badge>
+            <DraftStatusBadge status={draftSaveStatus} />
             <Badge variant={dirty ? "default" : "secondary"}>{dirty ? "Unpublished changes" : "Published"}</Badge>
             <Button disabled={!canManage || !dirty || status.type === "working"} onClick={() => setConfirmAction({ kind: "publish" })}>
               {status.type === "working" ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />}
@@ -262,29 +326,65 @@ export default function DesignClient({
         <Alert><AlertCircle /><AlertTitle>View only</AlertTitle><AlertDescription>Owner or admin access is required to publish website design changes.</AlertDescription></Alert>
       ) : null}
       {status.message ? <StatusAlert status={status} /> : null}
+      {draftSaveStatus.type === "error" ? (
+        <Alert variant="destructive">
+          <CloudOff />
+          <AlertTitle>Working draft was not saved</AlertTitle>
+          <AlertDescription>{draftSaveStatus.message} Your published website was not changed.</AlertDescription>
+        </Alert>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <Tabs value={tab} onValueChange={(value) => {
-          const next = value as DesignTab;
-          setTab(next);
-          if (next === "dark" || next === "light") setPreviewMode(next);
-        }}>
-          <TabsList className="h-auto w-full justify-start p-1" aria-label="Website design scope">
-            <TabsTrigger value="shared" className="min-h-9 px-3">Shared website settings</TabsTrigger>
-            <TabsTrigger value="dark" className="min-h-9 px-3">Website dark mode</TabsTrigger>
-            <TabsTrigger value="light" className="min-h-9 px-3">Website light mode</TabsTrigger>
-          </TabsList>
+        <div>
+          <FluidTabs
+            activeIndex={DESIGN_TABS.indexOf(tab)}
+            onActiveIndexChange={(index) => {
+              const next = DESIGN_TABS[index] ?? "shared";
+              setTab(next);
+              if (next === "dark" || next === "light") setPreviewMode(next);
+            }}
+            className="max-w-none justify-start"
+          >
+            <FluidTabs.List aria-label="Website design scope" className="w-full max-w-2xl">
+              <FluidTabs.Tab id="website-design-tab-shared" aria-controls="website-design-panel-shared">
+                <FluidTabs.Icon><Palette /></FluidTabs.Icon>
+                <FluidTabs.Label>Shared</FluidTabs.Label>
+              </FluidTabs.Tab>
+              <FluidTabs.Tab id="website-design-tab-dark" aria-controls="website-design-panel-dark">
+                <FluidTabs.Icon><Moon /></FluidTabs.Icon>
+                <FluidTabs.Label>Website dark mode</FluidTabs.Label>
+              </FluidTabs.Tab>
+              <FluidTabs.Tab id="website-design-tab-light" aria-controls="website-design-panel-light">
+                <FluidTabs.Icon><Sun /></FluidTabs.Icon>
+                <FluidTabs.Label>Website light mode</FluidTabs.Label>
+              </FluidTabs.Tab>
+            </FluidTabs.List>
+          </FluidTabs>
 
-          <TabsContent value="shared" className="space-y-4 pt-3">
+          {tab === "shared" ? (
+            <div
+              id="website-design-panel-shared"
+              role="tabpanel"
+              aria-labelledby="website-design-tab-shared"
+              className="space-y-4 pt-4"
+            >
             <SharedSettings design={draft} onChange={updateShared} />
             <Card className="border-destructive/30">
               <CardHeader><CardTitle>Reset entire design</CardTitle><CardDescription>Reset both website modes and shared settings to {template.name}. Logo, favicons, pages, and navigation stay unchanged.</CardDescription></CardHeader>
               <CardFooter><Button variant="destructive" disabled={!canManage} onClick={() => setConfirmAction({ kind: "reset-all" })}><RotateCcw /> Reset entire design</Button></CardFooter>
             </Card>
-          </TabsContent>
+            </div>
+          ) : null}
 
           {(["dark", "light"] as const).map((mode) => (
-            <TabsContent key={mode} value={mode} className="space-y-4 pt-3">
+            tab === mode ? (
+            <div
+              key={mode}
+              id={`website-design-panel-${mode}`}
+              role="tabpanel"
+              aria-labelledby={`website-design-tab-${mode}`}
+              className="space-y-4 pt-4"
+            >
               <ModeSettings
                 design={draft}
                 mode={mode}
@@ -302,9 +402,10 @@ export default function DesignClient({
                 onReset={() => setConfirmAction({ kind: "reset-mode", mode })}
                 onCopy={(source) => setConfirmAction({ kind: "copy", source, destination: mode })}
               />
-            </TabsContent>
+            </div>
+            ) : null
           ))}
-        </Tabs>
+        </div>
 
         <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           <Card>
@@ -427,11 +528,12 @@ function ModeSettings({ design, mode, uploading, disabled, onColor, onBackground
   );
 }
 
-function DesignPreview({ colors, background, shared, mode }: {
+function DesignPreview({ colors, background, shared, mode, template }: {
   colors: ReturnType<typeof resolveModeColors>;
   background: SiteBackgroundAsset | undefined;
   shared: ReturnType<typeof resolveShared>;
   mode: SiteMode;
+  template: SiteTemplate;
 }) {
   const style = {
     backgroundColor: colors.background,
@@ -441,12 +543,53 @@ function DesignPreview({ colors, background, shared, mode }: {
     color: colors.ink,
     fontFamily: shared.fonts?.body,
   } as CSSProperties;
+  const cornerClass =
+    template.visual.corners === "pill"
+      ? "rounded-[2rem]"
+      : template.visual.corners === "angular"
+        ? "rounded-none skew-x-[-1deg]"
+        : template.visual.corners === "structured"
+          ? "rounded-md"
+          : "rounded-xl";
   return (
-    <div className="aspect-[4/3] overflow-hidden rounded-lg border p-5" style={{ ...style, borderColor: colors.line }} data-preview-mode={mode}>
-      <p className="text-[10px] uppercase tracking-[0.24em]" style={{ color: colors.gold }}>LUME private collection</p>
-      <h3 className="mt-10 text-3xl leading-tight" style={{ fontFamily: shared.fonts?.experience }}>A quieter way to discover what moves you.</h3>
-      <p className="mt-3 text-sm" style={{ color: colors.muted }}>Curated inventory, personal attention, and a design tuned for Website {mode} mode.</p>
-      <div className="mt-6 rounded-lg border p-3" style={{ background: colors.panel, borderColor: colors.line }}><span className="text-xs" style={{ color: colors.soft }}>Preview panel</span></div>
+    <div
+      className={`aspect-[4/3] overflow-hidden border p-5 ${cornerClass}`}
+      style={{ ...style, borderColor: colors.line }}
+      data-preview-mode={mode}
+      data-preview-template={template.key}
+      data-preview-layout={template.visual.layout}
+    >
+      <p className="text-[10px] uppercase tracking-[0.24em]" style={{ color: colors.gold }}>
+        {template.conversion.eyebrow}
+      </p>
+      <h3
+        className={`mt-9 text-3xl leading-tight ${template.visual.layout === "kinetic-track" ? "uppercase italic" : ""}`}
+        style={{ fontFamily: shared.fonts?.experience }}
+      >
+        {template.conversion.headline}
+      </h3>
+      <p className="mt-3 line-clamp-3 text-sm" style={{ color: colors.muted }}>
+        {template.conversion.description}
+      </p>
+      <div
+        className={`mt-5 border p-3 ${cornerClass}`}
+        style={{ background: colors.panel, borderColor: colors.line }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-medium">{template.conversion.primaryLabel}</span>
+          <span
+            className="rounded-full px-2.5 py-1 text-[10px] font-semibold"
+            style={{ background: colors.gold, color: colors.background }}
+          >
+            Continue
+          </span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
+          {template.conversion.trustPoints.map((point) => (
+            <span key={point} className="text-[9px]" style={{ color: colors.soft }}>{point}</span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -472,6 +615,17 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
 
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: readonly { label: string; value: string }[]; onChange: (value: string) => void }) {
   return <div className="space-y-2"><Label>{label}</Label><Select value={value} onValueChange={onChange}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>;
+}
+
+function DraftStatusBadge({ status }: { status: DraftSaveStatus }) {
+  if (status.type === "idle") return null;
+  if (status.type === "saving") {
+    return <Badge variant="outline"><LoaderCircle className="animate-spin" /> Saving draft</Badge>;
+  }
+  if (status.type === "error") {
+    return <Badge variant="outline"><CloudOff /> Draft not saved</Badge>;
+  }
+  return <Badge variant="outline"><CloudCheck /> Draft saved</Badge>;
 }
 
 function StatusAlert({ status }: { status: Status }) {

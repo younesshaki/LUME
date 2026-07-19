@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createDefaultSiteDesign, getSiteTemplate } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { loadSiteDesign } from "@/lib/siteDesign.server";
+import { listSiteDesignDrafts, loadSiteDesign } from "@/lib/siteDesign.server";
 import TemplatesClient from "./TemplatesClient";
 
 type PageProps = { params: Promise<{ tenant: string }> };
@@ -16,8 +16,9 @@ export default async function TemplatesPage({ params }: PageProps) {
     .maybeSingle();
   if (!tenant) notFound();
 
-  const [design, manageResult] = await Promise.all([
+  const [design, drafts, manageResult] = await Promise.all([
     loadSiteDesign(tenant.slug),
+    listSiteDesignDrafts(tenant.slug),
     supabase.rpc("user_has_tenant_role", {
       p_tenant_id: tenant.id,
       p_roles: ["owner", "admin"],
@@ -29,6 +30,7 @@ export default async function TemplatesPage({ params }: PageProps) {
       tenantSlug={tenant.slug}
       tenantName={tenant.name}
       publishedDesign={design ?? createDefaultSiteDesign(getSiteTemplate("luxury"))}
+      initialDrafts={drafts}
       canManage={manageResult.data === true}
     />
   );

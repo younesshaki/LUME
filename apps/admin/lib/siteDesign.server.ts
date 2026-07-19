@@ -49,6 +49,16 @@ export type DesignRevisionSummary = {
   createdAt: string;
 };
 
+export type DesignDraftSummary = {
+  templateKey: string;
+  design: SiteDesign;
+  updatedAt: string;
+};
+
+export type DesignDraftResult =
+  | { ok: true; draft: DesignDraftSummary }
+  | { ok: false; error: string };
+
 type AuthorizedTenant = { tenantId: string; userId: string };
 
 export type SiteBackgroundUploadResult =
@@ -130,16 +140,167 @@ function normalizeFromRaw(raw: unknown): SiteDesign {
   return normalizeSiteDesign(raw, getSiteTemplate(key));
 }
 
-/**
- * Compute the design that applying a template would produce, WITHOUT publishing.
- * The UI shows this as an unsaved draft for the user to customize, then publish.
- */
-export async function applyTemplateDraft(slug: string, templateKey: string): Promise<DesignResult> {
+function designAsJson(design: SiteDesign): Record<string, unknown> {
+  return {
+    schemaVersion: design.schemaVersion,
+    template: design.template,
+    shared: design.shared,
+    modes: design.modes,
+    ...(design.header ? { header: design.header } : {}),
+    ...(design.branding ? { branding: design.branding } : {}),
+    ...(design.vehiclePricing ? { vehiclePricing: design.vehiclePricing } : {}),
+  };
+}
+
+function supportedTemplate(templateKey: string) {
+  const template = getSiteTemplate(templateKey);
+  return template.key === templateKey ? template : null;
+}
+
+/** Read every durable per-template draft available to this tenant member. */
+export async function listSiteDesignDrafts(slug: string): Promise<DesignDraftSummary[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (!tenant) return [];
+
+  const { data, error } = await supabase
+    .from("site_design_drafts")
+    .select("template_key, design, updated_at")
+    .eq("tenant_id", tenant.id)
+    .order("updated_at", { ascending: false });
+  if (error || !data) return [];
+
+  return data.flatMap((row) => {
+    const template = supportedTemplate(row.template_key);
+    if (!template) return [];
+    return [{
+      templateKey: template.key,
+      design: normalizeSiteDesign(row.design, template),
+      updatedAt: row.updated_at,
+    }];
+  });
+}
+
+async function storeDesignDraft(
+  authorized: AuthorizedTenant,
+  design: SiteDesign,
+): Promise<DesignDraftResult> {
+  const service = createServiceClient();
+  const owned = await assertOwnedBackgrounds(
+    design,
+    authorized.tenantId,
+    tenantMediaOrigin(service),
+  );
+  if (!owned.ok) return owned;
+
+  const { data, error } = await service
+    .from("site_design_drafts")
+    .upsert(
+      {
+        tenant_id: authorized.tenantId,
+        template_key: design.template.key,
+        design: designAsJson(design),
+        updated_by: authorized.userId,
+      },
+      { onConflict: "tenant_id,template_key" },
+    )
+    .select("template_key, design, updated_at")
+    .single();
+  if (error || !data) {
+    return { ok: false, error: "Unable to save this website template draft." };
+  }
+
+  const template = getSiteTemplate(data.template_key);
+  return {
+    ok: true,
+    draft: {
+      templateKey: template.key,
+      design: normalizeSiteDesign(data.design, template),
+      updatedAt: data.updated_at,
+    },
+  };
+}
+
+/** Validate and autosave the active template's working draft. */
+export async function saveSiteDesignDraft(
+  slug: string,
+  incoming: unknown,
+): Promise<DesignDraftResult> {
   const authorized = await authorizeDesignMutation(slug);
   if (!authorized) return { ok: false, error: "Owner or admin access is required." };
-  const current = (await loadSiteDesign(slug)) ?? createDefaultSiteDesign(getSiteTemplate(templateKey));
-  const applied = applyTemplateToDesign(current, getSiteTemplate(templateKey));
-  return { ok: true, design: applied };
+
+  const key =
+    typeof incoming === "object" && incoming !== null && "template" in incoming
+      ? (incoming as { template?: { key?: unknown } }).template?.key
+      : undefined;
+  if (typeof key !== "string") {
+    return { ok: false, error: "This website draft does not reference a supported template." };
+  }
+  const template = supportedTemplate(key);
+  if (!template) {
+    return { ok: false, error: "This website template is not supported." };
+  }
+  return storeDesignDraft(authorized, normalizeSiteDesign(incoming, template));
+}
+
+/**
+ * Continue a saved template draft, or create/reset its durable starting point.
+ * Nothing here changes the published tenant theme.
+ */
+export async function prepareTemplateDraft(
+  slug: string,
+  templateKey: string,
+  reset = false,
+): Promise<DesignDraftResult> {
+  const authorized = await authorizeDesignMutation(slug);
+  if (!authorized) return { ok: false, error: "Owner or admin access is required." };
+  const template = supportedTemplate(templateKey);
+  if (!template) return { ok: false, error: "This website template is not supported." };
+
+  const service = createServiceClient();
+  if (!reset) {
+    const { data: existing } = await service
+      .from("site_design_drafts")
+      .select("template_key, design, updated_at")
+      .eq("tenant_id", authorized.tenantId)
+      .eq("template_key", template.key)
+      .maybeSingle();
+    if (existing) {
+      return {
+        ok: true,
+        draft: {
+          templateKey: template.key,
+          design: normalizeSiteDesign(existing.design, template),
+          updatedAt: existing.updated_at,
+        },
+      };
+    }
+  }
+
+  const { data: tenant } = await service
+    .from("tenants")
+    .select("theme")
+    .eq("id", authorized.tenantId)
+    .maybeSingle();
+  const current = tenant
+    ? normalizeFromRaw(tenant.theme)
+    : createDefaultSiteDesign(template);
+  return storeDesignDraft(authorized, applyTemplateToDesign(current, template));
+}
+
+/** Backwards-compatible design-only wrapper for earlier callers. */
+export async function applyTemplateDraft(
+  slug: string,
+  templateKey: string,
+): Promise<DesignResult> {
+  const result = await prepareTemplateDraft(slug, templateKey);
+  return result.ok
+    ? { ok: true, design: result.draft.design }
+    : result;
 }
 
 /** Authorize direct-to-storage upload and generate the fixed tenant/mode key. */
@@ -184,6 +345,9 @@ export async function publishSiteDesign(slug: string, incoming: unknown): Promis
       ? (incoming as { template?: { key?: unknown } }).template?.key
       : undefined;
   const template = getSiteTemplate(typeof key === "string" ? key : undefined);
+  if (typeof key === "string" && template.key !== key) {
+    return { ok: false, error: "This website template is not supported." };
+  }
   const normalized = normalizeSiteDesign(incoming, template);
 
   const service = createServiceClient();
@@ -213,6 +377,21 @@ export async function publishSiteDesign(slug: string, incoming: unknown): Promis
   if (publishError) return { ok: false, error: "Unable to publish website design." };
 
   const published = normalizeFromRaw(publishedTheme);
+  // Keep the per-template working copy aligned even when the user publishes
+  // before the 900 ms autosave debounce completes. A missing draft table must
+  // never roll back an already-successful publish, so this result is deliberately
+  // best-effort.
+  await service
+    .from("site_design_drafts")
+    .upsert(
+      {
+        tenant_id: authorized.tenantId,
+        template_key: published.template.key,
+        design: designAsJson(published),
+        updated_by: authorized.userId,
+      },
+      { onConflict: "tenant_id,template_key" },
+    );
   await auditWrite({
     tenantId: authorized.tenantId,
     actorUserId: authorized.userId,

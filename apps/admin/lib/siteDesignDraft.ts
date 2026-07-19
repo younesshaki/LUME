@@ -7,11 +7,11 @@ import {
   type SiteMode,
 } from "@lume/types";
 
-const DRAFT_VERSION = 1;
+const DRAFT_VERSION = 2;
 
 type StoredDesignDraft = {
   version: typeof DRAFT_VERSION;
-  publishedSignature: string;
+  templateKey: string;
   design: SiteDesign;
 };
 
@@ -71,46 +71,51 @@ export function saveDesignDraft(
   storage: DesignDraftStorage,
   tenantSlug: string,
   design: SiteDesign,
-  published: SiteDesign,
 ): void {
+  const templateKey = getSiteTemplate(design.template.key).key;
   const payload: StoredDesignDraft = {
     version: DRAFT_VERSION,
-    publishedSignature: designSignature(published),
+    templateKey,
     design,
   };
-  storage.setItem(draftKey(tenantSlug), JSON.stringify(payload));
+  storage.setItem(draftKey(tenantSlug, templateKey), JSON.stringify(payload));
 }
 
 export function readDesignDraft(
   storage: DesignDraftStorage,
   tenantSlug: string,
-  published: SiteDesign,
+  templateKey: string,
 ): SiteDesign | null {
+  const canonicalKey = getSiteTemplate(templateKey).key;
   try {
-    const raw = storage.getItem(draftKey(tenantSlug));
+    const raw = storage.getItem(draftKey(tenantSlug, canonicalKey));
     if (!raw) return null;
     const payload = JSON.parse(raw) as Partial<StoredDesignDraft>;
     if (
       payload.version !== DRAFT_VERSION ||
-      payload.publishedSignature !== designSignature(published) ||
+      payload.templateKey !== canonicalKey ||
       !payload.design
     ) {
-      storage.removeItem(draftKey(tenantSlug));
+      storage.removeItem(draftKey(tenantSlug, canonicalKey));
       return null;
     }
-    return normalizeSiteDesign(payload.design, getSiteTemplate(payload.design.template?.key));
+    return normalizeSiteDesign(payload.design, getSiteTemplate(canonicalKey));
   } catch {
-    storage.removeItem(draftKey(tenantSlug));
+    storage.removeItem(draftKey(tenantSlug, canonicalKey));
     return null;
   }
 }
 
-export function clearDesignDraft(storage: DesignDraftStorage, tenantSlug: string): void {
-  storage.removeItem(draftKey(tenantSlug));
+export function clearDesignDraft(
+  storage: DesignDraftStorage,
+  tenantSlug: string,
+  templateKey: string,
+): void {
+  storage.removeItem(draftKey(tenantSlug, getSiteTemplate(templateKey).key));
 }
 
-function draftKey(tenantSlug: string): string {
-  return `lume.site-design-draft.v1.${tenantSlug.trim().toLowerCase()}`;
+function draftKey(tenantSlug: string, templateKey: string): string {
+  return `lume.site-design-draft.v2.${encodeURIComponent(tenantSlug.trim().toLowerCase())}.${templateKey}`;
 }
 
 function clone<T>(value: T): T {

@@ -5,11 +5,16 @@ import {
   prepareSiteBackgroundUpload,
   publishSiteDesign,
   restoreSiteDesign,
+  saveSiteDesignDraft,
 } from "@/lib/siteDesign.server";
 import type { SiteBackgroundCandidate } from "@/lib/siteDesignAssets";
 
 export async function publishWebsiteDesignAction(slug: string, design: SiteDesign) {
   return publishSiteDesign(slug, design);
+}
+
+export async function saveWebsiteDesignDraftAction(slug: string, design: SiteDesign) {
+  return saveSiteDesignDraft(slug, design);
 }
 
 export async function prepareWebsiteBackgroundUploadAction(
