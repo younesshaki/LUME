@@ -6,7 +6,12 @@
  * The browser never sees the system prompt, the RAG chunks, or the Deepseek
  * API key. It only sends user/assistant turns and consumes deltas.
  */
-import type { BotAction, ChatStreamThinking } from "@lume/types";
+import {
+  validateConciergeTargetDestination,
+  type BotAction,
+  type ChatStreamThinking,
+  type ConciergeTargetKind,
+} from "@lume/types";
 import { publicTenantSlug } from "./publicTenant";
 
 const CHAT_ENDPOINT = "/api/chat";
@@ -25,12 +30,13 @@ type ChatMetaEvent = {
   sourceCategories: string[];
   botName?: string;
   sessionId?: string;
+  capabilities?: { actions?: boolean };
 };
 type ChatActionEvent = { type: "action"; action: BotAction };
 type ChatErrorEvent = { type: "error"; message: string };
 
 export type ChatStreamYield =
-  | { kind: "meta"; sourceCategories: string[]; botName?: string; sessionId?: string }
+  | { kind: "meta"; sourceCategories: string[]; botName?: string; sessionId?: string; capabilities?: { actions: boolean } }
   | { kind: "delta"; text: string }
   | { kind: "action"; action: BotAction }
   | { kind: "thinking"; text: string };
@@ -64,6 +70,9 @@ export async function* streamChat(
     body: JSON.stringify({
       messages: sanitized,
       stream: true,
+      ...(typeof window !== "undefined"
+        ? { pagePath: window.location.pathname.slice(0, 300) }
+        : {}),
       ...(sessionId ? { sessionId } : {}),
       ...(startNewSession ? { startNewSession: true } : {}),
     }),
@@ -115,6 +124,10 @@ export async function* streamChat(
               : {}),
             ...(typeof parsed.sessionId === "string" && parsed.sessionId.trim()
               ? { sessionId: parsed.sessionId.trim() }
+              : {}),
+            ...(isRecord(parsed.capabilities) &&
+              typeof parsed.capabilities.actions === "boolean"
+              ? { capabilities: { actions: parsed.capabilities.actions } }
               : {}),
           };
           continue;
@@ -196,10 +209,19 @@ function isBotAction(value: unknown): value is BotAction {
       );
     case "navigate":
       return typeof value.route === "string";
+    case "navigate-target":
+      return (
+        typeof value.targetKey === "string" &&
+        (value.params === undefined || isStringRecord(value.params)) &&
+        isConciergeTargetDescriptor(value.target, value.targetKey)
+      );
     case "highlight-vehicle":
       return typeof value.vehicleId === "string";
     case "open-lead-form":
-      return value.prefill === undefined || isRecord(value.prefill);
+      return (
+        (value.prefill === undefined || isRecord(value.prefill)) &&
+        isOptionalString(value.vehicleId)
+      );
     case "capture_lead":
       return isLeadContact(value.contact) && isOptionalString(value.vehicleId);
     case "scroll-to":
@@ -207,6 +229,36 @@ function isBotAction(value: unknown): value is BotAction {
     default:
       return false;
   }
+}
+
+function isConciergeTargetDescriptor(
+  value: unknown,
+  targetKey: string,
+): boolean {
+  if (
+    !isRecord(value) ||
+    value.key !== targetKey ||
+    typeof value.label !== "string" ||
+    typeof value.destination !== "string" ||
+    typeof value.isConversion !== "boolean" ||
+    !["route", "section-anchor", "form", "modal"].includes(String(value.kind))
+  ) {
+    return false;
+  }
+  return (
+    validateConciergeTargetDestination(
+      value.kind as ConciergeTargetKind,
+      value.destination,
+    ) === null
+  );
+}
+
+function isStringRecord(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Object.keys(value).length <= 8 &&
+    Object.values(value).every((item) => typeof item === "string")
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

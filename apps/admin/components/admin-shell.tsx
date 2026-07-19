@@ -32,6 +32,7 @@ import {
   LogOut,
   Palette,
   PanelTop,
+  Route,
   Plus,
   Search,
   Settings,
@@ -161,6 +162,7 @@ const SECTIONS = [
     icon: Bot,
     children: [
       { slug: "persona", label: "Bot Config", icon: Bot },
+      { slug: "concierge-targets", label: "Targets", icon: Route },
       { slug: "knowledge", label: "Knowledge", icon: BookOpen },
     ],
   },

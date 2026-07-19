@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { normalizeLeadCaptureInput, verifyTurnstileToken } from "./leads";
+import {
+  conciergeConversionMetadata,
+  normalizeLeadCaptureInput,
+  verifyTurnstileToken,
+} from "./leads";
 
 describe("normalizeLeadCaptureInput", () => {
   it("requires at least one reachable contact method", () => {
@@ -56,6 +60,9 @@ describe("normalizeLeadCaptureInput", () => {
         trigger: "bot-action",
         actionType: "capture_lead",
         vehicleId: " vehicle-1 ",
+        targetKey: " vehicle-inquiry ",
+        chatSessionId: " chat-1 ",
+        conversationContext: `  ${"context ".repeat(220)}  `,
         rawConversation: "must not persist",
       },
     });
@@ -68,7 +75,14 @@ describe("normalizeLeadCaptureInput", () => {
       trigger: "bot-action",
       actionType: "capture_lead",
       vehicleId: "vehicle-1",
+      targetKey: "vehicle-inquiry",
+      chatSessionId: "chat-1",
+      conversationContext: `${"context ".repeat(150)}`,
     });
+    expect(result.value.sourceContext?.trigger).toBe("bot-action");
+    if (result.value.sourceContext?.trigger === "bot-action") {
+      expect(result.value.sourceContext.conversationContext).toHaveLength(1_200);
+    }
   });
 
   it("keeps the safe vehicle inquiry context for contact-form submissions", () => {
@@ -115,6 +129,35 @@ describe("normalizeLeadCaptureInput", () => {
     });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value.turnstileToken).toHaveLength(2_048);
+  });
+});
+
+describe("conciergeConversionMetadata", () => {
+  it("records bounded structured concierge attribution without conversation text", () => {
+    expect(
+      conciergeConversionMetadata({
+        sourceContext: {
+          trigger: "bot-action",
+          actionType: "open-lead-form",
+          targetKey: "contact-lead-form",
+          chatSessionId: "chat-1",
+          conversationContext: "private visitor context",
+        },
+      }),
+    ).toEqual({
+      conciergeDriven: true,
+      conciergeAction: "open-lead-form",
+      conciergeTargetKey: "contact-lead-form",
+      conciergeSessionId: "chat-1",
+    });
+    expect(
+      conciergeConversionMetadata({
+        sourceContext: {
+          trigger: "vehicle-inquiry",
+          actionType: "request-info",
+        },
+      }),
+    ).toEqual({});
   });
 });
 

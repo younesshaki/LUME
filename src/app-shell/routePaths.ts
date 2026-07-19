@@ -21,11 +21,12 @@ export const ROUTE_PATHS = {
 
 type StaticRouteId = Exclude<
   AppRouteId,
-  "productDetail" | "vehicleDetail" | "showcaseExperience"
+  "productDetail" | "vehicleDetail" | "vehicles" | "showcaseExperience"
 >;
 
 export type AppRouteLocation =
   | { route: StaticRouteId }
+  | { route: "vehicles"; inventoryState?: string }
   | { route: "productDetail"; productId: string }
   | { route: "vehicleDetail"; vehicleId: string }
   | { route: "showcaseExperience"; part?: number; chapter?: number };
@@ -84,6 +85,8 @@ export function resolvePath(location: AppRouteLocation): string {
       return `/products/${encodePathSegment(location.productId)}`;
     case "vehicleDetail":
       return `/vehicles/${encodePathSegment(location.vehicleId)}`;
+    case "vehicles":
+      return `${ROUTE_PATHS.vehicles}${safeInventoryState(location.inventoryState)}`;
     case "showcaseExperience":
       // Showcase entry state is optional, so it lives in query params instead
       // of forcing many different hardcoded paths.
@@ -94,6 +97,11 @@ export function resolvePath(location: AppRouteLocation): string {
     default:
       return ROUTE_PATHS[location.route];
   }
+}
+
+function safeInventoryState(value: string | undefined): string {
+  if (value === "#vehicles" || value?.startsWith("#vehicles?")) return value;
+  return "";
 }
 
 export function screenToPath(

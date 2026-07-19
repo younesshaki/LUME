@@ -13,6 +13,7 @@ import { registerBlocks } from "./registerBlocks";
 import { isPageRendererEnabled } from "./featureFlag";
 import { usePublishedPageSeo } from "@/lib/seo/SeoProvider";
 import { TemplateConversionPanel } from "@/components/site/TemplateConversionPanel";
+import { ConciergeLeadForm } from "@/components/site/ConciergeLeadForm";
 
 // Always register: custom tenant pages render regardless of the feature flag
 // (force prop), and this module only loads via the lazy renderer chunk anyway.
@@ -210,6 +211,7 @@ export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverri
                 <Component block={block} mode={mode} />
               </BlockBoundary>
             ))}
+            {slug === "contact" ? <ConciergeLeadForm /> : null}
           </main>
           {slug === "home" ? <TemplateConversionPanel /> : null}
           {footer}

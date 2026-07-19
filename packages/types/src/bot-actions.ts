@@ -1,4 +1,5 @@
 import type { TenantId } from "./tenant";
+import type { ConciergeTargetClientDescriptor } from "./conciergeTargets";
 
 export type BotNavigationAction = {
   type: "navigate";
@@ -22,6 +23,8 @@ export type BotHighlightVehicleAction = {
 export type BotOpenLeadFormAction = {
   type: "open-lead-form";
   prefill?: Record<string, unknown>;
+  vehicleId?: string;
+  attribution?: BotActionAttribution;
 };
 
 export type BotScrollToAction = {
@@ -32,6 +35,7 @@ export type BotScrollToAction = {
 export type BotAction =
   | BotInventoryFilterAction
   | BotNavigationAction
+  | BotNavigateTargetAction
   | BotHighlightVehicleAction
   | BotOpenLeadFormAction
   | BotScrollToAction
@@ -51,6 +55,27 @@ export type BotCaptureLeadAction = {
   type: "capture_lead";
   contact: BotLeadContact;
   vehicleId?: string;
+  attribution?: BotActionAttribution;
+};
+
+/** Server-authored context; model-supplied values are discarded before emit. */
+export type BotActionAttribution = {
+  targetKey?: string;
+  sessionId?: string;
+  conversationContext?: string;
+};
+
+/**
+ * The model emits only targetKey + string params. The chat server resolves the
+ * enabled tenant target and attaches the trusted descriptor before the action
+ * reaches the browser.
+ */
+export type BotNavigateTargetAction = {
+  type: "navigate-target";
+  targetKey: string;
+  params?: Record<string, string>;
+  target?: ConciergeTargetClientDescriptor;
+  attribution?: BotActionAttribution;
 };
 
 export type BotScheduleAppointmentAction = {

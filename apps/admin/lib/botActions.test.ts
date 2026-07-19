@@ -1,11 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
+  extractDeepseekDsmlToolCalls,
   extractDeepseekTextDelta,
   extractInlineActions,
+  InlineActionStreamFilter,
   isBotAction,
+  normalizeDeepseekAssistantMessage,
   parseBotActionLine,
+  stripDeepseekDsml,
+  stripInlineActions,
   validateBotActionEnvelope,
 } from "./botActions";
+
+const VEHICLE_ID = "5d6df0bd-85db-471e-9c4c-effa3c4938ab";
+const VEHICLE_DSML = [
+  "<｜｜DSML｜｜tool_calls>",
+  '<｜｜DSML｜｜invoke name="get_vehicle_details">',
+  `<｜｜DSML｜｜parameter name="vehicleId" string="true">${VEHICLE_ID}</｜｜DSML｜｜parameter>`,
+  "</｜｜DSML｜｜invoke>",
+  "</｜｜DSML｜｜tool_calls>",
+].join("\n");
 
 describe("extractDeepseekTextDelta", () => {
   it("pulls delta content from a data line", () => {
@@ -20,11 +34,78 @@ describe("extractDeepseekTextDelta", () => {
   });
 });
 
+describe("DeepSeek DSML containment", () => {
+  it("recovers an allowlisted tool call and removes provider markup from prose", () => {
+    const normalized = normalizeDeepseekAssistantMessage(
+      {
+        content: `I checked the selected vehicle's current details.\n${VEHICLE_DSML}`,
+      },
+      ["get_vehicle_details"],
+    );
+    expect(normalized.content).toBe(
+      "I checked the selected vehicle's current details.\n",
+    );
+    expect(normalized.recoveredDsmlToolCallCount).toBe(1);
+    expect(normalized.discardedDsml).toBe(true);
+    expect(normalized.toolCalls).toEqual([
+      {
+        id: "recovered_dsml_1",
+        type: "function",
+        function: {
+          name: "get_vehicle_details",
+          arguments: JSON.stringify({ vehicleId: VEHICLE_ID }),
+        },
+      },
+    ]);
+  });
+
+  it("strips but never recovers a non-allowlisted mutation-like call", () => {
+    const captureLead = [
+      "<｜｜DSML｜｜tool_calls>",
+      '<｜｜DSML｜｜invoke name="capture_lead">',
+      `<｜｜DSML｜｜parameter name="vehicleId" string="true">${VEHICLE_ID}</｜｜DSML｜｜parameter>`,
+      '<｜｜DSML｜｜parameter name="contact" string="false">{}</｜｜DSML｜｜parameter>',
+      "</｜｜DSML｜｜invoke>",
+      "</｜｜DSML｜｜tool_calls>",
+    ].join("\n");
+    expect(
+      extractDeepseekDsmlToolCalls(captureLead, ["get_vehicle_details"]),
+    ).toEqual([]);
+    expect(stripDeepseekDsml(`Opening the contact page.\n${captureLead}`)).toBe(
+      "Opening the contact page.\n",
+    );
+  });
+
+  it("prefers real structured calls and fails closed on truncated DSML", () => {
+    const structured = {
+      id: "call_1",
+      type: "function" as const,
+      function: {
+        name: "find_vehicles",
+        arguments: '{"make":"Ferrari"}',
+      },
+    };
+    const normalized = normalizeDeepseekAssistantMessage(
+      {
+        content: `Safe prose\n${VEHICLE_DSML}`,
+        tool_calls: [structured],
+      },
+      ["find_vehicles", "get_vehicle_details"],
+    );
+    expect(normalized.toolCalls).toEqual([structured]);
+    expect(normalized.recoveredDsmlToolCallCount).toBe(0);
+    expect(stripDeepseekDsml("Safe prose\n<｜｜DSML｜｜tool_calls>")).toBe(
+      "Safe prose\n",
+    );
+  });
+});
+
 describe("parseBotActionLine / isBotAction", () => {
   it("accepts each valid action shape", () => {
     const lines = [
       `{"type":"filter_inventory","make":"BMW","priceMax":50000}`,
       `{"type":"navigate","route":"/vehicles"}`,
+      `{"type":"navigate-target","targetKey":"vehicle-detail","params":{"vehicleId":"v1"}}`,
       `{"type":"highlight-vehicle","vehicleId":"v1"}`,
       `{"type":"open-lead-form"}`,
       `{"type":"capture_lead","contact":{"email":"a@b.c"}}`,
@@ -64,6 +145,138 @@ describe("extractInlineActions", () => {
 
   it("returns empty for pure prose", () => {
     expect(extractInlineActions("No actions here.")).toEqual([]);
+  });
+});
+
+describe("stripInlineActions", () => {
+  it("removes action lines without deleting arbitrary JSON", () => {
+    const content = [
+      "Absolutely — taking you there now.",
+      `{"type":"highlight-vehicle","vehicleId":"v1"}`,
+      `{"answer":"ordinary JSON"}`,
+      "Let me know if you want a comparison.",
+    ].join("\n");
+    expect(stripInlineActions(content)).toBe(
+      [
+        "Absolutely — taking you there now.",
+        `{"answer":"ordinary JSON"}`,
+        "Let me know if you want a comparison.",
+      ].join("\n"),
+    );
+  });
+
+  it("removes a valid action embedded after prose while keeping that prose", () => {
+    const action = `{"type":"navigate-target","targetKey":"inventory"}`;
+    const content = `I’ll open the live inventory now. ${action} You can refine it there.`;
+    expect(extractInlineActions(content)).toEqual([
+      { type: "navigate-target", targetKey: "inventory" },
+    ]);
+    expect(stripInlineActions(content)).toBe(
+      "I’ll open the live inventory now.  You can refine it there.",
+    );
+  });
+
+  it("preserves intentional paragraph breaks around action-free prose", () => {
+    expect(stripInlineActions("First paragraph.\n\nSecond paragraph.")).toBe(
+      "First paragraph.\n\nSecond paragraph.",
+    );
+    const filter = new InlineActionStreamFilter();
+    expect(filter.push("First paragraph.\n\nSecond paragraph.\n")).toEqual({
+      visibleText: "First paragraph.\n\nSecond paragraph.\n",
+      actions: [],
+    });
+  });
+
+  it("removes empty JSON fences left behind after an action is extracted", () => {
+    const action = `{"type":"filter_inventory","make":"BMW"}`;
+    expect(stripInlineActions(["```json", action, "```"].join("\n"))).toBe("");
+    expect(
+      stripInlineActions(
+        ["Taking you there now.", "```json", action, "```"].join("\n"),
+      ),
+    ).toBe("Taking you there now.");
+  });
+});
+
+describe("InlineActionStreamFilter", () => {
+  it("passes prose promptly while suppressing an action split across deltas", () => {
+    const filter = new InlineActionStreamFilter();
+    expect(filter.push("Taking you there.\n{\"type\":\"navigate-tar")).toEqual({
+      visibleText: "Taking you there.\n",
+      actions: [],
+    });
+    expect(
+      filter.push("get\",\"targetKey\":\"vehicle-detail\",\"params\":{\"vehicleId\":\"v1\"}}\nNext"),
+    ).toEqual({
+      visibleText: "Next",
+      actions: [
+        {
+          type: "navigate-target",
+          targetKey: "vehicle-detail",
+          params: { vehicleId: "v1" },
+        },
+      ],
+    });
+    expect(filter.flush()).toEqual({ visibleText: "", actions: [] });
+  });
+
+  it("keeps malformed or ordinary JSON visible", () => {
+    const filter = new InlineActionStreamFilter();
+    expect(filter.push(`{"type":"invented"}\n`)).toEqual({
+      visibleText: `{"type":"invented"}\n`,
+      actions: [],
+    });
+    expect(filter.push(`{"answer":"still prose"}`)).toEqual({
+      visibleText: "",
+      actions: [],
+    });
+    expect(filter.flush()).toEqual({
+      visibleText: `{"answer":"still prose"}`,
+      actions: [],
+    });
+  });
+
+  it("suppresses an embedded action split across deltas without delaying prose", () => {
+    const filter = new InlineActionStreamFilter();
+    expect(filter.push("Opening it now: {\"type\":\"navigate-")).toEqual({
+      visibleText: "Opening it now: ",
+      actions: [],
+    });
+    expect(filter.push("target\",\"targetKey\":\"inventory\"} Done.\n")).toEqual({
+      visibleText: " Done.\n",
+      actions: [{ type: "navigate-target", targetKey: "inventory" }],
+    });
+    expect(filter.flush()).toEqual({ visibleText: "", actions: [] });
+  });
+
+  it("never streams DSML even when its marker and block are split across chunks", () => {
+    const filter = new InlineActionStreamFilter();
+    const first = filter.push("Taking you there.\n<");
+    const second = filter.push(`｜｜DSML｜｜tool_calls>\n${VEHICLE_DSML.split("\n").slice(1).join("\n")}\nDone.`);
+    const final = filter.flush();
+    const visible = first.visibleText + second.visibleText + final.visibleText;
+    expect(visible).toBe("Taking you there.\n\nDone.");
+    expect(visible).not.toContain("DSML");
+    expect(visible).not.toContain(VEHICLE_ID);
+    expect([...first.actions, ...second.actions, ...final.actions]).toEqual([]);
+  });
+
+  it("never streams JSON protocol fences split across arbitrary chunks", () => {
+    const filter = new InlineActionStreamFilter();
+    const first = filter.push("```j");
+    const second = filter.push(
+      'son\n{"type":"filter_inventory","make":"BMW"}\n`',
+    );
+    const third = filter.push("``\n");
+    const final = filter.flush();
+    expect(first.visibleText + second.visibleText + third.visibleText + final.visibleText)
+      .toBe("");
+    expect([
+      ...first.actions,
+      ...second.actions,
+      ...third.actions,
+      ...final.actions,
+    ]).toEqual([{ type: "filter_inventory", make: "BMW" }]);
   });
 });
 

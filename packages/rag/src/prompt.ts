@@ -38,12 +38,12 @@ function formatVehiclePrice(price: number): string {
 function formatVehiclesBlock(
   matched: Vehicle[],
   totalMatched: number,
-  totalInventory: number,
+  totalInventory: number | undefined,
   filters: VehicleQueryFilters
 ): string {
   const isFiltered = Object.keys(filters).length > 0;
   const filterSummary = isFiltered
-    ? ` matching ${Object.entries(filters).map(([k, v]) => `${k}=${v}`).join(", ")}`
+    ? ` (${Object.entries(filters).map(([k, v]) => `${k}=${v}`).join(", ")})`
     : "";
   const showingNote =
     matched.length < totalMatched
@@ -52,7 +52,9 @@ function formatVehiclesBlock(
 
   const header =
     `=== VEHICLE INVENTORY ===\n` +
-    `Total vehicles in full inventory: ${totalInventory}\n` +
+    (totalInventory === undefined
+      ? ""
+      : `Total vehicles in full inventory: ${totalInventory}\n`) +
     `TOTAL MATCHING${filterSummary}: ${totalMatched}\n` +
     `${showingNote}\n`;
 
@@ -73,7 +75,7 @@ function formatVehiclesBlock(
     return `[${i + 1}] ${parts.join(" | ")}`;
   });
 
-  return `${header}\n${lines.join("\n")}\n==============================`;
+  return `${header}\n${lines.length > 0 ? lines.join("\n") : "No matching live vehicles."}\n==============================`;
 }
 
 export function assembleSystemPrompt(opts: SystemPromptOptions): AssembledPrompt {
@@ -87,11 +89,11 @@ export function assembleSystemPrompt(opts: SystemPromptOptions): AssembledPrompt
       ? opts.contextChunks.map((c, i) => `[${i + 1}] ${c.text}`).join("\n\n")
       : "";
 
-  if (opts.matchedVehicles && opts.matchedVehicles.length > 0) {
+  if (opts.matchedVehicles !== undefined) {
     const vehicleBlock = formatVehiclesBlock(
       opts.matchedVehicles,
       opts.totalMatched ?? opts.matchedVehicles.length,
-      opts.totalInventory ?? opts.matchedVehicles.length,
+      opts.totalInventory,
       opts.filters ?? {}
     );
     contextBlock = contextBlock ? `${contextBlock}\n\n---\n${vehicleBlock}` : vehicleBlock;

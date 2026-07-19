@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Check, GitCompare, Heart, Loader2, Send, X } from "lucide-react";
+import type { LeadSourceContext } from "@lume/types";
 import {
   formatVehiclePrice,
   loadVehicleById,
@@ -13,6 +14,8 @@ import { submitLead } from "@/lib/leads";
 import { trackConversion } from "@/lib/conversionAnalytics";
 import { useSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
 import { useSound } from "@/lib/sound";
+import { useConciergeTarget } from "@/lib/useConciergeTarget";
+import { botLeadFormSourceContext } from "@/lib/botActionConsumers";
 import CinematicShell from "../CinematicShell";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import VehicleGallery from "./VehicleGallery";
@@ -113,10 +116,12 @@ function splitName(name: string): { firstName: string; lastName: string } {
 function InquiryModal({
   open,
   vehicle,
+  botSourceContext,
   onClose,
 }: {
   open: boolean;
   vehicle: Vehicle;
+  botSourceContext: LeadSourceContext | null;
   onClose: () => void;
 }) {
   const { play } = useSound();
@@ -162,14 +167,15 @@ function InquiryModal({
         phone: phone || undefined,
         message: message || undefined,
         vehicleId: vehicle.id,
-        source: "contact-form",
+        source: botSourceContext ? "chat" : "contact-form",
         ...(turnstileToken ? { turnstileToken } : {}),
-        sourceContext: {
-          trigger: "vehicle-inquiry",
-          actionType: "request-info",
-          ...(typeof window !== "undefined" ? { pagePath: window.location.pathname } : {}),
-          vehicleTitle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-        },
+        sourceContext:
+          botSourceContext ?? {
+            trigger: "vehicle-inquiry",
+            actionType: "request-info",
+            ...(typeof window !== "undefined" ? { pagePath: window.location.pathname } : {}),
+            vehicleTitle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+          },
       });
 
       play(vehicleDetailSoundActions.inquirySubmit);
@@ -293,6 +299,7 @@ export default function VehicleDetailPage({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [botInquiryContext, setBotInquiryContext] = useState<LeadSourceContext | null>(null);
   const [compareIds, setCompareIds] = useState<string[]>(() => readStoredIds(COMPARE_STORAGE_KEY).slice(0, 3));
   const [loadedPriceSignal, setLoadedPriceSignal] = useState<{
     vehicleId: string;
@@ -334,6 +341,17 @@ export default function VehicleDetailPage({
   useEffect(() => {
     if (vehicle) trackConversion("vehicle_view", { vehicleId: vehicle.id });
   }, [vehicle]);
+
+  useConciergeTarget("vehicle-inquiry", (action) => {
+    setBotInquiryContext(
+      botLeadFormSourceContext({
+        vehicleId: action.params?.vehicleId ?? vehicleId ?? undefined,
+        attribution: action.attribution,
+      }),
+    );
+    if (vehicleId) trackConversion("inquiry_opened", { vehicleId });
+    setInquiryOpen(true);
+  });
 
   useEffect(() => {
     if (!vehicleId) return;
@@ -445,6 +463,7 @@ export default function VehicleDetailPage({
                       onClick={() => {
                         play(vehicleDetailSoundActions.inquiryOpen);
                         trackConversion("inquiry_opened", { vehicleId: vehicle.id });
+                        setBotInquiryContext(null);
                         setInquiryOpen(true);
                       }}
                     >
@@ -488,7 +507,11 @@ export default function VehicleDetailPage({
               <InquiryModal
                 open={inquiryOpen}
                 vehicle={vehicle}
-                onClose={() => setInquiryOpen(false)}
+                botSourceContext={botInquiryContext}
+                onClose={() => {
+                  setInquiryOpen(false);
+                  setBotInquiryContext(null);
+                }}
               />
             </>
           )}

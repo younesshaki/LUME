@@ -23,6 +23,19 @@ export type LeadCaptureValidation =
 
 const ALLOWED_PUBLIC_SOURCES = new Set(["chat", "contact-form", "test-drive", "api"]);
 
+export function conciergeConversionMetadata(
+  lead: Pick<NormalizedLeadCapture, "sourceContext">,
+): Record<string, string | boolean> {
+  const context = lead.sourceContext;
+  if (!context || context.trigger !== "bot-action") return {};
+  return {
+    conciergeDriven: true,
+    conciergeAction: context.actionType,
+    ...(context.targetKey ? { conciergeTargetKey: context.targetKey } : {}),
+    ...(context.chatSessionId ? { conciergeSessionId: context.chatSessionId } : {}),
+  };
+}
+
 export function normalizeLeadCaptureInput(input: unknown): LeadCaptureValidation {
   if (!isRecord(input)) return { ok: false, error: "Request body must be an object." };
 
@@ -123,10 +136,16 @@ function normalizeSourceContext(
     }
 
     const vehicleId = nullableTrimmed(value.vehicleId, 80);
+    const targetKey = nullableTrimmed(value.targetKey, 64);
+    const chatSessionId = nullableTrimmed(value.chatSessionId, 120);
+    const conversationContext = nullableTrimmed(value.conversationContext, 1_200);
     return {
       trigger: "bot-action",
       actionType: value.actionType,
       ...(vehicleId ? { vehicleId } : {}),
+      ...(targetKey ? { targetKey } : {}),
+      ...(chatSessionId ? { chatSessionId } : {}),
+      ...(conversationContext ? { conversationContext } : {}),
     };
   }
 
