@@ -1,59 +1,72 @@
-# Admin theme reveal validation
+# Unified Admin and public theme reveal
 
-## Rendering-path finding
+## Rendering contract
 
-The remaining Chrome/macOS flash was on the browser-generated root snapshot
-path: the implementation on `main` still called `document.startViewTransition`
-and animated `::view-transition-new(root)`. Overscan and paint-delay changes
-could not remove the browser-owned texture/compositor boundary.
+The Admin dashboard and every public tenant site use the same theme interaction:
 
-The replacement does not call the View Transitions API. It renders a
-script-free snapshot of the destination theme in an inert fixed iframe,
-reveals that DOM layer from the toggle with `clip-path`, commits through
-`next-themes` only after the viewport is covered, waits for the real root to
-paint, and then removes the layer. This keeps the destination UI visible
-during the commit instead of covering the page with a flat color.
+- one binary light/dark button;
+- a 350 ms circular reveal originating from that button;
+- `ease-in-out` timing on `::view-transition-new(root)`;
+- repeated clicks ignored while the reveal is active;
+- an immediate state change for reduced-motion users;
+- an immediate safe fallback when the View Transitions API is unavailable.
+
+There is no browser or operating-system detection. In particular, Chrome on
+macOS no longer receives the former solid-cover or iframe-snapshot animation.
+Supported browsers all execute the same View Transitions path.
+
+The persistence authorities remain intentionally separate:
+
+- Admin uses `next-themes`.
+- The public website stores an explicit `light` or `dark` choice at
+  `lume.color-theme.v1`.
+- A legacy public `auto` value is migrated once to its current concrete result;
+  `auto` is not exposed as a selectable mode and no longer follows later OS
+  changes.
+
+Public transitions synchronously apply both the selected mode and the active
+tenant's mode-specific design tokens/background before the destination snapshot
+is animated. Admin transitions synchronously apply the root `dark` class while
+`next-themes` remains responsible for persistence.
 
 ## Automated coverage
 
-- Unit: destination snapshot removes scripts and stale overlays and applies
-  the requested root theme.
-- Unit: reduced motion commits immediately without creating an overlay.
-- Unit: rapid clicks create one transition/commit and leave no overlay.
-- Playwright smoke: 24 consecutive toggles assert the root theme, persisted
-  `next-themes` value, button focus, and zero stale overlays after every
-  transition.
+- Public unit coverage confirms the control is binary and persists its choice.
+- Public and Admin unit coverage identify the browser as Chrome on macOS and
+  assert that both still call `document.startViewTransition`.
+- Both paths assert the same 350 ms circular root reveal.
+- Rapid-click coverage confirms only one Admin transition runs at a time.
+- Reduced-motion and unsupported-browser coverage confirm the immediate
+  accessible fallback.
 
-Automation verifies state and cleanup, but cannot prove the absence of a
-single compositor frame on a specific physical display. The following visual
-matrix therefore remains a required review step on the authenticated preview.
+## Manual browser matrix
 
-## Manual Chrome/macOS matrix
+For each normal-motion row, toggle at least 20 times, click rapidly during one
+reveal, navigate afterward, then reload and confirm the selected theme remains.
+Watch the viewport edges and mode-specific tenant background during every
+reveal.
 
-For every row, toggle at least 20 times while watching the left viewport edge.
-Also click rapidly during one reveal, navigate after a reveal, and confirm the
-theme remains correct after reload.
+| Surface | Browser/device | Motion | Expected path | Review status |
+| --- | --- | --- | --- | --- |
+| Admin | Chrome/macOS, normal + Guest | normal | circular reveal | Pending visual review |
+| Public | Chrome/macOS, normal + Guest | normal | circular reveal | Pending visual review |
+| Admin + public | Safari/macOS + iOS | normal | circular reveal when supported | Pending visual review |
+| Admin + public | Chrome/Windows + Android | normal | circular reveal | Pending visual review |
+| Admin + public | Edge/Windows | normal | circular reveal | Pending visual review |
+| Admin + public | Firefox | normal | circular reveal when supported; immediate fallback otherwise | Pending visual review |
+| Admin + public | Any browser | reduced | immediate switch | Pending visual review |
 
-| Browser/profile | GPU | Sidebar | Refresh rate | Motion | Review status |
-| --- | --- | --- | --- | --- | --- |
-| Chrome normal | on | expanded | ProMotion | normal | Pending visual review |
-| Chrome normal | on | collapsed | ProMotion | normal | Pending visual review |
-| Chrome Guest | on | expanded | ProMotion | normal | Pending visual review |
-| Chrome Guest | on | collapsed | ProMotion | normal | Pending visual review |
-| Chrome normal | off | expanded | ProMotion | normal | Pending visual review |
-| Chrome normal | off | collapsed | ProMotion | normal | Pending visual review |
-| Chrome normal | on | expanded | 60 Hz | normal | Pending visual review |
-| Chrome normal | on | collapsed | 60 Hz | normal | Pending visual review |
-| Chrome normal | on | expanded | ProMotion | reduced | Pending visual review |
-| Opera normal | on | expanded/collapsed | native | normal | Pending visual review |
-| Chrome on Windows | on | expanded/collapsed | native | normal | Pending visual review |
+Pass conditions:
 
-Pass conditions: no left-edge flash, no stale overlay, focus remains on the
-toggle, a rapid second click does not start another reveal, and reload retains
-the last committed theme.
+- identical reveal direction, duration, and easing on Admin and public;
+- no browser-specific cover, iframe, or user-agent branch;
+- no stale transition layer;
+- no theme mismatch after rapid interaction;
+- public background changes to the active mode during the reveal;
+- focus remains on the toggle;
+- reload retains the explicit selected mode.
 
 ## Rollback
 
-Revert this PR to restore the prior View Transitions implementation and its
-pseudo-element CSS. There are no database, environment, or persisted-data
-changes.
+Revert the unified View Transitions commits to restore the previous theme
+implementation. There are no database, environment, or tenant-schema changes.
