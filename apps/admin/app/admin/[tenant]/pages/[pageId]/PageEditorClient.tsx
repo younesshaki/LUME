@@ -1,14 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { GripVertical } from "lucide-react";
 import { publishDraft, restoreRevision, unpublishPage, updateDraftBlocks } from "@lume/db";
 import type { PageBlock, PageBlocksDocument, PageRevision } from "@lume/types";
 import type { BlockCategory, BlockField, EditorBlockDescriptor } from "@lume/blocks";
-import { reorderByBlockId, validatePageBlocksDocument } from "@lume/blocks";
+import { validatePageBlocksDocument } from "@lume/blocks";
 import { AssetPicker } from "@/components/asset-picker";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  PALETTE_DRAG_MIME,
+  filterPaletteDescriptors,
+  insertAt,
+  insertionIndexAfter,
+  moveToPosition,
+} from "@/lib/pageEditorBlocks";
 import { LivePreviewPanel } from "./LivePreviewPanel";
 
 type EditorPage = {
@@ -30,6 +38,9 @@ type PublicationStatus = {
   label: string;
   detail: string;
 };
+
+/** Where a dragged block (or palette item) would land on the list. */
+type DropIndicator = { blockId: string; position: "before" | "after" } | null;
 
 type PageEditorClientProps = {
   tenantId: string;
@@ -61,7 +72,9 @@ export default function PageEditorClient({
     initialRevisions[0]?.id ?? null
   );
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
-  const [dragTargetId, setDragTargetId] = useState<string | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
+  const [paletteQuery, setPaletteQuery] = useState("");
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
   const descriptorsByType = useMemo(
     () => new Map(blockDescriptors.map((descriptor) => [descriptor.type, descriptor])),
@@ -71,13 +84,17 @@ export default function PageEditorClient({
     () => blockDescriptors.filter((descriptor) => descriptor.palette),
     [blockDescriptors]
   );
+  const filteredPaletteDescriptors = useMemo(
+    () => filterPaletteDescriptors(paletteDescriptors, paletteQuery),
+    [paletteDescriptors, paletteQuery]
+  );
   const paletteByCategory = useMemo(() => {
     const groups = new Map<BlockCategory, EditorBlockDescriptor[]>();
-    for (const descriptor of paletteDescriptors) {
+    for (const descriptor of filteredPaletteDescriptors) {
       groups.set(descriptor.category, [...(groups.get(descriptor.category) ?? []), descriptor]);
     }
     return groups;
-  }, [paletteDescriptors]);
+  }, [filteredPaletteDescriptors]);
   const selectedBlock = blocks.find((block) => block.id === selectedBlockId) ?? null;
   const selectedDescriptor = selectedBlock ? descriptorsByType.get(selectedBlock.type) : null;
   const currentDraftDocument = currentDocument(blocks, initialBlocks.version);
@@ -89,13 +106,21 @@ export default function PageEditorClient({
     initialRevisions[0] ??
     null;
 
-  function addBlock(descriptor: EditorBlockDescriptor) {
+  // Selecting a block from the live preview may target a row off-screen.
+  useEffect(() => {
+    if (!selectedBlockId) return;
+    rowRefs.current.get(selectedBlockId)?.scrollIntoView({ block: "nearest" });
+  }, [selectedBlockId]);
+
+  function addBlock(descriptor: EditorBlockDescriptor, index?: number) {
     const block: PageBlock = {
       id: createBlockId(descriptor.type),
       type: descriptor.type,
       props: cloneProps(descriptor.defaultProps),
     };
-    setBlocks((current) => [...current, block]);
+    setBlocks((current) =>
+      insertAt(current, index ?? insertionIndexAfter(current, selectedBlockId), block)
+    );
     setSelectedBlockId(block.id);
     setState({ type: "idle", message: "" });
   }
@@ -111,13 +136,50 @@ export default function PageEditorClient({
     });
   }
 
-  function dropBlock(targetId: string) {
-    if (!draggedBlockId) return;
-    setBlocks((current) => reorderByBlockId(current, draggedBlockId, targetId));
-    setSelectedBlockId(draggedBlockId);
+  function rowDropPosition(event: React.DragEvent<HTMLElement>): "before" | "after" {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+  }
+
+  function handleRowDragOver(event: React.DragEvent<HTMLElement>, blockId: string) {
+    const isPaletteDrag = event.dataTransfer.types.includes(PALETTE_DRAG_MIME);
+    if (!isPaletteDrag && (!draggedBlockId || draggedBlockId === blockId)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = isPaletteDrag ? "copy" : "move";
+    setDropIndicator({ blockId, position: rowDropPosition(event) });
+  }
+
+  function handleRowDrop(event: React.DragEvent<HTMLElement>, blockId: string) {
+    event.preventDefault();
+    const position = rowDropPosition(event);
+    const paletteType = event.dataTransfer.getData(PALETTE_DRAG_MIME);
+    const descriptor = paletteType ? descriptorsByType.get(paletteType) : null;
+    if (descriptor) {
+      // Palette drop: insert a new block at the indicated position.
+      const newBlock: PageBlock = {
+        id: createBlockId(descriptor.type),
+        type: descriptor.type,
+        props: cloneProps(descriptor.defaultProps),
+      };
+      setBlocks((current) => {
+        const targetIndex = current.findIndex((block) => block.id === blockId);
+        const at = targetIndex < 0 ? current.length : position === "after" ? targetIndex + 1 : targetIndex;
+        return insertAt(current, at, newBlock);
+      });
+      setSelectedBlockId(newBlock.id);
+      setState({ type: "idle", message: "" });
+    } else if (draggedBlockId) {
+      setBlocks((current) => moveToPosition(current, draggedBlockId, blockId, position));
+      setSelectedBlockId(draggedBlockId);
+      setState({ type: "idle", message: "" });
+    }
     setDraggedBlockId(null);
-    setDragTargetId(null);
-    setState({ type: "idle", message: "" });
+    setDropIndicator(null);
+  }
+
+  function endDrag() {
+    setDraggedBlockId(null);
+    setDropIndicator(null);
   }
 
   function removeBlock(blockId: string) {
@@ -289,8 +351,23 @@ export default function PageEditorClient({
       <div className="grid flex-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)_360px]">
         <aside className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Blocks</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Add supported content blocks.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Click to add after the selected block, or drag onto the page order.
+          </p>
+          <input
+            type="search"
+            value={paletteQuery}
+            onChange={(event) => setPaletteQuery(event.target.value)}
+            placeholder="Search blocks..."
+            aria-label="Search blocks"
+            className="mt-3 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+          />
           <div className="mt-4 space-y-5">
+            {filteredPaletteDescriptors.length === 0 && (
+              <p className="rounded-lg border border-dashed border-neutral-300 p-3 text-xs text-muted-foreground dark:border-neutral-700">
+                No blocks match "{paletteQuery.trim()}".
+              </p>
+            )}
             {(["content", "data", "media"] as const).map((category) => {
               const descriptors = paletteByCategory.get(category) ?? [];
               if (descriptors.length === 0) return null;
@@ -304,8 +381,14 @@ export default function PageEditorClient({
                       <button
                         key={descriptor.type}
                         type="button"
+                        draggable
                         onClick={() => addBlock(descriptor)}
-                        className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+                        onDragStart={(event) => {
+                          event.dataTransfer.effectAllowed = "copy";
+                          event.dataTransfer.setData(PALETTE_DRAG_MIME, descriptor.type);
+                        }}
+                        title="Click to add, or drag onto the page order"
+                        className="w-full cursor-grab rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:bg-neutral-50 active:cursor-grabbing dark:border-neutral-800 dark:hover:bg-neutral-900"
                       >
                         <span className="block font-medium">{descriptor.displayName}</span>
                         <span className="mt-0.5 block text-xs text-muted-foreground">{descriptor.description}</span>
@@ -335,27 +418,40 @@ export default function PageEditorClient({
               const descriptor = descriptorsByType.get(block.type);
               const selected = block.id === selectedBlockId;
               const errors = blockErrors[block.id] ?? [];
+              const indicatorBefore = dropIndicator?.blockId === block.id && dropIndicator.position === "before";
+              const indicatorAfter = dropIndicator?.blockId === block.id && dropIndicator.position === "after";
               return (
-                <div
-                  key={block.id}
-                  onDragOver={(event) => {
-                    if (!draggedBlockId || draggedBlockId === block.id) return;
-                    event.preventDefault();
-                    setDragTargetId(block.id);
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    dropBlock(block.id);
-                  }}
-                  className={`rounded-lg border p-3 ${
-                    selected
-                      ? "border-neutral-900 bg-neutral-50 dark:border-white dark:bg-neutral-900"
-                      : dragTargetId === block.id
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                <div key={block.id} ref={(node) => {
+                  if (node) rowRefs.current.set(block.id, node);
+                  else rowRefs.current.delete(block.id);
+                }}>
+                  {indicatorBefore && <div aria-hidden="true" className="mb-2 h-0.5 rounded bg-primary" />}
+                  <div
+                    onDragOver={(event) => handleRowDragOver(event, block.id)}
+                    onDrop={(event) => handleRowDrop(event, block.id)}
+                    className={`rounded-lg border p-3 ${
+                      selected
+                        ? "border-neutral-900 bg-neutral-50 dark:border-white dark:bg-neutral-900"
                         : "border-border"
-                  }`}
-                >
+                    } ${draggedBlockId === block.id ? "opacity-60" : ""}`}
+                  >
                   <div className="flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      draggable
+                      aria-label={`Drag ${descriptor?.displayName ?? block.type} to reorder`}
+                      title="Drag to reorder"
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", block.id);
+                        setDraggedBlockId(block.id);
+                        setSelectedBlockId(block.id);
+                      }}
+                      onDragEnd={endDrag}
+                      className="cursor-grab rounded border border-neutral-200 p-1.5 text-muted-foreground hover:bg-neutral-100 active:cursor-grabbing dark:border-neutral-700 dark:hover:bg-neutral-800"
+                    >
+                      <GripVertical className="size-4" aria-hidden="true" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => setSelectedBlockId(block.id)}
@@ -371,25 +467,7 @@ export default function PageEditorClient({
                     <div className="flex shrink-0 items-center gap-1">
                       <button
                         type="button"
-                        draggable
-                        aria-label={`Drag ${descriptor?.displayName ?? block.type} to reorder`}
-                        title="Drag to reorder"
-                        onDragStart={(event) => {
-                          event.dataTransfer.effectAllowed = "move";
-                          event.dataTransfer.setData("text/plain", block.id);
-                          setDraggedBlockId(block.id);
-                          setSelectedBlockId(block.id);
-                        }}
-                        onDragEnd={() => {
-                          setDraggedBlockId(null);
-                          setDragTargetId(null);
-                        }}
-                        className="cursor-grab rounded border border-neutral-200 px-2 py-1 text-xs active:cursor-grabbing dark:border-neutral-700"
-                      >
-                        Drag
-                      </button>
-                      <button
-                        type="button"
+                        aria-label={`Move ${descriptor?.displayName ?? block.type} up`}
                         onClick={() => moveBlock(block.id, -1)}
                         disabled={index === 0}
                         className="rounded border border-neutral-200 px-2 py-1 text-xs disabled:opacity-40 dark:border-neutral-700"
@@ -398,6 +476,7 @@ export default function PageEditorClient({
                       </button>
                       <button
                         type="button"
+                        aria-label={`Move ${descriptor?.displayName ?? block.type} down`}
                         onClick={() => moveBlock(block.id, 1)}
                         disabled={index === blocks.length - 1}
                         className="rounded border border-neutral-200 px-2 py-1 text-xs disabled:opacity-40 dark:border-neutral-700"
@@ -420,6 +499,8 @@ export default function PageEditorClient({
                       ))}
                     </ul>
                   )}
+                  </div>
+                  {indicatorAfter && <div aria-hidden="true" className="mt-2 h-0.5 rounded bg-primary" />}
                 </div>
               );
             })}

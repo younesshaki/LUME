@@ -30,6 +30,13 @@
   --lume-on-primary: #17130d;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="marquee"] [data-slot="marquee-row"] {
+    animation: none;
+    transform: none;
+  }
+}
+
 :root[data-theme="dark"] {
   color-scheme: dark;
 }
@@ -190,5 +197,30 @@ select {
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none !important;
+  }
+}
+
+@theme inline {
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+
+  @keyframes marquee-vertical {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
+    }
   }
 }
