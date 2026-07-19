@@ -8,8 +8,20 @@
       (() => {
         try {
           const saved = localStorage.getItem("lume.color-theme.v1");
-          const dark = saved === "dark" || (saved !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-          document.documentElement.dataset.theme = dark ? "dark" : "light";
+          if (saved === "light" || saved === "dark") {
+            document.documentElement.dataset.theme = saved;
+            return;
+          }
+
+          // Auto was removed from the public site. Preserve an existing Auto
+          // visitor's current appearance once, then store an explicit choice.
+          const migrated = saved === "auto" && matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : saved === "auto"
+              ? "light"
+              : "dark";
+          localStorage.setItem("lume.color-theme.v1", migrated);
+          document.documentElement.dataset.theme = migrated;
         } catch {
           document.documentElement.dataset.theme = "dark";
         }

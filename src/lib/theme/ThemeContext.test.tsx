@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import {
+  DEFAULT_THEME_MODE,
   persistThemeMode,
   readThemeMode,
   resolveTheme,
@@ -69,22 +70,18 @@ function installSystemTheme(initiallyDark: boolean) {
   return {
     setDark(nextMatches: boolean) {
       matches = nextMatches;
-      act(() => {
-        listener?.({ matches: nextMatches } as MediaQueryListEvent);
-      });
+      listener?.({ matches: nextMatches } as MediaQueryListEvent);
     },
   };
 }
 
 describe("theme resolution", () => {
-  it("resolves explicit modes and the current system preference", () => {
-    expect(resolveTheme("light", true)).toBe("light");
-    expect(resolveTheme("dark", false)).toBe("dark");
-    expect(resolveTheme("auto", false)).toBe("light");
-    expect(resolveTheme("auto", true)).toBe("dark");
+  it("resolves explicit modes without an Auto state", () => {
+    expect(resolveTheme("light")).toBe("light");
+    expect(resolveTheme("dark")).toBe("dark");
   });
 
-  it("defaults to auto and persists valid selections", () => {
+  it("defaults to dark and persists valid selections", () => {
     const values = new Map<string, string>();
     const storage = {
       getItem: (key: string) => values.get(key) ?? null,
@@ -93,13 +90,26 @@ describe("theme resolution", () => {
       },
     };
 
-    expect(readThemeMode(storage)).toBe("auto");
-    persistThemeMode("dark", storage);
-    expect(values.get(THEME_STORAGE_KEY)).toBe("dark");
-    expect(readThemeMode(storage)).toBe("dark");
+    expect(readThemeMode(storage)).toBe(DEFAULT_THEME_MODE);
+    persistThemeMode("light", storage);
+    expect(values.get(THEME_STORAGE_KEY)).toBe("light");
+    expect(readThemeMode(storage)).toBe("light");
 
     values.set(THEME_STORAGE_KEY, "sepia");
-    expect(readThemeMode(storage)).toBe("auto");
+    expect(readThemeMode(storage)).toBe(DEFAULT_THEME_MODE);
+  });
+
+  it("migrates a stored Auto choice once to its current system result", () => {
+    const values = new Map<string, string>([[THEME_STORAGE_KEY, "auto"]]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+    };
+
+    expect(readThemeMode(storage, false)).toBe("light");
+    expect(values.get(THEME_STORAGE_KEY)).toBe("light");
   });
 });
 
@@ -112,25 +122,26 @@ describe("ThemeProvider", () => {
     delete document.documentElement.dataset.theme;
   });
 
-  it("updates auto mode live when the OS preference changes", () => {
+  it("migrates Auto on load and no longer follows later OS changes", () => {
     const systemTheme = installSystemTheme(false);
+    window.localStorage.setItem(THEME_STORAGE_KEY, "auto");
     render(
       <ThemeProvider>
         <ThemeProbe />
       </ThemeProvider>
     );
 
-    expect(screen.getByRole("button")).toHaveTextContent("auto:light");
+    expect(screen.getByRole("button")).toHaveTextContent("light:light");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
     expect(document.documentElement.dataset.theme).toBe("light");
 
     systemTheme.setDark(true);
 
-    expect(screen.getByRole("button")).toHaveTextContent("auto:dark");
-    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(screen.getByRole("button")).toHaveTextContent("light:light");
+    expect(document.documentElement.dataset.theme).toBe("light");
   });
 
   it("loads and persists an explicit choice", () => {
-    installSystemTheme(false);
     window.localStorage.setItem(THEME_STORAGE_KEY, "dark");
     render(
       <ThemeProvider>
