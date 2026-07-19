@@ -53,4 +53,21 @@ describe("stored chat migration", () => {
       ]),
     ).toEqual([]);
   });
+
+  it("removes empty JSON protocol fences from an existing conversation", () => {
+    expect(
+      stripLegacyProviderMarkup(
+        ["Taking you there now.", "", "```json", "```"].join("\n"),
+      ),
+    ).toBe("Taking you there now.");
+    expect(
+      sanitizeStoredChatMessages([
+        {
+          id: "empty-json-fence",
+          role: "assistant",
+          content: ["```json", "```"].join("\n"),
+        },
+      ]),
+    ).toEqual([]);
+  });
 });

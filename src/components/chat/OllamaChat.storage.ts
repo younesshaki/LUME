@@ -51,6 +51,10 @@ export function stripLegacyProviderMarkup(content: string): string {
       ? withoutCompleteBlocks
       : withoutCompleteBlocks.slice(0, firstRemainingMarker.index);
   return visible
+    .replace(
+      /(^|\n)[ \t]*```[ \t]*json[ \t]*\r?\n[ \t]*```[ \t]*(?=\n|$)/gi,
+      "$1",
+    )
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
