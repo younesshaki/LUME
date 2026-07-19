@@ -1,11 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "@/lib/theme/ThemeContext";
 import { THEME_STORAGE_KEY } from "@/lib/theme/theme";
 import { ThemeToggle } from "./ThemeToggle";
-
-let originalSrcdoc: PropertyDescriptor | undefined;
-let originalAnimate: PropertyDescriptor | undefined;
 
 function installMemoryLocalStorage() {
   const values = new Map<string, string>();
@@ -30,56 +27,12 @@ function mockMotionPreference(reduced: boolean): void {
   })));
 }
 
-function mockSnapshotAnimation(): ReturnType<typeof vi.fn> {
-  let srcdocValue = "";
-  Object.defineProperty(HTMLIFrameElement.prototype, "srcdoc", {
-    configurable: true,
-    get() {
-      return srcdocValue;
-    },
-    set(value: string) {
-      srcdocValue = value;
-      const snapshotTheme = value.match(/data-theme-reveal-snapshot="(light|dark)"/)?.[1];
-      if (snapshotTheme && this.contentDocument) {
-        this.contentDocument.documentElement.dataset.themeRevealSnapshot = snapshotTheme;
-      }
-      queueMicrotask(() => this.dispatchEvent(new Event("load")));
-    },
-  });
-  vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => (
-    window.setTimeout(() => callback(performance.now()), 0)
-  ));
-  vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => window.clearTimeout(id));
-  const animate = vi.fn(() => ({
-    finished: Promise.resolve(),
-    cancel: vi.fn(),
-    finish: vi.fn(),
-  }) as unknown as Animation);
-  Object.defineProperty(HTMLElement.prototype, "animate", {
-    configurable: true,
-    value: animate,
-  });
-  return animate;
-}
-
 beforeEach(() => {
   installMemoryLocalStorage();
-  originalSrcdoc = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, "srcdoc");
-  originalAnimate = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "animate");
 });
 
 afterEach(() => {
-  document.querySelectorAll("[data-theme-reveal-overlay], [data-theme-solid-cover]")
-    .forEach((node) => node.remove());
   document.documentElement.removeAttribute("data-theme");
-  if (originalSrcdoc) {
-    Object.defineProperty(HTMLIFrameElement.prototype, "srcdoc", originalSrcdoc);
-  }
-  if (originalAnimate) {
-    Object.defineProperty(HTMLElement.prototype, "animate", originalAnimate);
-  } else {
-    Reflect.deleteProperty(HTMLElement.prototype, "animate");
-  }
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -108,9 +61,10 @@ describe("ThemeToggle", () => {
     })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("uses one iframe clip reveal and serializes rapid clicks", async () => {
+  it("commits the theme without cloning the page into an iframe", () => {
+    // jsdom has no View Transitions API, so the toggle uses the instant path.
+    // Either way, the reveal must never create an iframe snapshot.
     mockMotionPreference(false);
-    const animate = mockSnapshotAnimation();
     const createElement = vi.spyOn(document, "createElement");
     render(
       <ThemeProvider>
@@ -122,17 +76,9 @@ describe("ThemeToggle", () => {
       name: "Switch website color theme to light",
     });
     createElement.mockClear();
-    for (let index = 0; index < 20; index += 1) fireEvent.click(toggle);
+    fireEvent.click(toggle);
 
-    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
-    await waitFor(() => {
-      expect(document.querySelector("[data-theme-reveal-overlay]")).toBeNull();
-    });
-    expect(createElement).toHaveBeenCalledWith("iframe");
-    expect(document.querySelector("[data-theme-solid-cover]")).toBeNull();
-    expect(animate).toHaveBeenCalledWith(
-      { clipPath: expect.any(Array) },
-      expect.objectContaining({ duration: 350, fill: "forwards" })
-    );
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(createElement).not.toHaveBeenCalledWith("iframe");
   });
 });
