@@ -46,29 +46,6 @@
   border: 0;
 }
 
-/* Same controlled DOM-overlay reveal used by the Admin dashboard. */
-[data-theme-reveal-overlay] {
-  position: fixed;
-  inset: 0;
-  z-index: 2147483000;
-  overflow: hidden;
-  pointer-events: none;
-  contain: strict;
-  isolation: isolate;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-  will-change: clip-path;
-}
-
-[data-theme-reveal-overlay] > iframe {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  pointer-events: none;
-  color-scheme: light dark;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .themeToggle {
     transition: none;

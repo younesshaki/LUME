@@ -1,4 +1,5 @@
 import { CSSProperties, UIEvent, useMemo, useRef } from "react";
+import { getSiteTemplate } from "@lume/types";
 import { useSound } from "@/lib/sound";
 import { useDualMode } from "@/lib/DualModeContext";
 import { useStory } from "@/experience/story/StoryProvider";
@@ -13,6 +14,8 @@ import { mediaUrl } from "@/config/cdn";
 import { getShowcasePreviewForChapter } from "@/experience/products/catalog";
 import homepageBackgroundImage from "@/experience/assets/images/lume-homepage-background.png";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { TemplateHomeExperience } from "@/components/site/TemplateHomeExperience";
+import { useTenantSiteDesign } from "@/lib/TenantThemeProvider";
 import { storyHomePageSoundActions } from "./StoryHomePage.sounds";
 import "./StoryHomePage.css";
 
@@ -155,6 +158,7 @@ export default function StoryHomePage({
   const { isReady, state } = useStory();
   const { play } = useSound();
   const { mode } = useDualMode();
+  const siteDesign = useTenantSiteDesign();
   const isStandard = mode === "standard";
   const pageRef = useRef<HTMLDivElement | null>(null);
 
@@ -169,6 +173,21 @@ export default function StoryHomePage({
         status: chapter.status === "locked" ? "available" : chapter.status,
       }));
   }, [isReady, state]);
+
+  const activeTemplate = siteDesign
+    ? getSiteTemplate(siteDesign.template.key)
+    : null;
+  if (activeTemplate && activeTemplate.key !== "luxury") {
+    return (
+      <TemplateHomeExperience
+        template={activeTemplate}
+        onNavigateToProducts={onNavigateToProducts}
+        onNavigateToVehicles={onNavigateToVehicles}
+        onNavigateToShowcase={onNavigateToShowcase}
+        onNavigateToContact={onNavigateToContact}
+      />
+    );
+  }
 
   const handleScroll = (event: UIEvent<HTMLDivElement>) => {
     const element = event.currentTarget;

@@ -35,6 +35,11 @@ export {
   listSiteTemplates,
   getSiteTemplate,
   templateForKey,
+  CAPITAL,
+  CONCIERGE,
+  EXCHANGE,
+  IGNITION,
+  LUXURY,
   LUXURY_DARK_COLORS,
   LUXURY_LIGHT_COLORS,
 } from "./siteTemplates";

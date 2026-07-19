@@ -51,21 +51,25 @@ describe("website design drafts", () => {
     expect(reset.modes.light.colors?.gold).toBe(luxury.modes.light.colors?.gold);
   });
 
-  it("restores only drafts based on the same published revision", () => {
+  it("keeps one independent local fallback for each template", () => {
     const storage = memoryStorage();
     const draft = updateModeColor(published, "dark", "ink", "#fafafa");
-    saveDesignDraft(storage, "Atelier", draft, published);
-    expect(readDesignDraft(storage, "atelier", published)?.modes.dark.colors?.ink).toBe("#fafafa");
-    const newerPublished = updateModeColor(published, "dark", "ink", "#bbbbbb");
-    expect(readDesignDraft(storage, "atelier", newerPublished)).toBeNull();
+    saveDesignDraft(storage, "Atelier", draft);
+    expect(readDesignDraft(storage, "atelier", "luxury")?.modes.dark.colors?.ink).toBe("#fafafa");
+
+    const capital = createDefaultSiteDesign(getSiteTemplate("capital"));
+    const capitalDraft = updateModeColor(capital, "light", "ink", "#123456");
+    saveDesignDraft(storage, "Atelier", capitalDraft);
+    expect(readDesignDraft(storage, "atelier", "capital")?.modes.light.colors?.ink).toBe("#123456");
+    expect(readDesignDraft(storage, "atelier", "luxury")?.modes.dark.colors?.ink).toBe("#fafafa");
   });
 
   it("detects changes and clears stored drafts", () => {
     const storage = memoryStorage();
     const draft = updateModeColor(published, "light", "panel", "#ffffff");
     expect(hasDesignChanges(draft, published)).toBe(true);
-    saveDesignDraft(storage, "atelier", draft, published);
-    clearDesignDraft(storage, "atelier");
-    expect(readDesignDraft(storage, "atelier", published)).toBeNull();
+    saveDesignDraft(storage, "atelier", draft);
+    clearDesignDraft(storage, "atelier", "luxury");
+    expect(readDesignDraft(storage, "atelier", "luxury")).toBeNull();
   });
 });

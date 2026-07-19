@@ -288,7 +288,10 @@ export function normalizeSiteDesign(value: unknown, template: SiteDesignDefaults
     const design: SiteDesign = {
       schemaVersion: SITE_DESIGN_SCHEMA_VERSION,
       template: {
-        key: typeof templateKey.key === "string" && templateKey.key.trim() ? templateKey.key : template.key,
+        // The caller resolves the source key through the finite registry first.
+        // Persist that canonical key so malformed/future values cannot leak into
+        // DOM layout selectors or draft row keys.
+        key: template.key,
         version:
           typeof templateKey.version === "number" && Number.isFinite(templateKey.version)
             ? templateKey.version

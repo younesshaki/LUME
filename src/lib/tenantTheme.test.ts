@@ -93,6 +93,17 @@ describe("tenant theme", () => {
     expect(document.documentElement.style.getPropertyValue("--theme-site-background-position")).toBe("top");
   });
 
+  it("applies only allowlisted registry layout metadata to the root", () => {
+    const exchange = createDefaultSiteDesign(getSiteTemplate("exchange"));
+    applyTenantSiteDesign(exchange, "dark", document.documentElement);
+    expect(document.documentElement.dataset.lumeTemplate).toBe("exchange");
+    expect(document.documentElement.dataset.lumeTemplateLayout).toBe("equity-split");
+    expect(document.documentElement.dataset.lumeTemplateSpecialty).toBe("trade-in");
+
+    applyTenantTheme({}, document.documentElement);
+    expect(document.documentElement.dataset.lumeTemplate).toBeUndefined();
+  });
+
   it("resolves destination-mode tokens without mutating the current document", () => {
     const design = createDefaultSiteDesign(getSiteTemplate("luxury"));
     design.modes.dark.assets = { siteBackground: { url: "https://cdn.example/dark.webp" } };

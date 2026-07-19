@@ -102,17 +102,17 @@ const GlowingEffect = memo(({
           "--glowingeffect-border-width": `${borderWidth}px`,
           "--repeating-conic-gradient-times": "5",
           "--gradient": `
-            radial-gradient(circle, #ffe57e 10%, #ffe57e00 20%),
-            radial-gradient(circle at 40% 40%, #d4a017 5%, #d4a01700 15%),
-            radial-gradient(circle at 60% 60%, #c87a10 10%, #c87a1000 20%),
-            radial-gradient(circle at 40% 60%, #8b6914 10%, #8b691400 20%),
+            radial-gradient(circle, var(--theme-lume-gold, #ffe57e) 10%, transparent 20%),
+            radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--theme-lume-gold, #ffe57e) 78%, white) 5%, transparent 15%),
+            radial-gradient(circle at 60% 60%, var(--theme-lume-gold, #ffe57e) 10%, transparent 20%),
+            radial-gradient(circle at 40% 60%, color-mix(in srgb, var(--theme-lume-gold, #ffe57e) 72%, black) 10%, transparent 20%),
             repeating-conic-gradient(
               from 236.84deg at 50% 50%,
-              #ffe57e 0%,
-              #d4a017 calc(25% / var(--repeating-conic-gradient-times)),
-              #c87a10 calc(50% / var(--repeating-conic-gradient-times)),
-              #8b6914 calc(75% / var(--repeating-conic-gradient-times)),
-              #ffe57e calc(100% / var(--repeating-conic-gradient-times))
+              var(--theme-lume-gold, #ffe57e) 0%,
+              color-mix(in srgb, var(--theme-lume-gold, #ffe57e) 82%, white) calc(25% / var(--repeating-conic-gradient-times)),
+              var(--theme-lume-gold, #ffe57e) calc(50% / var(--repeating-conic-gradient-times)),
+              color-mix(in srgb, var(--theme-lume-gold, #ffe57e) 72%, black) calc(75% / var(--repeating-conic-gradient-times)),
+              var(--theme-lume-gold, #ffe57e) calc(100% / var(--repeating-conic-gradient-times))
             )`,
         } as React.CSSProperties}
         className={cn(
