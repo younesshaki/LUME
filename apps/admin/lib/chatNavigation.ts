@@ -42,6 +42,9 @@ type GroundedInventoryFilters = Partial<{
   sellerState: string;
   sellerCity: string;
   year: number;
+  mileageMax: number;
+  priceMin: number;
+  priceMax: number;
 }>;
 
 const UUID_PATTERN =
@@ -364,7 +367,8 @@ function groundedInventoryFilterAction(
     filters.drivetrain ||
     filters.sellerState ||
     filters.sellerCity ||
-    filters.year !== undefined
+    filters.year !== undefined ||
+    filters.mileageMax !== undefined
   ) {
     return null;
   }
@@ -382,6 +386,8 @@ function groundedInventoryFilterAction(
     type: "filter_inventory",
     ...(canonicalMake ? { make: canonicalMake } : {}),
     ...(bodyStyle ? { bodyStyle } : {}),
+    ...(filters.priceMin !== undefined ? { priceMin: filters.priceMin } : {}),
+    ...(filters.priceMax !== undefined ? { priceMax: filters.priceMax } : {}),
   };
 }
 

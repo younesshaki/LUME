@@ -19,7 +19,7 @@
  * `messages` with role: "system" is dropped. The tenant is resolved from the
  * X-Lume-Tenant header (or ?tenant= or subdomain — see lib/tenant.ts).
  */
-import type { BotAction, ChatRequest, Vehicle, VehicleQuery } from "@lume/types";
+import type { BotAction, ChatRequest, Vehicle } from "@lume/types";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
 import {
   getTenantVehicle,
@@ -44,6 +44,7 @@ import {
   assembleSystemPrompt,
   extractVehicleFilters,
   isVehicleQuery,
+  mergeTrustedVehicleQuery,
   retrieveByKeywords,
   vehicleQueryFromFilters,
 } from "@lume/rag";
@@ -757,18 +758,6 @@ function vehicleFilterVocabulary(value: unknown): {
     states: stringArray(record.states),
     cities: stringArray(record.cities),
   };
-}
-
-/**
- * The model may omit or abbreviate a filter it just read from the visitor.
- * Parsed user filters are trusted over those model-generated arguments, while
- * tool-only constraints such as price and sorting remain intact.
- */
-function mergeTrustedVehicleQuery(
-  modelQuery: VehicleQuery,
-  trustedFilters: VehicleQuery,
-): VehicleQuery {
-  return { ...modelQuery, ...trustedFilters };
 }
 
 function stringArray(value: unknown): string[] {

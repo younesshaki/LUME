@@ -11,6 +11,7 @@ import {
 
 const VEHICLE_ID = "5d6df0bd-85db-471e-9c4c-effa3c4938ab";
 const BMW_2016_ID = "877ad1ad-0cdf-47dd-9930-127089b60e10";
+const BMW_X1_ID = "867058c6-2ff1-461a-aac7-ab156e96d679";
 const BMW_2020_ID = "39d724a5-0d3a-4d3e-8918-5ed980855ee0";
 const MERCEDES_ID = "003b1685-725a-4b69-9e21-82806daf1d53";
 const targets = mergeConciergeTargets([]);
@@ -24,6 +25,15 @@ const groundedBmws = [
     trim: "",
     price: 11_995,
     mileage: 129_832,
+  },
+  {
+    id: BMW_X1_ID,
+    year: 2019,
+    make: "BMW",
+    model: "X1",
+    trim: "",
+    price: 19_980,
+    mileage: null,
   },
   {
     id: BMW_2020_ID,
@@ -166,15 +176,47 @@ describe("deterministic concierge navigation", () => {
     }]);
   });
 
+  it("resolves the unique BMW X1 from the reported wording", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "take me to BMW X1 2019" }],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { make: "BMW", model: "X1", year: 2019 },
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "navigate-target",
+      targetKey: "vehicle-detail",
+      params: { vehicleId: BMW_X1_ID },
+    }]);
+  });
+
+  it("keeps trusted price filters in deterministic inventory actions", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "show BMWs under $50,000" }],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { make: "BMW", priceMax: 50_000 },
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "filter_inventory",
+      make: "BMW",
+      priceMax: 50_000,
+    }]);
+  });
+
   it("fails closed when a grounded vehicle description is still ambiguous", () => {
     const duplicate = {
-      ...groundedBmws[1]!,
+      ...groundedBmws[2]!,
       id: "f13ee5f8-2308-4e95-a615-1c86332fb118",
     };
     expect(
       exactGroundedVehicleId(
         "open the 2020 BMW X3 xDrive30i",
-        [groundedBmws[1]!, duplicate],
+        [groundedBmws[2]!, duplicate],
       ),
     ).toBeNull();
     expect(
