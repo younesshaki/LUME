@@ -1,0 +1,77 @@
+.botLeadStatus {
+  position: fixed;
+  z-index: 80;
+  right: clamp(1rem, 3vw, 2rem);
+  bottom: clamp(5.5rem, 10vh, 7rem);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  width: min(24rem, calc(100vw - 2rem));
+  padding: 0.85rem 1rem;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-color: color-mix(in srgb, var(--text-primary, #fff) 20%, transparent);
+  border-radius: 0.85rem;
+  background: var(--surface-primary, #111);
+  background: color-mix(in srgb, var(--surface-primary, #111) 94%, transparent);
+  color: var(--text-primary, #fff);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 28%);
+  backdrop-filter: blur(18px);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.botLeadStatus > svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.botLeadStatus--success > svg {
+  color: #52c78a;
+}
+
+.botLeadStatus--error > svg {
+  color: #ef8b82;
+}
+
+.botLeadStatus--submitting > svg {
+  animation: botLeadStatusPulse 1s ease-in-out infinite alternate;
+}
+
+.botLeadStatus button {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.botLeadStatus button:hover,
+.botLeadStatus button:focus-visible {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  outline: none;
+}
+
+.botLeadStatus button:focus-visible {
+  box-shadow: 0 0 0 2px currentColor;
+}
+
+.botLeadStatus button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+@keyframes botLeadStatusPulse {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botLeadStatus--submitting > svg {
+    animation: none;
+  }
+}

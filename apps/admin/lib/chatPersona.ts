@@ -63,6 +63,8 @@ type ActionShape = {
   example: string;
   /** Which capability gates it; null = always available. */
   capability: keyof BotPersonaCapabilities | null;
+  /** A short disambiguation note shown beside the JSON shape. */
+  hint?: string;
 };
 
 const ACTION_SHAPES: Record<string, ActionShape> = {
@@ -73,10 +75,17 @@ const ACTION_SHAPES: Record<string, ActionShape> = {
   navigate: {
     example: `{"type":"navigate","route":"string"}`,
     capability: "navigate",
+    hint: "Legacy public-page navigation; prefer navigate-target when an enabled registry key matches.",
+  },
+  "navigate-target": {
+    example: `{"type":"navigate-target","targetKey":"string","params":{"vehicleId":"string"}}`,
+    capability: "navigate",
+    hint: "Use only a key listed in CONCIERGE_TARGETS_DATA. Include only destination parameters grounded in context.",
   },
   "highlight-vehicle": {
     example: `{"type":"highlight-vehicle","vehicleId":"string"}`,
     capability: null,
+    hint: "Legacy vehicle-detail navigation. vehicleId must be an exact grounded inventory id.",
   },
   "open-lead-form": {
     example: `{"type":"open-lead-form","prefill":{}}`,
@@ -112,7 +121,9 @@ export function actionSystemPrompt(
 ): string {
   const shapes = Object.values(ACTION_SHAPES)
     .filter((shape) => capabilityEnabled(capabilities, shape.capability))
-    .map((shape) => shape.example);
+    .map((shape) =>
+      shape.hint ? `${shape.example}\nUsage note: ${shape.hint}` : shape.example,
+    );
   if (shapes.length === 0 && callableToolNames.length === 0) return "";
   const sections: string[] = [];
   if (shapes.length > 0) {

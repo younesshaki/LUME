@@ -6,7 +6,12 @@
  * The browser never sees the system prompt, the RAG chunks, or the Deepseek
  * API key. It only sends user/assistant turns and consumes deltas.
  */
-import type { BotAction, ChatStreamThinking } from "@lume/types";
+import {
+  validateConciergeTargetDestination,
+  type BotAction,
+  type ChatStreamThinking,
+  type ConciergeTargetKind,
+} from "@lume/types";
 import { publicTenantSlug } from "./publicTenant";
 
 const CHAT_ENDPOINT = "/api/chat";
@@ -64,6 +69,9 @@ export async function* streamChat(
     body: JSON.stringify({
       messages: sanitized,
       stream: true,
+      ...(typeof window !== "undefined"
+        ? { pagePath: window.location.pathname.slice(0, 300) }
+        : {}),
       ...(sessionId ? { sessionId } : {}),
       ...(startNewSession ? { startNewSession: true } : {}),
     }),
@@ -196,10 +204,19 @@ function isBotAction(value: unknown): value is BotAction {
       );
     case "navigate":
       return typeof value.route === "string";
+    case "navigate-target":
+      return (
+        typeof value.targetKey === "string" &&
+        (value.params === undefined || isStringRecord(value.params)) &&
+        isConciergeTargetDescriptor(value.target, value.targetKey)
+      );
     case "highlight-vehicle":
       return typeof value.vehicleId === "string";
     case "open-lead-form":
-      return value.prefill === undefined || isRecord(value.prefill);
+      return (
+        (value.prefill === undefined || isRecord(value.prefill)) &&
+        isOptionalString(value.vehicleId)
+      );
     case "capture_lead":
       return isLeadContact(value.contact) && isOptionalString(value.vehicleId);
     case "scroll-to":
@@ -207,6 +224,36 @@ function isBotAction(value: unknown): value is BotAction {
     default:
       return false;
   }
+}
+
+function isConciergeTargetDescriptor(
+  value: unknown,
+  targetKey: string,
+): boolean {
+  if (
+    !isRecord(value) ||
+    value.key !== targetKey ||
+    typeof value.label !== "string" ||
+    typeof value.destination !== "string" ||
+    typeof value.isConversion !== "boolean" ||
+    !["route", "section-anchor", "form", "modal"].includes(String(value.kind))
+  ) {
+    return false;
+  }
+  return (
+    validateConciergeTargetDestination(
+      value.kind as ConciergeTargetKind,
+      value.destination,
+    ) === null
+  );
+}
+
+function isStringRecord(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Object.keys(value).length <= 8 &&
+    Object.values(value).every((item) => typeof item === "string")
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

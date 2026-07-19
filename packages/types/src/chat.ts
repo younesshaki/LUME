@@ -12,6 +12,8 @@ export type ChatRequest = {
   sessionId?: string;
   /** Explicitly begins a new browser conversation; retry-safe with sessionId. */
   startNewSession?: boolean;
+  /** Untrusted public pathname; the server re-resolves any referenced entity tenant-safely. */
+  pagePath?: string;
   stream?: boolean;
 };
 

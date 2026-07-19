@@ -24,6 +24,19 @@ describe("bot action consumers", () => {
     expect(resolveBotNavigationRoute("/admin")).toBeNull();
   });
 
+  it("resolves vehicle and product detail paths while preserving identifier case", () => {
+    expect(resolveBotNavigationRoute("/vehicles/ABC-123")).toEqual({
+      route: "vehicleDetail",
+      vehicleId: "ABC-123",
+    });
+    expect(resolveBotNavigationRoute("/products/Red-Bull?ref=chat")).toEqual({
+      route: "productDetail",
+      productId: "Red-Bull",
+    });
+    expect(resolveBotNavigationRoute("/vehicles/one/extra")).toBeNull();
+    expect(resolveBotNavigationRoute("/vehicles/%E0%A4%A")).toBeNull();
+  });
+
   it("normalizes coarse vehicle filters", () => {
     expect(
       vehicleFiltersFromBotAction({
@@ -72,7 +85,15 @@ describe("bot action consumers", () => {
       email: "ada@example.com",
     });
 
-    storePendingLeadFormPrefill(action);
+    storePendingLeadFormPrefill({
+      ...action,
+      vehicleId: "v1",
+      attribution: {
+        targetKey: "contact-lead-form",
+        sessionId: "chat-1",
+        conversationContext: "user: Please contact me",
+      },
+    });
     expect(consumePendingLeadFormPrefill()).toEqual({
       firstName: "Ada",
       email: "ada@example.com",
@@ -81,6 +102,10 @@ describe("bot action consumers", () => {
     expect(consumePendingLeadFormSourceContext()).toEqual({
       trigger: "bot-action",
       actionType: "open-lead-form",
+      vehicleId: "v1",
+      targetKey: "contact-lead-form",
+      chatSessionId: "chat-1",
+      conversationContext: "user: Please contact me",
     });
     expect(consumePendingLeadFormSourceContext()).toBeNull();
   });

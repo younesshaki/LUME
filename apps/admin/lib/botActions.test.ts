@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   extractDeepseekTextDelta,
   extractInlineActions,
+  InlineActionStreamFilter,
   isBotAction,
   parseBotActionLine,
+  stripInlineActions,
   validateBotActionEnvelope,
 } from "./botActions";
 
@@ -25,6 +27,7 @@ describe("parseBotActionLine / isBotAction", () => {
     const lines = [
       `{"type":"filter_inventory","make":"BMW","priceMax":50000}`,
       `{"type":"navigate","route":"/vehicles"}`,
+      `{"type":"navigate-target","targetKey":"vehicle-detail","params":{"vehicleId":"v1"}}`,
       `{"type":"highlight-vehicle","vehicleId":"v1"}`,
       `{"type":"open-lead-form"}`,
       `{"type":"capture_lead","contact":{"email":"a@b.c"}}`,
@@ -64,6 +67,98 @@ describe("extractInlineActions", () => {
 
   it("returns empty for pure prose", () => {
     expect(extractInlineActions("No actions here.")).toEqual([]);
+  });
+});
+
+describe("stripInlineActions", () => {
+  it("removes action lines without deleting arbitrary JSON", () => {
+    const content = [
+      "Absolutely — taking you there now.",
+      `{"type":"highlight-vehicle","vehicleId":"v1"}`,
+      `{"answer":"ordinary JSON"}`,
+      "Let me know if you want a comparison.",
+    ].join("\n");
+    expect(stripInlineActions(content)).toBe(
+      [
+        "Absolutely — taking you there now.",
+        `{"answer":"ordinary JSON"}`,
+        "Let me know if you want a comparison.",
+      ].join("\n"),
+    );
+  });
+
+  it("removes a valid action embedded after prose while keeping that prose", () => {
+    const action = `{"type":"navigate-target","targetKey":"inventory"}`;
+    const content = `I’ll open the live inventory now. ${action} You can refine it there.`;
+    expect(extractInlineActions(content)).toEqual([
+      { type: "navigate-target", targetKey: "inventory" },
+    ]);
+    expect(stripInlineActions(content)).toBe(
+      "I’ll open the live inventory now.  You can refine it there.",
+    );
+  });
+
+  it("preserves intentional paragraph breaks around action-free prose", () => {
+    expect(stripInlineActions("First paragraph.\n\nSecond paragraph.")).toBe(
+      "First paragraph.\n\nSecond paragraph.",
+    );
+    const filter = new InlineActionStreamFilter();
+    expect(filter.push("First paragraph.\n\nSecond paragraph.\n")).toEqual({
+      visibleText: "First paragraph.\n\nSecond paragraph.\n",
+      actions: [],
+    });
+  });
+});
+
+describe("InlineActionStreamFilter", () => {
+  it("passes prose promptly while suppressing an action split across deltas", () => {
+    const filter = new InlineActionStreamFilter();
+    expect(filter.push("Taking you there.\n{\"type\":\"navigate-tar")).toEqual({
+      visibleText: "Taking you there.\n",
+      actions: [],
+    });
+    expect(
+      filter.push("get\",\"targetKey\":\"vehicle-detail\",\"params\":{\"vehicleId\":\"v1\"}}\nNext"),
+    ).toEqual({
+      visibleText: "Next",
+      actions: [
+        {
+          type: "navigate-target",
+          targetKey: "vehicle-detail",
+          params: { vehicleId: "v1" },
+        },
+      ],
+    });
+    expect(filter.flush()).toEqual({ visibleText: "", actions: [] });
+  });
+
+  it("keeps malformed or ordinary JSON visible", () => {
+    const filter = new InlineActionStreamFilter();
+    expect(filter.push(`{"type":"invented"}\n`)).toEqual({
+      visibleText: `{"type":"invented"}\n`,
+      actions: [],
+    });
+    expect(filter.push(`{"answer":"still prose"}`)).toEqual({
+      visibleText: "",
+      actions: [],
+    });
+    expect(filter.flush()).toEqual({
+      visibleText: `{"answer":"still prose"}`,
+      actions: [],
+    });
+  });
+
+  it("suppresses an embedded action split across deltas without delaying prose", () => {
+    const filter = new InlineActionStreamFilter();
+    expect(filter.push("Opening it now: {\"type\":\"navigate-")).toEqual({
+      visibleText: "Opening it now: ",
+      actions: [],
+    });
+    expect(filter.push("target\",\"targetKey\":\"inventory\"} Done.\n")).toEqual({
+      visibleText: " Done.\n",
+      actions: [{ type: "navigate-target", targetKey: "inventory" }],
+    });
+    expect(filter.flush()).toEqual({ visibleText: "", actions: [] });
   });
 });
 

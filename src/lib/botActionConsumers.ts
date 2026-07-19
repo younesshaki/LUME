@@ -31,6 +31,18 @@ let pendingLeadFormContextFallback: LeadSourceContext | null = null;
  * intentionally excluded because chat navigation should stay on public surfaces.
  */
 export function resolveBotNavigationRoute(route: string): AppRouteLocation | null {
+  const path = normalizeRoutePath(route);
+  const vehicleDetail = /^\/vehicles\/([^/]+)$/.exec(path);
+  if (vehicleDetail) {
+    const vehicleId = safeDecodePathSegment(vehicleDetail[1]);
+    return vehicleId ? { route: "vehicleDetail", vehicleId } : null;
+  }
+  const productDetail = /^\/products\/([^/]+)$/.exec(path);
+  if (productDetail) {
+    const productId = safeDecodePathSegment(productDetail[1]);
+    return productId ? { route: "productDetail", productId } : null;
+  }
+
   const normalized = normalizeRouteInput(route);
   switch (normalized) {
     case "home":
@@ -124,7 +136,7 @@ export function mergeLeadFormPrefill<T extends LeadFormPrefill>(
 /** Stores lead-form prefill so the contact route can focus and populate after navigation. */
 export function storePendingLeadFormPrefill(action: BotOpenLeadFormAction): void {
   const prefill = leadFormPrefillFromAction(action) ?? {};
-  const context = botLeadFormSourceContext();
+  const context = botLeadFormSourceContext(action);
   pendingLeadFormPrefillFallback = prefill;
   pendingLeadFormContextFallback = context;
   writeSessionJson(PENDING_LEAD_FORM_PREFILL_KEY, prefill);
@@ -149,12 +161,31 @@ export function consumePendingLeadFormSourceContext(): LeadSourceContext | null 
   return isLeadFormSourceContext(stored) ? stored : fallback;
 }
 
-export function botLeadFormSourceContext(): LeadSourceContext {
-  return { trigger: "bot-action", actionType: "open-lead-form" };
+export function botLeadFormSourceContext(
+  action?: Pick<BotOpenLeadFormAction, "vehicleId" | "attribution">,
+): LeadSourceContext {
+  return {
+    trigger: "bot-action",
+    actionType: "open-lead-form",
+    ...(action?.vehicleId ? { vehicleId: action.vehicleId } : {}),
+    ...(action?.attribution?.targetKey
+      ? { targetKey: action.attribution.targetKey }
+      : {}),
+    ...(action?.attribution?.sessionId
+      ? { chatSessionId: action.attribution.sessionId }
+      : {}),
+    ...(action?.attribution?.conversationContext
+      ? { conversationContext: action.attribution.conversationContext }
+      : {}),
+  };
 }
 
 function normalizeRouteInput(route: string): string {
-  const trimmed = route.trim().toLowerCase();
+  return normalizeRoutePath(route).toLowerCase();
+}
+
+function normalizeRoutePath(route: string): string {
+  const trimmed = route.trim();
   if (!trimmed) return "";
 
   try {
@@ -163,6 +194,14 @@ function normalizeRouteInput(route: string): string {
   } catch {
     const [withoutQuery] = trimmed.split(/[?#]/, 1);
     return withoutQuery.replace(/\/+$/, "") || "/";
+  }
+}
+
+function safeDecodePathSegment(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
   }
 }
 

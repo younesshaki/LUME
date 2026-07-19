@@ -8,6 +8,10 @@ export type BotActionLeadSourceContext = {
   trigger: "bot-action";
   actionType: "capture_lead" | "open-lead-form";
   vehicleId?: string;
+  targetKey?: string;
+  chatSessionId?: string;
+  /** Bounded recent visitor/assistant context captured by the trusted chat server. */
+  conversationContext?: string;
 };
 
 /** Context captured from the public vehicle detail inquiry form. */

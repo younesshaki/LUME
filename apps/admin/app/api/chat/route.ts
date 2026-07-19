@@ -54,15 +54,24 @@ import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import {
   extractDeepseekTextDelta,
   extractInlineActions,
-  parseBotActionLine,
+  InlineActionStreamFilter,
+  stripInlineActions,
 } from "@/lib/botActions";
 import {
   actionSystemPrompt,
   filterAllowedActions,
-  isActionAllowed,
   loadActivePersona,
   personaBasePrompt,
 } from "@/lib/chatPersona";
+import {
+  buildBotActionAttribution,
+  conciergeTargetSystemPrompt,
+  filterGroundedVehicleActions,
+  groundLeadCaptureActions,
+  loadConciergeTargets,
+  prepareBotActionsForClient,
+  vehicleIdFromPublicPagePath,
+} from "@/lib/conciergeTargets";
 import { buildToolRequestFields, loadTenantToolAllowlist } from "@/lib/chatTools";
 import { loadChatLoyaltyContext, loyaltySystemPrompt } from "@/lib/chatLoyalty";
 import { resolveVisitor } from "@/lib/visitorSession";
@@ -156,11 +165,13 @@ export async function POST(request: Request): Promise<Response> {
 
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.
-  const [persona, toolAllowlist, visitor] = await Promise.all([
+  const [persona, toolAllowlist, visitor, targetRegistry] = await Promise.all([
     loadActivePersona(supabase, tenant.tenantId),
     loadTenantToolAllowlist(supabase, tenant.tenantId),
     resolveVisitor(request, tenant.tenantId, supabase).catch(() => null),
+    loadConciergeTargets(supabase, tenant.tenantId),
   ]);
+  const conciergeTargets = targetRegistry.targets;
   const enabledTools = filterBotTools(toolAllowlist);
   const enabledToolNames = enabledTools.map((tool) => tool.name);
   const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
@@ -187,12 +198,19 @@ export async function POST(request: Request): Promise<Response> {
         userContent: lastUser.content,
       })
     : null;
+  const actionAttribution = buildBotActionAttribution(
+    modelMessages,
+    visitorTurn?.sessionId ??
+      (typeof body.sessionId === "string" ? body.sessionId : undefined),
+  );
+  const currentPageVehicleId = vehicleIdFromPublicPagePath(body.pagePath);
 
   let assembled;
+  const groundedVehicleIds = new Set<string>();
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> = null;
   let visitorPreferenceContext: Awaited<ReturnType<typeof loadVisitorPreferenceContext>> = null;
   try {
-    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext] = await Promise.all([
+    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext, currentVehicleResult] = await Promise.all([
       supabase
         .from("rag_chunks")
         .select("text, category")
@@ -206,6 +224,15 @@ export async function POST(request: Request): Promise<Response> {
             visitorId: visitor.id,
           })
         : Promise.resolve(null),
+      currentPageVehicleId
+        ? supabase
+            .from("vehicles")
+            .select("id, year, make, model, trim")
+            .eq("tenant_id", tenant.tenantId)
+            .eq("id", currentPageVehicleId)
+            .eq("status", "live")
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
     chatLoyaltyContext = loadedLoyaltyContext;
     visitorPreferenceContext = loadedPreferenceContext;
@@ -217,6 +244,15 @@ export async function POST(request: Request): Promise<Response> {
       lastUser.content,
       7
     );
+    if (currentVehicleResult.data) {
+      const currentVehicle = currentVehicleResult.data;
+      groundedVehicleIds.add(currentVehicle.id);
+      contextChunks.unshift({
+        category: "current-page",
+        text: `Current public page is the live vehicle ${currentVehicle.year} ${currentVehicle.make} ${currentVehicle.model}${currentVehicle.trim ? ` ${currentVehicle.trim}` : ""}. Exact vehicleId: ${currentVehicle.id}.`,
+        score: 2,
+      });
+    }
 
     let matchedVehicles;
     let totalMatched: number | undefined;
@@ -236,6 +272,7 @@ export async function POST(request: Request): Promise<Response> {
       filters = extractVehicleFilters(lastUser.content, vehicles);
       const match = matchVehicles(vehicles, filters, lastUser.content);
       matchedVehicles = match.results;
+      for (const vehicle of matchedVehicles) groundedVehicleIds.add(vehicle.id);
       totalMatched = match.totalMatched;
       totalInventory = vehicles.length;
       const matchedIds = matchedVehicles.slice(0, 20).map((vehicle) => vehicle.id);
@@ -269,7 +306,10 @@ export async function POST(request: Request): Promise<Response> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "RAG failure";
-    console.error("[/api/chat] RAG error:", message);
+    captureError("api/chat/context-build", err, {
+      tenantId: tenant.tenantId,
+      detail: message,
+    });
     return json({ error: "Failed to build context" }, 500, request, quotaHeaders);
   }
 
@@ -282,7 +322,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const systemMessage = {
     role: "system" as const,
-    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}${conversationMemoryToolPrompt(remembered?.toolResults ?? [])}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
+    content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}${conversationMemoryToolPrompt(remembered?.toolResults ?? [])}${conciergeTargetSystemPrompt(persona.capabilities.navigate === false ? [] : conciergeTargets)}\n${actionSystemPrompt(persona.capabilities, enabledToolNames)}`,
   };
 
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
@@ -321,7 +361,10 @@ export async function POST(request: Request): Promise<Response> {
     phase1Message = message;
   } catch (err) {
     const message = err instanceof Error ? err.message : "bad completion";
-    console.error("[/api/chat] completion parse error:", message);
+    captureError("api/chat/completion-parse", err, {
+      tenantId: tenant.tenantId,
+      detail: message,
+    });
     return json({ error: "Malformed model response" }, 502, request, quotaHeaders);
   }
 
@@ -345,32 +388,42 @@ export async function POST(request: Request): Promise<Response> {
   // ── No tools requested: re-emit the prose as SSE ──────────────────────────
   if (!phase1Message.tool_calls?.length) {
     const content = phase1Message.content ?? "";
+    const visibleContent = stripInlineActions(content);
+    const actions = prepareBotActionsForClient(
+      filterGroundedVehicleActions(
+        groundLeadCaptureActions(
+          filterAllowedActions(extractInlineActions(content), persona.capabilities),
+          modelMessages,
+        ),
+        conciergeTargets,
+        groundedVehicleIds,
+      ),
+      conciergeTargets,
+      actionAttribution,
+    );
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
         controller.enqueue(encoder.encode(metaEvent));
-        for (const action of filterAllowedActions(
-          extractInlineActions(content),
-          persona.capabilities
-        )) {
+        for (const action of actions) {
           controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
         }
-        if (content) {
+        if (visibleContent) {
           controller.enqueue(
-            encoder.encode(sseEvent({ choices: [{ delta: { content } }] }))
+            encoder.encode(sseEvent({ choices: [{ delta: { content: visibleContent } }] }))
           );
         }
-        if (visitor && visitorTurn && content) {
+        if (visitor && visitorTurn && visibleContent) {
           await completeVisitorPreferenceTurn(supabase, {
             tenantId: tenant.tenantId,
             visitorId: visitor.id,
             sessionId: visitorTurn.sessionId,
-            assistantContent: content,
+            assistantContent: visibleContent,
           });
         }
-        if (memoryKey && content) {
+        if (memoryKey && visibleContent) {
           await memoryStore.append(memoryKey, {
-            messages: [lastUser, { role: "assistant", content }],
+            messages: [lastUser, { role: "assistant", content: visibleContent }],
           }).catch((error: unknown) => {
             captureError("api/chat/memory-write", error, { tenantId: tenant.tenantId });
           });
@@ -446,22 +499,60 @@ export async function POST(request: Request): Promise<Response> {
       }
       // Tool-emitted UI actions go out before the prose starts streaming so
       // the interface reacts (filters, highlights) while the model talks.
-      for (const action of filterAllowedActions(turn.actions, persona.capabilities)) {
+      for (const action of turn.actions) {
+        if (action.type === "highlight-vehicle") {
+          groundedVehicleIds.add(action.vehicleId);
+        }
+      }
+      const seenActionFingerprints = new Set<string>();
+      for (const action of prepareBotActionsForClient(
+        groundLeadCaptureActions(
+          filterAllowedActions(turn.actions, persona.capabilities),
+          modelMessages,
+        ),
+        conciergeTargets,
+        actionAttribution,
+        seenActionFingerprints,
+      )) {
         controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
       }
 
       const reader = upstreamBody.getReader();
       let sseLineBuffer = "";
-      let actionLineBuffer = "";
-      let pendingActions: BotAction[] = [];
+      const actionFilter = new InlineActionStreamFilter();
       let assistantContent = "";
       let streamCompletionObserved = false;
+      let doneEventSent = false;
 
-      const flushActionEvents = () => {
-        for (const action of pendingActions) {
+      const emitActions = (actions: readonly BotAction[]) => {
+        for (const action of prepareBotActionsForClient(
+          filterGroundedVehicleActions(
+            groundLeadCaptureActions(
+              filterAllowedActions(actions, persona.capabilities),
+              modelMessages,
+            ),
+            conciergeTargets,
+            groundedVehicleIds,
+          ),
+          conciergeTargets,
+          actionAttribution,
+          seenActionFingerprints,
+        )) {
           controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
         }
-        pendingActions = [];
+      };
+
+      const emitFiltered = ({
+        visibleText,
+        actions,
+      }: ReturnType<InlineActionStreamFilter["push"]>) => {
+        if (visibleText) {
+          assistantContent += visibleText;
+          controller.enqueue(
+            encoder.encode(sseEvent({ choices: [{ delta: { content: visibleText } }] })),
+          );
+        }
+        emitActions(actions);
       };
 
       const processSseLine = (line: string) => {
@@ -469,35 +560,17 @@ export async function POST(request: Request): Promise<Response> {
         if (isChatStreamCompletionLine(line)) streamCompletionObserved = true;
 
         if (trimmed === "data: [DONE]") {
-          const finalAction = parseBotActionLine(actionLineBuffer);
-          if (finalAction && isActionAllowed(finalAction, persona.capabilities)) {
-            pendingActions.push(finalAction);
+          emitFiltered(actionFilter.flush());
+          if (!doneEventSent) {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            doneEventSent = true;
           }
-          actionLineBuffer = "";
-          flushActionEvents();
-        }
-
-        controller.enqueue(encoder.encode(`${line}\n`));
-
-        if (!trimmed) {
-          flushActionEvents();
           return;
         }
 
         const textDelta = extractDeepseekTextDelta(line);
         if (!textDelta) return;
-
-        assistantContent += textDelta;
-        actionLineBuffer += textDelta;
-        const actionLines = actionLineBuffer.split(/\r?\n/);
-        actionLineBuffer = actionLines.pop() ?? "";
-
-        for (const actionLine of actionLines) {
-          const action = parseBotActionLine(actionLine);
-          if (action && isActionAllowed(action, persona.capabilities)) {
-            pendingActions.push(action);
-          }
-        }
+        emitFiltered(actionFilter.push(textDelta));
       };
 
       try {
@@ -516,11 +589,11 @@ export async function POST(request: Request): Promise<Response> {
         if (sseLineBuffer) {
           processSseLine(sseLineBuffer);
         }
-        const finalAction = parseBotActionLine(actionLineBuffer);
-        if (finalAction && isActionAllowed(finalAction, persona.capabilities)) {
-          pendingActions.push(finalAction);
+        emitFiltered(actionFilter.flush());
+        if (streamCompletionObserved && !doneEventSent) {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          doneEventSent = true;
         }
-        flushActionEvents();
       } catch (err) {
         const message = err instanceof Error ? err.message : "stream failure";
         controller.enqueue(

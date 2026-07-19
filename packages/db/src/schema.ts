@@ -979,6 +979,49 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["tenant_bot_config"]["Insert"]>;
         Relationships: [];
       };
+      concierge_targets: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          key: string;
+          label: string;
+          kind: "route" | "section-anchor" | "form" | "modal";
+          destination: string;
+          ai_description: string;
+          is_conversion: boolean;
+          enabled: boolean;
+          example_prompts: string[];
+          sort_order: number;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["concierge_targets"]["Row"],
+          | "id"
+          | "is_conversion"
+          | "enabled"
+          | "example_prompts"
+          | "sort_order"
+          | "created_by"
+          | "updated_by"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          is_conversion?: boolean;
+          enabled?: boolean;
+          example_prompts?: string[];
+          sort_order?: number;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["concierge_targets"]["Insert"]>;
+        Relationships: [];
+      };
       loyalty_accounts: {
         Row: {
           id: string;

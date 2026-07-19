@@ -52,6 +52,7 @@ describe("streamChat", () => {
       sessionId: "session-1",
       startNewSession: true,
       stream: true,
+      pagePath: window.location.pathname,
       messages: [{ role: "user", content: "Find an SUV" }],
     });
   });
@@ -85,6 +86,40 @@ describe("streamChat", () => {
     };
     expect(requestBody.messages).toEqual([{ role: "user", content: "hello" }]);
     expect(requestBody.sessionId).toBeUndefined();
+  });
+
+  it("accepts only server-resolved generic target actions", async () => {
+    const validAction = {
+      type: "navigate-target",
+      targetKey: "vehicle-detail",
+      params: { vehicleId: "v1" },
+      target: {
+        key: "vehicle-detail",
+        label: "Vehicle detail",
+        kind: "route",
+        destination: "/vehicles/:vehicleId",
+        isConversion: false,
+      },
+    };
+    const body = [
+      `data: ${JSON.stringify({ type: "action", action: validAction })}`,
+      `data: ${JSON.stringify({
+        type: "action",
+        action: { type: "navigate-target", targetKey: "forged" },
+      })}`,
+      "data: [DONE]",
+      "",
+    ].join("\n\n");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(body, { status: 200 })),
+    );
+
+    const events = [];
+    for await (const event of streamChat([{ role: "user", content: "show it" }])) {
+      events.push(event);
+    }
+    expect(events).toEqual([{ kind: "action", action: validAction }]);
   });
 
   it("surfaces explicit stream errors without exposing an unreadable response", async () => {

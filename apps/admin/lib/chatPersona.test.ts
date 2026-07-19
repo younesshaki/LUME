@@ -44,6 +44,7 @@ describe("actionSystemPrompt", () => {
     for (const type of [
       "filter_inventory",
       "navigate",
+      "navigate-target",
       "highlight-vehicle",
       "open-lead-form",
       "capture_lead",
@@ -61,6 +62,7 @@ describe("actionSystemPrompt", () => {
     });
     expect(prompt).not.toContain(`"type":"capture_lead"`);
     expect(prompt).not.toContain(`"type":"navigate"`);
+    expect(prompt).not.toContain(`"type":"navigate-target"`);
     expect(prompt).toContain(`"type":"filter_inventory"`);
   });
 

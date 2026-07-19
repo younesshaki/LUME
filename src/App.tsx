@@ -15,6 +15,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -37,6 +38,12 @@ import {
   storePendingInventoryFilter,
   storePendingLeadFormPrefill,
 } from "./lib/botActionConsumers";
+import {
+  activatePendingConciergeTarget,
+  queueConciergeTargetAction,
+  resolveConciergeTargetAction,
+  watchPendingConciergeTarget,
+} from "./lib/conciergeTargetRuntime";
 import { isPageRendererEnabled } from "./lib/pageBuilder/featureFlag";
 import {
   CookieBanner,
@@ -239,6 +246,7 @@ function ShowcaseExperienceRoute(props: ShowcaseExperienceRouteProps) {
 
 export default function App() {
   const location = useLocation();
+  const routerNavigate = useNavigate();
   const { navigateTo } = useNavigation();
   const { routeId, config: currentRouteConfig } = useCurrentRoute();
   const setActiveRoute = useUIStore((state) => state.setActiveRoute);
@@ -358,6 +366,52 @@ export default function App() {
     });
   });
 
+  useBotAction("navigate-target", (action) => {
+    const resolved = resolveConciergeTargetAction(action);
+    if (!resolved) {
+      console.warn(`[concierge] Unable to resolve enabled target: ${action.targetKey}`);
+      return;
+    }
+
+    setShowcaseChapterRevealed(false);
+    const currentPath = location.pathname.replace(/\/+$/, "") || "/";
+    const targetPath = resolved.path.replace(/\/+$/, "") || "/";
+    if (resolved.handlerId) queueConciergeTargetAction(action);
+
+    if (currentPath === targetPath) {
+      window.requestAnimationFrame(() => {
+        activatePendingConciergeTarget(location.pathname);
+      });
+      return;
+    }
+
+    if (resolved.route) {
+      navigateTo(resolved.route, {
+        source: "bot",
+        analytics: { action: `concierge_target:${action.targetKey}` },
+      });
+    } else {
+      // Custom Page Builder routes still flow through React Router while the
+      // trusted server descriptor guarantees a safe same-origin public path.
+      routerNavigate(resolved.path, {
+        state: { source: "bot", conciergeTargetKey: action.targetKey },
+      });
+    }
+  });
+
+  useBotAction("highlight-vehicle", (action) => {
+    const vehicleId = action.vehicleId.trim();
+    if (!vehicleId) {
+      console.warn("[bot] highlight-vehicle action missing vehicleId");
+      return;
+    }
+    setShowcaseChapterRevealed(false);
+    navigateTo(
+      { route: "vehicleDetail", vehicleId },
+      { source: "bot", analytics: { action: "bot_highlight_vehicle" } },
+    );
+  });
+
   useBotAction("filter_inventory", (action) => {
     if (location.pathname !== ROUTE_PATHS.vehicles) {
       storePendingInventoryFilter(action);
@@ -393,6 +447,14 @@ export default function App() {
     if (location.pathname === ROUTE_PATHS.vehicles) {
       preloadVehiclesRoute();
     }
+    let stopWatching: () => void = () => undefined;
+    const frameId = window.requestAnimationFrame(() => {
+      stopWatching = watchPendingConciergeTarget(location.pathname);
+    });
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      stopWatching();
+    };
   }, [location.pathname]);
 
   // The live-preview iframe endpoint: no site chrome or audio — just

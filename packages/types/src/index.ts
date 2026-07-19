@@ -3,6 +3,17 @@ export type * from "./vehicle";
 export type * from "./rag";
 export type * from "./chat";
 export type * from "./bot-actions";
+export type * from "./conciergeTargets";
+export {
+  CONCIERGE_TARGET_KINDS,
+  CONCIERGE_TARGET_LIMITS,
+  DEFAULT_CONCIERGE_TARGETS,
+  isConciergeTargetKey,
+  validateConciergeTargetDestination,
+  validateConciergeTargetInput,
+  mergeConciergeTargets,
+  conciergeTargetClientDescriptor,
+} from "./conciergeTargets";
 export type * from "./page";
 export type * from "./tenantTheme";
 export { DEFAULT_TENANT_THEME } from "./tenantTheme";

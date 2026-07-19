@@ -24,6 +24,7 @@ import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { resolveVisitor } from "@/lib/visitorSession";
 import {
+  conciergeConversionMetadata,
   normalizeLeadCaptureInput,
   verifyTurnstileToken,
   type NormalizedLeadCapture,
@@ -147,7 +148,11 @@ export async function POST(request: Request): Promise<Response> {
     .select("id, assigned_to, created_at")
     .single();
   if (error || !data) {
-    console.error("[/api/leads] insert failed:", error?.message ?? "no row");
+    captureError(
+      "api/leads/insert",
+      error ?? new Error("Lead insert returned no row"),
+      { tenantId: tenant.tenantId },
+    );
     return json({ error: "Unable to capture lead" }, 500, request, quotaHeaders);
   }
 
@@ -158,12 +163,16 @@ export async function POST(request: Request): Promise<Response> {
       eventType: "submitted_lead",
       idempotencyKey: `lead:${data.id}`,
       description: "Submitted an enquiry",
-      metadata: { leadId: data.id, source: lead.source },
+      metadata: {
+        leadId: data.id,
+        source: lead.source,
+        ...conciergeConversionMetadata(lead),
+      },
     }).catch((accrualError: unknown) => {
-      console.error(
-        "[/api/leads] loyalty accrual failed:",
-        accrualError instanceof Error ? accrualError.message : "unknown error",
-      );
+      captureError("api/leads/loyalty-accrual", accrualError, {
+        tenantId: tenant.tenantId,
+        leadId: data.id,
+      });
     });
   }
 
@@ -173,7 +182,11 @@ export async function POST(request: Request): Promise<Response> {
     vehicle_id: lead.vehicleId,
     event_name: "inquiry_submitted",
     event_category: "operational",
-    metadata: { leadId: data.id, source: lead.source },
+    metadata: {
+      leadId: data.id,
+      source: lead.source,
+      ...conciergeConversionMetadata(lead),
+    },
   }).then(({ error: analyticsError }) => {
     if (analyticsError) captureError("api/leads/conversion-event", analyticsError, { tenantId: tenant.tenantId, leadId: data.id });
   });
@@ -257,7 +270,7 @@ async function findRecentDuplicate(
 
   const { data, error } = await query.maybeSingle();
   if (error) {
-    console.error("[/api/leads] duplicate lookup failed:", error.message);
+    captureError("api/leads/duplicate-lookup", error, { tenantId });
     return null;
   }
   return data?.id ?? null;
