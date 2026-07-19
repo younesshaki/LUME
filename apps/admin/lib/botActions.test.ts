@@ -186,6 +186,16 @@ describe("stripInlineActions", () => {
       actions: [],
     });
   });
+
+  it("removes empty JSON fences left behind after an action is extracted", () => {
+    const action = `{"type":"filter_inventory","make":"BMW"}`;
+    expect(stripInlineActions(["```json", action, "```"].join("\n"))).toBe("");
+    expect(
+      stripInlineActions(
+        ["Taking you there now.", "```json", action, "```"].join("\n"),
+      ),
+    ).toBe("Taking you there now.");
+  });
 });
 
 describe("InlineActionStreamFilter", () => {
@@ -249,6 +259,24 @@ describe("InlineActionStreamFilter", () => {
     expect(visible).not.toContain("DSML");
     expect(visible).not.toContain(VEHICLE_ID);
     expect([...first.actions, ...second.actions, ...final.actions]).toEqual([]);
+  });
+
+  it("never streams JSON protocol fences split across arbitrary chunks", () => {
+    const filter = new InlineActionStreamFilter();
+    const first = filter.push("```j");
+    const second = filter.push(
+      'son\n{"type":"filter_inventory","make":"BMW"}\n`',
+    );
+    const third = filter.push("``\n");
+    const final = filter.flush();
+    expect(first.visibleText + second.visibleText + third.visibleText + final.visibleText)
+      .toBe("");
+    expect([
+      ...first.actions,
+      ...second.actions,
+      ...third.actions,
+      ...final.actions,
+    ]).toEqual([{ type: "filter_inventory", make: "BMW" }]);
   });
 });
 

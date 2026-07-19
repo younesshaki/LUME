@@ -2,14 +2,38 @@ import { describe, expect, it } from "vitest";
 import { mergeConciergeTargets } from "@lume/types";
 import { DEFAULT_BOT_PERSONA_CAPABILITIES } from "./persona";
 import {
+  actionOnlyAcknowledgement,
+  exactGroundedVehicleId,
   recentVehicleIdFromAssistantHistory,
   recentVehicleIdFromToolResults,
   resolveDeterministicConciergeNavigation,
 } from "./chatNavigation";
 
 const VEHICLE_ID = "5d6df0bd-85db-471e-9c4c-effa3c4938ab";
+const BMW_2016_ID = "877ad1ad-0cdf-47dd-9930-127089b60e10";
+const BMW_2020_ID = "39d724a5-0d3a-4d3e-8918-5ed980855ee0";
 const targets = mergeConciergeTargets([]);
 const capabilities = DEFAULT_BOT_PERSONA_CAPABILITIES;
+const groundedBmws = [
+  {
+    id: BMW_2016_ID,
+    year: 2016,
+    make: "BMW",
+    model: "3 Series 328i xDrive",
+    trim: "",
+    price: 11_995,
+    mileage: 129_832,
+  },
+  {
+    id: BMW_2020_ID,
+    year: 2020,
+    make: "BMW",
+    model: "X3",
+    trim: "xDrive30i",
+    price: 108_500,
+    mileage: 54_153,
+  },
+];
 
 function resolve(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
@@ -50,6 +74,76 @@ describe("deterministic concierge navigation", () => {
         params: { vehicleId: VEHICLE_ID },
       },
     ]);
+  });
+
+  it("applies the canonical make filter for a grounded brand inventory question", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "do you have any BMW" }],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { make: "Bmw" },
+        capabilities,
+      }),
+    ).toEqual([{ type: "filter_inventory", make: "BMW" }]);
+  });
+
+  it("resolves both exact BMW requests from the reported transcript", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{
+          role: "user",
+          content: "open - **2016 BMW 328i xDrive** — 129,832 miles — $11,995",
+        }],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { make: "Bmw", year: 2016 },
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "navigate-target",
+      targetKey: "vehicle-detail",
+      params: { vehicleId: BMW_2016_ID },
+    }]);
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{
+          role: "user",
+          content:
+            "take me to - **2020 BMW X3 xDrive30i** — 54,153 miles — $108,500",
+        }],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { make: "Bmw", year: 2020 },
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "navigate-target",
+      targetKey: "vehicle-detail",
+      params: { vehicleId: BMW_2020_ID },
+    }]);
+  });
+
+  it("fails closed when a grounded vehicle description is still ambiguous", () => {
+    const duplicate = {
+      ...groundedBmws[1]!,
+      id: "f13ee5f8-2308-4e95-a615-1c86332fb118",
+    };
+    expect(
+      exactGroundedVehicleId(
+        "open the 2020 BMW X3 xDrive30i",
+        [groundedBmws[1]!, duplicate],
+      ),
+    ).toBeNull();
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "show me used BMWs from 2020" }],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { make: "Bmw", stockType: "Used", year: 2020 },
+        capabilities,
+      }),
+    ).toEqual([]);
   });
 
   it("turns an affirmative reply to an inquiry offer into opening the real form", () => {
@@ -214,5 +308,19 @@ describe("selected vehicle continuity", () => {
         },
       ]),
     ).toBeNull();
+  });
+});
+
+describe("action-only acknowledgement", () => {
+  it("describes deterministic filters and navigation without exposing JSON", () => {
+    expect(
+      actionOnlyAcknowledgement([{ type: "filter_inventory", make: "BMW" }]),
+    ).toBe("I’ve opened the inventory with those filters applied.");
+    expect(
+      actionOnlyAcknowledgement([
+        { type: "navigate-target", targetKey: "products" },
+      ]),
+    ).toBe("Taking you there now.");
+    expect(actionOnlyAcknowledgement([])).toBe("");
   });
 });

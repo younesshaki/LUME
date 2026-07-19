@@ -3,6 +3,7 @@ import type {
   BotAction,
   BotPersonaCapabilities,
   ConciergeTarget,
+  Vehicle,
 } from "@lume/types";
 import {
   extractDeepseekDsmlToolCalls,
@@ -18,11 +19,30 @@ export type DeterministicConciergeNavigationInput = {
   messages: readonly ConversationMessage[];
   targets: readonly ConciergeTarget[];
   selectedVehicleId?: string | null;
+  groundedVehicles?: readonly GroundedVehicleCandidate[];
+  inventoryFilters?: GroundedInventoryFilters | null;
   capabilities: Pick<
     BotPersonaCapabilities,
-    "navigate" | "openLeadForm"
+    "navigate" | "filterInventory" | "openLeadForm"
   >;
 };
+
+type GroundedVehicleCandidate = Pick<
+  Vehicle,
+  "id" | "year" | "make" | "model" | "trim" | "price" | "mileage"
+>;
+
+type GroundedInventoryFilters = Partial<{
+  make: string;
+  model: string;
+  bodyStyle: string;
+  stockType: string;
+  fuelType: string;
+  drivetrain: string;
+  sellerState: string;
+  sellerCity: string;
+  year: number;
+}>;
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -30,6 +50,8 @@ const AFFIRMATIVE_PATTERN =
   /^(?:yes|yes please|yeah|yep|sure|okay|ok|please do|do it|absolutely|i would|sounds good)[.! ]*$/;
 const EXPLICIT_NAVIGATION_PATTERN =
   /\b(?:take|bring|send|navigate|go|open|visit|show|view)\b/;
+const INVENTORY_DISCOVERY_PATTERN =
+  /\b(?:do you have|have any|available|availability|browse|find|inventory|looking for|show|take|open|view)\b/;
 const IGNORED_TARGET_WORDS = new Set([
   "and",
   "form",
@@ -82,9 +104,21 @@ export function resolveDeterministicConciergeNavigation(
     );
   }
 
-  if (!EXPLICIT_NAVIGATION_PATTERN.test(userText)) return [];
+  const explicitNavigation = EXPLICIT_NAVIGATION_PATTERN.test(userText);
+  if (explicitNavigation) {
+    const exactVehicleId = exactGroundedVehicleId(
+      lastUser.content,
+      input.groundedVehicles ?? [],
+    );
+    if (exactVehicleId) {
+      return targetAction(input.targets, "vehicle-detail", {
+        vehicleId: exactVehicleId,
+      });
+    }
+  }
 
   if (
+    explicitNavigation &&
     input.selectedVehicleId &&
     (/\b(?:that|this|its)\s+(?:page|listing|vehicle|car|details?)\b/.test(
       userText,
@@ -95,6 +129,16 @@ export function resolveDeterministicConciergeNavigation(
       vehicleId: input.selectedVehicleId,
     });
   }
+
+  const inventoryFilter = groundedInventoryFilterAction(
+    userText,
+    input.inventoryFilters,
+    input.groundedVehicles ?? [],
+    input.capabilities.filterInventory !== false,
+  );
+  if (inventoryFilter) return [inventoryFilter];
+
+  if (!explicitNavigation) return [];
 
   const knownKey = knownTargetKey(userText);
   if (knownKey) {
@@ -122,6 +166,79 @@ export function resolveDeterministicConciergeNavigation(
     undefined,
     input.capabilities.openLeadForm !== false,
   );
+}
+
+/**
+ * Resolve an explicitly named vehicle only from the tenant-scoped matches
+ * already loaded by the chat route. Numeric anchors are exact and ties fail
+ * closed, so a similar model can never send the visitor to the wrong listing.
+ */
+export function exactGroundedVehicleId(
+  userContent: string,
+  vehicles: readonly GroundedVehicleCandidate[],
+): string | null {
+  if (vehicles.length === 0) return null;
+  const normalizedUser = normalizeIntentText(userContent);
+  const userTokens = new Set(normalizedUser.split(" ").filter(Boolean));
+  const year = integerAnchor(userContent, /\b(20\d{2})\b/);
+  const price = integerAnchor(userContent, /\$\s*([\d][\d,\s]*)/);
+  const mileage = integerAnchor(
+    userContent,
+    /\b([\d][\d,\s]*)\s*(?:miles?|mi)\b/i,
+  );
+
+  const scored = vehicles.flatMap((vehicle) => {
+    if (!UUID_PATTERN.test(vehicle.id)) return [];
+    if (year !== null && vehicle.year !== year) return [];
+    if (price !== null && Math.round(vehicle.price) !== price) return [];
+    if (mileage !== null && vehicle.mileage !== mileage) return [];
+
+    const makeTokens = meaningfulVehicleTokens(vehicle.make);
+    if (
+      makeTokens.length === 0 ||
+      !makeTokens.every((token) => userTokens.has(token))
+    ) {
+      return [];
+    }
+    const detailTokens = meaningfulVehicleTokens(
+      `${vehicle.model} ${vehicle.trim}`,
+    ).filter((token) => !makeTokens.includes(token));
+    const detailMatches = detailTokens.filter((token) => userTokens.has(token));
+    if (detailMatches.length === 0) return [];
+
+    return [{
+      id: vehicle.id,
+      score:
+        detailMatches.length * 10 +
+        (year !== null ? 5 : 0) +
+        (price !== null ? 20 : 0) +
+        (mileage !== null ? 20 : 0),
+    }];
+  });
+  if (scored.length === 0) return null;
+  scored.sort((left, right) => right.score - left.score);
+  if (scored[0]?.score === scored[1]?.score) return null;
+  return scored[0]?.id ?? null;
+}
+
+export function actionOnlyAcknowledgement(
+  actions: readonly BotAction[],
+): string {
+  if (actions.some((action) => action.type === "filter_inventory")) {
+    return "I’ve opened the inventory with those filters applied.";
+  }
+  if (
+    actions.some(
+      (action) =>
+        action.type === "navigate" ||
+        action.type === "navigate-target" ||
+        action.type === "highlight-vehicle" ||
+        action.type === "open-lead-form",
+    )
+  ) {
+    return "Taking you there now.";
+  }
+  return "";
 }
 
 /** Find the latest exact VDP selected by a trusted inventory tool result. */
@@ -231,6 +348,43 @@ function targetAction(
   ];
 }
 
+function groundedInventoryFilterAction(
+  userText: string,
+  filters: GroundedInventoryFilters | null | undefined,
+  vehicles: readonly GroundedVehicleCandidate[],
+  allowed: boolean,
+): BotAction | null {
+  if (
+    !allowed ||
+    !filters ||
+    !INVENTORY_DISCOVERY_PATTERN.test(userText) ||
+    filters.model ||
+    filters.stockType ||
+    filters.fuelType ||
+    filters.drivetrain ||
+    filters.sellerState ||
+    filters.sellerCity ||
+    filters.year !== undefined
+  ) {
+    return null;
+  }
+
+  const make = filters.make?.trim();
+  const bodyStyle = filters.bodyStyle?.trim();
+  if (!make && !bodyStyle) return null;
+  const canonicalMake = make
+    ? vehicles.find(
+        (vehicle) =>
+          normalizeIntentText(vehicle.make) === normalizeIntentText(make),
+      )?.make ?? make
+    : undefined;
+  return {
+    type: "filter_inventory",
+    ...(canonicalMake ? { make: canonicalMake } : {}),
+    ...(bodyStyle ? { bodyStyle } : {}),
+  };
+}
+
 function previousAssistantMessage(
   messages: readonly ConversationMessage[],
 ): ConversationMessage | null {
@@ -261,6 +415,26 @@ function normalizeIntentText(value: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+function meaningfulVehicleTokens(value: string): string[] {
+  return [
+    ...new Set(
+      normalizeIntentText(value)
+        .split(" ")
+        .filter((token) => token.length >= 2),
+    ),
+  ];
+}
+
+function integerAnchor(
+  value: string,
+  pattern: RegExp,
+): number | null {
+  const match = pattern.exec(value);
+  if (!match?.[1]) return null;
+  const parsed = Number(match[1].replace(/[,\s]/g, ""));
+  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

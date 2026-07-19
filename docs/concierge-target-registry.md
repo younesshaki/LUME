@@ -134,8 +134,17 @@ forged or cross-tenant value cannot navigate.
 
 High-confidence explicit requests such as “take me to the products page,”
 “open the contact page,” and “take me to that vehicle” are also resolved
-deterministically against the enabled registry. This fallback only emits a
-navigation action; it cannot submit a lead or mutate data.
+deterministically against the enabled registry. Brand inventory questions such
+as “do you have any BMWs?” deterministically emit the same canonical make
+filter used to ground the answer, so cross-route navigation cannot lose the
+filter while the inventory screen mounts.
+
+An explicitly named vehicle is resolved only from that turn’s tenant-scoped
+live matches. Year, price, and mileage anchors must match exactly; make and
+model/trim tokens must also be present, and equal-scoring matches fail closed.
+This lets an exact listing open reliably without trusting the model to copy an
+ID, while ambiguous requests remain on the current page. These fallbacks only
+emit UI actions; they cannot submit a lead or mutate data.
 
 ## Streaming reliability
 
@@ -145,11 +154,17 @@ navigation action; it cannot submit a lead or mutate data.
 - a candidate beginning at any `{` is held across arbitrary model chunks, even
   when a provider puts it after prose instead of on a clean line;
 - a valid action line becomes only a structured SSE action;
+- provider-authored `json` protocol fences are suppressed with their action so
+  an extracted payload cannot leave an empty code block in visitor-visible
+  prose;
 - malformed or ordinary JSON remains visible instead of being silently deleted;
 - only visible prose is persisted to visitor preference memory or conversation
   memory.
 
 The non-streamed path uses the matching `stripInlineActions()` behavior.
+When a response contains a valid action but no visitor-visible prose, the
+server supplies a short deterministic acknowledgement instead of rendering an
+empty assistant turn.
 DeepSeek DSML receives the same treatment: it is removed from complete and
 streamed output. Only bounded function calls whose names were already exposed
 by the tenant's callable-tool allowlist can be recovered; their arguments still

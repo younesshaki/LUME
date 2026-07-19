@@ -197,14 +197,22 @@ export function extractInlineActions(content: string): BotAction[] {
  * deleted.
  */
 export function stripInlineActions(content: string): string {
-  return stripDeepseekDsml(content)
-    .split(/\r?\n/)
-    .flatMap((line) => {
-      const extracted = extractActionSegments(line);
-      return extracted.actions.length > 0 && !extracted.visibleText
-        ? []
-        : [extracted.visibleText];
-    })
+  let inJsonFence = false;
+  const visibleLines: string[] = [];
+  for (const line of stripDeepseekDsml(content).split(/\r?\n/)) {
+    if (isJsonFenceOpening(line)) {
+      inJsonFence = true;
+      continue;
+    }
+    if (inJsonFence && isMarkdownFenceClosing(line)) {
+      inJsonFence = false;
+      continue;
+    }
+    const extracted = extractActionSegments(line);
+    if (extracted.actions.length > 0 && !extracted.visibleText) continue;
+    visibleLines.push(extracted.visibleText);
+  }
+  return visibleLines
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -224,6 +232,7 @@ export type InlineActionFilterResult = {
 export class InlineActionStreamFilter {
   private providerBuffer = "";
   private lineBuffer = "";
+  private inJsonFence = false;
 
   push(delta: string): InlineActionFilterResult {
     return this.pushInline(this.consumeProviderText(delta, false));
@@ -234,6 +243,14 @@ export class InlineActionStreamFilter {
     const buffered = this.lineBuffer;
     this.lineBuffer = "";
     if (!buffered) return fromProvider;
+    if (isJsonFenceOpening(buffered)) {
+      this.inJsonFence = true;
+      return fromProvider;
+    }
+    if (this.inJsonFence && isMarkdownFenceClosing(buffered)) {
+      this.inJsonFence = false;
+      return fromProvider;
+    }
     const final = extractActionSegments(buffered);
     return {
       visibleText: fromProvider.visibleText + final.visibleText,
@@ -290,6 +307,14 @@ export class InlineActionStreamFilter {
         ? lineWithCarriage.slice(0, -1)
         : lineWithCarriage;
       this.lineBuffer = this.lineBuffer.slice(newlineIndex + 1);
+      if (isJsonFenceOpening(line)) {
+        this.inJsonFence = true;
+        continue;
+      }
+      if (this.inJsonFence && isMarkdownFenceClosing(line)) {
+        this.inJsonFence = false;
+        continue;
+      }
       const extracted = extractActionSegments(line);
       actions.push(...extracted.actions);
       if (extracted.visibleText || extracted.actions.length === 0) {
@@ -302,6 +327,9 @@ export class InlineActionStreamFilter {
     // even when a provider puts it after prose rather than on a clean line.
     const firstNonWhitespace = this.lineBuffer.search(/\S/);
     if (firstNonWhitespace >= 0) {
+      if (isPossibleJsonFenceLinePrefix(this.lineBuffer, this.inJsonFence)) {
+        return { visibleText, actions };
+      }
       const candidateIndex = this.lineBuffer.indexOf("{", firstNonWhitespace);
       if (candidateIndex >= 0) {
         if (candidateIndex > 0) {
@@ -348,6 +376,24 @@ function extractActionSegments(line: string): InlineActionFilterResult {
     visibleText = "";
   }
   return { visibleText, actions };
+}
+
+function isJsonFenceOpening(value: string): boolean {
+  return /^\s*```\s*json\s*$/i.test(value);
+}
+
+function isMarkdownFenceClosing(value: string): boolean {
+  return /^\s*```\s*$/.test(value);
+}
+
+function isPossibleJsonFenceLinePrefix(
+  value: string,
+  inJsonFence: boolean,
+): boolean {
+  const normalized = value.trimStart().toLowerCase();
+  if (!normalized || !normalized.startsWith("`")) return false;
+  if ("```json".startsWith(normalized)) return true;
+  return inJsonFence && "```".startsWith(normalized);
 }
 
 function completeJsonObjectEnd(value: string, start: number): number {

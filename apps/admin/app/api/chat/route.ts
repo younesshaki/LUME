@@ -19,7 +19,7 @@
  * `messages` with role: "system" is dropped. The tenant is resolved from the
  * X-Lume-Tenant header (or ?tenant= or subdomain — see lib/tenant.ts).
  */
-import type { BotAction, ChatRequest } from "@lume/types";
+import type { BotAction, ChatRequest, Vehicle } from "@lume/types";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
 import {
   getTenantVehicle,
@@ -59,6 +59,7 @@ import {
   stripInlineActions,
 } from "@/lib/botActions";
 import {
+  actionOnlyAcknowledgement,
   recentVehicleIdFromAssistantHistory,
   recentVehicleIdFromToolResults,
   resolveDeterministicConciergeNavigation,
@@ -243,6 +244,8 @@ export async function POST(request: Request): Promise<Response> {
 
   let assembled;
   const groundedVehicleIds = new Set<string>();
+  let groundedVehicles: Vehicle[] = [];
+  let groundedInventoryFilters: ReturnType<typeof extractVehicleFilters> | null = null;
   let selectedVehicleId: string | null = null;
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> = null;
   let visitorPreferenceContext: Awaited<ReturnType<typeof loadVisitorPreferenceContext>> = null;
@@ -313,6 +316,8 @@ export async function POST(request: Request): Promise<Response> {
       filters = extractVehicleFilters(lastUser.content, vehicles);
       const match = matchVehicles(vehicles, filters, lastUser.content);
       matchedVehicles = match.results;
+      groundedVehicles = matchedVehicles;
+      groundedInventoryFilters = filters;
       for (const vehicle of matchedVehicles) groundedVehicleIds.add(vehicle.id);
       totalMatched = match.totalMatched;
       totalInventory = vehicles.length;
@@ -358,9 +363,11 @@ export async function POST(request: Request): Promise<Response> {
     messages: modelMessages,
     targets: conciergeTargets,
     selectedVehicleId,
+    groundedVehicles,
+    inventoryFilters: groundedInventoryFilters,
     capabilities: persona.capabilities,
   });
-  const hasDeterministicNavigation = deterministicActions.length > 0;
+  const hasDeterministicActions = deterministicActions.length > 0;
 
   const deepseekUrl =
     process.env.DEEPSEEK_API_URL ?? "https://api.deepseek.com/v1/chat/completions";
@@ -446,8 +453,8 @@ export async function POST(request: Request): Promise<Response> {
   // ── No tools requested: re-emit the prose as SSE ──────────────────────────
   if (!phase1Message.tool_calls?.length) {
     const content = phase1Message.content ?? "";
-    const visibleContent = stripInlineActions(content);
-    const modelActions = hasDeterministicNavigation
+    const filteredContent = stripInlineActions(content);
+    const modelActions = hasDeterministicActions
       ? deterministicActions
       : extractInlineActions(content);
     const actions = prepareBotActionsForClient(
@@ -462,6 +469,8 @@ export async function POST(request: Request): Promise<Response> {
       conciergeTargets,
       actionAttribution,
     );
+    const visibleContent =
+      filteredContent || actionOnlyAcknowledgement(actions);
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -566,7 +575,8 @@ export async function POST(request: Request): Promise<Response> {
         }
       }
       const seenActionFingerprints = new Set<string>();
-      const initialActions = hasDeterministicNavigation
+      const emittedActions: BotAction[] = [];
+      const initialActions = hasDeterministicActions
         ? deterministicActions
         : turn.actions;
       for (const action of prepareBotActionsForClient(
@@ -583,6 +593,7 @@ export async function POST(request: Request): Promise<Response> {
         seenActionFingerprints,
       )) {
         controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
+        emittedActions.push(action);
       }
 
       const reader = upstreamBody.getReader();
@@ -593,7 +604,7 @@ export async function POST(request: Request): Promise<Response> {
       let doneEventSent = false;
 
       const emitActions = (actions: readonly BotAction[]) => {
-        if (hasDeterministicNavigation) return;
+        if (hasDeterministicActions) return;
         for (const action of prepareBotActionsForClient(
           filterGroundedVehicleActions(
             groundLeadCaptureActions(
@@ -608,7 +619,20 @@ export async function POST(request: Request): Promise<Response> {
           seenActionFingerprints,
         )) {
           controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
+          emittedActions.push(action);
         }
+      };
+
+      const emitActionOnlyAcknowledgement = () => {
+        if (assistantContent.trim()) return;
+        const acknowledgement = actionOnlyAcknowledgement(emittedActions);
+        if (!acknowledgement) return;
+        assistantContent = acknowledgement;
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({ choices: [{ delta: { content: acknowledgement } }] }),
+          ),
+        );
       };
 
       const emitFiltered = ({
@@ -630,6 +654,7 @@ export async function POST(request: Request): Promise<Response> {
 
         if (trimmed === "data: [DONE]") {
           emitFiltered(actionFilter.flush());
+          emitActionOnlyAcknowledgement();
           if (!doneEventSent) {
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             doneEventSent = true;
@@ -660,6 +685,7 @@ export async function POST(request: Request): Promise<Response> {
         }
         emitFiltered(actionFilter.flush());
         if (streamCompletionObserved && !doneEventSent) {
+          emitActionOnlyAcknowledgement();
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           doneEventSent = true;
         }
