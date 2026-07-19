@@ -1,0 +1,161 @@
+/*
+ * Finite, product-owned layout traits for the built-in template registry.
+ * Colors and mode assets still come from the validated SiteDesign document;
+ * these selectors only react to the registry key applied by tenantTheme.ts.
+ * Luxury intentionally has no overrides, preserving the original public site.
+ */
+
+:root[data-lume-template="capital"] .siteHeader {
+  border-bottom-color: color-mix(in srgb, var(--theme-lume-gold) 36%, var(--theme-lume-line));
+  backdrop-filter: blur(12px);
+}
+
+:root[data-lume-template="capital"] :is(
+  .vehiclesPage__toolbar,
+  .vehiclesPage__card,
+  .vehiclesPage__drawer,
+  .vehiclesPage__compareModal,
+  .contactPage__form,
+  .visitorCard
+) {
+  border-radius: 0.35rem;
+}
+
+:root[data-lume-template="capital"] :is(
+  .vehiclesPage__title,
+  .vehicleDetail__title,
+  .contactPage__title
+) {
+  font-family: var(--theme-body-font-family, system-ui);
+  font-weight: 760;
+  letter-spacing: -0.05em;
+  text-transform: none;
+}
+
+:root[data-lume-template="ignition"] .siteHeader {
+  border-bottom: 2px solid var(--theme-lume-gold);
+  background:
+    linear-gradient(110deg, color-mix(in srgb, var(--theme-lume-gold) 8%, transparent), transparent 44%),
+    color-mix(in srgb, var(--theme-lume-background) 90%, transparent);
+}
+
+:root[data-lume-template="ignition"] :is(
+  .vehiclesPage__toolbar,
+  .vehiclesPage__card,
+  .vehiclesPage__drawer,
+  .vehiclesPage__compareModal,
+  .contactPage__form,
+  .visitorCard
+) {
+  border-radius: 0;
+}
+
+:root[data-lume-template="ignition"] .vehiclesPage__card {
+  border-top-color: color-mix(in srgb, var(--theme-lume-gold) 54%, var(--theme-lume-line));
+}
+
+:root[data-lume-template="ignition"] :is(
+  .vehiclesPage__title,
+  .vehicleDetail__title,
+  .contactPage__title
+) {
+  font-family: var(--theme-body-font-family, system-ui);
+  font-weight: 850;
+  letter-spacing: -0.06em;
+  text-transform: uppercase;
+  transform: skewX(-2deg);
+}
+
+:root[data-lume-template="ignition"] :is(
+  .vehiclesPage__detailsBtn,
+  .vehiclesPage__filterToggle,
+  .vehiclesPage__applyBtn,
+  .contactPage__submit
+) {
+  border-radius: 0;
+}
+
+:root[data-lume-template="concierge"] .siteHeader {
+  top: 0.65rem;
+  right: 0.75rem;
+  left: 0.75rem;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-lume-panel) 88%, transparent);
+}
+
+:root[data-lume-template="concierge"] :is(
+  .vehiclesPage__toolbar,
+  .vehiclesPage__card,
+  .vehiclesPage__drawer,
+  .vehiclesPage__compareModal,
+  .contactPage__form,
+  .visitorCard
+) {
+  border-radius: 1.5rem;
+}
+
+:root[data-lume-template="concierge"] .vehiclesPage__cardImage,
+:root[data-lume-template="concierge"] .vehiclesPage__cardImage img {
+  border-radius: 1.1rem 1.1rem 0 0;
+}
+
+:root[data-lume-template="concierge"] :is(
+  .vehiclesPage__detailsBtn,
+  .vehiclesPage__filterToggle,
+  .vehiclesPage__applyBtn,
+  .contactPage__submit
+) {
+  border-radius: 999px;
+}
+
+:root[data-lume-template="exchange"] .siteHeader {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-lume-gold) 9%, transparent) 0 50%, transparent 50%),
+    color-mix(in srgb, var(--theme-lume-background) 88%, transparent);
+}
+
+:root[data-lume-template="exchange"] .vehiclesPage__card {
+  border-left: 3px solid color-mix(in srgb, var(--theme-lume-gold) 72%, transparent);
+}
+
+:root[data-lume-template="exchange"] :is(
+  .vehiclesPage__toolbar,
+  .vehiclesPage__drawer,
+  .vehiclesPage__compareModal,
+  .contactPage__form,
+  .visitorCard
+) {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-lume-gold) 5%, transparent) 0 50%, transparent 50%),
+    var(--theme-lume-panel);
+}
+
+:root[data-lume-template="exchange"] :is(
+  .vehiclesPage__title,
+  .vehicleDetail__title,
+  .contactPage__title
+) {
+  font-family: var(--theme-body-font-family, system-ui);
+  font-weight: 760;
+  letter-spacing: -0.05em;
+  text-transform: none;
+}
+
+@media (max-width: 767px) {
+  :root[data-lume-template="concierge"] .siteHeader {
+    top: 0.4rem;
+    right: 0.45rem;
+    left: 0.45rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-lume-template] :is(
+    .vehiclesPage__card,
+    .vehiclesPage__cardImage img,
+    .siteHeader
+  ) {
+    transition-duration: 0.01ms !important;
+  }
+}
