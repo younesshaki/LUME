@@ -2,7 +2,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useState,
@@ -10,10 +9,8 @@ import {
 } from "react";
 import {
   persistThemeMode,
-  readSystemPrefersDark,
   readThemeMode,
   resolveTheme,
-  THEME_MEDIA_QUERY,
   type ResolvedTheme,
   type ThemeMode,
 } from "./theme";
@@ -37,24 +34,7 @@ export function ThemeProvider({ children, enabled = true }: ThemeProviderProps) 
 
 function ActiveThemeProvider({ children }: PropsWithChildren) {
   const [mode, setStoredMode] = useState<ThemeMode>(readThemeMode);
-  const [systemPrefersDark, setSystemPrefersDark] =
-    useState(readSystemPrefersDark);
-  const resolvedTheme = resolveTheme(mode, systemPrefersDark);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia(THEME_MEDIA_QUERY);
-    const handlePreferenceChange = (event: MediaQueryListEvent) => {
-      setSystemPrefersDark(event.matches);
-    };
-
-    setSystemPrefersDark(mediaQuery.matches);
-    mediaQuery.addEventListener("change", handlePreferenceChange);
-    return () => mediaQuery.removeEventListener("change", handlePreferenceChange);
-  }, []);
+  const resolvedTheme = resolveTheme(mode);
 
   useLayoutEffect(() => {
     if (typeof document === "undefined") return;

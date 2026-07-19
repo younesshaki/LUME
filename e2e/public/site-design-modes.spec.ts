@@ -44,7 +44,7 @@ test("uses the persisted website mode before paint and switches resolved tokens"
     getComputedStyle(element).getPropertyValue("--theme-lume-background").trim(),
   )).toBe("#f4efe5");
 
-  const toggle = page.getByRole("button", { name: /Color theme: Light\. Switch to Dark/i });
+  const toggle = page.getByRole("button", { name: /Switch website color theme to dark/i });
   await toggle.click();
   await expect(root).toHaveAttribute("data-theme", "dark");
   await expect.poll(() => root.evaluate((element) =>
