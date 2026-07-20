@@ -7,9 +7,9 @@
  * Flow (SCRUM-144):
  *   1. Build the system prompt server-side from the tenant's RAG corpus +
  *      vehicle inventory.
- *   2. First DeepSeek call (non-streaming) with @lume/bot tool specs.
+ *   2. First tenant-selected model call (non-streaming) with @lume/bot tools.
  *   3. If the model requested tools, execute them tenant-scoped via
- *      BotToolContext, then re-call DeepSeek (streaming) with the tool
+ *      BotToolContext, then re-call the same model (streaming) with the tool
  *      results for the prose answer. Tool-emitted BotActions are sent to the
  *      client as SSE `action` events right after `meta`.
  *   4. If no tools were requested, the first call's content is re-emitted in
@@ -60,10 +60,9 @@ import { getTenantFromRequest } from "@/lib/tenant";
 import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import {
-  extractDeepseekTextDelta,
+  extractChatCompletionTextDelta,
   extractInlineActions,
   InlineActionStreamFilter,
-  normalizeDeepseekAssistantMessage,
   stripInlineActions,
 } from "@/lib/botActions";
 import {
@@ -88,7 +87,21 @@ import {
   prepareBotActionsForClient,
   vehicleIdFromPublicPagePath,
 } from "@/lib/conciergeTargets";
-import { buildToolRequestFields, loadTenantToolAllowlist } from "@/lib/chatTools";
+import {
+  buildToolRequestFields,
+  loadTenantBotRuntimeConfig,
+} from "@/lib/chatTools";
+import {
+  assistantToolCallMessage,
+  buildChatCompletionBody,
+  normalizeProviderAssistantMessage,
+  type ProviderAssistantMessage,
+} from "@/lib/chatProvider";
+import { resolveChatProvider } from "@/lib/chatProvider.server";
+import {
+  DEFAULT_CONCIERGE_MODEL_ID,
+  isPremiumConciergeModel,
+} from "@/lib/conciergeModels";
 import {
   CHAT_ACTIONS_DISABLED_CAPABILITIES,
   filterPlanAllowedActions,
@@ -199,9 +212,9 @@ export async function POST(request: Request): Promise<Response> {
 
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.
-  const [persona, toolAllowlist, visitor, targetRegistry, tenantPlan] = await Promise.all([
+  const [persona, botRuntimeConfig, visitor, targetRegistry, tenantPlan] = await Promise.all([
     loadActivePersona(supabase, tenant.tenantId),
-    loadTenantToolAllowlist(supabase, tenant.tenantId),
+    loadTenantBotRuntimeConfig(supabase, tenant.tenantId),
     resolveVisitor(request, tenant.tenantId, supabase).catch(() => null),
     loadConciergeTargets(supabase, tenant.tenantId),
     resolveTenantPlan(supabase, tenant.tenantId),
@@ -211,7 +224,10 @@ export async function POST(request: Request): Promise<Response> {
   // gates tools and BotActions below, on top of the tenant's own allowlist
   // and persona capabilities. Fails closed to Basic — see lib/chatEntitlements.
   const chatActionsEnabled = tenantPlan.entitlements["chat.actions"];
-  const enabledTools = planEnabledTools(chatActionsEnabled, toolAllowlist);
+  const enabledTools = planEnabledTools(
+    chatActionsEnabled,
+    botRuntimeConfig.allowedTools,
+  );
   const enabledToolNames = enabledTools.map((tool) => tool.name);
   const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
   const tenantName = tenant.name ?? tenant.slug;
@@ -482,11 +498,34 @@ export async function POST(request: Request): Promise<Response> {
     return new Response(stream, { headers: sseHeaders });
   }
 
-  const deepseekUrl =
-    process.env.DEEPSEEK_API_URL ?? "https://api.deepseek.com/v1/chat/completions";
-  const deepseekKey = process.env.DEEPSEEK_API_KEY;
-  if (!deepseekKey) {
-    return json({ error: "DEEPSEEK_API_KEY not configured" }, 500, request, quotaHeaders);
+  // Premium intelligence levels are plan-gated ("chat.premium_models"): a
+  // stored premium selection is clamped to the base model when the tenant's
+  // plan no longer entitles it (e.g. after a downgrade). Selection-time
+  // enforcement lives in the persona save action; this is the runtime gate.
+  const planClampedModelId =
+    isPremiumConciergeModel(botRuntimeConfig.modelId) &&
+    !tenantPlan.entitlements["chat.premium_models"]
+      ? DEFAULT_CONCIERGE_MODEL_ID
+      : botRuntimeConfig.modelId;
+  const chatProvider = resolveChatProvider(planClampedModelId);
+  if (!chatProvider) {
+    return json(
+      { error: "AI provider is not configured" },
+      503,
+      request,
+      quotaHeaders,
+    );
+  }
+  if (chatProvider.fellBack) {
+    captureError(
+      "api/chat/model-fallback",
+      new Error("Configured concierge model provider is unavailable"),
+      {
+        tenantId: tenant.tenantId,
+        requestedModel: chatProvider.requestedModelId,
+        effectiveModel: chatProvider.profile.id,
+      },
+    );
   }
 
   const systemMessage = {
@@ -498,45 +537,52 @@ export async function POST(request: Request): Promise<Response> {
   // parseToolCalls expects the non-streamed message.tool_calls shape; if the
   // model answers in prose we re-emit its content as SSE below, so the client
   // contract is identical either way.
-  const phase1 = await fetch(deepseekUrl, {
+  const phase1 = await fetch(chatProvider.apiUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${deepseekKey}`,
+      Authorization: `Bearer ${chatProvider.apiKey}`,
     },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      stream: false,
-      messages: [systemMessage, ...modelMessages],
-      ...toolRequestFields,
-    }),
+    body: JSON.stringify(
+      buildChatCompletionBody({
+        modelId: chatProvider.profile.id,
+        stream: false,
+        messages: [systemMessage, ...modelMessages],
+        toolFields: toolRequestFields,
+      }),
+    ),
   });
 
   if (!phase1.ok) {
-    const text = await phase1.text();
+    await phase1.text();
+    captureError(
+      "api/chat/provider-phase-1",
+      new Error("Concierge provider request failed"),
+      {
+        tenantId: tenant.tenantId,
+        provider: chatProvider.profile.provider,
+        model: chatProvider.profile.id,
+        status: phase1.status,
+      },
+    );
     return json(
-      { error: `Deepseek error ${phase1.status}: ${text}` },
-      phase1.status,
+      { error: "AI provider request failed" },
+      phase1.status === 429 ? 429 : 502,
       request,
       quotaHeaders,
     );
   }
 
-  let phase1Message: DeepseekMessage;
+  let phase1Message: ProviderAssistantMessage;
   try {
-    const parsed = (await phase1.json()) as DeepseekCompletion;
+    const parsed = (await phase1.json()) as ProviderCompletion;
     const message = parsed.choices?.[0]?.message;
     if (!message) throw new Error("no choices in completion");
-    const normalized = normalizeDeepseekAssistantMessage(
+    phase1Message = normalizeProviderAssistantMessage(
+      chatProvider.profile,
       message,
       enabledToolNames,
     );
-    phase1Message = {
-      content: normalized.content,
-      ...(normalized.toolCalls.length > 0
-        ? { tool_calls: normalized.toolCalls }
-        : {}),
-    };
   } catch (err) {
     const message = err instanceof Error ? err.message : "bad completion";
     captureError("api/chat/completion-parse", err, {
@@ -547,8 +593,8 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // ── No tools requested: re-emit the prose as SSE ──────────────────────────
-  if (!phase1Message.tool_calls?.length) {
-    const content = phase1Message.content ?? "";
+  if (phase1Message.toolCalls.length === 0) {
+    const content = phase1Message.content;
     const filteredContent = stripInlineActions(content);
     const modelActions = hasDeterministicActions
       ? deterministicActions
@@ -622,39 +668,47 @@ export async function POST(request: Request): Promise<Response> {
     getVehicleById: (id) => getTenantVehicle(anonDb, tenant.tenantId, id),
   };
 
-  const calls = parseToolCalls(phase1Message.tool_calls);
+  const calls = parseToolCalls(phase1Message.toolCalls);
   const turn = await runToolCalls(calls, ctx, { allowedToolNames: enabledToolNames });
   const thinkingSteps = turnThinkingSteps(turn.steps);
 
-  const phase2 = await fetch(deepseekUrl, {
+  const phase2 = await fetch(chatProvider.apiUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${deepseekKey}`,
+      Authorization: `Bearer ${chatProvider.apiKey}`,
     },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      stream: true,
-      // No tools on the follow-up: one tool round per turn keeps latency and
-      // failure modes bounded. Revisit if multi-round tool use proves useful.
-      messages: [
-        systemMessage,
-        ...modelMessages,
-        {
-          role: "assistant",
-          content: phase1Message.content ?? "",
-          tool_calls: phase1Message.tool_calls,
-        },
-        ...toToolResultMessages(turn.steps),
-      ],
-    }),
+    body: JSON.stringify(
+      buildChatCompletionBody({
+        modelId: chatProvider.profile.id,
+        stream: true,
+        // No tools on the follow-up: one tool round per turn keeps latency and
+        // failure modes bounded. Revisit if multi-round tool use proves useful.
+        messages: [
+          systemMessage,
+          ...modelMessages,
+          assistantToolCallMessage(phase1Message),
+          ...toToolResultMessages(turn.steps),
+        ],
+      }),
+    ),
   });
 
   if (!phase2.ok) {
-    const text = await phase2.text();
+    await phase2.text();
+    captureError(
+      "api/chat/provider-phase-2",
+      new Error("Concierge provider follow-up failed"),
+      {
+        tenantId: tenant.tenantId,
+        provider: chatProvider.profile.provider,
+        model: chatProvider.profile.id,
+        status: phase2.status,
+      },
+    );
     return json(
-      { error: `Deepseek error ${phase2.status}: ${text}` },
-      phase2.status,
+      { error: "AI provider request failed" },
+      phase2.status === 429 ? 429 : 502,
       request,
       quotaHeaders,
     );
@@ -779,7 +833,7 @@ export async function POST(request: Request): Promise<Response> {
           return;
         }
 
-        const textDelta = extractDeepseekTextDelta(line);
+        const textDelta = extractChatCompletionTextDelta(line);
         if (!textDelta) return;
         emitFiltered(actionFilter.push(textDelta));
       };
@@ -904,11 +958,12 @@ function sseEvent(payload: unknown): string {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
-type DeepseekMessage = {
+type ProviderMessage = {
   content?: string | null;
+  reasoning_content?: string | null;
   tool_calls?: LlmToolCall[];
 };
 
-type DeepseekCompletion = {
-  choices?: Array<{ message?: DeepseekMessage }>;
+type ProviderCompletion = {
+  choices?: Array<{ message?: ProviderMessage }>;
 };

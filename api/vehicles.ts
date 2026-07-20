@@ -277,6 +277,7 @@ function buildVehicleQuery(
   }
 
   switch (sp.get("sort") || "recommended") {
+    case "created_desc": vehicleQuery = vehicleQuery.order("created_at", { ascending: false }); break;
     case "price_asc": vehicleQuery = vehicleQuery.order("price", { ascending: true }); break;
     case "price_desc": vehicleQuery = vehicleQuery.order("price", { ascending: false }); break;
     case "year_desc": vehicleQuery = vehicleQuery.order("year", { ascending: false }); break;

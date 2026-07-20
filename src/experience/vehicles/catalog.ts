@@ -102,6 +102,7 @@ export type VehicleFilters = {
 
 export type VehicleSort =
   | "recommended"
+  | "created_desc"
   | "price_asc"
   | "price_desc"
   | "year_desc"
@@ -114,6 +115,7 @@ export const YEAR_MAX = 2027;
 
 export const VEHICLE_SORT_OPTIONS: { label: string; value: VehicleSort }[] = [
   { label: "Recommended", value: "recommended" },
+  { label: "Recently added", value: "created_desc" },
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" },
   { label: "Newest Year", value: "year_desc" },
@@ -1050,6 +1052,7 @@ export function sortVehicles(vehicles: Vehicle[], sort: VehicleSort): Vehicle[] 
   const regular  = vehicles.filter(v => !v.isSpecial);
 
   if (sort === "recommended") return [...specials, ...regular];
+  if (sort === "created_desc") return [...vehicles];
 
   const compareFn = (a: Vehicle, b: Vehicle): number => {
     if (sort === "price_asc")    return a.price - b.price;

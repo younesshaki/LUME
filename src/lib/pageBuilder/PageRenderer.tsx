@@ -171,6 +171,12 @@ type PageBlocksViewProps = {
   context?: Omit<PageBuilderRenderContextValue, "pageSlug">;
   /** Override the ambient dual-mode value (the live preview forces a mode). */
   mode?: BlockMode;
+  /**
+   * Optional per-block wrapper, rendered inside the error boundary. The live
+   * preview uses it for click-to-select; production rendering leaves it unset
+   * so page markup stays exactly as blocks author it.
+   */
+  blockWrapper?: (block: PageBlock, children: ReactNode) => ReactNode;
 };
 
 /**
@@ -179,7 +185,7 @@ type PageBlocksViewProps = {
  * the published-page renderer and the admin live-preview bridge render through
  * this so the preview is pixel-identical to production — never an approximation.
  */
-export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverride }: PageBlocksViewProps) {
+export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverride, blockWrapper }: PageBlocksViewProps) {
   const { mode: ambientMode } = useDualMode();
   const mode = modeOverride ?? ambientMode;
 
@@ -208,7 +214,9 @@ export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverri
             {slug === "home" && <div className="storyHome__tracingBeam" aria-hidden="true" />}
             {renderableBlocks.map(({ block, Component }) => (
               <BlockBoundary key={block.id} block={block}>
-                <Component block={block} mode={mode} />
+                {blockWrapper
+                  ? blockWrapper(block, <Component block={block} mode={mode} />)
+                  : <Component block={block} mode={mode} />}
               </BlockBoundary>
             ))}
             {slug === "contact" ? <ConciergeLeadForm /> : null}

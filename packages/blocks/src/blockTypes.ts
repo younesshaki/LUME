@@ -84,6 +84,169 @@ export const heroSchema = z.object({
 
 export type HeroBlockProps = z.infer<typeof heroSchema>;
 
+const requiredShortText = z.string().trim().min(1, "This field is required").max(180);
+const optionalShortText = z.string().max(180).optional().default("");
+const optionalBodyText = z.string().max(2_000).optional().default("");
+const requiredBodyText = z.string().trim().min(1, "This field is required").max(2_000);
+const labelBodyItemSchema = z.object({
+  label: z.string().trim().min(1, "Label is required").max(180),
+  body: z.string().trim().min(1, "Body is required").max(2_000),
+});
+const labelBodyItemsSchema = z.array(labelBodyItemSchema).max(20).default([]);
+
+function isSafeLinkValue(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (
+    (trimmed.startsWith("/") && !trimmed.startsWith("//")) ||
+    trimmed.startsWith("#")
+  ) {
+    return true;
+  }
+  try {
+    const url = new URL(trimmed);
+    return ["https:", "http:", "tel:", "mailto:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function isSafeMediaValue(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return true;
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+const safeLinkSchema = z
+  .string()
+  .max(2_048)
+  .refine(isSafeLinkValue, "Use a local path or an http(s), telephone, or email URL")
+  .optional()
+  .default("");
+const safeMediaSchema = z
+  .string()
+  .max(2_048)
+  .refine(isSafeMediaValue, "Use a local path or an http(s) media URL")
+  .optional()
+  .default("");
+
+function isSupportedVideoValue(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    return (
+      host === "youtu.be" ||
+      host === "youtube.com" ||
+      host === "m.youtube.com" ||
+      host === "youtube-nocookie.com" ||
+      host === "vimeo.com" ||
+      host === "player.vimeo.com"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isSupportedMapEmbedValue(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.toLowerCase();
+    return (
+      url.protocol === "https:" &&
+      (
+        host === "www.google.com" ||
+        host === "maps.google.com" ||
+        host.endsWith(".openstreetmap.org")
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+const videoEmbedUrlSchema = z
+  .string()
+  .max(2_048)
+  .refine(isSupportedVideoValue, "Use a YouTube or Vimeo URL")
+  .optional()
+  .default("");
+const mapEmbedUrlSchema = z
+  .string()
+  .max(2_048)
+  .refine(isSupportedMapEmbedValue, "Use a Google Maps or OpenStreetMap embed URL")
+  .optional()
+  .default("");
+const mediaItemSchema = z.object({
+  label: z.string().trim().min(1, "Image alt text is required").max(180),
+  body: z
+    .string()
+    .trim()
+    .min(1, "Image URL is required")
+    .max(2_048)
+    .refine(isSafeMediaValue, "Use a local path or an http(s) image URL"),
+});
+const mediaItemsSchema = z.array(mediaItemSchema).max(20).default([]);
+const logoItemSchema = z.object({
+  label: z.string().trim().min(1, "Partner name is required").max(180),
+  body: z
+    .string()
+    .trim()
+    .min(1, "Use “text” or an image URL")
+    .max(2_048)
+    .refine(
+      (value) => value.toLowerCase() === "text" || isSafeMediaValue(value),
+      "Use “text”, a local path, or an http(s) image URL",
+    ),
+});
+const logoItemsSchema = z.array(logoItemSchema).max(20).default([]);
+
+function sectionFields(): BlockField[] {
+  return [
+    { name: "eyebrow", label: "Eyebrow", type: "text" },
+    { name: "title", label: "Title", type: "text" },
+    { name: "body", label: "Supporting copy", type: "textarea" },
+  ];
+}
+
+function listField(
+  name: string,
+  label: string,
+  itemLabel: string,
+  itemBody: string,
+  helpText?: string,
+): BlockField {
+  return {
+    name,
+    label,
+    type: "statement-list",
+    itemFields: [
+      { name: "label", label: itemLabel, type: "text" },
+      { name: "body", label: itemBody, type: "textarea" },
+    ],
+    ...(helpText ? { helpText } : {}),
+  };
+}
+
+function basicSectionSchema<TExtra extends z.ZodRawShape>(extra: TExtra) {
+  return z.object({
+    eyebrow: optionalShortText,
+    title: requiredShortText,
+    body: optionalBodyText,
+    ...extra,
+  });
+}
+
 export const BLOCK_DESCRIPTORS = {
   hero: descriptor({
     type: "hero",
@@ -288,6 +451,801 @@ export const BLOCK_DESCRIPTORS = {
           { label: "Chapter 3", value: "showcase-chapter-3" },
         ],
       },
+    ],
+  }),
+
+  "trade-in-form": descriptor({
+    type: "trade-in-form",
+    displayName: "Trade-In Form",
+    description: "Capture a vehicle appraisal request through the existing lead pipeline.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Your Current Vehicle",
+      title: "Begin with a considered valuation.",
+      body:
+        "Share the essentials. Our appraisal team will review the vehicle and return with a private, market-informed estimate.",
+      buttonLabel: "Request appraisal",
+      successMessage: "Your appraisal request is with our team. We will be in touch shortly.",
+      disclaimer:
+        "Estimates are subject to an in-person inspection, history review, and current market conditions.",
+    },
+    schema: basicSectionSchema({
+      buttonLabel: requiredShortText,
+      successMessage: requiredShortText,
+      disclaimer: optionalBodyText,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "buttonLabel", label: "Submit button label", type: "text" },
+      { name: "successMessage", label: "Success message", type: "textarea" },
+      { name: "disclaimer", label: "Appraisal disclaimer", type: "textarea" },
+    ],
+  }),
+
+  "finance-calculator": descriptor({
+    type: "finance-calculator",
+    displayName: "Finance Calculator",
+    description: "Estimate a monthly vehicle payment with an editable disclosure.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Finance",
+      title: "Shape the terms around the drive.",
+      body:
+        "Adjust the purchase price, deposit, term, and illustrative rate to explore a monthly estimate.",
+      defaultPrice: 85000,
+      defaultDeposit: 15000,
+      defaultTermMonths: 60,
+      defaultAnnualRate: 6.9,
+      disclaimer:
+        "Illustrative estimate only. This is not an offer of credit. Final terms depend on lender approval, taxes, fees, and individual circumstances.",
+    },
+    schema: basicSectionSchema({
+      defaultPrice: z.number().min(0).max(10_000_000),
+      defaultDeposit: z.number().min(0).max(10_000_000),
+      defaultTermMonths: z.number().int().min(12).max(120),
+      defaultAnnualRate: z.number().min(0).max(100),
+      disclaimer: requiredBodyText,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "defaultPrice", label: "Default vehicle price", type: "number" },
+      { name: "defaultDeposit", label: "Default deposit", type: "number" },
+      { name: "defaultTermMonths", label: "Default term in months", type: "number" },
+      { name: "defaultAnnualRate", label: "Default annual rate (%)", type: "number" },
+      { name: "disclaimer", label: "Finance disclaimer", type: "textarea" },
+    ],
+  }),
+
+  "test-drive-booking": descriptor({
+    type: "test-drive-booking",
+    displayName: "Test-Drive Booking",
+    description: "Capture a preferred vehicle, date, and time as a test-drive lead.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Private Appointment",
+      title: "Meet the vehicle on your terms.",
+      body:
+        "Choose a preferred date and time. A product specialist will confirm availability personally.",
+      buttonLabel: "Request test drive",
+      successMessage: "Your preferred appointment has been received. We will confirm it shortly.",
+    },
+    schema: basicSectionSchema({
+      buttonLabel: requiredShortText,
+      successMessage: requiredShortText,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "buttonLabel", label: "Submit button label", type: "text" },
+      { name: "successMessage", label: "Success message", type: "textarea" },
+    ],
+  }),
+
+  "lead-capture-form": descriptor({
+    type: "lead-capture-form",
+    displayName: "Lead Capture Form",
+    description: "A general dealership enquiry form backed by the existing lead pipeline.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Personal Assistance",
+      title: "Start a private conversation.",
+      body:
+        "Tell us what you are looking for. A member of the dealership team will respond directly.",
+      buttonLabel: "Send enquiry",
+      successMessage: "Your enquiry has been received. We will follow up shortly.",
+    },
+    schema: basicSectionSchema({
+      buttonLabel: requiredShortText,
+      successMessage: requiredShortText,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "buttonLabel", label: "Submit button label", type: "text" },
+      { name: "successMessage", label: "Success message", type: "textarea" },
+    ],
+  }),
+
+  "whatsapp-cta": descriptor({
+    type: "whatsapp-cta",
+    displayName: "WhatsApp CTA",
+    description: "Open a dealership WhatsApp conversation with a prefilled message.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Direct Line",
+      title: "Continue the conversation on WhatsApp.",
+      body: "Speak with the dealership team for availability, specifications, or a private viewing.",
+      phone: "15551234567",
+      message: "Hello, I would like to speak with the dealership about a vehicle.",
+      buttonLabel: "Message on WhatsApp",
+    },
+    schema: basicSectionSchema({
+      phone: z.string().regex(/^[+()\d\s-]{7,24}$/, "Enter a valid WhatsApp number"),
+      message: z.string().min(1).max(500),
+      buttonLabel: requiredShortText,
+    }),
+    fields: [
+      ...sectionFields(),
+      {
+        name: "phone",
+        label: "WhatsApp number",
+        type: "text",
+        helpText: "Include the international country code.",
+      },
+      { name: "message", label: "Prefilled message", type: "textarea" },
+      { name: "buttonLabel", label: "Button label", type: "text" },
+    ],
+  }),
+
+  "cta-banner": descriptor({
+    type: "cta-banner",
+    displayName: "CTA Banner",
+    description: "A focused conversion banner with primary and secondary actions.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Your Next Vehicle",
+      title: "The right example deserves a closer look.",
+      body: "Explore the live collection or arrange a private conversation with our team.",
+      primaryLabel: "View inventory",
+      primaryHref: "/vehicles",
+      secondaryLabel: "Contact the team",
+      secondaryHref: "/contact",
+    },
+    schema: basicSectionSchema({
+      primaryLabel: requiredShortText,
+      primaryHref: safeLinkSchema,
+      secondaryLabel: optionalShortText,
+      secondaryHref: safeLinkSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "primaryLabel", label: "Primary action label", type: "text" },
+      { name: "primaryHref", label: "Primary action link", type: "url" },
+      { name: "secondaryLabel", label: "Secondary action label", type: "text" },
+      { name: "secondaryHref", label: "Secondary action link", type: "url" },
+    ],
+  }),
+
+  "announcement-bar": descriptor({
+    type: "announcement-bar",
+    displayName: "Announcement Bar",
+    description: "A restrained notice for arrivals, events, or dealership updates.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      message: "New arrivals are now available for private viewing.",
+      linkLabel: "Explore the collection",
+      linkHref: "/vehicles",
+      dismissible: true,
+    },
+    schema: z.object({
+      message: requiredShortText,
+      linkLabel: optionalShortText,
+      linkHref: safeLinkSchema,
+      dismissible: z.boolean().default(true),
+    }),
+    fields: [
+      { name: "message", label: "Announcement", type: "text" },
+      { name: "linkLabel", label: "Link label", type: "text" },
+      { name: "linkHref", label: "Link destination", type: "url" },
+      { name: "dismissible", label: "Allow visitors to dismiss", type: "boolean" },
+    ],
+  }),
+
+  "newsletter-signup": descriptor({
+    type: "newsletter-signup",
+    displayName: "New-Arrival Signup",
+    description: "Capture visitors who want to hear about newly listed vehicles.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "First Look",
+      title: "Be notified before the next arrival is widely seen.",
+      body: "Join the private new-arrival list. We will only contact you when the collection changes.",
+      buttonLabel: "Notify me",
+      successMessage: "You are on the new-arrival list.",
+    },
+    schema: basicSectionSchema({
+      buttonLabel: requiredShortText,
+      successMessage: requiredShortText,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "buttonLabel", label: "Submit button label", type: "text" },
+      { name: "successMessage", label: "Success message", type: "textarea" },
+    ],
+  }),
+
+  "featured-vehicles": descriptor({
+    type: "featured-vehicles",
+    displayName: "Featured Vehicles",
+    description: "A curated or filtered vehicle carousel from the live tenant inventory.",
+    category: "data",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Selected Inventory",
+      title: "A considered edit of the current collection.",
+      body: "Chosen for specification, provenance, and presence.",
+      vehicleIds: [] as string[],
+      make: "",
+      bodyStyle: "",
+      priceMax: 0,
+      maxItems: 6,
+      ctaLabel: "View all vehicles",
+    },
+    schema: basicSectionSchema({
+      vehicleIds: z.array(z.string().uuid()).max(12).default([]),
+      make: optionalShortText,
+      bodyStyle: optionalShortText,
+      priceMax: z.number().min(0).max(100_000_000).default(0),
+      maxItems: z.number().int().min(1).max(12).default(6),
+      ctaLabel: requiredShortText,
+    }),
+    fields: [
+      ...sectionFields(),
+      {
+        name: "vehicleIds",
+        label: "Curated vehicle IDs",
+        type: "string-list",
+        helpText: "Optional. Leave empty to use the filters below.",
+      },
+      { name: "make", label: "Make filter", type: "text" },
+      { name: "bodyStyle", label: "Body style filter", type: "text" },
+      { name: "priceMax", label: "Maximum price (0 for any)", type: "number" },
+      { name: "maxItems", label: "Maximum vehicles", type: "number" },
+      { name: "ctaLabel", label: "Inventory link label", type: "text" },
+    ],
+  }),
+
+  "new-arrivals": descriptor({
+    type: "new-arrivals",
+    displayName: "New Arrivals",
+    description: "Automatically show the latest live vehicles added by this tenant.",
+    category: "data",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Just Arrived",
+      title: "The newest additions to the collection.",
+      body: "Recently listed and ready for a closer look.",
+      maxItems: 6,
+      ctaLabel: "See every new arrival",
+    },
+    schema: basicSectionSchema({
+      maxItems: z.number().int().min(1).max(12).default(6),
+      ctaLabel: requiredShortText,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "maxItems", label: "Maximum vehicles", type: "number" },
+      { name: "ctaLabel", label: "Inventory link label", type: "text" },
+    ],
+  }),
+
+  "vehicle-search-band": descriptor({
+    type: "vehicle-search-band",
+    displayName: "Vehicle Search Band",
+    description: "A quick make, model, and budget search that opens filtered inventory.",
+    category: "data",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Find Your Vehicle",
+      title: "Begin with the essentials.",
+      body: "Choose a make, model, and budget. The full inventory will open with those filters applied.",
+      buttonLabel: "Search inventory",
+      defaultBudget: 0,
+    },
+    schema: basicSectionSchema({
+      buttonLabel: requiredShortText,
+      defaultBudget: z.number().min(0).max(100_000_000).default(0),
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "buttonLabel", label: "Search button label", type: "text" },
+      { name: "defaultBudget", label: "Default maximum budget (0 for any)", type: "number" },
+    ],
+  }),
+
+  "vehicle-spec-table": descriptor({
+    type: "vehicle-spec-table",
+    displayName: "Vehicle Specification Table",
+    description: "A clear, editable table of vehicle or service specifications.",
+    category: "data",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Specification",
+      title: "The details, precisely stated.",
+      body: "Use this table for a featured vehicle, ownership programme, or dealership service.",
+      items: [
+        { label: "Powertrain", body: "4.0-litre twin-turbo V8" },
+        { label: "Transmission", body: "Eight-speed automatic" },
+        { label: "Drivetrain", body: "All-wheel drive" },
+        { label: "Exterior", body: "Obsidian Black" },
+      ],
+    },
+    schema: basicSectionSchema({
+      items: labelBodyItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      listField("items", "Specifications", "Specification", "Value"),
+    ],
+  }),
+
+  testimonials: descriptor({
+    type: "testimonials",
+    displayName: "Testimonials",
+    description: "Customer comments presented as restrained proof points.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Client Notes",
+      title: "Confidence, expressed quietly.",
+      body: "A few words from clients who trusted us with their next vehicle.",
+      items: [
+        {
+          label: "Amelia R. — Returning client",
+          body: "Every detail was handled before I needed to ask. The car was exactly as described.",
+        },
+        {
+          label: "Daniel M. — First-time buyer",
+          body: "Measured advice, transparent history, and a delivery that felt genuinely personal.",
+        },
+        {
+          label: "Sophia K. — Collector",
+          body: "They understood the specification I wanted and waited for the right example.",
+        },
+      ],
+    },
+    schema: basicSectionSchema({
+      items: labelBodyItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      listField("items", "Testimonials", "Client", "Quote"),
+    ],
+  }),
+
+  "review-summary": descriptor({
+    type: "review-summary",
+    displayName: "Review Summary",
+    description: "Display a review rating, count, source, and supporting message.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Client Confidence",
+      title: "A reputation built one handover at a time.",
+      body: "Independent feedback from verified dealership clients.",
+      rating: 4.9,
+      reviewCount: 287,
+      sourceLabel: "Read verified reviews",
+      sourceHref: "",
+    },
+    schema: basicSectionSchema({
+      rating: z.number().min(0).max(5),
+      reviewCount: z.number().int().min(0).max(100_000_000),
+      sourceLabel: optionalShortText,
+      sourceHref: safeLinkSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "rating", label: "Rating out of 5", type: "number" },
+      { name: "reviewCount", label: "Review count", type: "number" },
+      { name: "sourceLabel", label: "Review link label", type: "text" },
+      { name: "sourceHref", label: "Review link", type: "url" },
+    ],
+  }),
+
+  "trust-stats": descriptor({
+    type: "trust-stats",
+    displayName: "Trust Statistics",
+    description: "Animated dealership proof points with reduced-motion support.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Measured Experience",
+      title: "The numbers behind the service.",
+      body: "Edit each value as number, optional decimal places, and suffix: 2500|0|+.",
+      items: [
+        { label: "Vehicles delivered", body: "2500|0|+" },
+        { label: "Client rating", body: "4.9|1|/5" },
+        { label: "Years of expertise", body: "18|0|+" },
+        { label: "Repeat clients", body: "72|0|%" },
+      ],
+    },
+    schema: basicSectionSchema({
+      items: labelBodyItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      listField(
+        "items",
+        "Statistics",
+        "Metric label",
+        "Value | decimals | suffix",
+        "Example: 4.9|1|/5 or 2500|0|+.",
+      ),
+    ],
+  }),
+
+  "logo-marquee": descriptor({
+    type: "logo-marquee",
+    displayName: "Logo Marquee",
+    description: "A reduced-motion-safe marquee for brands or finance partners.",
+    category: "media",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Trusted Relationships",
+      title: "Names our clients already know.",
+      body: "Add a partner name and an optional public logo URL. Text is used when no image is supplied.",
+      items: [
+        { label: "Porsche", body: "text" },
+        { label: "Mercedes-Benz", body: "text" },
+        { label: "BMW", body: "text" },
+        { label: "Land Rover", body: "text" },
+        { label: "Ferrari", body: "text" },
+      ],
+    },
+    schema: basicSectionSchema({
+      items: logoItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      listField(
+        "items",
+        "Partners",
+        "Partner name / logo alt text",
+        "Logo URL or “text”",
+      ),
+    ],
+  }),
+
+  "services-list": descriptor({
+    type: "services-list",
+    displayName: "Services List",
+    description: "Present core dealership services in a clear responsive grid.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Beyond the Handover",
+      title: "Ownership, considered in full.",
+      body: "A dealership relationship should continue long after the keys change hands.",
+      items: [
+        { label: "Vehicle sourcing", body: "A discreet search for the exact specification you want." },
+        { label: "Part exchange", body: "Market-informed valuations and a straightforward transition." },
+        { label: "Finance", body: "A choice of structures explained with clarity." },
+        { label: "Aftercare", body: "Introductions to trusted servicing, detailing, and transport partners." },
+      ],
+    },
+    schema: basicSectionSchema({
+      items: labelBodyItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      listField("items", "Services", "Service", "Description"),
+    ],
+  }),
+
+  "how-it-works": descriptor({
+    type: "how-it-works",
+    displayName: "How It Works",
+    description: "Explain the dealership journey as an ordered set of steps.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "A Clear Process",
+      title: "From first conversation to final handover.",
+      body: "Every stage is deliberate, transparent, and led by one point of contact.",
+      items: [
+        { label: "Tell us what matters", body: "Share the vehicle, specification, timing, and ownership goals." },
+        { label: "Review the right examples", body: "We present relevant cars with condition and provenance made clear." },
+        { label: "Complete with confidence", body: "Inspection, documentation, finance, and delivery are coordinated around you." },
+      ],
+    },
+    schema: basicSectionSchema({
+      items: labelBodyItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      listField("items", "Steps", "Step title", "Step description"),
+    ],
+  }),
+
+  "faq-accordion": descriptor({
+    type: "faq-accordion",
+    displayName: "FAQ Accordion",
+    description: "Accessible frequently asked questions using the shared accordion primitive.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Questions, Answered",
+      title: "The details worth knowing.",
+      body: "Clear answers before the conversation begins.",
+      items: [
+        {
+          label: "Can you source a vehicle that is not listed?",
+          body: "Yes. Share the model, specification, and timing and our team can begin a discreet search.",
+        },
+        {
+          label: "Do you accept part exchange?",
+          body: "Yes. We can review your current vehicle remotely before arranging a final inspection.",
+        },
+        {
+          label: "Can delivery be arranged?",
+          body: "Collection and enclosed transport options can be coordinated once the purchase is complete.",
+        },
+      ],
+    },
+    schema: basicSectionSchema({
+      items: labelBodyItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      listField("items", "Questions", "Question", "Answer"),
+    ],
+  }),
+
+  "team-grid": descriptor({
+    type: "team-grid",
+    displayName: "Team Grid",
+    description: "Introduce dealership specialists with roles and concise biographies.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Your Team",
+      title: "Expertise with a name and a direct line.",
+      body: "A small team, accountable for every detail.",
+      items: [
+        {
+          label: "Alex Morgan",
+          body: "Managing Director|Collector-car sourcing and long-term client relationships.",
+        },
+        {
+          label: "Maya Laurent",
+          body: "Sales Director|Contemporary performance and luxury vehicles.",
+        },
+        {
+          label: "James Ellis",
+          body: "Vehicle Specialist|Appraisals, provenance, and pre-delivery preparation.",
+        },
+      ],
+    },
+    schema: basicSectionSchema({
+      items: labelBodyItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      listField(
+        "items",
+        "Team members",
+        "Name",
+        "Role | short biography",
+        "Separate the role and biography with |.",
+      ),
+    ],
+  }),
+
+  "split-feature": descriptor({
+    type: "split-feature",
+    displayName: "Split Feature",
+    description: "An image-and-copy feature with an editable media position.",
+    category: "media",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Prepared Without Compromise",
+      title: "Every vehicle is presented with its story intact.",
+      body:
+        "Condition, provenance, ownership history, and preparation are considered before a car enters the collection.",
+      mediaUrl: "",
+      mediaAlt: "A dealership specialist inspecting a vehicle",
+      mediaPosition: "left",
+      ctaLabel: "Explore the collection",
+      ctaHref: "/vehicles",
+    },
+    schema: basicSectionSchema({
+      mediaUrl: safeMediaSchema,
+      mediaAlt: requiredShortText,
+      mediaPosition: z.enum(["left", "right"]).default("left"),
+      ctaLabel: optionalShortText,
+      ctaHref: safeLinkSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "mediaUrl", label: "Image", type: "url" },
+      { name: "mediaAlt", label: "Image alt text", type: "text" },
+      {
+        name: "mediaPosition",
+        label: "Image position",
+        type: "select",
+        options: [
+          { label: "Left", value: "left" },
+          { label: "Right", value: "right" },
+        ],
+      },
+      { name: "ctaLabel", label: "Action label", type: "text" },
+      { name: "ctaHref", label: "Action link", type: "url" },
+    ],
+  }),
+
+  "video-embed": descriptor({
+    type: "video-embed",
+    displayName: "Video Embed",
+    description: "A privacy-conscious YouTube or Vimeo presentation band without autoplay.",
+    category: "media",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "In Motion",
+      title: "See the vehicle as it was meant to be seen.",
+      body: "Add a YouTube or Vimeo URL. Playback begins only when the visitor chooses.",
+      videoUrl: "",
+      caption: "Vehicle film",
+    },
+    schema: basicSectionSchema({
+      videoUrl: videoEmbedUrlSchema,
+      caption: optionalShortText,
+    }),
+    fields: [
+      ...sectionFields(),
+      {
+        name: "videoUrl",
+        label: "YouTube or Vimeo URL",
+        type: "url",
+        helpText: "Only YouTube and Vimeo URLs are embedded.",
+      },
+      { name: "caption", label: "Accessible video title", type: "text" },
+    ],
+  }),
+
+  "gallery-masonry": descriptor({
+    type: "gallery-masonry",
+    displayName: "Masonry Gallery",
+    description: "A responsive, lazy-loaded image gallery for showroom or vehicle photography.",
+    category: "media",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "A Closer Look",
+      title: "Details reveal the difference.",
+      body: "Add an image description as the label and a public image URL as the body.",
+      items: [] as Array<{ label: string; body: string }>,
+    },
+    schema: basicSectionSchema({
+      items: mediaItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      listField(
+        "items",
+        "Gallery images",
+        "Image alt text",
+        "Public image URL",
+      ),
+    ],
+  }),
+
+  "map-hours": descriptor({
+    type: "map-hours",
+    displayName: "Map and Hours",
+    description: "Show the dealership address, opening hours, and an optional safe map embed.",
+    category: "media",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Visit the Showroom",
+      title: "Arrive when the pace is yours.",
+      body: "Private appointments outside standard hours can be arranged in advance.",
+      address: "1250 Motor Row, Beverly Hills, CA 90210",
+      mapUrl: "https://maps.google.com/",
+      mapEmbedUrl: "",
+      items: [
+        { label: "Monday–Friday", body: "09:00–18:00" },
+        { label: "Saturday", body: "10:00–17:00" },
+        { label: "Sunday", body: "By appointment" },
+      ],
+    },
+    schema: basicSectionSchema({
+      address: requiredBodyText,
+      mapUrl: safeLinkSchema,
+      mapEmbedUrl: mapEmbedUrlSchema,
+      items: labelBodyItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "address", label: "Address", type: "textarea" },
+      { name: "mapUrl", label: "Open-in-maps link", type: "url" },
+      {
+        name: "mapEmbedUrl",
+        label: "Map embed URL",
+        type: "url",
+        helpText: "Only Google Maps and OpenStreetMap embed URLs render as an iframe.",
+      },
+      listField("items", "Opening hours", "Day", "Hours"),
+    ],
+  }),
+
+  "footer-contact": descriptor({
+    type: "footer-contact",
+    displayName: "Footer Contact",
+    description: "A complete dealership contact and opening-hours footer block.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "The Dealership",
+      title: "A direct line, whenever you are ready.",
+      body: "For vehicle enquiries, private viewings, and sourcing requests, speak with our team.",
+      phone: "+1 555 123 4567",
+      whatsappPhone: "15551234567",
+      email: "concierge@example.com",
+      address: "1250 Motor Row, Beverly Hills, CA 90210",
+      legalText: "Vehicle availability and specifications are subject to confirmation.",
+      items: [
+        { label: "Monday–Friday", body: "09:00–18:00" },
+        { label: "Saturday", body: "10:00–17:00" },
+        { label: "Sunday", body: "By appointment" },
+      ],
+    },
+    schema: basicSectionSchema({
+      phone: z.string().max(40),
+      whatsappPhone: z.string().max(40),
+      email: z.string().email().or(z.literal("")),
+      address: requiredBodyText,
+      legalText: optionalBodyText,
+      items: labelBodyItemsSchema,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "phone", label: "Telephone", type: "text" },
+      { name: "whatsappPhone", label: "WhatsApp number", type: "text" },
+      { name: "email", label: "Email", type: "text" },
+      { name: "address", label: "Address", type: "textarea" },
+      listField("items", "Opening hours", "Day", "Hours"),
+      { name: "legalText", label: "Footer note", type: "textarea" },
     ],
   }),
 } as const satisfies Record<string, BlockDescriptor>;

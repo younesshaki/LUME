@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { listPaletteBlockDescriptors } from "@lume/blocks";
 import { isBlockRenderable } from "./registry";
 import { registerBlocks } from "./registerBlocks";
 
@@ -7,12 +8,10 @@ describe("registerBlocks", () => {
     registerBlocks();
     registerBlocks();
 
-    expect(isBlockRenderable("hero")).toBe(true);
-    expect(isBlockRenderable("feature-band")).toBe(true);
-    expect(isBlockRenderable("statement-list")).toBe(true);
-    expect(isBlockRenderable("rich-text")).toBe(true);
-    expect(isBlockRenderable("product-grid")).toBe(true);
-    expect(isBlockRenderable("vehicle-inventory")).toBe(true);
-    expect(isBlockRenderable("showcase-gallery")).toBe(true);
+    const descriptors = listPaletteBlockDescriptors();
+    expect(descriptors).toHaveLength(32);
+    expect(
+      descriptors.filter((descriptor) => !isBlockRenderable(descriptor.type)),
+    ).toEqual([]);
   });
 });

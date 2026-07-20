@@ -153,6 +153,7 @@ function buildVehicleQuery(
   }
 
   switch (sp.get("sort") || "recommended") {
+    case "created_desc": query = query.order("created_at", { ascending: false }); break;
     case "price_asc": query = query.order("price", { ascending: true }); break;
     case "price_desc": query = query.order("price", { ascending: false }); break;
     case "year_desc": query = query.order("year", { ascending: false }); break;

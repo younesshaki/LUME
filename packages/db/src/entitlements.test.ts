@@ -23,7 +23,7 @@ describe("resolveTenantPlan", () => {
 
     await expect(resolveTenantPlan(fixture.client, "tenant-1")).resolves.toEqual({
       planId: "pro",
-      entitlements: { "chat.actions": true },
+      entitlements: { "chat.actions": true, "chat.premium_models": true },
       source: "subscription",
     });
     expect(fixture.subscriptionReads).toHaveBeenCalledTimes(1);
@@ -52,7 +52,7 @@ describe("resolveTenantPlan", () => {
 
     await expect(resolveTenantPlan(fixture.client, "tenant-1")).resolves.toEqual({
       planId: "basic",
-      entitlements: { "chat.actions": false },
+      entitlements: { "chat.actions": false, "chat.premium_models": false },
       source: "default",
     });
     expect(fixture.planReads).not.toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe("resolveTenantPlan", () => {
     const resolution = await resolveTenantPlan(fixture.client, "tenant-1");
     expect(resolution).toEqual({
       planId: "basic",
-      entitlements: { "chat.actions": false },
+      entitlements: { "chat.actions": false, "chat.premium_models": false },
       source: "default",
     });
   });
