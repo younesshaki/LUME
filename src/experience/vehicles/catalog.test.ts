@@ -242,4 +242,12 @@ describe("vehicle catalog", () => {
     expect(state.sort).toBe("year_desc");
     expect(state.page).toBe(3);
   });
+
+  it("round-trips the server-backed recently-added sort used by new-arrival blocks", () => {
+    expect(encodeVehicleUrlState(DEFAULT_FILTERS, "created_desc", 1)).toBe(
+      "#vehicles?sort=created_desc",
+    );
+    window.history.replaceState(null, "", "#vehicles?sort=created_desc");
+    expect(readVehicleUrlState().sort).toBe("created_desc");
+  });
 });

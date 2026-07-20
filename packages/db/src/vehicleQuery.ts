@@ -84,6 +84,8 @@ type VehicleSelectQuery = ReturnType<
 
 function applySort(query: VehicleSelectQuery, sort: VehicleSort): VehicleSelectQuery {
   switch (sort) {
+    case "created_desc":
+      return query.order("created_at", { ascending: false });
     case "price_asc":
       return query.order("price", { ascending: true });
     case "price_desc":

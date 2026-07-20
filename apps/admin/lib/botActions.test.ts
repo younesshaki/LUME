@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  extractChatCompletionTextDelta,
   extractDeepseekDsmlToolCalls,
   extractDeepseekTextDelta,
   extractInlineActions,
@@ -31,6 +32,14 @@ describe("extractDeepseekTextDelta", () => {
     expect(extractDeepseekTextDelta("data: [DONE]")).toBeUndefined();
     expect(extractDeepseekTextDelta("event: ping")).toBeUndefined();
     expect(extractDeepseekTextDelta("data: {nope")).toBeUndefined();
+  });
+
+  it("also exposes the parser under its provider-neutral name", () => {
+    expect(
+      extractChatCompletionTextDelta(
+        `data: {"choices":[{"delta":{"content":"Kimi"}}]}`,
+      ),
+    ).toBe("Kimi");
   });
 });
 

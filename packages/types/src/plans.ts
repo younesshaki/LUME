@@ -20,8 +20,11 @@ export type PlanId = (typeof PLAN_IDS)[number];
  * - "chat.actions": the concierge may perform website actions (navigate,
  *   filter inventory, open lead forms, tenant-configured concierge targets)
  *   and call action-capable tools. Off = informational Q&A concierge only.
+ * - "chat.premium_models": access to intelligence levels above the base
+ *   model (Kimi K2.6/K3, DeepSeek V4 Pro) for the concierge — both the
+ *   visitor concierge and the editor copilot. Off = base model only.
  */
-export const PLAN_FEATURES = ["chat.actions"] as const;
+export const PLAN_FEATURES = ["chat.actions", "chat.premium_models"] as const;
 export type PlanFeature = (typeof PLAN_FEATURES)[number];
 export type PlanEntitlements = Record<PlanFeature, boolean>;
 
@@ -63,7 +66,7 @@ export const PLAN_CATALOG: readonly PlanCatalogEntry[] = [
       "Vehicle inventory with lead capture",
       "Custom branding, pages, and domains",
     ],
-    entitlements: { "chat.actions": false },
+    entitlements: { "chat.actions": false, "chat.premium_models": false },
   },
   {
     id: "pro",
@@ -81,7 +84,7 @@ export const PLAN_CATALOG: readonly PlanCatalogEntry[] = [
       "Concierge opens pages, filters inventory, and starts lead forms",
       "Tenant-configured concierge actions",
     ],
-    entitlements: { "chat.actions": true },
+    entitlements: { "chat.actions": true, "chat.premium_models": true },
   },
   {
     id: "ultra",
@@ -99,7 +102,7 @@ export const PLAN_CATALOG: readonly PlanCatalogEntry[] = [
       "Premium concierge capabilities as they launch",
       "Priority support and onboarding",
     ],
-    entitlements: { "chat.actions": true },
+    entitlements: { "chat.actions": true, "chat.premium_models": true },
   },
 ];
 

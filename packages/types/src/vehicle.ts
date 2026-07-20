@@ -55,6 +55,7 @@ export type VehicleQuery = {
 
 export type VehicleSort =
   | "recommended"
+  | "created_desc"
   | "price_asc"
   | "price_desc"
   | "year_desc"

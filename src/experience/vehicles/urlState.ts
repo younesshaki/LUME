@@ -14,6 +14,7 @@ export type VehicleUrlState = {
 
 const SORT_VALUES: VehicleSort[] = [
   "recommended",
+  "created_desc",
   "price_asc",
   "price_desc",
   "year_desc",

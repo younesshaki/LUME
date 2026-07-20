@@ -1,0 +1,1254 @@
+.dealershipBlock,
+.announcementBlock,
+.dealershipContact {
+  width: 100%;
+  color: var(--theme-lume-ink);
+}
+
+.dealershipBlock {
+  padding: clamp(3.75rem, 8vw, 7.5rem) clamp(1rem, 4vw, 3rem);
+}
+
+.dealershipBlock__inner,
+.announcementBlock__inner,
+.dealershipContact__inner,
+.dealershipContact__legal {
+  width: min(100%, 74rem);
+  margin-inline: auto;
+}
+
+.dealershipBlock__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: clamp(1.75rem, 4vw, 3rem);
+}
+
+.dealershipBlock__headingCopy {
+  max-width: 48rem;
+}
+
+.dealershipBlock__eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--theme-lume-gold);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.dealershipBlock__title,
+.dealershipContact h2 {
+  margin: 0;
+  color: var(--theme-lume-ink);
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.dealershipBlock__body,
+.dealershipContact__intro > p:last-child {
+  max-width: 44rem;
+  margin: 1rem 0 0;
+  color: var(--theme-lume-muted);
+  font-size: clamp(0.98rem, 1.7vw, 1.15rem);
+  line-height: 1.65;
+}
+
+.dealershipBlock__empty {
+  margin: 0;
+  border: 1px dashed var(--theme-lume-line);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  color: var(--theme-lume-muted);
+  background: var(--lume-surface-subtle);
+  line-height: 1.6;
+}
+
+.dealershipBlock__actions,
+.dealershipBlock__footerAction {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dealershipBlock__footerAction {
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.dealershipBlock__action,
+.dealershipForm__submit,
+.newsletterForm button,
+.vehicleSearchBand__submit {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border: 1px solid var(--lume-primary-action);
+  border-radius: 999px;
+  padding: 0.75rem 1.25rem;
+  color: var(--lume-on-primary);
+  background: var(--lume-primary-action);
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+
+.dealershipBlock__action svg,
+.dealershipForm__submit svg,
+.newsletterForm button svg,
+.vehicleSearchBand__submit svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.dealershipBlock__action:hover,
+.dealershipForm__submit:hover:not(:disabled),
+.newsletterForm button:hover:not(:disabled),
+.vehicleSearchBand__submit:hover {
+  transform: translateY(-1px);
+}
+
+.dealershipBlock__action--secondary {
+  color: var(--theme-lume-ink);
+  border-color: var(--theme-lume-line);
+  background: var(--lume-surface-subtle);
+}
+
+.dealershipBlock__action:focus-visible,
+.dealershipForm :is(input, select, textarea, button):focus-visible,
+.newsletterForm :is(input, button):focus-visible,
+.vehicleSearchBand :is(input, select, a):focus-visible,
+.vehicleCarousel:focus-visible,
+.vehicleCarousel a:focus-visible,
+.vehicleCarousel__controls button:focus-visible,
+.announcementBlock :is(a, button):focus-visible,
+.faqAccordion__trigger:focus-visible,
+.dealershipContact a:focus-visible {
+  outline: 3px solid var(--lume-focus-ring);
+  outline-offset: 3px;
+}
+
+.dealershipBlock__srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Conversion blocks */
+
+.dealershipBlock--cta .dealershipBlock__inner,
+.dealershipBlock--calculator .dealershipBlock__inner,
+.dealershipBlock--form .dealershipBlock__inner,
+.dealershipBlock--newsletter .dealershipBlock__inner,
+.dealershipBlock--reviews .dealershipBlock__inner,
+.dealershipBlock--search .dealershipBlock__inner,
+.dealershipBlock--specs .dealershipBlock__inner,
+.dealershipBlock--video .dealershipBlock__inner,
+.dealershipBlock--location .dealershipBlock__inner {
+  border: 1px solid var(--theme-lume-line);
+  border-radius: clamp(1rem, 2vw, 1.6rem);
+  padding: clamp(1.4rem, 4vw, 3.25rem);
+  background: var(--lume-surface);
+  box-shadow: 0 1.4rem 4rem var(--lume-shadow);
+}
+
+.dealershipForm {
+  display: grid;
+  gap: 1.35rem;
+}
+
+.dealershipForm fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.dealershipForm legend {
+  margin-bottom: 0.85rem;
+  color: var(--theme-lume-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.dealershipForm__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.dealershipForm__field {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--theme-lume-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.dealershipForm__field input,
+.dealershipForm__field select,
+.dealershipForm__field textarea,
+.newsletterForm input,
+.vehicleSearchBand input,
+.vehicleSearchBand select {
+  width: 100%;
+  min-height: 3.15rem;
+  box-sizing: border-box;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 0.8rem;
+  padding: 0.8rem 0.95rem;
+  color: var(--theme-lume-ink);
+  background: var(--lume-control);
+  caret-color: var(--theme-lume-gold);
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  outline: none;
+}
+
+.dealershipForm__field textarea {
+  resize: vertical;
+}
+
+.dealershipForm__field :is(input, textarea)::placeholder,
+.newsletterForm input::placeholder,
+.vehicleSearchBand input::placeholder {
+  color: var(--theme-lume-soft);
+}
+
+.dealershipForm__field :is(input, select, textarea):disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.dealershipForm__submit {
+  justify-self: start;
+  cursor: pointer;
+}
+
+.dealershipForm__submit:disabled,
+.newsletterForm button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.dealershipForm__status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--theme-lume-muted);
+  line-height: 1.5;
+}
+
+.dealershipForm__status svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--theme-lume-gold);
+}
+
+.dealershipForm__status--error {
+  color: var(--lume-danger);
+}
+
+.dealershipForm__disclaimer {
+  max-width: 48rem;
+  margin: 0;
+  color: var(--theme-lume-soft);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.financeCalculator {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.financeCalculator__controls {
+  display: grid;
+  gap: 1rem;
+}
+
+.financeCalculator__result {
+  display: flex;
+  min-height: 14rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 1rem;
+  padding: clamp(1.4rem, 4vw, 2.5rem);
+  background: var(--lume-surface-raised);
+}
+
+.financeCalculator__result span,
+.financeCalculator__result small {
+  color: var(--theme-lume-muted);
+}
+
+.financeCalculator__result strong {
+  margin-block: 0.45rem;
+  color: var(--theme-lume-gold);
+  font-size: clamp(2.4rem, 7vw, 4.8rem);
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.newsletterForm {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.newsletterForm label {
+  min-width: 0;
+}
+
+.newsletterForm button {
+  cursor: pointer;
+}
+
+.announcementBlock {
+  border-block: 1px solid var(--theme-lume-line);
+  padding: 0.75rem 1rem;
+  background: var(--lume-surface-raised);
+}
+
+.announcementBlock__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+}
+
+.announcementBlock p {
+  margin: 0;
+  color: var(--theme-lume-ink);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.announcementBlock a {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--theme-lume-gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.announcementBlock a svg,
+.announcementBlock button svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.announcementBlock button {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 999px;
+  padding: 0;
+  color: var(--theme-lume-muted);
+  background: var(--lume-control);
+  cursor: pointer;
+}
+
+/* Inventory and discovery */
+
+.vehicleCarousel__controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.vehicleCarousel__controls button {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 999px;
+  padding: 0;
+  color: var(--theme-lume-ink);
+  background: var(--lume-control);
+  cursor: pointer;
+}
+
+.vehicleCarousel__controls svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.vehicleCarousel {
+  display: grid;
+  grid-auto-columns: minmax(17rem, 78vw);
+  grid-auto-flow: column;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 0.2rem 0.2rem 1rem;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: inline mandatory;
+  scrollbar-color: var(--theme-lume-gold) var(--lume-control);
+}
+
+.vehicleCarousel__card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 1rem;
+  background: var(--lume-surface);
+  scroll-snap-align: start;
+}
+
+.vehicleCarousel__card > a {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.vehicleCarousel__media {
+  display: grid;
+  aspect-ratio: 16 / 10;
+  place-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--theme-lume-line);
+  color: var(--theme-lume-soft);
+  background: var(--lume-surface-subtle);
+  font-size: 1.2rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.vehicleCarousel__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 280ms ease;
+}
+
+.vehicleCarousel__card a:hover .vehicleCarousel__media img {
+  transform: scale(1.025);
+}
+
+.vehicleCarousel__copy {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.1rem;
+}
+
+.vehicleCarousel__copy p,
+.vehicleCarousel__copy h3,
+.vehicleCarousel__copy span {
+  margin: 0;
+}
+
+.vehicleCarousel__copy p {
+  color: var(--theme-lume-gold);
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.vehicleCarousel__copy h3 {
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.vehicleCarousel__copy span {
+  min-height: 1.2em;
+  color: var(--theme-lume-muted);
+  font-size: 0.85rem;
+}
+
+.vehicleCarousel__copy strong {
+  margin-top: 0.7rem;
+  color: var(--theme-lume-ink);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.vehicleSearchBand {
+  display: grid;
+  gap: 1rem;
+}
+
+.vehicleSearchBand label {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+  color: var(--theme-lume-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.vehicleSearchBand select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.vehicleSearchBand__submit {
+  align-self: end;
+}
+
+.vehicleSpecTable {
+  overflow: hidden;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 1rem;
+}
+
+.vehicleSpecTable dl {
+  margin: 0;
+}
+
+.vehicleSpecTable dl > div {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+  background: var(--lume-surface-subtle);
+}
+
+.vehicleSpecTable dl > div + div {
+  border-top: 1px solid var(--theme-lume-line);
+}
+
+.vehicleSpecTable dt {
+  color: var(--theme-lume-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.vehicleSpecTable dd {
+  margin: 0;
+  color: var(--theme-lume-ink);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Trust and editorial content */
+
+.testimonialGrid,
+.serviceGrid,
+.teamGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.testimonialGrid figure,
+.serviceGrid article,
+.teamGrid article {
+  margin: 0;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 1rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: var(--lume-surface);
+}
+
+.testimonialGrid svg,
+.serviceGrid svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--theme-lume-gold);
+}
+
+.testimonialGrid blockquote {
+  margin: 1rem 0 1.4rem;
+  color: var(--theme-lume-ink);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.testimonialGrid figcaption,
+.teamGrid__role {
+  color: var(--theme-lume-gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.reviewSummary {
+  display: grid;
+  gap: 1rem;
+  align-items: center;
+}
+
+.reviewSummary__score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.reviewSummary__score strong {
+  color: var(--theme-lume-gold);
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.reviewSummary__score span,
+.reviewSummary p {
+  margin: 0;
+  color: var(--theme-lume-muted);
+}
+
+.reviewSummary__stars {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.45rem;
+  color: var(--theme-lume-gold);
+}
+
+.reviewSummary__stars svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.trustStats {
+  display: grid;
+  margin: 0;
+  border-block: 1px solid var(--theme-lume-line);
+}
+
+.trustStats > div {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.4rem 0;
+}
+
+.trustStats > div + div {
+  border-top: 1px solid var(--theme-lume-line);
+}
+
+.trustStats dt {
+  color: var(--theme-lume-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.trustStats dd {
+  margin: 0;
+  color: var(--theme-lume-gold);
+  font-size: clamp(2.2rem, 6vw, 4.4rem);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.logoMarquee {
+  --gap: clamp(1rem, 3vw, 2.5rem);
+  --duration: 45s;
+}
+
+.logoMarquee__item {
+  display: grid;
+  min-width: 9rem;
+  min-height: 5rem;
+  place-items: center;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 0.9rem;
+  padding: 0.8rem 1.25rem;
+  color: var(--theme-lume-muted);
+  background: var(--lume-surface-subtle);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.logoMarquee__item img {
+  width: auto;
+  max-width: 9rem;
+  height: 2.2rem;
+  object-fit: contain;
+  filter: grayscale(1);
+}
+
+.serviceGrid article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem 0.85rem;
+}
+
+.serviceGrid h3,
+.serviceGrid p,
+.processSteps h3,
+.processSteps p,
+.teamGrid h3,
+.teamGrid p {
+  margin: 0;
+}
+
+.serviceGrid h3,
+.processSteps h3,
+.teamGrid h3 {
+  color: var(--theme-lume-ink);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.serviceGrid p {
+  grid-column: 2;
+  color: var(--theme-lume-muted);
+  line-height: 1.6;
+}
+
+.processSteps {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.processSteps li {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  gap: 1rem;
+  border-top: 1px solid var(--theme-lume-line);
+  padding: 1.4rem 0;
+}
+
+.processSteps li:last-child {
+  border-bottom: 1px solid var(--theme-lume-line);
+}
+
+.processSteps li > span {
+  color: var(--theme-lume-gold);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.processSteps p {
+  margin-top: 0.45rem;
+  color: var(--theme-lume-muted);
+  line-height: 1.6;
+}
+
+.faqAccordion {
+  border-top: 1px solid var(--theme-lume-line);
+}
+
+.faqAccordion__item {
+  border-bottom: 1px solid var(--theme-lume-line);
+}
+
+.faqAccordion__trigger {
+  min-height: 4rem;
+  border-radius: 0;
+  padding: 1rem 0;
+  color: var(--theme-lume-ink);
+  font-size: 1rem;
+  line-height: 1.45;
+  text-decoration: none;
+}
+
+.faqAccordion__trigger:hover {
+  color: var(--theme-lume-gold);
+  text-decoration: none;
+}
+
+.faqAccordion__content {
+  padding-right: 2rem;
+  padding-bottom: 1rem;
+  color: var(--theme-lume-muted);
+  line-height: 1.7;
+}
+
+.faqAccordion__content p {
+  margin: 0;
+}
+
+.teamGrid__monogram {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 1.25rem;
+  place-items: center;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 999px;
+  color: var(--theme-lume-gold);
+  background: var(--lume-surface-subtle);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.teamGrid__role {
+  margin-top: 0.45rem;
+}
+
+.teamGrid article > p:last-child:not(.teamGrid__role) {
+  margin-top: 1rem;
+  color: var(--theme-lume-muted);
+  line-height: 1.6;
+}
+
+/* Media, location, and contact */
+
+.splitFeature {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: clamp(1rem, 2vw, 1.6rem);
+  background: var(--lume-surface);
+}
+
+.splitFeature__media {
+  display: grid;
+  min-height: 18rem;
+  place-items: center;
+  overflow: hidden;
+  color: var(--theme-lume-muted);
+  background: var(--lume-surface-subtle);
+  text-align: center;
+}
+
+.splitFeature__media img {
+  width: 100%;
+  height: 100%;
+  min-height: 18rem;
+  object-fit: cover;
+}
+
+.splitFeature__media > span {
+  max-width: 18rem;
+  padding: 2rem;
+  line-height: 1.6;
+}
+
+.splitFeature__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(1.4rem, 5vw, 3.5rem);
+}
+
+.splitFeature__copy .dealershipBlock__title {
+  font-size: clamp(2rem, 4vw, 3.7rem);
+}
+
+.splitFeature__copy .dealershipBlock__body {
+  margin-bottom: 1.5rem;
+}
+
+.videoEmbed {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 1rem;
+  aspect-ratio: 16 / 9;
+  background: var(--lume-surface-subtle);
+}
+
+.videoEmbed iframe,
+.mapHours__map iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.galleryMasonry {
+  columns: 1;
+  column-gap: 1rem;
+}
+
+.galleryMasonry figure {
+  position: relative;
+  margin: 0 0 1rem;
+  break-inside: avoid;
+  overflow: hidden;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 1rem;
+  background: var(--lume-surface);
+}
+
+.galleryMasonry img {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 14rem;
+  object-fit: cover;
+}
+
+.galleryMasonry figcaption {
+  padding: 0.8rem 1rem;
+  color: var(--theme-lume-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.mapHours {
+  display: grid;
+  gap: 1rem;
+}
+
+.mapHours__details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.4rem;
+}
+
+.mapHours__address {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  color: var(--theme-lume-muted);
+}
+
+.mapHours__address svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.2rem;
+  color: var(--theme-lume-gold);
+}
+
+.mapHours address,
+.dealershipContact address {
+  font-style: normal;
+  line-height: 1.65;
+}
+
+.mapHours__schedule,
+.dealershipContact__hours dl {
+  width: 100%;
+  margin: 0;
+}
+
+.mapHours__schedule > div,
+.dealershipContact__hours dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--theme-lume-line);
+  padding: 0.7rem 0;
+}
+
+.mapHours__schedule > div:last-child,
+.dealershipContact__hours dl > div:last-child {
+  border-bottom: 1px solid var(--theme-lume-line);
+}
+
+.mapHours__schedule dt,
+.dealershipContact__hours dt {
+  color: var(--theme-lume-muted);
+}
+
+.mapHours__schedule dd,
+.dealershipContact__hours dd {
+  margin: 0;
+  color: var(--theme-lume-ink);
+  text-align: right;
+}
+
+.mapHours__map {
+  min-height: 20rem;
+  overflow: hidden;
+  border: 1px solid var(--theme-lume-line);
+  border-radius: 1rem;
+  background: var(--lume-surface-subtle);
+}
+
+.mapHours__placeholder {
+  display: grid;
+  height: 100%;
+  min-height: 20rem;
+  place-items: center;
+  align-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  color: var(--theme-lume-muted);
+  text-align: center;
+}
+
+.mapHours__placeholder svg {
+  color: var(--theme-lume-gold);
+}
+
+.dealershipContact {
+  border-top: 1px solid var(--theme-lume-line);
+  padding: clamp(3.5rem, 8vw, 6rem) clamp(1rem, 4vw, 3rem) 1.5rem;
+  background: var(--lume-surface-raised);
+}
+
+.dealershipContact__inner {
+  display: grid;
+  gap: 2.5rem;
+}
+
+.dealershipContact__contact h3,
+.dealershipContact__hours h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  color: var(--theme-lume-gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dealershipContact__hours h3 svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.dealershipContact__contact address {
+  margin-bottom: 1rem;
+  color: var(--theme-lume-muted);
+}
+
+.dealershipContact__contact ul {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dealershipContact__contact li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.dealershipContact__contact li svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--theme-lume-gold);
+}
+
+.dealershipContact__contact a {
+  color: var(--theme-lume-ink);
+  text-decoration-color: var(--theme-lume-line);
+  text-underline-offset: 0.25rem;
+}
+
+.dealershipContact__legal {
+  border-top: 1px solid var(--theme-lume-line);
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  color: var(--theme-lume-soft);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+@media (min-width: 40rem) {
+  .dealershipForm__grid,
+  .financeCalculator__controls,
+  .newsletterForm,
+  .reviewSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dealershipForm__grid--vehicle {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .dealershipForm__grid--vehicle > * {
+    grid-column: span 2;
+  }
+
+  .dealershipForm__grid--vehicle > *:nth-last-child(2),
+  .dealershipForm__grid--vehicle > *:last-child {
+    grid-column: span 3;
+  }
+
+  .dealershipForm__field--wide,
+  .newsletterForm .dealershipForm__status,
+  .newsletterForm .dealershipForm__verification {
+    grid-column: 1 / -1;
+  }
+
+  .newsletterForm {
+    align-items: start;
+  }
+
+  .testimonialGrid,
+  .serviceGrid,
+  .teamGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trustStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trustStats > div {
+    padding-inline: 1.25rem;
+  }
+
+  .trustStats > div:nth-child(2) {
+    border-top: 0;
+  }
+
+  .trustStats > div:nth-child(even) {
+    border-left: 1px solid var(--theme-lume-line);
+  }
+
+  .galleryMasonry {
+    columns: 2;
+  }
+
+  .vehicleSpecTable dl > div {
+    grid-template-columns: minmax(8rem, 0.45fr) minmax(0, 1fr);
+    align-items: baseline;
+  }
+}
+
+@media (min-width: 56rem) {
+  .financeCalculator {
+    grid-template-columns: minmax(0, 1.1fr) minmax(19rem, 0.9fr);
+    align-items: stretch;
+  }
+
+  .vehicleSearchBand {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: end;
+  }
+
+  .testimonialGrid,
+  .serviceGrid,
+  .teamGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .trustStats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .trustStats > div,
+  .trustStats > div:nth-child(2) {
+    border-top: 0;
+  }
+
+  .trustStats > div + div {
+    border-left: 1px solid var(--theme-lume-line);
+  }
+
+  .splitFeature {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 31rem;
+  }
+
+  .splitFeature--media-right .splitFeature__media {
+    order: 2;
+  }
+
+  .splitFeature--media-right .splitFeature__copy {
+    order: 1;
+  }
+
+  .mapHours {
+    grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .dealershipContact__inner {
+    grid-template-columns: minmax(0, 1.35fr) minmax(12rem, 0.75fr) minmax(15rem, 0.9fr);
+  }
+
+  .galleryMasonry {
+    columns: 3;
+  }
+
+  .vehicleCarousel {
+    grid-auto-columns: minmax(18rem, calc((100% - 2rem) / 3));
+  }
+}
+
+@media (max-width: 39.99rem) {
+  .dealershipBlock__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dealershipBlock__header > svg {
+    display: none;
+  }
+
+  .dealershipBlock__footerAction {
+    justify-content: stretch;
+  }
+
+  .dealershipBlock__action,
+  .dealershipForm__submit,
+  .newsletterForm button,
+  .vehicleSearchBand__submit {
+    width: 100%;
+  }
+
+  .announcementBlock__inner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .announcementBlock p {
+    flex: 1 1 70%;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dealershipBlock *,
+  .announcementBlock *,
+  .dealershipContact * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .vehicleCarousel__card a:hover .vehicleCarousel__media img,
+  .dealershipBlock__action:hover,
+  .dealershipForm__submit:hover:not(:disabled),
+  .newsletterForm button:hover:not(:disabled),
+  .vehicleSearchBand__submit:hover {
+    transform: none;
+  }
+}
