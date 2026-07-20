@@ -15,6 +15,10 @@ import { E2E_EMAIL, E2E_PASSWORD_ENV, E2E_SITE_NAME } from "./support";
 test.describe.configure({ mode: "serial" });
 
 const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
+const tinyPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
 
 let page: Page;
 let tenantSlug = "";
@@ -23,6 +27,9 @@ const vehiclesUrl = () => `/admin/${tenantSlug}/vehicles`;
 
 test.beforeAll(async ({ browser }) => {
   page = await browser.newPage();
+  await page.route("https://images.example.test/**", (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: tinyPng }),
+  );
 });
 
 test.afterAll(async () => {
@@ -86,6 +93,9 @@ test("CSV import previews and inserts rows", async () => {
   await page.setInputFiles('input[type="file"]', path.join(fixturesDir, "vehicles.csv"));
 
   await expect(page.getByText("5 valid rows")).toBeVisible();
+  await expect(page.getByText(/1 of 5 rows include a primary photo/)).toBeVisible();
+  await expect(page.getByText(/plus 1 additional photo URL detected/)).toBeVisible();
+  await expect(page.getByRole("img", { name: "Primary photo for 2021 Porsche 911" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Porsche" }).first()).toBeVisible();
   await page.getByRole("button", { name: "Import 5 vehicles" }).click();
   await expect(page.getByText("Imported 5 vehicles.")).toBeVisible();
@@ -93,6 +103,49 @@ test("CSV import previews and inserts rows", async () => {
   await page.getByRole("link", { name: "Back to inventory" }).click();
   await page.waitForURL(`**${vehiclesUrl()}`);
   // Header row + 5 vehicles.
+  await expect(page.getByRole("row")).toHaveCount(6);
+});
+
+test("vehicle grid preserves filtering and sorting with selection and feed thumbnails", async () => {
+  await page.goto(vehiclesUrl());
+  await page.getByRole("link", { name: "Grid", exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("view")).toBe("grid");
+  await expect(page.getByRole("link", { name: "Grid", exact: true })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(page.locator('ul[role="list"] > li')).toHaveCount(5);
+
+  const porscheImage = page.getByRole("img", { name: "2021 Porsche 911" });
+  await expect(porscheImage).toBeVisible();
+  await expect(porscheImage).toHaveAttribute(
+    "src",
+    "https://images.example.test/e2e-porsche.jpg",
+  );
+
+  await page.getByLabel("Select 2021 Porsche 911").check();
+  await expect(page.getByText("1 selected on this page")).toBeVisible();
+
+  const search = page.getByPlaceholder(/Search make, model, trim/);
+  await search.fill("Porsche");
+  await search.press("Enter");
+  await expect.poll(() => new URL(page.url()).searchParams.get("view")).toBe("grid");
+  await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe("Porsche");
+  await expect(page.locator('ul[role="list"] > li')).toHaveCount(1);
+
+  await page.getByLabel("Sort by").selectOption("price");
+  await page.getByLabel("Direction").selectOption("asc");
+  await page.getByRole("button", { name: "Apply sort" }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("sort")).toBe("price");
+  await expect.poll(() => new URL(page.url()).searchParams.get("dir")).toBe("asc");
+  await expect.poll(() => new URL(page.url()).searchParams.get("view")).toBe("grid");
+
+  await page.getByPlaceholder(/Search make, model, trim/).fill("");
+  await page.getByPlaceholder(/Search make, model, trim/).press("Enter");
+  await expect(page.locator('ul[role="list"] > li').first()).toContainText("Honda");
+
+  await page.getByRole("link", { name: "Table", exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("view")).toBeNull();
   await expect(page.getByRole("row")).toHaveCount(6);
 });
 

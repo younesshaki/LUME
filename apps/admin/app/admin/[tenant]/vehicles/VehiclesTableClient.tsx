@@ -343,12 +343,7 @@ function VehicleGridCard({
   selected: boolean;
   onToggle: (checked: boolean) => void;
 }) {
-  // A broken external URL (e.g. from a feed import) falls back to the
-  // placeholder instead of a broken-image glyph — one bad URL never breaks
-  // the grid.
-  const [imageFailed, setImageFailed] = React.useState(false);
   const title = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-  const showImage = thumbnail && !imageFailed;
 
   return (
     <li
@@ -358,24 +353,7 @@ function VehicleGridCard({
       data-state={selected ? "selected" : undefined}
     >
       <div className="relative aspect-[4/3] bg-muted">
-        {showImage ? (
-          // Deliberately a native <img>: feed thumbnails come from arbitrary
-          // dealer CDNs, and allowlisting them all in next/image would mean a
-          // wildcard remote pattern — a controlled <img> is safer.
-          <img
-            src={thumbnail}
-            alt={title}
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 size-full object-cover"
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
-            <Car className="size-8" aria-hidden="true" />
-            <span className="text-xs">No photo</span>
-          </div>
-        )}
+        <VehicleThumbnail key={thumbnail ?? "no-photo"} src={thumbnail} title={title} />
         <span className="absolute left-2 top-2 rounded-md bg-background/90 p-1 shadow-sm">
           <Checkbox
             checked={selected}
@@ -424,6 +402,34 @@ function VehicleGridCard({
         </div>
       </div>
     </li>
+  );
+}
+
+function VehicleThumbnail({ src, title }: { src: string | null; title: string }) {
+  // This component is keyed by URL at the call site. If a broken feed image
+  // is later replaced by a managed image during router.refresh(), React
+  // remounts it and clears this failure state immediately.
+  const [failed, setFailed] = React.useState(false);
+  if (!src || failed) {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+        <Car className="size-8" aria-hidden="true" />
+        <span className="text-xs">No photo</span>
+      </div>
+    );
+  }
+
+  return (
+    // Feed thumbnails may come from arbitrary dealer CDNs. A native image
+    // avoids weakening next/image with a wildcard remote-host policy.
+    <img
+      src={src}
+      alt={title}
+      loading="lazy"
+      decoding="async"
+      className="absolute inset-0 size-full object-cover"
+      onError={() => setFailed(true)}
+    />
   );
 }
 

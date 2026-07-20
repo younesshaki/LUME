@@ -89,6 +89,71 @@ describe("parseVehicleCsv", () => {
     expect(result.errors[0]?.message).toContain("tab-separated");
     expect(result.errors[0]?.message).toContain("comma-separated CSV");
   });
+
+  it("rejects rows whose unquoted commas shift the column count", () => {
+    const result = parseVehicleCsv(
+      [
+        "year,make,model,price,image_link,additional_image_link",
+        "2020,Ford,Escape,9000,https://cdn.example.com/a.jpg,https://cdn.example.com/b.jpg,https://cdn.example.com/c.jpg",
+      ].join("\n"),
+    );
+
+    expect(result.rows).toEqual([]);
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        line: 2,
+        message: expect.stringContaining("Expected 6 columns but found 7"),
+      }),
+    ]);
+    expect(result.errors[0]?.message).toContain("must be enclosed in double quotes");
+  });
+
+  it("rejects rows with missing trailing columns instead of shifting data", () => {
+    const result = parseVehicleCsv(
+      "year,make,model,price,mileage\n2020,Ford,Escape,9000",
+    );
+
+    expect(result.rows).toEqual([]);
+    expect(result.errors[0]).toMatchObject({ line: 2 });
+    expect(result.errors[0]?.message).toContain("Expected 5 columns but found 4");
+  });
+
+  it("reports an unclosed quoted field as a structural CSV error", () => {
+    const result = parseVehicleCsv(
+      'year,make,model,price\n2020,Ford,"Escape,9000',
+    );
+
+    expect(result.rows).toEqual([]);
+    expect(result.errors).toEqual([
+      { line: 2, message: "Unclosed quoted field." },
+    ]);
+  });
+
+  it("reports unexpected characters after a closing quote", () => {
+    const result = parseVehicleCsv(
+      'year,make,model,price\n2020,Ford,"Escape"oops,9000',
+    );
+
+    expect(result.rows).toEqual([]);
+    expect(result.errors).toEqual([
+      { line: 2, message: "Unexpected character after a closing quote." },
+    ]);
+  });
+
+  it("keeps physical line numbers after a multiline quoted field", () => {
+    const result = parseVehicleCsv(
+      [
+        "year,make,model,price,trim",
+        '2020,Ford,Escape,9000,"First line',
+        'second line"',
+        "2021,Toyota,Camry,10000",
+      ].join("\n"),
+    );
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.trim).toBe("First line\nsecond line");
+    expect(result.errors[0]).toMatchObject({ line: 4 });
+  });
 });
 
 describe("feed header aliases", () => {

@@ -205,24 +205,62 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         </nav>
       </div>
 
-      <form method="get" className="relative max-w-sm">
-        <Search
-          className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
-          type="search"
-          name="q"
-          aria-label="Search vehicles"
-          defaultValue={q}
-          placeholder="Search make, model, trim…"
-          className="pl-8"
-        />
-        {sort !== "year" && <input type="hidden" name="sort" value={sort} />}
-        {dir !== "desc" && <input type="hidden" name="dir" value={dir} />}
-        {status !== "active" && <input type="hidden" name="status" value={status} />}
-        {view !== "table" && <input type="hidden" name="view" value={view} />}
-      </form>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <form method="get" className="relative w-full max-w-sm">
+          <Search
+            className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            type="search"
+            name="q"
+            aria-label="Search vehicles"
+            defaultValue={q}
+            placeholder="Search make, model, trim…"
+            className="pl-8"
+          />
+          {sort !== "year" && <input type="hidden" name="sort" value={sort} />}
+          {dir !== "desc" && <input type="hidden" name="dir" value={dir} />}
+          {status !== "active" && <input type="hidden" name="status" value={status} />}
+          {view !== "table" && <input type="hidden" name="view" value={view} />}
+        </form>
+
+        {view === "grid" ? (
+          <form method="get" className="flex flex-wrap items-end gap-2" aria-label="Sort vehicle grid">
+            {q ? <input type="hidden" name="q" value={q} /> : null}
+            {status !== "active" ? <input type="hidden" name="status" value={status} /> : null}
+            <input type="hidden" name="view" value="grid" />
+            <label className="grid gap-1 text-xs text-muted-foreground">
+              Sort by
+              <select
+                name="sort"
+                defaultValue={sort}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+              >
+                <option value="year">Year</option>
+                <option value="make">Make</option>
+                <option value="model">Model</option>
+                <option value="price">Price</option>
+                <option value="mileage">Mileage</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs text-muted-foreground">
+              Direction
+              <select
+                name="dir"
+                defaultValue={dir}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+              >
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+              </select>
+            </label>
+            <Button type="submit" variant="outline" size="sm">
+              Apply sort
+            </Button>
+          </form>
+        ) : null}
+      </div>
 
       {totalCount === 0 && !q && !error ? (
         <EmptyState

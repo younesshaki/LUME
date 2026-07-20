@@ -59,12 +59,62 @@ export type VehicleImportResult = {
 
 export const MAX_IMPORT_ROWS = 2_000;
 
+type CsvStructuralIssue = {
+  line: number;
+  rowStartLine: number;
+  message: string;
+};
+
+type ParsedCsvTable = {
+  rows: string[][];
+  rowStartLines: number[];
+  issues: CsvStructuralIssue[];
+};
+
 /** Quote-aware CSV parser (RFC-4180-ish: quoted fields, "" escapes, CRLF). */
 export function parseCsv(text: string): string[][] {
+  return parseCsvTable(text).rows;
+}
+
+/**
+ * Parse CSV while retaining physical row locations and structural errors.
+ * `parseCsv` intentionally keeps its small legacy return type; vehicle
+ * imports use this richer result so malformed rows cannot shift columns and
+ * silently discard data.
+ */
+function parseCsvTable(text: string): ParsedCsvTable {
   const rows: string[][] = [];
+  const rowStartLines: number[] = [];
+  const issues: CsvStructuralIssue[] = [];
   let field = "";
   let row: string[] = [];
   let inQuotes = false;
+  let afterClosingQuote = false;
+  let currentLine = 1;
+  let rowStartLine = 1;
+  let openingQuoteLine = 1;
+
+  const reportIssue = (line: number, message: string) => {
+    if (issues.some((issue) => issue.rowStartLine === rowStartLine && issue.message === message)) {
+      return;
+    }
+    issues.push({ line, rowStartLine, message });
+  };
+
+  const finishField = () => {
+    row.push(field);
+    field = "";
+    afterClosingQuote = false;
+  };
+
+  const finishRow = () => {
+    finishField();
+    if (row.some((cell) => cell.trim() !== "")) {
+      rows.push(row);
+      rowStartLines.push(rowStartLine);
+    }
+    row = [];
+  };
 
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
@@ -75,33 +125,64 @@ export function parseCsv(text: string): string[][] {
           i++;
         } else {
           inQuotes = false;
+          afterClosingQuote = true;
         }
+      } else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        field += "\n";
+        currentLine++;
       } else {
         field += ch;
       }
       continue;
     }
+
+    if (afterClosingQuote) {
+      if (ch === ",") {
+        finishField();
+      } else if (ch === "\n" || ch === "\r") {
+        finishRow();
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        currentLine++;
+        rowStartLine = currentLine;
+      } else if (ch !== " " && ch !== "\t") {
+        reportIssue(currentLine, "Unexpected character after a closing quote.");
+        field += ch;
+        afterClosingQuote = false;
+      }
+      continue;
+    }
+
     if (ch === '"') {
-      inQuotes = true;
+      if (field.trim() === "") {
+        // Whitespace around a quoted value is harmless and is discarded just
+        // like the per-cell trim applied by the vehicle mapper.
+        field = "";
+        inQuotes = true;
+        openingQuoteLine = currentLine;
+      } else {
+        reportIssue(currentLine, "Unexpected quote inside an unquoted field.");
+        field += ch;
+      }
     } else if (ch === ",") {
-      row.push(field);
-      field = "";
+      finishField();
     } else if (ch === "\n" || ch === "\r") {
       if (ch === "\r" && text[i + 1] === "\n") i++;
-      row.push(field);
-      field = "";
-      rows.push(row);
-      row = [];
+      finishRow();
+      currentLine++;
+      rowStartLine = currentLine;
     } else {
       field += ch;
     }
   }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
+
+  if (inQuotes) {
+    reportIssue(openingQuoteLine, "Unclosed quoted field.");
   }
-  // Drop fully empty trailing rows.
-  return rows.filter((r) => r.some((cell) => cell.trim() !== ""));
+  if (field.length > 0 || row.length > 0) {
+    finishRow();
+  }
+  return { rows, rowStartLines, issues };
 }
 
 /** Canonical column key ← accepted NATIVE header spellings (lowercased). */
@@ -212,9 +293,11 @@ export function parseVehicleCsv(text: string): VehicleImportResult {
 
   // UTF-8 BOM from spreadsheet exports.
   const cleanText = text.replace(/^\uFEFF/, "");
-  const table = parseCsv(cleanText);
+  const parsedTable = parseCsvTable(cleanText);
+  const table = parsedTable.rows;
   if (table.length === 0) {
-    return empty([{ line: 1, message: "File is empty." }]);
+    const structuralErrors = parsedTable.issues.map(({ line, message }) => ({ line, message }));
+    return empty(structuralErrors.length > 0 ? structuralErrors : [{ line: 1, message: "File is empty." }]);
   }
 
   // Tab-delimited exports parse as one giant comma-less column. Refuse them
@@ -227,6 +310,12 @@ export function parseVehicleCsv(text: string): VehicleImportResult {
           "This file looks tab-separated. LUME imports require a standard comma-separated CSV — re-export the file as CSV (comma delimited) and try again.",
       },
     ]);
+  }
+
+  const headerStartLine = parsedTable.rowStartLines[0] ?? 1;
+  const headerIssues = parsedTable.issues.filter((issue) => issue.rowStartLine === headerStartLine);
+  if (headerIssues.length > 0) {
+    return empty(headerIssues.map(({ line, message }) => ({ line, message })));
   }
 
   const headerCells = table[0].map((h) => h.trim().toLowerCase());
@@ -259,7 +348,15 @@ export function parseVehicleCsv(text: string): VehicleImportResult {
     !nativeKeys.has("stock_type") && headerCells.includes("condition");
 
   const dataRows = table.slice(1);
-  const errors: VehicleImportRowError[] = [];
+  const dataRowStartLines = parsedTable.rowStartLines.slice(1);
+  const errors: VehicleImportRowError[] = parsedTable.issues
+    .filter((issue) => issue.rowStartLine !== headerStartLine)
+    .map(({ line, message }) => ({ line, message }));
+  const structurallyInvalidRows = new Set(
+    parsedTable.issues
+      .filter((issue) => issue.rowStartLine !== headerStartLine)
+      .map((issue) => issue.rowStartLine),
+  );
   const warnings: VehicleImportRowError[] = [];
   if (dataRows.length > MAX_IMPORT_ROWS) {
     errors.push({
@@ -271,7 +368,17 @@ export function parseVehicleCsv(text: string): VehicleImportResult {
   const rows: VehicleImportInsert[] = [];
   const rowImages: VehicleImportRowImages[] = [];
   dataRows.slice(0, MAX_IMPORT_ROWS).forEach((cells, index) => {
-    const line = index + 2;
+    const line = dataRowStartLines[index] ?? index + 2;
+    if (structurallyInvalidRows.has(line)) return;
+    if (cells.length !== headerCells.length) {
+      errors.push({
+        line,
+        message:
+          `Expected ${headerCells.length} columns but found ${cells.length}. ` +
+          "Fields containing commas, including additional_image_link, must be enclosed in double quotes.",
+      });
+      return;
+    }
     const record: Record<string, string> = {};
     columns.forEach((column, i) => {
       if (column) record[column.key] = (cells[i] ?? "").trim();
