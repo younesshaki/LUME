@@ -31,7 +31,7 @@ export type BotActionEnvelopeValidation =
   | { ok: true; value: BotActionEnvelope }
   | { ok: false; error: string };
 
-type DeepseekStreamChunk = {
+type ChatCompletionStreamChunk = {
   choices?: Array<{ delta?: { content?: string } }>;
 };
 
@@ -43,19 +43,22 @@ export type NormalizedDeepseekAssistantMessage = {
 };
 
 /** Extract the text delta from one `data: {...}` SSE line, if any. */
-export function extractDeepseekTextDelta(line: string): string | undefined {
+export function extractChatCompletionTextDelta(line: string): string | undefined {
   const trimmed = line.trim();
   if (!trimmed.startsWith("data: ") || trimmed === "data: [DONE]") {
     return undefined;
   }
 
   try {
-    const chunk = JSON.parse(trimmed.slice(6)) as DeepseekStreamChunk;
+    const chunk = JSON.parse(trimmed.slice(6)) as ChatCompletionStreamChunk;
     return chunk.choices?.[0]?.delta?.content;
   } catch {
     return undefined;
   }
 }
+
+/** @deprecated Use the provider-neutral OpenAI-compatible parser. */
+export const extractDeepseekTextDelta = extractChatCompletionTextDelta;
 
 /**
  * DeepSeek occasionally serializes its private DSML tool protocol into

@@ -7,7 +7,10 @@ import {
   rowToBotPersona,
   type BotPersonaRow,
 } from "@/lib/persona";
+import { normalizeConciergeModelId } from "@/lib/conciergeModels";
+import { getConciergeProviderAvailability } from "@/lib/chatProvider.server";
 import PersonaClient from "./PersonaClient";
+import { ModelIntelligenceControl } from "./ModelIntelligenceControl";
 import { ToolWhitelist } from "./ToolWhitelist";
 
 type PageProps = {
@@ -25,7 +28,7 @@ export default async function PersonaPage({ params }: PageProps) {
     .maybeSingle();
   if (!tenant) notFound();
 
-  const [personaResult, toolConfigResult] = await Promise.all([
+  const [personaResult, toolConfigResult, manageResult] = await Promise.all([
     supabase
       .from("bot_personas")
       .select("*")
@@ -34,9 +37,13 @@ export default async function PersonaPage({ params }: PageProps) {
       .maybeSingle(),
     supabase
       .from("tenant_bot_config")
-      .select("allowed_tools")
+      .select("allowed_tools, model")
       .eq("tenant_id", tenant.id)
       .maybeSingle(),
+    supabase.rpc("user_has_tenant_role", {
+      p_tenant_id: tenant.id,
+      p_roles: ["owner", "admin"],
+    }),
   ]);
   const { data: personaRow, error: personaError } = personaResult;
 
@@ -65,6 +72,15 @@ export default async function PersonaPage({ params }: PageProps) {
             : defaultPersona(tenant.id)
         }
         migrationWarning={migrationWarning}
+      />
+      <ModelIntelligenceControl
+        tenantSlug={tenant.slug}
+        initialModelId={normalizeConciergeModelId(
+          toolConfigResult.data?.model,
+        )}
+        providerAvailability={getConciergeProviderAvailability()}
+        canManage={manageResult.data === true}
+        configurationWarning={toolConfigurationWarning}
       />
       <ToolWhitelist
         tenantId={tenant.id}
