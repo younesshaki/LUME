@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Sparkles } from "lucide-react";
 import { publishDraft, restoreRevision, unpublishPage, updateDraftBlocks } from "@lume/db";
 import type { PageBlock, PageBlocksDocument, PageRevision } from "@lume/types";
 import type { BlockCategory, BlockField, EditorBlockDescriptor } from "@lume/blocks";
@@ -17,6 +17,8 @@ import {
   insertionIndexAfter,
   moveToPosition,
 } from "@/lib/pageEditorBlocks";
+import { applyProposedEdits, type ProposedEdit } from "@/lib/editorCopilot";
+import { ConciergePanel } from "./ConciergePanel";
 import { LivePreviewPanel } from "./LivePreviewPanel";
 
 type EditorPage = {
@@ -74,6 +76,9 @@ export default function PageEditorClient({
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
   const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
   const [paletteQuery, setPaletteQuery] = useState("");
+  const [conciergeOpen, setConciergeOpen] = useState(false);
+  // Snapshots of `blocks` taken right before concierge proposals are applied.
+  const [conciergeUndoStack, setConciergeUndoStack] = useState<PageBlock[][]>([]);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
   const descriptorsByType = useMemo(
@@ -180,6 +185,30 @@ export default function PageEditorClient({
   function endDrag() {
     setDraggedBlockId(null);
     setDropIndicator(null);
+  }
+
+  /** Apply concierge proposals: snapshot for undo, then pure array transform. */
+  function applyConciergeEdits(edits: ProposedEdit[]) {
+    setConciergeUndoStack((stack) => [...stack.slice(-19), blocks]);
+    const result = applyProposedEdits(blocks, edits);
+    setBlocks(result.blocks);
+    if (result.affectedId) setSelectedBlockId(result.affectedId);
+    else if (!result.blocks.some((block) => block.id === selectedBlockId)) {
+      setSelectedBlockId(result.blocks[0]?.id ?? null);
+    }
+    setState({ type: "idle", message: "" });
+  }
+
+  function undoConciergeEdits() {
+    setConciergeUndoStack((stack) => {
+      const snapshot = stack[stack.length - 1];
+      if (!snapshot) return stack;
+      setBlocks(snapshot);
+      if (!snapshot.some((block) => block.id === selectedBlockId)) {
+        setSelectedBlockId(snapshot[0]?.id ?? null);
+      }
+      return stack.slice(0, -1);
+    });
   }
 
   function removeBlock(blockId: string) {
@@ -306,6 +335,19 @@ export default function PageEditorClient({
           <PublicationStatusBadge status={publicationStatus} />
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setConciergeOpen((open) => !open)}
+            aria-pressed={conciergeOpen}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50 ${
+              conciergeOpen
+                ? "border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-700 dark:border-white"
+                : "border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
+            }`}
+          >
+            <Sparkles className="size-4" aria-hidden="true" />
+            Concierge
+          </button>
           <button
             type="button"
             onClick={saveDraft}
@@ -515,7 +557,22 @@ export default function PageEditorClient({
           />
         </main>
 
-        <aside className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+        <aside className="space-y-4">
+          {conciergeOpen && (
+            <ConciergePanel
+              tenantSlug={tenantSlug}
+              pageSlug={page.slug}
+              pageTitle={page.title}
+              version={initialBlocks.version}
+              blocks={blocks}
+              selectedBlockId={selectedBlockId}
+              descriptors={blockDescriptors}
+              onApplyEdits={applyConciergeEdits}
+              onUndo={undoConciergeEdits}
+              canUndo={conciergeUndoStack.length > 0}
+            />
+          )}
+          <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Properties</h2>
           {!selectedBlock || !selectedDescriptor ? (
             <p className="mt-4 text-sm text-muted-foreground">Select a block to edit its props.</p>
@@ -547,6 +604,7 @@ export default function PageEditorClient({
             onPreview={(revisionId) => setPreviewRevisionId(revisionId)}
             onRestore={restoreRevisionToDraft}
           />
+          </div>
         </aside>
       </div>
     </div>
