@@ -50,6 +50,9 @@ export type EditorChatRequest = {
   pageTitle: string;
   draft: PageBlocksDocument;
   selectedBlockId?: string;
+  /** Requested intelligence level; the route normalizes, plan-gates, and
+   * resolves it — an unknown or missing id falls back to the base model. */
+  modelId?: string;
   messages: EditorChatMessage[];
 };
 
@@ -57,6 +60,9 @@ export type EditorChatResponse = {
   reply: string;
   edits: ProposedEdit[];
   droppedEdits?: DroppedEdit[];
+  /** The model that actually served the turn (may differ from the request
+   * when the requested provider is unconfigured and resolution fell back). */
+  model?: { id: string; fellBack: boolean };
 };
 
 // ── Request parsing (pure; the route calls this after the size cap) ─────────
@@ -72,7 +78,7 @@ export type ParsedEditorChatRequest =
 /** Shape-validate the request body. Draft content is validated separately. */
 export function parseEditorChatRequest(body: unknown): ParsedEditorChatRequest {
   if (!isRecord(body)) return { ok: false, error: "Request body must be a JSON object." };
-  const { tenantSlug, pageSlug, pageTitle, draft, selectedBlockId, messages } = body;
+  const { tenantSlug, pageSlug, pageTitle, draft, selectedBlockId, modelId, messages } = body;
   if (typeof tenantSlug !== "string" || !tenantSlug.trim()) {
     return { ok: false, error: "tenantSlug is required." };
   }
@@ -106,6 +112,7 @@ export function parseEditorChatRequest(body: unknown): ParsedEditorChatRequest {
       ...(typeof selectedBlockId === "string" && selectedBlockId
         ? { selectedBlockId }
         : {}),
+      ...(typeof modelId === "string" && modelId ? { modelId } : {}),
       messages: sanitized,
     },
   };

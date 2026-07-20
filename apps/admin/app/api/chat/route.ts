@@ -99,6 +99,10 @@ import {
 } from "@/lib/chatProvider";
 import { resolveChatProvider } from "@/lib/chatProvider.server";
 import {
+  DEFAULT_CONCIERGE_MODEL_ID,
+  isPremiumConciergeModel,
+} from "@/lib/conciergeModels";
+import {
   CHAT_ACTIONS_DISABLED_CAPABILITIES,
   filterPlanAllowedActions,
   planEnabledTools,
@@ -494,7 +498,16 @@ export async function POST(request: Request): Promise<Response> {
     return new Response(stream, { headers: sseHeaders });
   }
 
-  const chatProvider = resolveChatProvider(botRuntimeConfig.modelId);
+  // Premium intelligence levels are plan-gated ("chat.premium_models"): a
+  // stored premium selection is clamped to the base model when the tenant's
+  // plan no longer entitles it (e.g. after a downgrade). Selection-time
+  // enforcement lives in the persona save action; this is the runtime gate.
+  const planClampedModelId =
+    isPremiumConciergeModel(botRuntimeConfig.modelId) &&
+    !tenantPlan.entitlements["chat.premium_models"]
+      ? DEFAULT_CONCIERGE_MODEL_ID
+      : botRuntimeConfig.modelId;
+  const chatProvider = resolveChatProvider(planClampedModelId);
   if (!chatProvider) {
     return json(
       { error: "AI provider is not configured" },

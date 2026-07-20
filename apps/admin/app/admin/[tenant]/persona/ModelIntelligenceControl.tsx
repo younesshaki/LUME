@@ -26,6 +26,8 @@ type ModelIntelligenceControlProps = {
   initialModelId: ConciergeModelId;
   providerAvailability: Readonly<Record<ConciergeProvider, boolean>>;
   canManage: boolean;
+  /** Display hint for the plan gate — saveConciergeModel re-enforces it. */
+  premiumModelsEnabled: boolean;
   configurationWarning: string | null;
 };
 
@@ -34,6 +36,7 @@ export function ModelIntelligenceControl({
   initialModelId,
   providerAvailability,
   canManage,
+  premiumModelsEnabled,
   configurationWarning,
 }: ModelIntelligenceControlProps) {
   const router = useRouter();
@@ -53,12 +56,14 @@ export function ModelIntelligenceControl({
     selectedProfile.id,
     providerAvailability,
   );
+  const selectedPlanLocked = selectedProfile.premium && !premiumModelsEnabled;
   const hasChanges = selectedProfile.id !== publishedModelId;
   const disabled =
     state.type === "saving" ||
     !canManage ||
     Boolean(configurationWarning) ||
     !selectedAvailable ||
+    selectedPlanLocked ||
     !hasChanges;
 
   function selectIndex(index: number) {
@@ -174,7 +179,7 @@ export function ModelIntelligenceControl({
                   <span className="absolute -bottom-1.5 -right-1.5 rounded-md border border-border bg-background px-1 py-0.5 text-[9px] font-bold leading-none text-foreground shadow-sm">
                     {profile.iconBadge}
                   </span>
-                  {!isAvailable ? (
+                  {!isAvailable || (profile.premium && !premiumModelsEnabled) ? (
                     <span className="absolute -left-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-muted text-muted-foreground">
                       <LockKeyhole className="size-2.5" aria-hidden="true" />
                     </span>
@@ -264,6 +269,12 @@ export function ModelIntelligenceControl({
       ) : !canManage ? (
         <p className="mt-3 text-xs text-muted-foreground">
           Owner or admin access is required to change the concierge model.
+        </p>
+      ) : selectedPlanLocked ? (
+        <p className="mt-3 text-sm text-amber-700 dark:text-amber-300" role="status">
+          {selectedProfile.providerLabel} {selectedProfile.modelLabel} is
+          available on the Pro and Ultra plans. Upgrade to unlock deeper
+          intelligence for your concierge.
         </p>
       ) : !selectedAvailable ? (
         <p className="mt-3 text-sm text-amber-700 dark:text-amber-300" role="status">

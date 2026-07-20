@@ -11,6 +11,7 @@ export const CONCIERGE_MODEL_PROFILES = [
     iconSrc: "/model-icons/deepseek.svg",
     iconBadge: "F",
     thinkingMode: "disabled",
+    premium: false,
   },
   {
     id: "kimi-k2.6",
@@ -24,6 +25,7 @@ export const CONCIERGE_MODEL_PROFILES = [
     iconSrc: "/model-icons/kimi.svg",
     iconBadge: "2.6",
     thinkingMode: "disabled",
+    premium: true,
   },
   {
     id: "deepseek-v4-pro",
@@ -37,6 +39,7 @@ export const CONCIERGE_MODEL_PROFILES = [
     iconSrc: "/model-icons/deepseek.svg",
     iconBadge: "P",
     thinkingMode: "disabled",
+    premium: true,
   },
   {
     id: "kimi-k3",
@@ -50,6 +53,7 @@ export const CONCIERGE_MODEL_PROFILES = [
     iconSrc: "/model-icons/kimi.svg",
     iconBadge: "3",
     thinkingMode: "max",
+    premium: true,
   },
 ] as const;
 
@@ -96,6 +100,15 @@ export function conciergeModelIndex(value: unknown): number {
     (profile) => profile.id === modelId,
   );
   return index < 0 ? 0 : index;
+}
+
+/**
+ * Intelligence levels above the base model are a paid capability
+ * ("chat.premium_models"): Pro/Ultra only. The base level is never premium
+ * so every plan always has a working concierge.
+ */
+export function isPremiumConciergeModel(value: unknown): boolean {
+  return getConciergeModelProfile(value).premium;
 }
 
 export function isProviderAvailable(

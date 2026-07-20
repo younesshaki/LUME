@@ -46,6 +46,13 @@ describe("parseEditorChatRequest", () => {
     if (result.ok) expect(result.request.tenantSlug).toBe("demo");
   });
 
+  it("passes a string modelId through and drops non-string ones", () => {
+    const withModel = parseEditorChatRequest({ ...valid, modelId: "kimi-k3" });
+    expect(withModel.ok && withModel.request.modelId).toBe("kimi-k3");
+    const withBadModel = parseEditorChatRequest({ ...valid, modelId: 42 });
+    expect(withBadModel.ok && withBadModel.request.modelId).toBeUndefined();
+  });
+
   it("rejects non-object bodies, missing tenant, and bad drafts", () => {
     expect(parseEditorChatRequest(null).ok).toBe(false);
     expect(parseEditorChatRequest({ ...valid, tenantSlug: " " }).ok).toBe(false);

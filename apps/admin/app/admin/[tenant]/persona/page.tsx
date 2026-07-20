@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { BOT_TOOLS } from "@lume/bot";
+import { resolveTenantPlan } from "@lume/db";
+import { createServiceClient } from "@lume/db/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   defaultPersona,
@@ -45,6 +47,7 @@ export default async function PersonaPage({ params }: PageProps) {
       p_roles: ["owner", "admin"],
     }),
   ]);
+  const tenantPlan = await resolveTenantPlan(createServiceClient(), tenant.id);
   const { data: personaRow, error: personaError } = personaResult;
 
   const migrationWarning = personaError
@@ -80,6 +83,7 @@ export default async function PersonaPage({ params }: PageProps) {
         )}
         providerAvailability={getConciergeProviderAvailability()}
         canManage={manageResult.data === true}
+        premiumModelsEnabled={tenantPlan.entitlements["chat.premium_models"]}
         configurationWarning={toolConfigurationWarning}
       />
       <ToolWhitelist

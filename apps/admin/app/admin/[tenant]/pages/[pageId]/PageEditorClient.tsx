@@ -18,6 +18,7 @@ import {
   moveToPosition,
 } from "@/lib/pageEditorBlocks";
 import { applyProposedEdits, type ProposedEdit } from "@/lib/editorCopilot";
+import type { ConciergeProvider } from "@/lib/conciergeModels";
 import { ConciergePanel } from "./ConciergePanel";
 import { LivePreviewPanel } from "./LivePreviewPanel";
 
@@ -52,6 +53,10 @@ type PageEditorClientProps = {
   initialBlocks: PageBlocksDocument;
   initialRevisions: PageRevision[];
   blockDescriptors: EditorBlockDescriptor[];
+  /** Display hint for the concierge intelligence selector — the editor chat
+   * route re-enforces the plan gate server-side on every turn. */
+  premiumModelsEnabled: boolean;
+  providerAvailability: Readonly<Record<ConciergeProvider, boolean>>;
 };
 
 export default function PageEditorClient({
@@ -62,6 +67,8 @@ export default function PageEditorClient({
   initialBlocks,
   initialRevisions,
   blockDescriptors,
+  premiumModelsEnabled,
+  providerAvailability,
 }: PageEditorClientProps) {
   const router = useRouter();
   const [blocks, setBlocks] = useState<PageBlock[]>(initialBlocks.blocks);
@@ -567,6 +574,8 @@ export default function PageEditorClient({
               blocks={blocks}
               selectedBlockId={selectedBlockId}
               descriptors={blockDescriptors}
+              premiumModelsEnabled={premiumModelsEnabled}
+              providerAvailability={providerAvailability}
               onApplyEdits={applyConciergeEdits}
               onUndo={undoConciergeEdits}
               canUndo={conciergeUndoStack.length > 0}

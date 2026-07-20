@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { BOT_TOOLS } from "@lume/bot";
+import { resolveTenantPlan } from "@lume/db";
+import { createServiceClient } from "@lume/db/server";
 import { auditWrite } from "@/lib/audit";
 import {
   isConciergeModelId,
+  isPremiumConciergeModel,
   normalizeConciergeModelId,
   type ConciergeModelId,
 } from "@/lib/conciergeModels";
@@ -48,6 +51,19 @@ export async function saveConciergeModel(
   );
   if (roleError || !allowed) {
     return { ok: false, error: "Owner or admin access is required." };
+  }
+
+  // Premium intelligence levels are a paid capability — same gate as the
+  // editor copilot ("chat.premium_models"; fails closed to Basic).
+  if (isPremiumConciergeModel(incomingModelId)) {
+    const plan = await resolveTenantPlan(createServiceClient(), tenant.id);
+    if (!plan.entitlements["chat.premium_models"]) {
+      return {
+        ok: false,
+        error:
+          "This intelligence level is available on the Pro and Ultra plans. Upgrade to unlock it.",
+      };
+    }
   }
 
   const currentResult = await supabase

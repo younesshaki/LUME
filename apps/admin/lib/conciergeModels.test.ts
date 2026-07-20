@@ -5,6 +5,7 @@ import {
   conciergeModelIndex,
   getConciergeModelProfile,
   isConciergeModelId,
+  isPremiumConciergeModel,
   isProviderAvailable,
   normalizeConciergeModelId,
 } from "./conciergeModels";
@@ -47,5 +48,14 @@ describe("concierge model registry", () => {
         moonshot: false,
       }),
     ).toBe(false);
+  });
+
+  it("marks every level above the base model as premium (plan-gated)", () => {
+    expect(isPremiumConciergeModel(DEFAULT_CONCIERGE_MODEL_ID)).toBe(false);
+    expect(isPremiumConciergeModel("kimi-k2.6")).toBe(true);
+    expect(isPremiumConciergeModel("deepseek-v4-pro")).toBe(true);
+    expect(isPremiumConciergeModel("kimi-k3")).toBe(true);
+    // Unknown ids normalize to the base model — never premium by accident.
+    expect(isPremiumConciergeModel("attacker/model")).toBe(false);
   });
 });

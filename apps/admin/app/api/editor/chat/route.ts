@@ -30,6 +30,10 @@ import {
   type EditorChatResponse,
 } from "@/lib/editorCopilot";
 import { requestEditorCopilotCompletion } from "@/lib/editorCopilotLlm";
+import {
+  isPremiumConciergeModel,
+  normalizeConciergeModelId,
+} from "@/lib/conciergeModels";
 import { captureError } from "@/lib/observability";
 
 export const runtime = "nodejs";
@@ -58,7 +62,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const parsed = parseEditorChatRequest(body);
   if (!parsed.ok) return json({ error: parsed.error }, 400);
-  const { tenantSlug, pageSlug, pageTitle, draft, selectedBlockId, messages } =
+  const { tenantSlug, pageSlug, pageTitle, draft, selectedBlockId, modelId, messages } =
     parsed.request;
 
   // ── Auth: session + editor-or-higher role in the named tenant ────────────
@@ -80,11 +84,24 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "Not authorized for this tenant" }, 403);
   }
 
-  // ── Plan gate (fails closed to Basic inside resolveTenantPlan) ───────────
+  // ── Plan gates (fail closed to Basic inside resolveTenantPlan) ───────────
   const plan = await resolveTenantPlan(createServiceClient(), tenant.id);
   if (!plan.entitlements["chat.actions"]) {
     return json(
       { error: "plan_upgrade_required", feature: "chat.actions" },
+      403,
+    );
+  }
+  // Premium intelligence levels are Pro/Ultra only. Enforced here regardless
+  // of what the panel shows — the client's slider is a convenience, not the
+  // authority.
+  const requestedModelId = normalizeConciergeModelId(modelId);
+  if (
+    isPremiumConciergeModel(requestedModelId) &&
+    !plan.entitlements["chat.premium_models"]
+  ) {
+    return json(
+      { error: "plan_upgrade_required", feature: "chat.premium_models" },
       403,
     );
   }
@@ -115,10 +132,10 @@ export async function POST(request: Request): Promise<Response> {
     ...(selectedBlockId ? { selectedBlockId } : {}),
     descriptors: listEditorBlockDescriptors(),
   });
-  const completion = await requestEditorCopilotCompletion([
-    { role: "system", content: systemPrompt },
-    ...messages,
-  ]);
+  const completion = await requestEditorCopilotCompletion(
+    [{ role: "system", content: systemPrompt }, ...messages],
+    requestedModelId,
+  );
   if (!completion.ok) {
     captureError("api/editor-chat/llm", new Error(`editor copilot LLM ${completion.status}`), {
       tenantId: tenant.id,
@@ -133,6 +150,7 @@ export async function POST(request: Request): Promise<Response> {
     reply: reply || (edits.length > 0 ? "Here is what I propose." : ""),
     edits,
     ...(dropped.length > 0 ? { droppedEdits: dropped } : {}),
+    model: { id: completion.modelId, fellBack: completion.fellBack },
   };
   return json(payload, 200);
 }
