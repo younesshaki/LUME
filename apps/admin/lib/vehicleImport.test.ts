@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_IMPORT_ROWS,
   findDuplicates,
+  isSafeExternalImageUrl,
+  parseAdditionalImageUrls,
   parseCsv,
   parseVehicleCsv,
   type VehicleFingerprint,
@@ -72,6 +74,178 @@ describe("parseVehicleCsv", () => {
     const result = parseVehicleCsv(lines.join("\n"));
     expect(result.rows).toHaveLength(MAX_IMPORT_ROWS);
     expect(result.errors[0]?.message).toContain("only the first");
+  });
+
+  it("strips a UTF-8 BOM and accepts blank optional fields", () => {
+    const result = parseVehicleCsv("﻿year,make,model,price,trim\r\n2020,Ford,Escape,10000,\r\n");
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({ make: "Ford", trim: "" });
+  });
+
+  it("rejects tab-delimited files with a clear comma-CSV message", () => {
+    const result = parseVehicleCsv("year\tmake\tmodel\tprice\n2020\tFord\tEscape\t10000");
+    expect(result.rows).toEqual([]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.message).toContain("tab-separated");
+    expect(result.errors[0]?.message).toContain("comma-separated CSV");
+  });
+});
+
+describe("feed header aliases", () => {
+  it("maps brand/image_link/id/color/condition to native fields", () => {
+    const result = parseVehicleCsv(
+      [
+        "id,brand,model,year,price,color,condition,image_link",
+        "feed-1,FORD,ESCAPE,2018,10956.00 USD,GOLD,used,https://cdn.example.com/a.jpg",
+      ].join("\n"),
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({
+      external_id: "feed-1",
+      make: "FORD",
+      model: "ESCAPE",
+      price: 10956,
+      exterior_color: "GOLD",
+      stock_type: "Used",
+      image_src: "https://cdn.example.com/a.jpg",
+    });
+  });
+
+  it("native headers win over their feed aliases", () => {
+    const result = parseVehicleCsv(
+      [
+        "year,make,brand,model,price,image_src,image_link,external_id,id,exterior_color,color,stock_type,condition",
+        "2020,NativeMake,AliasBrand,X,1000,https://native.example.com/a.jpg,https://alias.example.com/b.jpg,native-id,alias-id,NativeColor,AliasColor,Certified,used",
+      ].join("\n"),
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({
+      make: "NativeMake",
+      image_src: "https://native.example.com/a.jpg",
+      external_id: "native-id",
+      exterior_color: "NativeColor",
+      stock_type: "Certified",
+    });
+  });
+
+  it("a brand-only feed satisfies the make requirement", () => {
+    const result = parseVehicleCsv("brand,model,year,price\nFord,Escape,2020,9000");
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]?.make).toBe("Ford");
+  });
+});
+
+describe("feed value normalization", () => {
+  const header = "year,make,model,price,mileage,condition";
+
+  it('parses "10956.00 USD" and "102598 MILES"', () => {
+    const result = parseVehicleCsv(`${header}\n2018,Ford,Escape,10956.00 USD,102598 MILES,used`);
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({ price: 10956, mileage: 102598, stock_type: "Used" });
+  });
+
+  it("maps new/used case-insensitively and passes unknown conditions through", () => {
+    const result = parseVehicleCsv(
+      `${header}\n2018,Ford,Escape,9000,,NEW\n2019,Ford,Edge,9500,,Certified pre-owned`,
+    );
+    expect(result.rows[0]?.stock_type).toBe("New");
+    expect(result.rows[1]?.stock_type).toBe("Certified pre-owned");
+  });
+
+  it("does not silently zero fundamentally invalid numbers", () => {
+    const result = parseVehicleCsv(`${header}\n2018,Ford,Escape,call for price,,used`);
+    expect(result.rows).toEqual([]);
+    expect(result.errors[0]?.message).toContain("invalid price");
+  });
+
+  it("keeps a missing required price a row-level error", () => {
+    const result = parseVehicleCsv(`${header}\n2018,Ford,Escape,,,used`);
+    expect(result.rows).toEqual([]);
+    expect(result.errors[0]?.line).toBe(2);
+  });
+});
+
+describe("image URL policy", () => {
+  it("accepts only well-formed https URLs without credentials", () => {
+    expect(isSafeExternalImageUrl("https://cdn.example.com/a.jpg")).toBe(true);
+    expect(isSafeExternalImageUrl("http://cdn.example.com/a.jpg")).toBe(false);
+    expect(isSafeExternalImageUrl("javascript:alert(1)")).toBe(false);
+    expect(isSafeExternalImageUrl("data:image/png;base64,AAAA")).toBe(false);
+    expect(isSafeExternalImageUrl("blob:https://example.com/x")).toBe(false);
+    expect(isSafeExternalImageUrl("/var/tmp/a.jpg")).toBe(false);
+    expect(isSafeExternalImageUrl("not a url")).toBe(false);
+    expect(isSafeExternalImageUrl("https://user:pass@cdn.example.com/a.jpg")).toBe(false);
+  });
+});
+
+describe("feed image import", () => {
+  const header = "year,make,model,price,image_link,additional_image_link";
+
+  it("uses a valid image_link as the primary image", () => {
+    const result = parseVehicleCsv(
+      `${header}\n2018,Ford,Escape,9000,https://cdn.example.com/a.jpg,`,
+    );
+    expect(result.rows[0]?.image_src).toBe("https://cdn.example.com/a.jpg");
+    expect(result.rowImages[0]).toEqual({
+      primary: "https://cdn.example.com/a.jpg",
+      additionalCount: 0,
+      rejectedCount: 0,
+    });
+  });
+
+  it("parses quoted additional_image_link lists, dedupes, and removes the primary", () => {
+    const result = parseVehicleCsv(
+      `${header}\n2018,Ford,Escape,9000,https://cdn.example.com/a.jpg,"https://cdn.example.com/a.jpg,https://cdn.example.com/b.jpg, https://cdn.example.com/b.jpg ,https://cdn.example.com/c.jpg"`,
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.rowImages[0]).toEqual({
+      primary: "https://cdn.example.com/a.jpg",
+      additionalCount: 2, // b + c: primary removed, duplicate b removed
+      rejectedCount: 0,
+    });
+  });
+
+  it("falls back to the first valid additional image when the primary is missing", () => {
+    const result = parseVehicleCsv(
+      `${header}\n2018,Ford,Escape,9000,,"https://cdn.example.com/b.jpg,https://cdn.example.com/c.jpg"`,
+    );
+    expect(result.rows[0]?.image_src).toBe("https://cdn.example.com/b.jpg");
+    expect(result.rowImages[0]).toMatchObject({ additionalCount: 1 });
+  });
+
+  it("demotes invalid image URLs to warnings without failing the row", () => {
+    const result = parseVehicleCsv(
+      `${header}\n2018,Ford,Escape,9000,javascript:alert(1),"http://insecure.example.com/x.jpg,https://cdn.example.com/ok.jpg"`,
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.rows).toHaveLength(1);
+    // Invalid primary rejected; first valid additional promoted to primary.
+    expect(result.rows[0]?.image_src).toBe("https://cdn.example.com/ok.jpg");
+    expect(result.rowImages[0]).toEqual({
+      primary: "https://cdn.example.com/ok.jpg",
+      additionalCount: 0,
+      rejectedCount: 2,
+    });
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]?.message).toContain("rejected");
+    expect(result.warnings[0]?.line).toBe(2);
+  });
+
+  it("leaves the vehicle photo-less (placeholder) when nothing valid exists", () => {
+    const result = parseVehicleCsv(`${header}\n2018,Ford,Escape,9000,,`);
+    expect(result.rows[0]?.image_src).toBe("");
+    expect(result.rowImages[0]).toEqual({ primary: null, additionalCount: 0, rejectedCount: 0 });
+  });
+});
+
+describe("parseAdditionalImageUrls", () => {
+  it("trims, drops empties, validates, dedupes, and excludes the primary", () => {
+    const { urls, rejected } = parseAdditionalImageUrls(
+      " https://a.example.com/1.jpg ,, https://a.example.com/1.jpg ,ftp://bad,https://b.example.com/2.jpg",
+      "https://b.example.com/2.jpg",
+    );
+    expect(urls).toEqual(["https://a.example.com/1.jpg"]);
+    expect(rejected).toBe(1);
   });
 });
 

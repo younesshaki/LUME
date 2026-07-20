@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Car } from "lucide-react";
 import type { VehicleStatus } from "@lume/types";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +20,8 @@ import { VehicleBulkToolbar } from "./VehicleBulkToolbar";
 
 type SortableColumn = "year" | "make" | "model" | "price" | "mileage";
 
+export type InventoryView = "table" | "grid";
+
 export type VehicleTableRow = {
   id: string;
   year: number;
@@ -32,12 +34,17 @@ export type VehicleTableRow = {
   exterior_color: string;
   status: VehicleStatus;
   sold_at: string | null;
+  stock_type: string | null;
+  external_id: string | null;
 };
 
 type VehiclesTableClientProps = {
   tenantId: string;
   tenantSlug: string;
   vehicles: VehicleTableRow[];
+  /** vehicle id → resolved thumbnail URL (managed R2 wins; null = placeholder). */
+  thumbnails: Record<string, string | null>;
+  view: InventoryView;
   query: string;
   errorMessage: string | null;
   clearSearchHref: string;
@@ -63,6 +70,8 @@ export function VehiclesTableClient({
   tenantId,
   tenantSlug,
   vehicles,
+  thumbnails,
+  view,
   query,
   errorMessage,
   clearSearchHref,
@@ -70,6 +79,8 @@ export function VehiclesTableClient({
   direction,
   sortHrefs,
 }: VehiclesTableClientProps) {
+  // Selection is page-scoped and shared by both views: switching layout or
+  // changing filters/pages prunes ids that are no longer on screen.
   const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const availableIds = React.useMemo(() => new Set(vehicles.map((vehicle) => vehicle.id)), [vehicles]);
 
@@ -83,6 +94,14 @@ export function VehiclesTableClient({
   );
   const allSelected = vehicles.length > 0 && selectedRows.length === vehicles.length;
   const clearSelection = React.useCallback(() => setSelected(new Set()), []);
+  const toggleOne = React.useCallback((vehicleId: string, checked: boolean) => {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (checked) next.add(vehicleId);
+      else next.delete(vehicleId);
+      return next;
+    });
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -94,136 +113,317 @@ export function VehiclesTableClient({
         />
       ) : null}
 
-      <div className="rounded-xl border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={allSelected ? true : selectedRows.length > 0 ? "indeterminate" : false}
-                  onCheckedChange={(checked) => {
-                    setSelected(checked === true ? new Set(vehicles.map((vehicle) => vehicle.id)) : new Set());
-                  }}
-                  aria-label="Select all vehicles on this page"
-                  disabled={vehicles.length === 0 || Boolean(errorMessage)}
-                />
-              </TableHead>
-              {(["year", "make", "model"] as const).map((column) => (
+      {view === "grid" ? (
+        <VehiclesGrid
+          tenantId={tenantId}
+          tenantSlug={tenantSlug}
+          vehicles={vehicles}
+          thumbnails={thumbnails}
+          query={query}
+          errorMessage={errorMessage}
+          clearSearchHref={clearSearchHref}
+          selected={selected}
+          allSelected={allSelected}
+          selectedCount={selectedRows.length}
+          onToggleOne={toggleOne}
+          onToggleAll={(checked) =>
+            setSelected(checked ? new Set(vehicles.map((vehicle) => vehicle.id)) : new Set())
+          }
+        />
+      ) : (
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allSelected ? true : selectedRows.length > 0 ? "indeterminate" : false}
+                    onCheckedChange={(checked) => {
+                      setSelected(checked === true ? new Set(vehicles.map((vehicle) => vehicle.id)) : new Set());
+                    }}
+                    aria-label="Select all vehicles on this page"
+                    disabled={vehicles.length === 0 || Boolean(errorMessage)}
+                  />
+                </TableHead>
+                {(["year", "make", "model"] as const).map((column) => (
+                  <SortableHead
+                    key={column}
+                    column={column}
+                    label={column.charAt(0).toUpperCase() + column.slice(1)}
+                    href={sortHrefs[column]}
+                    sort={sort}
+                    direction={direction}
+                  />
+                ))}
+                <TableHead>Trim</TableHead>
                 <SortableHead
-                  key={column}
-                  column={column}
-                  label={column.charAt(0).toUpperCase() + column.slice(1)}
-                  href={sortHrefs[column]}
+                  column="price"
+                  label="Price"
+                  href={sortHrefs.price}
+                  sort={sort}
+                  direction={direction}
+                  className="text-right"
+                />
+                <SortableHead
+                  column="mileage"
+                  label="Mileage"
+                  href={sortHrefs.mileage}
                   sort={sort}
                   direction={direction}
                 />
-              ))}
-              <TableHead>Trim</TableHead>
-              <SortableHead
-                column="price"
-                label="Price"
-                href={sortHrefs.price}
-                sort={sort}
-                direction={direction}
-                className="text-right"
-              />
-              <SortableHead
-                column="mileage"
-                label="Mileage"
-                href={sortHrefs.mileage}
-                sort={sort}
-                direction={direction}
-              />
-              <TableHead>Body</TableHead>
-              <TableHead>Color</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {errorMessage ? (
-              <TableRow>
-                <TableCell colSpan={11} className="h-24 text-center text-destructive">
-                  {errorMessage}
-                </TableCell>
+                <TableHead>Body</TableHead>
+                <TableHead>Color</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : vehicles.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">
-                  No vehicles match “{query}”.{" "}
-                  <Link href={clearSearchHref} className="underline underline-offset-2">
-                    Clear search
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ) : (
-              vehicles.map((vehicle) => (
-                <TableRow key={vehicle.id} data-state={selected.has(vehicle.id) ? "selected" : undefined}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selected.has(vehicle.id)}
-                      onCheckedChange={(checked) => {
-                        setSelected((current) => {
-                          const next = new Set(current);
-                          if (checked === true) next.add(vehicle.id);
-                          else next.delete(vehicle.id);
-                          return next;
-                        });
-                      }}
-                      aria-label={`Select ${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                    />
-                  </TableCell>
-                  <TableCell>{vehicle.year}</TableCell>
-                  <TableCell className="font-medium">{vehicle.make}</TableCell>
-                  <TableCell>{vehicle.model}</TableCell>
-                  <TableCell className="text-muted-foreground">{vehicle.trim || "—"}</TableCell>
-                  <TableCell className="text-right font-mono text-sm">
-                    {formatCurrency(vehicle.price)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {vehicle.mileage !== null ? `${vehicle.mileage.toLocaleString()} mi` : "—"}
-                  </TableCell>
-                  <TableCell>{vehicle.body_style || "—"}</TableCell>
-                  <TableCell>
-                    <span className="flex items-center gap-2">
-                      {vehicle.exterior_color ? (
-                        <span
-                          className="inline-block size-3 shrink-0 rounded-full border"
-                          style={{ backgroundColor: colorToHex(vehicle.exterior_color) }}
-                          title={vehicle.exterior_color}
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                      {vehicle.exterior_color || "—"}
-                    </span>
-                  </TableCell>
-                  <TableCell><StatusBadge status={vehicle.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link
-                          href={`/admin/${tenantSlug}/vehicles/${vehicle.id}`}
-                          aria-label={`Edit ${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                        >
-                          Edit
-                        </Link>
-                      </Button>
-                      {vehicle.sold_at ? null : (
-                        <DeleteButton
-                          tenantId={tenantId}
-                          vehicleId={vehicle.id}
-                          vehicleLabel={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                        />
-                      )}
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {errorMessage ? (
+                <TableRow>
+                  <TableCell colSpan={11} className="h-24 text-center text-destructive">
+                    {errorMessage}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : vehicles.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">
+                    No vehicles match “{query}”.{" "}
+                    <Link href={clearSearchHref} className="underline underline-offset-2">
+                      Clear search
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                vehicles.map((vehicle) => (
+                  <TableRow key={vehicle.id} data-state={selected.has(vehicle.id) ? "selected" : undefined}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selected.has(vehicle.id)}
+                        onCheckedChange={(checked) => toggleOne(vehicle.id, checked === true)}
+                        aria-label={`Select ${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                      />
+                    </TableCell>
+                    <TableCell>{vehicle.year}</TableCell>
+                    <TableCell className="font-medium">{vehicle.make}</TableCell>
+                    <TableCell>{vehicle.model}</TableCell>
+                    <TableCell className="text-muted-foreground">{vehicle.trim || "—"}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {formatCurrency(vehicle.price)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {vehicle.mileage !== null ? `${vehicle.mileage.toLocaleString()} mi` : "—"}
+                    </TableCell>
+                    <TableCell>{vehicle.body_style || "—"}</TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-2">
+                        {vehicle.exterior_color ? (
+                          <span
+                            className="inline-block size-3 shrink-0 rounded-full border"
+                            style={{ backgroundColor: colorToHex(vehicle.exterior_color) }}
+                            title={vehicle.exterior_color}
+                            aria-hidden="true"
+                          />
+                        ) : null}
+                        {vehicle.exterior_color || "—"}
+                      </span>
+                    </TableCell>
+                    <TableCell><StatusBadge status={vehicle.status} /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link
+                            href={`/admin/${tenantSlug}/vehicles/${vehicle.id}`}
+                            aria-label={`Edit ${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                          >
+                            Edit
+                          </Link>
+                        </Button>
+                        {vehicle.sold_at ? null : (
+                          <DeleteButton
+                            tenantId={tenantId}
+                            vehicleId={vehicle.id}
+                            vehicleLabel={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                          />
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
+  );
+}
+
+function VehiclesGrid({
+  tenantId,
+  tenantSlug,
+  vehicles,
+  thumbnails,
+  query,
+  errorMessage,
+  clearSearchHref,
+  selected,
+  allSelected,
+  selectedCount,
+  onToggleOne,
+  onToggleAll,
+}: {
+  tenantId: string;
+  tenantSlug: string;
+  vehicles: VehicleTableRow[];
+  thumbnails: Record<string, string | null>;
+  query: string;
+  errorMessage: string | null;
+  clearSearchHref: string;
+  selected: Set<string>;
+  allSelected: boolean;
+  selectedCount: number;
+  onToggleOne: (vehicleId: string, checked: boolean) => void;
+  onToggleAll: (checked: boolean) => void;
+}) {
+  if (errorMessage) {
+    return (
+      <div className="rounded-xl border p-10 text-center text-destructive">{errorMessage}</div>
+    );
+  }
+  if (vehicles.length === 0) {
+    return (
+      <div className="rounded-xl border p-10 text-center text-muted-foreground">
+        No vehicles match “{query}”.{" "}
+        <Link href={clearSearchHref} className="underline underline-offset-2">
+          Clear search
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className="flex w-fit items-center gap-2 text-sm text-muted-foreground">
+        <Checkbox
+          checked={allSelected ? true : selectedCount > 0 ? "indeterminate" : false}
+          onCheckedChange={(checked) => onToggleAll(checked === true)}
+          aria-label="Select all vehicles on this page"
+        />
+        Select all on this page
+      </label>
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" role="list">
+        {vehicles.map((vehicle) => (
+          <VehicleGridCard
+            key={vehicle.id}
+            tenantId={tenantId}
+            tenantSlug={tenantSlug}
+            vehicle={vehicle}
+            thumbnail={thumbnails[vehicle.id] ?? null}
+            selected={selected.has(vehicle.id)}
+            onToggle={(checked) => onToggleOne(vehicle.id, checked)}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function VehicleGridCard({
+  tenantId,
+  tenantSlug,
+  vehicle,
+  thumbnail,
+  selected,
+  onToggle,
+}: {
+  tenantId: string;
+  tenantSlug: string;
+  vehicle: VehicleTableRow;
+  thumbnail: string | null;
+  selected: boolean;
+  onToggle: (checked: boolean) => void;
+}) {
+  // A broken external URL (e.g. from a feed import) falls back to the
+  // placeholder instead of a broken-image glyph — one bad URL never breaks
+  // the grid.
+  const [imageFailed, setImageFailed] = React.useState(false);
+  const title = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+  const showImage = thumbnail && !imageFailed;
+
+  return (
+    <li
+      className={`overflow-hidden rounded-xl border bg-card transition-colors ${
+        selected ? "border-primary ring-2 ring-primary/15" : ""
+      }`}
+      data-state={selected ? "selected" : undefined}
+    >
+      <div className="relative aspect-[4/3] bg-muted">
+        {showImage ? (
+          // Deliberately a native <img>: feed thumbnails come from arbitrary
+          // dealer CDNs, and allowlisting them all in next/image would mean a
+          // wildcard remote pattern — a controlled <img> is safer.
+          <img
+            src={thumbnail}
+            alt={title}
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 size-full object-cover"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+            <Car className="size-8" aria-hidden="true" />
+            <span className="text-xs">No photo</span>
+          </div>
+        )}
+        <span className="absolute left-2 top-2 rounded-md bg-background/90 p-1 shadow-sm">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) => onToggle(checked === true)}
+            aria-label={`Select ${title}`}
+          />
+        </span>
+        <span className="absolute right-2 top-2">
+          <StatusBadge status={vehicle.status} />
+        </span>
+      </div>
+      <div className="space-y-2 p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{title}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {[vehicle.trim, vehicle.body_style].filter(Boolean).join(" · ") || "—"}
+            </p>
+          </div>
+          <p className="shrink-0 font-mono text-sm font-medium">{formatCurrency(vehicle.price)}</p>
+        </div>
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span>{vehicle.mileage !== null ? `${vehicle.mileage.toLocaleString()} mi` : "— mi"}</span>
+          {vehicle.exterior_color ? (
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block size-2.5 shrink-0 rounded-full border"
+                style={{ backgroundColor: colorToHex(vehicle.exterior_color) }}
+                aria-hidden="true"
+              />
+              {vehicle.exterior_color}
+            </span>
+          ) : null}
+          {vehicle.stock_type ? <span>{vehicle.stock_type}</span> : null}
+          {vehicle.external_id ? <span title="External ID">#{vehicle.external_id}</span> : null}
+        </p>
+        <div className="flex items-center justify-end gap-1 border-t pt-2">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/admin/${tenantSlug}/vehicles/${vehicle.id}`} aria-label={`Edit ${title}`}>
+              Edit
+            </Link>
+          </Button>
+          {vehicle.sold_at ? null : (
+            <DeleteButton tenantId={tenantId} vehicleId={vehicle.id} vehicleLabel={title} />
+          )}
+        </div>
+      </div>
+    </li>
   );
 }
 

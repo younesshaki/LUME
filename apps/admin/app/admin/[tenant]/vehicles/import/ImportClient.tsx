@@ -242,7 +242,11 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
             trim, mileage, body_style, exterior_color, interior_color, drivetrain,
             fuel_type, image_src, seller_city, seller_state, stock_type, external_id
           </code>
-          . Header names are case-insensitive; camelCase works too.
+          . Header names are case-insensitive; camelCase works too. Common feed
+          headers are understood as well:{" "}
+          <code>brand, image_link, additional_image_link, id, color, condition</code>{" "}
+          (LUME headers win when both are present). Files must be standard
+          comma-separated CSV — tab-separated exports are not supported.
         </p>
       </header>
 
@@ -335,6 +339,50 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
 
       {recentImports.length > 0 && <RecentImports imports={recentImports} />}
     </div>
+  );
+}
+
+/**
+ * Bounded, lazy-loaded primary-photo preview. Only PREVIEW_ROWS thumbnails
+ * render, and a broken external URL falls back to the "No photo" state
+ * instead of a broken-image glyph.
+ */
+function PreviewThumb({
+  src,
+  title,
+  additionalCount,
+}: {
+  src: string | null;
+  title: string;
+  additionalCount: number;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <span className="inline-flex h-10 w-14 items-center justify-center rounded border bg-muted text-[10px] text-muted-foreground">
+        No photo
+      </span>
+    );
+  }
+  return (
+    <span className="relative inline-block">
+      <img
+        src={src}
+        alt={`Primary photo for ${title}`}
+        loading="lazy"
+        decoding="async"
+        className="h-10 w-14 rounded border object-cover"
+        onError={() => setFailed(true)}
+      />
+      {additionalCount > 0 && (
+        <span
+          className="absolute -bottom-1 -right-1 rounded bg-background/95 border px-1 text-[9px] font-medium leading-tight"
+          title={`${additionalCount} additional photo URL${additionalCount === 1 ? "" : "s"} detected`}
+        >
+          +{additionalCount}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -453,6 +501,17 @@ function PreviewPanel({
     [duplicates]
   );
   const canImport = importCount > 0;
+  const photoStats = useMemo(() => {
+    let withPrimary = 0;
+    let additional = 0;
+    let rejected = 0;
+    for (const images of parsed.rowImages) {
+      if (images.primary) withPrimary++;
+      additional += images.additionalCount;
+      rejected += images.rejectedCount;
+    }
+    return { withPrimary, additional, rejected };
+  }, [parsed.rowImages]);
 
   return (
     <div className="space-y-4">
@@ -479,6 +538,41 @@ function PreviewPanel({
             </li>
           ))}
           {parsed.errors.length > 50 && <li>…and {parsed.errors.length - 50} more</li>}
+        </ul>
+      )}
+
+      {parsed.rows.length > 0 && (
+        <div className="rounded-xl border p-3 text-xs text-muted-foreground space-y-1">
+          <p>
+            <span className="font-medium text-foreground">Photos:</span>{" "}
+            {photoStats.withPrimary} of {parsed.rows.length} row
+            {parsed.rows.length === 1 ? "" : "s"} include a primary photo
+            {photoStats.additional > 0 &&
+              `, plus ${photoStats.additional.toLocaleString()} additional photo URL${photoStats.additional === 1 ? "" : "s"} detected`}
+            {photoStats.rejected > 0 && (
+              <span className="text-amber-600">
+                {" "}· {photoStats.rejected} invalid photo URL{photoStats.rejected === 1 ? "" : "s"} ignored
+              </span>
+            )}
+            .
+          </p>
+          <p>
+            Feed photos stay hosted on the source site and display on your website
+            until you replace them with a managed upload in the vehicle&apos;s image
+            manager — managed photos always take precedence. Additional photo URLs
+            are validated and counted here but not copied into the managed gallery.
+          </p>
+        </div>
+      )}
+
+      {parsed.warnings.length > 0 && (
+        <ul className="text-xs text-amber-700 dark:text-amber-500 rounded-lg border border-amber-300 dark:border-amber-800 p-3 space-y-1 max-h-40 overflow-y-auto">
+          {parsed.warnings.slice(0, 50).map((warning, i) => (
+            <li key={i}>
+              Line {warning.line}: {warning.message}
+            </li>
+          ))}
+          {parsed.warnings.length > 50 && <li>…and {parsed.warnings.length - 50} more</li>}
         </ul>
       )}
 
@@ -561,7 +655,7 @@ function PreviewPanel({
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b bg-muted/50">
-                {["Year", "Make", "Model", "Trim", "Price", "Mileage", "Body"].map((h) => (
+                {["Photo", "Year", "Make", "Model", "Trim", "Price", "Mileage", "Body"].map((h) => (
                   <th key={h} className="text-left px-3 py-2 font-medium text-muted-foreground">
                     {h}
                   </th>
@@ -571,6 +665,13 @@ function PreviewPanel({
             <tbody>
               {parsed.rows.slice(0, PREVIEW_ROWS).map((row, i) => (
                 <tr key={i} className="border-b border-neutral-100 dark:border-neutral-800/50">
+                  <td className="px-3 py-2">
+                    <PreviewThumb
+                      src={parsed.rowImages[i]?.primary ?? null}
+                      title={`${row.year} ${row.make} ${row.model}`}
+                      additionalCount={parsed.rowImages[i]?.additionalCount ?? 0}
+                    />
+                  </td>
                   <td className="px-3 py-2">{row.year}</td>
                   <td className="px-3 py-2">{row.make}</td>
                   <td className="px-3 py-2">{row.model}</td>

@@ -1,17 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Car, Plus, Search, Upload } from "lucide-react";
+import { Car, LayoutGrid, Plus, Search, TableProperties, Upload } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   VEHICLE_STATUS_FILTERS,
   normalizeVehicleStatusFilter,
   vehicleStatusFilterLabel,
 } from "@/lib/vehicleStatus";
+import { readR2PublicBaseUrl } from "@/lib/r2Config";
+import {
+  groupManagedImagesByVehicle,
+  resolveVehicleThumbnail,
+  type ManagedImageRef,
+} from "@/lib/vehicleGrid";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { VehiclesTableClient } from "./VehiclesTableClient";
+import { VehiclesTableClient, type InventoryView } from "./VehiclesTableClient";
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
@@ -21,6 +27,7 @@ type PageProps = {
     dir?: string;
     page?: string;
     status?: string;
+    view?: string;
   }>;
 };
 
@@ -42,6 +49,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
   const dir = sp.dir === "asc" ? "asc" : "desc";
   const page = Math.max(1, parseInt(sp.page ?? "1") || 1);
   const status = normalizeVehicleStatusFilter(sp.status);
+  const view: InventoryView = sp.view === "grid" ? "grid" : "table";
 
   const supabase = await createSupabaseServerClient();
 
@@ -55,7 +63,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
   let query = supabase
     .from("vehicles")
     .select(
-      "id, year, make, model, trim, price, mileage, body_style, exterior_color, status, sold_at",
+      "id, year, make, model, trim, price, mileage, body_style, exterior_color, status, sold_at, stock_type, external_id, image_src, special_image_src",
       { count: "exact" },
     )
     .eq("tenant_id", tenant.id);
@@ -73,18 +81,47 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
     .order(SORTABLE[sort], { ascending: dir === "asc", nullsFirst: false })
     .range(from, from + PAGE_SIZE - 1);
 
+  // One bounded, tenant-scoped image lookup for the vehicles on this page —
+  // managed R2 images stay authoritative over imported external URLs. A
+  // failed read (e.g. migration missing) degrades to legacy fallbacks only.
+  const pageVehicles = vehicles ?? [];
+  let managedByVehicle = new Map<string, ManagedImageRef[]>();
+  if (pageVehicles.length > 0) {
+    const { data: managedImages } = await supabase
+      .from("vehicle_images")
+      .select("vehicle_id, r2_key, is_primary, sort_order, created_at")
+      .eq("tenant_id", tenant.id)
+      .in("vehicle_id", pageVehicles.map((vehicle) => vehicle.id));
+    managedByVehicle = groupManagedImagesByVehicle(managedImages ?? []);
+  }
+  const r2PublicBaseUrl = readR2PublicBaseUrl();
+  const thumbnails: Record<string, string | null> = Object.fromEntries(
+    pageVehicles.map((vehicle) => [
+      vehicle.id,
+      resolveVehicleThumbnail({
+        managed: managedByVehicle.get(vehicle.id),
+        vehicle: {
+          special_image_src: vehicle.special_image_src,
+          image_src: vehicle.image_src,
+        },
+        r2PublicBaseUrl,
+      }),
+    ]),
+  );
+
   const totalCount = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const statusDescriptor = status === "all" ? "" : `${vehicleStatusFilterLabel(status).toLowerCase()} `;
 
   const href = (overrides: Record<string, string | number | undefined>) => {
     const params = new URLSearchParams();
-    const merged = { q, sort, dir, page, status, ...overrides };
+    const merged = { q, sort, dir, page, status, view, ...overrides };
     if (merged.q) params.set("q", String(merged.q));
     if (merged.sort && merged.sort !== "year") params.set("sort", String(merged.sort));
     if (merged.dir && merged.dir !== "desc") params.set("dir", String(merged.dir));
     if (merged.page && Number(merged.page) > 1) params.set("page", String(merged.page));
     if (merged.status && merged.status !== "active") params.set("status", String(merged.status));
+    if (merged.view && merged.view !== "table") params.set("view", String(merged.view));
     const qs = params.toString();
     return `/admin/${slug}/vehicles${qs ? `?${qs}` : ""}`;
   };
@@ -126,23 +163,47 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         }
       />
 
-      <nav className="flex flex-wrap gap-2" aria-label="Filter vehicles by status">
-        {VEHICLE_STATUS_FILTERS.map((filter) => (
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <nav className="flex flex-wrap gap-2" aria-label="Filter vehicles by status">
+          {VEHICLE_STATUS_FILTERS.map((filter) => (
+            <Button
+              key={filter.value}
+              variant={status === filter.value ? "secondary" : "outline"}
+              size="sm"
+              asChild
+            >
+              <Link
+                href={href({ status: filter.value, page: 1 })}
+                aria-current={status === filter.value ? "page" : undefined}
+              >
+                {filter.label}
+              </Link>
+            </Button>
+          ))}
+        </nav>
+        <nav className="flex gap-1 rounded-lg border p-0.5" aria-label="Inventory layout">
           <Button
-            key={filter.value}
-            variant={status === filter.value ? "secondary" : "outline"}
+            variant={view === "table" ? "secondary" : "ghost"}
             size="sm"
             asChild
           >
-            <Link
-              href={href({ status: filter.value, page: 1 })}
-              aria-current={status === filter.value ? "page" : undefined}
-            >
-              {filter.label}
+            <Link href={href({ view: "table" })} aria-current={view === "table" ? "true" : undefined}>
+              <TableProperties aria-hidden="true" />
+              Table
             </Link>
           </Button>
-        ))}
-      </nav>
+          <Button
+            variant={view === "grid" ? "secondary" : "ghost"}
+            size="sm"
+            asChild
+          >
+            <Link href={href({ view: "grid" })} aria-current={view === "grid" ? "true" : undefined}>
+              <LayoutGrid aria-hidden="true" />
+              Grid
+            </Link>
+          </Button>
+        </nav>
+      </div>
 
       <form method="get" className="relative max-w-sm">
         <Search
@@ -160,6 +221,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         {sort !== "year" && <input type="hidden" name="sort" value={sort} />}
         {dir !== "desc" && <input type="hidden" name="dir" value={dir} />}
         {status !== "active" && <input type="hidden" name="status" value={status} />}
+        {view !== "table" && <input type="hidden" name="view" value={view} />}
       </form>
 
       {totalCount === 0 && !q && !error ? (
@@ -198,7 +260,9 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         <VehiclesTableClient
           tenantId={tenant.id}
           tenantSlug={tenant.slug}
-          vehicles={vehicles ?? []}
+          vehicles={pageVehicles}
+          thumbnails={thumbnails}
+          view={view}
           query={q}
           errorMessage={error ? "Failed to load vehicles" : null}
           clearSearchHref={href({ q: undefined, page: 1 })}
