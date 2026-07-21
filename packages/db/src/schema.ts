@@ -475,7 +475,7 @@ export type Database = {
           id: string;
           tenant_id: string;
           import_type: "vehicle_inventory";
-          mode: "add" | "replace";
+          mode: "add" | "replace" | "sync";
           status: "pending" | "running" | "succeeded" | "failed" | "partial";
           source_file_name: string;
           source_object_path: string | null;
@@ -514,7 +514,7 @@ export type Database = {
         > & {
           id?: string;
           import_type?: "vehicle_inventory";
-          mode?: "add" | "replace";
+          mode?: "add" | "replace" | "sync";
           status?: "pending" | "running" | "succeeded" | "failed" | "partial";
           source_object_path?: string | null;
           total_rows?: number;
@@ -538,6 +538,9 @@ export type Database = {
           id: string;
           tenant_id: string;
           external_id: string | null;
+          feed_vin: string | null;
+          feed_image_urls: string[];
+          feed_updated_at: string | null;
           stock_type: string | null;
           year: number;
           make: string;
@@ -569,9 +572,18 @@ export type Database = {
           | "status"
           | "sold_at"
           | "sold_price"
+          | "feed_vin"
+          | "feed_image_urls"
+          | "feed_updated_at"
           | "created_at"
           | "updated_at"
-        > & { id?: string; status?: "draft" | "live" | "sold" | "archived" };
+        > & {
+          id?: string;
+          status?: "draft" | "live" | "sold" | "archived";
+          feed_vin?: string | null;
+          feed_image_urls?: string[];
+          feed_updated_at?: string | null;
+        };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
         Relationships: [];
       };
@@ -581,6 +593,7 @@ export type Database = {
           tenant_id: string;
           vehicle_id: string;
           r2_key: string;
+          source_url: string | null;
           content_type: "image/jpeg" | "image/png" | "image/webp";
           byte_size: number;
           width: number | null;
@@ -598,7 +611,7 @@ export type Database = {
           Database["public"]["Tables"]["vehicle_images"]["Row"],
           "id" | "sort_order" | "is_primary" | "ai_description" |
           "ai_description_status" | "ai_description_model" |
-          "ai_description_updated_at" | "created_at" | "updated_at"
+          "ai_description_updated_at" | "source_url" | "created_at" | "updated_at"
         > & {
           id?: string;
           sort_order?: number;
@@ -607,6 +620,7 @@ export type Database = {
           ai_description_status?: "pending" | "processing" | "completed" | "failed" | null;
           ai_description_model?: string | null;
           ai_description_updated_at?: string | null;
+          source_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -7,6 +7,10 @@ export type Vehicle = {
   id: string;
   tenantId: TenantId;
   externalId?: string;
+  /** Stable VIN supplied by an inventory feed, when available. */
+  feedVin?: string;
+  /** Ordered supplier-hosted image URLs; separate from managed R2 images. */
+  feedImageUrls?: string[];
   stockType: StockType | string;
   year: number;
   make: string;

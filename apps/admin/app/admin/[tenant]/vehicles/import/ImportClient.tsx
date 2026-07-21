@@ -16,8 +16,10 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   findDuplicates,
   parseVehicleCsv,
+  resolveFeedSync,
   type DuplicateReason,
-  type VehicleFingerprint,
+  type FeedSyncExistingVehicle,
+  type FeedSyncResolution,
   type VehicleImportResult,
 } from "@/lib/vehicleImport";
 import {
@@ -53,7 +55,7 @@ type RecentCsvImport = Pick<
   | "created_at"
 >;
 
-type ImportMode = "add" | "replace";
+type ImportMode = "add" | "replace" | "sync";
 
 type ImportPhase =
   | { step: "pick" }
@@ -63,10 +65,11 @@ type ImportPhase =
       fileName: string;
       parsed: VehicleImportResult;
       duplicates: Map<number, DuplicateReason>;
+      sync: Map<number, FeedSyncResolution>;
       existingCount: number;
     }
   | { step: "importing"; done: number; total: number }
-  | { step: "done"; imported: number; deleted: number }
+  | { step: "done"; imported: number; updated: number; deleted: number }
   | { step: "failed"; message: string; imported: number };
 
 const BATCH_SIZE = 500;
@@ -87,6 +90,7 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
     try {
       const existing = await fetchExistingFingerprints(tenantId);
       const duplicates = findDuplicates(parsed.rows, existing);
+      const sync = resolveFeedSync(parsed.rows, existing);
       setMode("add");
       setSkipped(new Set(duplicates.keys()));
       setPhase({
@@ -94,6 +98,7 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
         fileName: file.name,
         parsed,
         duplicates,
+        sync,
         existingCount: existing.length,
       });
     } catch (error) {
@@ -109,15 +114,24 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
     fileName: string,
     parsed: VehicleImportResult,
     importMode: ImportMode,
-    existingCount: number
+    existingCount: number,
+    sync: Map<number, FeedSyncResolution>,
   ) => {
     const supabase = createSupabaseBrowserClient();
     const rows =
       importMode === "replace"
         ? parsed.rows
         : parsed.rows.filter((_, index) => !skipped.has(index));
-    const total = rows.length;
-    const skippedRows = parsed.rows.length - rows.length;
+    const syncTasks = importMode === "sync"
+      ? parsed.rows.map((row, index) => ({ row, resolution: sync.get(index) ?? { status: "create" } }))
+      : [];
+    const syncConflicts = syncTasks.filter((task) => task.resolution.status === "conflict");
+    const total = importMode === "sync"
+      ? syncTasks.length - syncConflicts.length
+      : rows.length;
+    const skippedRows = importMode === "sync"
+      ? syncConflicts.length
+      : parsed.rows.length - rows.length;
     const failedRows = new Set(
       parsed.errors.filter((error) => error.line > 1).map((error) => error.line)
     ).size;
@@ -172,6 +186,7 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
     };
 
     let deleted = 0;
+    let updated = 0;
     if (importMode === "replace") {
       // Order matters: wipe first so a mid-import failure never leaves the
       // old and new inventories mixed together.
@@ -193,8 +208,45 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
       deleted = existingCount;
     }
 
-    for (let i = 0; i < total; i += BATCH_SIZE) {
-      const batch = rows.slice(i, i + BATCH_SIZE).map((row) => ({ ...row, tenant_id: tenantId }));
+    if (importMode === "sync") {
+      const syncTimestamp = new Date().toISOString();
+      const runnable = syncTasks.filter((task) => task.resolution.status !== "conflict");
+      for (const task of runnable) {
+        const payload = syncVehiclePayload(task.row, syncTimestamp);
+        const error = task.resolution.status === "update"
+          ? (await supabase
+            .from("vehicles")
+            .update(payload)
+            .eq("tenant_id", tenantId)
+            .eq("id", task.resolution.vehicleId)).error
+          : (await supabase.from("vehicles").insert({ ...payload, tenant_id: tenantId })).error;
+        if (error) {
+          const failedProgress = resolveCsvImportProgress(
+            { ...baseCounts, succeededRows: done },
+            "failed",
+          );
+          await persistProgress(failedProgress, {
+            errors: mergeCsvImportErrors(trackedErrors, [
+              { line: null, message: `Feed sync failed: ${error.message}` },
+            ]),
+            completed_at: new Date().toISOString(),
+          });
+          setPhase({ step: "failed", message: error.message, imported: done });
+          return;
+        }
+        if (task.resolution.status === "update") updated++;
+        done++;
+        await persistProgress(resolveCsvImportProgress(
+          { ...baseCounts, succeededRows: done },
+          "running",
+        ));
+        setPhase({ step: "importing", done, total });
+      }
+    } else for (let i = 0; i < total; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE).map((row) => ({
+        ...legacyVehiclePayload(row),
+        tenant_id: tenantId,
+      }));
       const { error } = await supabase.from("vehicles").insert(batch);
       if (error) {
         const failedProgress = resolveCsvImportProgress(
@@ -219,16 +271,18 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
     }
 
     await persistProgress(resolveCsvImportProgress(
-      { ...baseCounts, succeededRows: total },
+      { ...baseCounts, succeededRows: done },
       "completed",
     ), { completed_at: new Date().toISOString() });
 
     toast.success(
       importMode === "replace"
         ? `Inventory replaced: ${total} vehicle${total === 1 ? "" : "s"} imported`
+        : importMode === "sync"
+          ? `Feed synchronized: ${updated} updated, ${done - updated} added`
         : `Imported ${total} vehicle${total === 1 ? "" : "s"}`
     );
-    setPhase({ step: "done", imported: total, deleted });
+    setPhase({ step: "done", imported: done - updated, updated, deleted });
     router.refresh();
   };
 
@@ -240,7 +294,7 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
           Required columns: <code>year, make, model, price</code>. Optional:{" "}
           <code>
             trim, mileage, body_style, exterior_color, interior_color, drivetrain,
-            fuel_type, image_src, seller_city, seller_state, stock_type, external_id
+            fuel_type, image_src, image_list, vin, seller_city, seller_state, stock_type, external_id
           </code>
           . Header names are case-insensitive; camelCase works too.
         </p>
@@ -274,6 +328,7 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
           fileName={phase.fileName}
           parsed={phase.parsed}
           duplicates={phase.duplicates}
+          sync={phase.sync}
           existingCount={phase.existingCount}
           mode={mode}
           onModeChange={setMode}
@@ -292,6 +347,7 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
             phase.parsed,
             mode,
             phase.existingCount,
+            phase.sync,
           )}
         />
       )}
@@ -307,6 +363,8 @@ export default function ImportClient({ tenantId, tenantSlug, recentImports }: Im
           <p className="text-sm text-green-600" role="status">
             {phase.deleted > 0
               ? `Replaced ${phase.deleted} vehicle${phase.deleted === 1 ? "" : "s"} with ${phase.imported} imported row${phase.imported === 1 ? "" : "s"}.`
+              : phase.updated > 0
+                ? `Feed sync complete: ${phase.updated} existing vehicle${phase.updated === 1 ? "" : "s"} updated and ${phase.imported} new vehicle${phase.imported === 1 ? "" : "s"} added.`
               : `Imported ${phase.imported} vehicle${phase.imported === 1 ? "" : "s"}.`}
           </p>
           <Link
@@ -347,6 +405,15 @@ function csvImportProgressUpdate(progress: CsvImportProgress): CsvImportUpdate {
     failed_rows: progress.failedRows,
     skipped_rows: progress.skippedRows,
   };
+}
+
+function legacyVehiclePayload(row: VehicleImportResult["rows"][number]) {
+  const { feed_vin: _feedVin, feed_image_urls: _feedImages, feed_updated_at: _feedUpdatedAt, ...legacy } = row;
+  return legacy;
+}
+
+function syncVehiclePayload(row: VehicleImportResult["rows"][number], feedUpdatedAt: string) {
+  return { ...row, feed_updated_at: feedUpdatedAt };
 }
 
 function RecentImports({ imports }: { imports: RecentCsvImport[] }) {
@@ -400,13 +467,13 @@ function formatImportTimestamp(value: string): string {
 }
 
 /** Page through the tenant's inventory; RLS scopes it, tenant_id is belt-and-braces. */
-async function fetchExistingFingerprints(tenantId: string): Promise<VehicleFingerprint[]> {
+async function fetchExistingFingerprints(tenantId: string): Promise<FeedSyncExistingVehicle[]> {
   const supabase = createSupabaseBrowserClient();
-  const fingerprints: VehicleFingerprint[] = [];
+  const fingerprints: FeedSyncExistingVehicle[] = [];
   for (let from = 0; ; from += FINGERPRINT_PAGE) {
     const { data, error } = await supabase
       .from("vehicles")
-      .select("external_id, year, make, model, trim, mileage")
+      .select("id, external_id, feed_vin, year, make, model, trim, mileage")
       .eq("tenant_id", tenantId)
       .in("status", ["draft", "live"])
       .range(from, from + FINGERPRINT_PAGE - 1);
@@ -421,6 +488,7 @@ function PreviewPanel({
   fileName,
   parsed,
   duplicates,
+  sync,
   existingCount,
   mode,
   onModeChange,
@@ -432,6 +500,7 @@ function PreviewPanel({
   fileName: string;
   parsed: VehicleImportResult;
   duplicates: Map<number, DuplicateReason>;
+  sync: Map<number, FeedSyncResolution>;
   existingCount: number;
   mode: ImportMode;
   onModeChange: (mode: ImportMode) => void;
@@ -452,7 +521,17 @@ function PreviewPanel({
     () => [...duplicates.entries()].sort(([a], [b]) => a - b),
     [duplicates]
   );
-  const canImport = importCount > 0;
+  const syncSummary = useMemo(() => {
+    const resolutions = [...sync.values()];
+    return {
+      updated: resolutions.filter((resolution) => resolution.status === "update").length,
+      created: resolutions.filter((resolution) => resolution.status === "create").length,
+      conflicts: resolutions.filter((resolution) => resolution.status === "conflict").length,
+    };
+  }, [sync]);
+  const canImport = mode === "sync"
+    ? syncSummary.updated + syncSummary.created > 0
+    : importCount > 0;
 
   return (
     <div className="space-y-4">
@@ -516,6 +595,21 @@ function PreviewPanel({
             </span>
           </span>
         </label>
+        <label className="flex items-start gap-3 text-sm cursor-pointer">
+          <input
+            type="radio"
+            name="importMode"
+            className="mt-0.5 accent-primary"
+            checked={mode === "sync"}
+            onChange={() => onModeChange("sync")}
+          />
+          <span>
+            <span className="font-medium">Synchronize inventory feed</span>
+            <span className="block text-xs text-muted-foreground">
+              Updates matching VINs or stock numbers in place and saves all feed images. It preserves vehicle IDs, saved vehicles, leads, and managed R2 images.
+            </span>
+          </span>
+        </label>
       </fieldset>
 
       {mode === "add" && duplicateEntries.length > 0 && (
@@ -556,6 +650,15 @@ function PreviewPanel({
         </div>
       )}
 
+      {mode === "sync" && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3 text-xs text-blue-950 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
+          <p><strong>{syncSummary.updated}</strong> existing vehicle{syncSummary.updated === 1 ? "" : "s"} will update in place; <strong>{syncSummary.created}</strong> new vehicle{syncSummary.created === 1 ? "" : "s"} will be added.</p>
+          {syncSummary.conflicts > 0 ? (
+            <p className="mt-1"><strong>{syncSummary.conflicts}</strong> conflicting row{syncSummary.conflicts === 1 ? "" : "s"} will be skipped because their VIN and stock number point to different units.</p>
+          ) : null}
+        </div>
+      )}
+
       {parsed.rows.length > 0 && (
         <div className="overflow-x-auto rounded-xl border">
           <table className="w-full text-xs">
@@ -593,6 +696,8 @@ function PreviewPanel({
       <p className="text-sm text-muted-foreground">
         {mode === "replace"
           ? `Summary: delete ${existingCount.toLocaleString()} existing, then import ${importCount.toLocaleString()}.`
+          : mode === "sync"
+            ? `Summary: update ${syncSummary.updated.toLocaleString()}, add ${syncSummary.created.toLocaleString()}${syncSummary.conflicts > 0 ? `, skip ${syncSummary.conflicts.toLocaleString()} conflict${syncSummary.conflicts === 1 ? "" : "s"}` : ""}.`
           : `Summary: import ${importCount.toLocaleString()}${skippedCount > 0 ? `, skip ${skippedCount.toLocaleString()} duplicate${skippedCount === 1 ? "" : "s"}` : ""}.`}
       </p>
 
@@ -637,7 +742,9 @@ function PreviewPanel({
             className="rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={onImport}
           >
-            Import {importCount.toLocaleString()} vehicle{importCount === 1 ? "" : "s"}
+            {mode === "sync"
+              ? `Synchronize ${syncSummary.updated + syncSummary.created} vehicle${syncSummary.updated + syncSummary.created === 1 ? "" : "s"}`
+              : `Import ${importCount.toLocaleString()} vehicle${importCount === 1 ? "" : "s"}`}
           </button>
         )}
         <button

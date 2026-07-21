@@ -4,6 +4,7 @@ import {
   findDuplicates,
   parseCsv,
   parseVehicleCsv,
+  resolveFeedSync,
   type VehicleFingerprint,
   type VehicleImportInsert,
 } from "./vehicleImport";
@@ -73,6 +74,61 @@ describe("parseVehicleCsv", () => {
     expect(result.rows).toHaveLength(MAX_IMPORT_ROWS);
     expect(result.errors[0]?.message).toContain("only the first");
   });
+
+  it("strips a UTF-8 BOM and accepts blank optional fields", () => {
+    const result = parseVehicleCsv("﻿year,make,model,price,trim\r\n2020,Ford,Escape,10000,\r\n");
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({ make: "Ford", trim: "" });
+  });
+
+  it("rejects tab-delimited files with a clear comma-CSV message", () => {
+    const result = parseVehicleCsv("year\tmake\tmodel\tprice\n2020\tFord\tEscape\t10000");
+    expect(result.rows).toEqual([]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.message).toContain("tab-separated");
+    expect(result.errors[0]?.message).toContain("comma-separated CSV");
+  });
+});
+
+describe("parseVehicleCsv — Google vehicle-feed dialect", () => {
+  it("maps brand/color/condition/id/image_link and feed-formatted numbers", () => {
+    const result = parseVehicleCsv(
+      [
+        "id,brand,model,year,price,color,condition,mileage,image_link,additional_image_link",
+        'feed-1,FORD,ESCAPE,2018,10956.00 USD,GOLD,used,102598 MILES,https://cdn.example.com/a.jpg,"https://cdn.example.com/a.jpg,https://cdn.example.com/b.jpg"',
+      ].join("\n"),
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({
+      external_id: "feed-1",
+      make: "FORD",
+      model: "ESCAPE",
+      price: 10956,
+      mileage: 102598,
+      exterior_color: "GOLD",
+      stock_type: "Used",
+      image_src: "https://cdn.example.com/a.jpg",
+    });
+    // The quoted additional_image_link list feeds the external gallery.
+    expect(result.rows[0]?.feed_image_urls).toEqual([
+      "https://cdn.example.com/a.jpg",
+      "https://cdn.example.com/b.jpg",
+    ]);
+  });
+
+  it("normalizes new/used case-insensitively and passes unknown conditions through", () => {
+    const result = parseVehicleCsv(
+      "year,make,model,price,condition\n2018,Ford,Escape,9000,NEW\n2019,Ford,Edge,9500,Certified pre-owned",
+    );
+    expect(result.rows[0]?.stock_type).toBe("New");
+    expect(result.rows[1]?.stock_type).toBe("Certified pre-owned");
+  });
+
+  it("does not silently zero fundamentally invalid feed numbers", () => {
+    const result = parseVehicleCsv("year,make,model,price\n2018,Ford,Escape,call for price");
+    expect(result.rows).toEqual([]);
+    expect(result.errors[0]?.message).toContain("invalid price");
+  });
 });
 
 describe("findDuplicates", () => {
@@ -89,6 +145,9 @@ describe("findDuplicates", () => {
     drivetrain: "",
     fuel_type: "",
     image_src: "",
+    feed_image_urls: [],
+    feed_vin: null,
+    feed_updated_at: null,
     seller_city: "",
     seller_state: "",
     stock_type: null,
@@ -99,6 +158,7 @@ describe("findDuplicates", () => {
   });
   const existing = (overrides: Partial<VehicleFingerprint>): VehicleFingerprint => ({
     external_id: null,
+    feed_vin: null,
     year: 2021,
     make: "Porsche",
     model: "911",
@@ -113,6 +173,20 @@ describe("findDuplicates", () => {
       [existing({ external_id: "ABC-1" })]
     );
     expect(duplicates.get(0)).toBe("external_id");
+  });
+
+  it("reads Homenet ImageList into an ordered external gallery", () => {
+    const result = parseVehicleCsv([
+      "Stock,VIN,Year,Make,Model,SellingPrice,Miles,ImageList",
+      'OW26220,4T1K31AK0RU000001,2026,Toyota,Camry,35000,0,"https://images.example/one.jpg,https://images.example/two.jpg"',
+    ].join("\n"));
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({
+      external_id: "OW26220",
+      feed_vin: "4T1K31AK0RU000001",
+      image_src: "https://images.example/one.jpg",
+      feed_image_urls: ["https://images.example/one.jpg", "https://images.example/two.jpg"],
+    });
   });
 
   it("falls back to year+make+model+trim+mileage with normalization", () => {
@@ -148,5 +222,68 @@ describe("findDuplicates", () => {
       [existing({ trim: null, mileage: null })]
     );
     expect(duplicates.get(0)).toBe("attributes");
+  });
+});
+
+describe("resolveFeedSync", () => {
+  const row = (overrides: Partial<VehicleImportInsert> = {}): VehicleImportInsert => ({
+    year: 2024,
+    make: "BMW",
+    model: "X3",
+    trim: "xDrive30i",
+    price: 50000,
+    mileage: 1000,
+    body_style: "SUV",
+    exterior_color: "Black",
+    interior_color: "Black",
+    drivetrain: "AWD",
+    fuel_type: "Gasoline",
+    image_src: "",
+    feed_image_urls: [],
+    feed_vin: null,
+    feed_updated_at: null,
+    seller_city: "",
+    seller_state: "",
+    stock_type: null,
+    external_id: null,
+    is_special: false,
+    special_image_src: null,
+    ...overrides,
+  });
+
+  it("matches a stable VIN before a stock number and retains the existing ID", () => {
+    const resolved = resolveFeedSync(
+      [row({ feed_vin: "5UX53DP04R9T00001", external_id: "NEW-STOCK" })],
+      [{ id: "vehicle-a", feed_vin: "5UX53DP04R9T00001", external_id: "OLD-STOCK", year: 2024, make: "BMW", model: "X3", trim: "", mileage: null }],
+    );
+    expect(resolved.get(0)).toEqual({ status: "update", vehicleId: "vehicle-a", matchedBy: "feed_vin" });
+  });
+
+  it("falls back to stock number and refuses rows without a stable identity", () => {
+    const resolved = resolveFeedSync(
+      [row({ external_id: "OW26220" }), row({ make: "BMW", model: "X3" })],
+      [{ id: "vehicle-a", feed_vin: null, external_id: "ow26220", year: 2024, make: "BMW", model: "X3", trim: "xDrive30i", mileage: 1000 }],
+    );
+    expect(resolved.get(0)).toEqual({ status: "update", vehicleId: "vehicle-a", matchedBy: "external_id" });
+    expect(resolved.get(1)).toMatchObject({ status: "conflict" });
+  });
+
+  it("refuses a row when VIN and stock number point to different units", () => {
+    const resolved = resolveFeedSync(
+      [row({ feed_vin: "5UX53DP04R9T00001", external_id: "OW26220" })],
+      [
+        { id: "vehicle-a", feed_vin: "5UX53DP04R9T00001", external_id: "A", year: 2024, make: "BMW", model: "X3", trim: "", mileage: null },
+        { id: "vehicle-b", feed_vin: null, external_id: "OW26220", year: 2024, make: "BMW", model: "X3", trim: "", mileage: null },
+      ],
+    );
+    expect(resolved.get(0)).toMatchObject({ status: "conflict" });
+  });
+
+  it("creates a genuinely new vehicle only when it has a stable feed identifier", () => {
+    const resolved = resolveFeedSync(
+      [row({ external_id: "NEW-STOCK" })],
+      [],
+    );
+    expect(resolved.get(0)).toEqual({ status: "create" });
   });
 });

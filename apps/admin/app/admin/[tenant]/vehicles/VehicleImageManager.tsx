@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   deleteManagedVehicleImage,
+  importFeedVehicleImages,
   persistPrimaryVehicleImage,
   persistVehicleImageOrder,
 } from "@/lib/vehicleImageManagementClient";
@@ -28,11 +29,15 @@ export function VehicleImageManager({
   tenantSlug,
   vehicleId,
   initialImages,
+  feedImages,
+  feedImportWarning,
   migrationWarning,
 }: {
   tenantSlug: string;
   vehicleId: string;
   initialImages: ConfirmedVehicleImage[];
+  feedImages: string[];
+  feedImportWarning: string | null;
   migrationWarning: string | null;
 }) {
   const [images, setImages] = useState(() => ordered(initialImages));
@@ -98,6 +103,25 @@ export function VehicleImageManager({
     } catch (error) {
       toast.error("Unable to delete image", { description: errorMessage(error) });
     } finally {
+      setPending(false);
+    }
+  }
+
+  async function importFeedImages(urls: string[]) {
+    if (pending || urls.length === 0) return;
+    setPending(true);
+    try {
+      const result = await importFeedVehicleImages(vehicleId, tenantSlug, urls);
+      if (result.errors.length > 0) {
+        toast.warning("Some feed images could not be copied", { description: result.errors[0]?.error });
+      } else if (result.skipped > 0 && result.imported === 0) {
+        toast.info("Those feed images are already in the managed gallery.");
+      } else {
+        toast.success(result.imported === 1 ? "Feed image copied to R2." : "Feed images copied to R2.");
+      }
+      window.location.reload();
+    } catch (error) {
+      toast.error("Unable to import feed image", { description: errorMessage(error) });
       setPending(false);
     }
   }
@@ -232,6 +256,56 @@ export function VehicleImageManager({
           </ol>
         )}
       </div>
+
+      {feedImages.length > 0 ? (
+        <div className="rounded-xl border p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold">Feed images</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Supplier-hosted images. They appear publicly when no managed gallery exists and are not stored in LUME R2 unless imported.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending || Boolean(feedImportWarning)}
+              onClick={() => void importFeedImages(feedImages)}
+            >
+              Import all to R2
+            </Button>
+          </div>
+          {feedImportWarning ? (
+            <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">{feedImportWarning}</p>
+          ) : null}
+          <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {feedImages.map((url, index) => (
+              <li key={url} className="overflow-hidden rounded-lg border bg-card">
+                <div className="aspect-video bg-muted">
+                  <img
+                    src={url}
+                    alt={`Supplier vehicle image ${index + 1}`}
+                    className="h-full w-full object-cover"
+                    loading={index === 0 ? "eager" : "lazy"}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2 p-2">
+                  <span className="text-xs text-muted-foreground">Feed image {index + 1}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pending || Boolean(feedImportWarning)}
+                    onClick={() => void importFeedImages([url])}
+                  >
+                    Import to R2
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
     </section>
   );
 }

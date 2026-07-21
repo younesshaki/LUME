@@ -5,13 +5,20 @@
  *   required: year, make, model, price
  *   optional: trim, mileage, body_style, exterior_color, interior_color,
  *             drivetrain, fuel_type, image_src, seller_city, seller_state,
- *             stock_type, external_id, is_special, special_image_src
+ *             stock_type, external_id, vin, image_list, is_special,
+ *             special_image_src. Homenet aliases such as Stock, ImageList,
+ *             SellingPrice, and Miles are accepted too.
  *
  * Unknown columns are ignored. Rows failing validation are reported with
  * their line number and skipped — a partially valid file imports the valid
  * rows (the UI shows the error list before committing).
  */
 import type { Database } from "@lume/db";
+import {
+  isSafeFeedVehicleImageUrl,
+  MAX_FEED_VEHICLE_IMAGES,
+  resolveFeedVehicleImageUrls,
+} from "./feedVehicleImages";
 
 export type VehicleImportInsert = Omit<
   Database["public"]["Tables"]["vehicles"]["Insert"],
@@ -82,6 +89,7 @@ export function parseCsv(text: string): string[][] {
 const HEADER_ALIASES: Record<string, string> = {
   year: "year",
   make: "make",
+  brand: "make",
   model: "model",
   trim: "trim",
   price: "price",
@@ -90,6 +98,7 @@ const HEADER_ALIASES: Record<string, string> = {
   bodystyle: "body_style",
   exterior_color: "exterior_color",
   exteriorcolor: "exterior_color",
+  color: "exterior_color",
   interior_color: "interior_color",
   interiorcolor: "interior_color",
   drivetrain: "drivetrain",
@@ -98,6 +107,12 @@ const HEADER_ALIASES: Record<string, string> = {
   image_src: "image_src",
   imagesrc: "image_src",
   image: "image_src",
+  image_link: "image_src",
+  imagelink: "image_src",
+  additional_image_link: "additional_image_link",
+  additionalimagelink: "additional_image_link",
+  image_list: "image_list",
+  imagelist: "image_list",
   seller_city: "seller_city",
   sellercity: "seller_city",
   city: "seller_city",
@@ -106,8 +121,17 @@ const HEADER_ALIASES: Record<string, string> = {
   state: "seller_state",
   stock_type: "stock_type",
   stocktype: "stock_type",
+  condition: "stock_type",
   external_id: "external_id",
   externalid: "external_id",
+  id: "external_id",
+  stock: "external_id",
+  vin: "feed_vin",
+  sellingprice: "price",
+  internet_price: "price",
+  internetprice: "price",
+  miles: "mileage",
+  body: "body_style",
   is_special: "is_special",
   isspecial: "is_special",
   special_image_src: "special_image_src",
@@ -117,9 +141,27 @@ const HEADER_ALIASES: Record<string, string> = {
 const REQUIRED_COLUMNS = ["year", "make", "model", "price"] as const;
 
 export function parseVehicleCsv(text: string): VehicleImportResult {
-  const table = parseCsv(text);
+  // Strip a UTF-8 BOM (common in spreadsheet exports) so the first header
+  // isn't silently mangled.
+  const table = parseCsv(text.replace(/^\uFEFF/, ""));
   if (table.length === 0) {
     return { rows: [], errors: [{ line: 1, message: "File is empty." }], recognizedHeaders: [] };
+  }
+
+  // Tab-delimited exports (e.g. some Homenet feeds) parse as one comma-less
+  // column. Refuse them with a clear message instead of failing later with a
+  // confusing "missing required column" error or, worse for sync mode,
+  // shifting data into the wrong fields.
+  if (table[0].length === 1 && table[0][0].includes("\t")) {
+    return {
+      rows: [],
+      errors: [{
+        line: 1,
+        message:
+          "This file looks tab-separated. LUME imports require a standard comma-separated CSV — re-export the file as CSV (comma delimited) and try again.",
+      }],
+      recognizedHeaders: [],
+    };
   }
 
   const headerCells = table[0].map((h) => h.trim().toLowerCase());
@@ -168,6 +210,12 @@ export function parseVehicleCsv(text: string): VehicleImportResult {
       return;
     }
 
+    const feedImageUrls = parseFeedImageUrls(record);
+    const resolvedFeedImageUrls = resolveFeedVehicleImageUrls({
+      image_src: record.image_src ?? "",
+      feed_image_urls: feedImageUrls,
+    });
+
     rows.push({
       year: year!,
       make: record.make,
@@ -180,10 +228,13 @@ export function parseVehicleCsv(text: string): VehicleImportResult {
       interior_color: record.interior_color ?? "",
       drivetrain: record.drivetrain ?? "",
       fuel_type: record.fuel_type ?? "",
-      image_src: record.image_src ?? "",
+      image_src: resolvedFeedImageUrls[0] ?? "",
+      feed_image_urls: resolvedFeedImageUrls,
+      feed_vin: normalizeVin(record.feed_vin),
+      feed_updated_at: null,
       seller_city: record.seller_city ?? "",
       seller_state: record.seller_state ?? "",
-      stock_type: record.stock_type || null,
+      stock_type: normalizeStockType(record.stock_type),
       external_id: record.external_id || null,
       is_special: parseBoolean(record.is_special),
       special_image_src: record.special_image_src || null,
@@ -200,7 +251,9 @@ export function parseVehicleCsv(text: string): VehicleImportResult {
  *   - year + make + model + trim + mileage all match (strings normalized).
  */
 export type VehicleFingerprint = {
+  id?: string;
   external_id: string | null;
+  feed_vin: string | null;
   year: number;
   make: string;
   model: string;
@@ -208,7 +261,7 @@ export type VehicleFingerprint = {
   mileage: number | null;
 };
 
-export type DuplicateReason = "external_id" | "attributes";
+export type DuplicateReason = "feed_vin" | "external_id" | "attributes";
 
 const norm = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 
@@ -222,20 +275,27 @@ export function findDuplicates(
   existing: VehicleFingerprint[]
 ): Map<number, DuplicateReason> {
   const byExternalId = new Set<string>();
+  const byVin = new Set<string>();
   const byAttributes = new Set<string>();
   for (const vehicle of existing) {
     if (vehicle.external_id) byExternalId.add(norm(vehicle.external_id));
+    if (vehicle.feed_vin) byVin.add(norm(vehicle.feed_vin));
     byAttributes.add(attributeKey(vehicle));
   }
 
   const duplicates = new Map<number, DuplicateReason>();
   rows.forEach((row, index) => {
+    if (row.feed_vin && byVin.has(norm(row.feed_vin))) {
+      duplicates.set(index, "feed_vin");
+      return;
+    }
     if (row.external_id && byExternalId.has(norm(row.external_id))) {
       duplicates.set(index, "external_id");
       return;
     }
     const fingerprint: VehicleFingerprint = {
       external_id: row.external_id ?? null,
+      feed_vin: row.feed_vin ?? null,
       year: row.year,
       make: row.make,
       model: row.model,
@@ -249,18 +309,116 @@ export function findDuplicates(
   return duplicates;
 }
 
+export type FeedSyncExistingVehicle = VehicleFingerprint & { id: string };
+
+export type FeedSyncResolution =
+  | { status: "update"; vehicleId: string; matchedBy: "feed_vin" | "external_id" }
+  | { status: "create" }
+  | { status: "conflict"; message: string };
+
+/**
+ * Safe, stable matching for a feed refresh. We deliberately do not use title
+ * attributes here: a sync must never overwrite a similar but different unit.
+ */
+export function resolveFeedSync(
+  rows: VehicleImportInsert[],
+  existing: FeedSyncExistingVehicle[],
+): Map<number, FeedSyncResolution> {
+  const byVin = new Map<string, Set<string>>();
+  const byExternalId = new Map<string, Set<string>>();
+  for (const vehicle of existing) {
+    addMatch(byVin, vehicle.feed_vin, vehicle.id);
+    addMatch(byExternalId, vehicle.external_id, vehicle.id);
+  }
+
+  const resolved = new Map<number, FeedSyncResolution>();
+  rows.forEach((row, index) => {
+    const vinMatches = matches(byVin, row.feed_vin);
+    const externalMatches = matches(byExternalId, row.external_id);
+    if (!row.feed_vin && !row.external_id) {
+      resolved.set(index, {
+        status: "conflict",
+        message: "Feed synchronization requires a VIN or stock number.",
+      });
+      return;
+    }
+    const allMatches = new Set([...vinMatches, ...externalMatches]);
+    if (allMatches.size > 1) {
+      resolved.set(index, {
+        status: "conflict",
+        message: "VIN and stock number identify different existing vehicles.",
+      });
+      return;
+    }
+    const vehicleId = [...allMatches][0];
+    if (!vehicleId) {
+      resolved.set(index, { status: "create" });
+      return;
+    }
+    resolved.set(index, {
+      status: "update",
+      vehicleId,
+      matchedBy: vinMatches.has(vehicleId) ? "feed_vin" : "external_id",
+    });
+  });
+  return resolved;
+}
+
 function parseIntStrict(value: string | undefined): number | null {
   if (!value || !/^-?\d+$/.test(value)) return null;
   return parseInt(value, 10);
 }
 
+/**
+ * Feed exports commonly suffix numbers with a currency or distance unit
+ * ("10956.00 USD", "102598 MILES"). Strip a single known trailing unit word,
+ * then parse strictly — a fundamentally invalid number stays invalid (never
+ * silently coerced to zero).
+ */
+const NUMERIC_UNIT_SUFFIX = /\s+(usd|eur|gbp|cad|aud|miles?|mi|kms?)\.?$/i;
+
 function parseNumberStrict(value: string | undefined): number | null {
   if (!value) return null;
-  const cleaned = value.replace(/[$,\s]/g, "");
+  const withoutUnit = value.trim().replace(NUMERIC_UNIT_SUFFIX, "");
+  const cleaned = withoutUnit.replace(/[$,\s]/g, "");
   if (!/^-?\d+(\.\d+)?$/.test(cleaned)) return null;
   return Number(cleaned);
 }
 
+/** Feed `condition`/stock values → LUME stock-type convention ("New"/"Used"). */
+function normalizeStockType(value: string | undefined): string | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "new") return "New";
+  if (normalized === "used") return "Used";
+  return value.trim();
+}
+
 function parseBoolean(value: string | undefined): boolean {
   return value !== undefined && ["true", "1", "yes"].includes(value.toLowerCase());
+}
+
+function parseFeedImageUrls(record: Record<string, string>): string[] {
+  const candidates = [record.image_list, record.additional_image_link]
+    .filter((value): value is string => Boolean(value))
+    .flatMap((value) => value.split(","));
+  const valid = candidates.map((value) => value.trim()).filter(isSafeFeedVehicleImageUrl);
+  return [...new Set(valid)].slice(0, MAX_FEED_VEHICLE_IMAGES);
+}
+
+function normalizeVin(value: string | undefined): string | null {
+  const vin = value?.trim().toUpperCase().replace(/\s+/g, "") ?? "";
+  return /^[A-HJ-NPR-Z0-9]{11,17}$/.test(vin) ? vin : null;
+}
+
+function addMatch(index: Map<string, Set<string>>, value: string | null, id: string): void {
+  const key = norm(value);
+  if (!key) return;
+  const values = index.get(key) ?? new Set<string>();
+  values.add(id);
+  index.set(key, values);
+}
+
+function matches(index: Map<string, Set<string>>, value: string | null | undefined): Set<string> {
+  return index.get(norm(value)) ?? new Set<string>();
 }
