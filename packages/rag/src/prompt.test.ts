@@ -17,6 +17,8 @@ describe("vehicle prompt grounding", () => {
     expect(assembled.prompt).toContain("No matching live vehicles.");
     expect(assembled.prompt).toContain("GROUNDING RULE");
     expect(assembled.prompt).toContain("AVAILABILITY TRUTH RULE");
+    expect(assembled.prompt).toContain("INVENTORY PRECEDENCE RULE");
+    expect(assembled.prompt).toContain("FACTUAL BOUNDARY RULE");
     expect(assembled.sourceCategories).toContain("vehicles");
   });
 

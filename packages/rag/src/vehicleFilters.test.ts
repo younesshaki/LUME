@@ -163,8 +163,48 @@ describe("vehicle query intent", () => {
     ["BMWs, my ceiling is 45 grand", { make: "BMW", priceMax: 45_000 }],
     ["BMWs, I have 60 large available", { make: "BMW", priceMax: 60_000 }],
     ["BMWs under fifty grand", { make: "BMW", priceMax: 50_000 }],
+    ["I got a 10k budget", { priceMax: 10_000 }],
+    ["budget of 10k", { priceMax: 10_000 }],
+    ["looking to spend 10k", { priceMax: 10_000 }],
   ])("understands informal price ceilings and floors: %s", (query, expected) => {
     expect(extractVehicleFilters(query)).toMatchObject(expected);
+  });
+
+  it("does not extract a negated make during an all-inventory reset", () => {
+    expect(
+      extractVehicleFilters(
+        "I'm not talking about Toyota, I'm talking in general",
+        [],
+        { makes: ["Toyota"], models: ["Camry"] },
+      ),
+    ).toEqual({});
+    expect(
+      extractVehicleFilters(
+        "all inventory under 10k, regardless of make",
+        [],
+        { makes: ["Toyota"], models: ["Camry"] },
+      ),
+    ).toEqual({ priceMax: 10_000 });
+  });
+
+  it("keeps an affirmative replacement make/model after a negated scope", () => {
+    const vocabulary = {
+      makes: ["Toyota", "BMW"],
+      models: ["Camry", "X5"],
+    };
+    expect(
+      extractVehicleFilters("not Toyota — show me BMWs X5s instead under 70k", [], vocabulary),
+    ).toEqual({ make: "BMW", model: "X5", priceMax: 70_000 });
+    expect(
+      extractVehicleFilters("no Camry, I want an X5", [], vocabulary),
+    ).toEqual({ model: "X5" });
+  });
+
+  it("keeps a natural budget statement free of fuzzy make/model filters", () => {
+    expect(extractVehicleFilters("I got a 10k budget", [], {
+      makes: ["Toyota"],
+      models: ["Ghost", "Camry"],
+    })).toEqual({ priceMax: 10_000 });
   });
 
   it.each([

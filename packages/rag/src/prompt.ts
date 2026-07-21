@@ -60,6 +60,12 @@ function formatVehiclesBlock(
     `AVAILABILITY TRUTH RULE: TOTAL MATCHING is authoritative. When it is greater than 0, ` +
     `you MUST say matching inventory is available and MUST NOT say it is unavailable, absent, ` +
     `or that the listed matching vehicles are another make/model. When it is 0, say none match.\n` +
+    `INVENTORY PRECEDENCE RULE: This live matching block overrides every other context block, ` +
+    `including retrieved knowledge text and earlier conversation prose, for vehicle availability, ` +
+    `counts, prices, mileage, and vehicle identity.\n` +
+    `FACTUAL BOUNDARY RULE: Do not invent or infer market comparisons, percentages, discounts, ` +
+    `price history, deal quality, reliability, condition, accident history, options, or specifications. ` +
+    `State those only when an explicit value is present in the provided context; otherwise say it is not listed.\n` +
     `GROUNDING RULE: For this visitor request, mention, recommend, count, or ` +
     `navigate only the vehicles in this matching block. Do not substitute or ` +
     `describe vehicles outside these filters. If no vehicles match, say so ` +

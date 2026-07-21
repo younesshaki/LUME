@@ -12,12 +12,18 @@ export type MemoryToolResult = {
 export type ConversationMemorySnapshot = {
   messages: MemoryMessage[];
   toolResults: MemoryToolResult[];
+  /**
+   * Server-owned, serializable turn state. Consumers own its schema so the
+   * generic memory package never couples to a particular concierge domain.
+   */
+  conversationState?: unknown;
   expiresAt: string;
 };
 
 export type ConversationMemoryUpdate = {
   messages?: readonly MemoryMessage[];
   toolResults?: readonly Omit<MemoryToolResult, "recordedAt">[];
+  conversationState?: unknown;
 };
 
 export interface ConversationMemoryStore {
@@ -76,6 +82,11 @@ export function appendConversationMemory(
         recordedAt: new Date(nowMs).toISOString(),
       })),
     ],
+    ...(update.conversationState !== undefined
+      ? { conversationState: update.conversationState }
+      : current?.conversationState !== undefined
+        ? { conversationState: current.conversationState }
+        : {}),
     expiresAt: new Date(nowMs + ttlSeconds * 1_000).toISOString(),
   });
 }
@@ -122,10 +133,18 @@ export function normalizeConversationMemory(value: unknown): ConversationMemoryS
   const toolResults = Array.isArray(record.toolResults)
     ? record.toolResults.flatMap(normalizeToolResult).slice(-MAX_MEMORY_TOOL_RESULTS)
     : [];
+  const conversationState = record.conversationState === undefined
+    ? undefined
+    : boundedJson(record.conversationState);
   const expiresAt = typeof record.expiresAt === "string" && Number.isFinite(Date.parse(record.expiresAt))
     ? record.expiresAt
     : new Date(0).toISOString();
-  return { messages, toolResults, expiresAt };
+  return {
+    messages,
+    toolResults,
+    ...(conversationState !== undefined ? { conversationState } : {}),
+    expiresAt,
+  };
 }
 
 export function mergeRememberedMessages(
