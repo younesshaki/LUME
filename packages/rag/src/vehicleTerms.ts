@@ -6,7 +6,7 @@
 export const MAKE_ALIASES: Record<string, string[]> = {
   acura: ["acura"],
   audi: ["audi"],
-  bmw: ["bmw", "beemer", "bimmer"],
+  bmw: ["bmw", "bmww", "bwm", "beemer", "bimmer"],
   buick: ["buick"],
   cadillac: ["cadillac", "caddy"],
   chevrolet: ["chevrolet", "chevy", "chev"],

@@ -56,7 +56,11 @@ function formatVehiclesBlock(
       ? ""
       : `Total vehicles in full inventory: ${totalInventory}\n`) +
     `TOTAL MATCHING${filterSummary}: ${totalMatched}\n` +
-    `${showingNote}\n`;
+    `${showingNote}\n` +
+    `GROUNDING RULE: For this visitor request, mention, recommend, count, or ` +
+    `navigate only the vehicles in this matching block. Do not substitute or ` +
+    `describe vehicles outside these filters. If no vehicles match, say so ` +
+    `plainly and offer to broaden the search only if the visitor asks.\n`;
 
   const lines = matched.map((v, i) => {
     const parts = [

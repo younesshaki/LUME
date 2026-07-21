@@ -242,6 +242,12 @@ export function filterGroundedVehicleActions(
     if (action.type === "highlight-vehicle") {
       return groundedVehicleIds.has(action.vehicleId) ? [action] : [];
     }
+    if (action.type === "compare_vehicles") {
+      return action.vehicleIds.length >= 2 &&
+        action.vehicleIds.every((vehicleId) => groundedVehicleIds.has(vehicleId))
+        ? [action]
+        : [];
+    }
     if (action.type === "navigate-target") {
       const target = targets.find(
         (candidate) => candidate.enabled && candidate.key === action.targetKey,
@@ -366,8 +372,10 @@ export function botActionFingerprint(action: BotAction): string {
       return `navigate:${action.route}`;
     case "highlight-vehicle":
       return `vehicle-detail:${action.vehicleId}`;
+    case "compare_vehicles":
+      return `compare:${[...action.vehicleIds].sort().join(",")}`;
     case "filter_inventory":
-      return `filter:${action.make ?? ""}:${action.bodyStyle ?? ""}:${action.priceMin ?? ""}:${action.priceMax ?? ""}`;
+      return `filter:${action.make ?? ""}:${action.bodyStyle ?? ""}:${action.priceMin ?? ""}:${action.priceMax ?? ""}:${action.sort ?? ""}`;
     case "open-lead-form":
       return `open-lead:${action.vehicleId ?? ""}:${action.attribution?.targetKey ?? ""}`;
     case "capture_lead":

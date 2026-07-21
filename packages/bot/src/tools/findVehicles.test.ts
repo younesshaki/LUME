@@ -28,6 +28,13 @@ describe("buildVehicleQuery", () => {
     expect(query.mileageMax).toBe(0);
   });
 
+  it("passes through grounded listing location filters", () => {
+    const query = buildVehicleQuery(
+      findVehiclesSchema.parse({ sellerState: "FL", sellerCity: "Miami" }),
+    );
+    expect(query).toMatchObject({ sellerState: "FL", sellerCity: "Miami" });
+  });
+
   it("rejects an out-of-range limit", () => {
     expect(() => findVehiclesSchema.parse({ limit: 999 })).toThrow();
   });
