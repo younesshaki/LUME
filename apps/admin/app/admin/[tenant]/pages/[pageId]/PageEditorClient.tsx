@@ -819,6 +819,24 @@ function FieldControl({
           />
           Enabled
         </label>
+      ) : field.type === "color" ? (
+        <div className="mt-1 flex items-center gap-2">
+          <input
+            id={id}
+            type="color"
+            value={String(value ?? "#B68A35")}
+            onChange={(event) => onChange(event.target.value.toUpperCase())}
+            className="size-10 cursor-pointer rounded-md border border-neutral-300 bg-transparent p-1 dark:border-neutral-700"
+          />
+          <input
+            aria-label={`${field.label} hex value`}
+            value={String(value ?? "#B68A35")}
+            pattern="^#[0-9a-fA-F]{6}$"
+            placeholder="#B68A35"
+            onChange={(event) => onChange(event.target.value)}
+            className={commonClass}
+          />
+        </div>
       ) : field.type === "select" ? (
         <select
           id={id}

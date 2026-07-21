@@ -458,6 +458,65 @@
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.44);
 }
 
+/* Page Builder's optional Notch card. It deliberately layers over the
+   established card markup so inventory navigation, save, and compare controls
+   keep the exact same semantics in both the preview and published site. */
+.vehiclesPage__card--notch {
+  border: 1px solid color-mix(in srgb, var(--vehicle-card-accent) 55%, rgba(255, 248, 236, 0.18));
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 86% 10%, color-mix(in srgb, var(--vehicle-card-accent) 64%, transparent), transparent 35%),
+    linear-gradient(160deg, color-mix(in srgb, var(--vehicle-card-accent) 68%, #0a0a0a), #090909 64%);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--vehicle-card-accent) 18%, transparent);
+}
+
+.vehiclesPage__card--notch::before {
+  background:
+    radial-gradient(340px circle at var(--spotlight-x) var(--spotlight-y), color-mix(in srgb, var(--vehicle-card-accent) 40%, white), transparent 62%);
+}
+
+.vehiclesPage__card--notch::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: -1px;
+  left: 50%;
+  width: 5.5rem;
+  height: 0.72rem;
+  transform: translateX(-50%);
+  border: 1px solid color-mix(in srgb, var(--vehicle-card-accent) 65%, rgba(255, 248, 236, 0.2));
+  border-top: 0;
+  border-radius: 0 0 0.7rem 0.7rem;
+  background: color-mix(in srgb, var(--vehicle-card-accent) 82%, #080808);
+  pointer-events: none;
+}
+
+.vehiclesPage__card--notch:hover {
+  border-color: color-mix(in srgb, var(--vehicle-card-accent) 82%, white);
+  box-shadow: 0 26px 68px color-mix(in srgb, var(--vehicle-card-accent) 26%, transparent);
+}
+
+.vehiclesPage__card--notch .vehiclesPage__cardImage {
+  margin: 0.3rem 0.3rem 0;
+  width: calc(100% - 0.6rem);
+  border-radius: 0.75rem;
+}
+
+.vehiclesPage__card--notch .vehiclesPage__cardPrice,
+.vehiclesPage__card--notch .vehiclesPage__cardYear {
+  color: color-mix(in srgb, var(--vehicle-card-accent) 72%, white);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--vehicle-card-accent) 42%, transparent);
+}
+
+.vehiclesPage__card--notch .vehiclesPage__badge--new,
+.vehiclesPage__card--notch .vehiclesPage__badge--special,
+.vehiclesPage__card--notch .vehiclesPage__iconBtn:hover:not(:disabled),
+.vehiclesPage__card--notch .vehiclesPage__iconBtn--active {
+  border-color: color-mix(in srgb, var(--vehicle-card-accent) 72%, white);
+  background: color-mix(in srgb, var(--vehicle-card-accent) 26%, transparent);
+  color: color-mix(in srgb, var(--vehicle-card-accent) 70%, white);
+}
+
 .vehiclesPage__cardImage {
   position: relative;
   width: 100%;
