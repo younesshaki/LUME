@@ -45,7 +45,7 @@ describe("compare_vehicles", () => {
     expect(result.error?.code).toBe("invalid_args");
   });
 
-  it("compares vehicles and highlights the best value", async () => {
+  it("compares vehicles and opens the grounded side-by-side comparison", async () => {
     const result = await runBotTool("compare_vehicles", { vehicleIds: ["a", "b", "c"] }, fullCtx());
     expect(result.ok).toBe(true);
     const data = result.data as {
@@ -56,7 +56,10 @@ describe("compare_vehicles", () => {
     // 'c' sits at the median on both price and mileage, so it scores neutral;
     // 'a' is penalised for price and 'b' for high mileage — 'c' wins on balance.
     expect(data.bestValueVehicleId).toBe("c");
-    expect(result.actions?.[0]).toEqual({ type: "highlight-vehicle", vehicleId: "c" });
+    expect(result.actions?.[0]).toEqual({
+      type: "compare_vehicles",
+      vehicleIds: ["c", "a", "b"],
+    });
   });
 
   it("returns an empty comparison when fewer than two ids resolve", async () => {
@@ -64,4 +67,5 @@ describe("compare_vehicles", () => {
     expect(result.ok).toBe(true);
     expect((result.data as { comparisons: unknown[] }).comparisons).toHaveLength(0);
   });
+
 });

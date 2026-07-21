@@ -142,9 +142,11 @@ describe("concierge action preparation", () => {
           vehicleId: "invented",
         },
         { type: "highlight-vehicle", vehicleId: "invented" },
+        { type: "compare_vehicles", vehicleIds: ["grounded", "invented"] },
+        { type: "compare_vehicles", vehicleIds: ["grounded", "grounded-2"] },
       ],
       targets,
-      new Set(["grounded"]),
+      new Set(["grounded", "grounded-2"]),
     );
     expect(actions).toEqual([
       {
@@ -165,6 +167,7 @@ describe("concierge action preparation", () => {
         type: "capture_lead",
         contact: { email: "visitor@example.com" },
       },
+      { type: "compare_vehicles", vehicleIds: ["grounded", "grounded-2"] },
     ]);
   });
 

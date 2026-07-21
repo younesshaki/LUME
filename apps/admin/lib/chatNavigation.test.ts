@@ -219,6 +219,105 @@ describe("deterministic concierge navigation", () => {
     }]);
   });
 
+  it("opens inventory for a price-only shopping request", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "show cars under $50,000" }],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { priceMax: 50_000 },
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "filter_inventory",
+      priceMax: 50_000,
+    }]);
+  });
+
+  it("opens inventory for a year-only shopping request", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "show cars newer than 2020" }],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { yearMin: 2021 },
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "filter_inventory",
+      yearMin: 2021,
+    }]);
+  });
+
+  it("keeps the visitor's requested inventory order", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "show me the cheapest BMWs" }],
+        targets,
+        groundedVehicles: groundedBmws,
+        inventoryFilters: { make: "BMW", sort: "price_asc" },
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "filter_inventory",
+      make: "BMW",
+      sort: "price_asc",
+    }]);
+  });
+
+  it("opens a grounded comparison when the request resolves to two or three vehicles", () => {
+    const action = resolveDeterministicConciergeNavigation({
+      messages: [{ role: "user", content: "compare these BMWs" }],
+      targets,
+      groundedVehicles: groundedBmws.slice(0, 2),
+      capabilities,
+    });
+    expect(action).toEqual([{
+      type: "compare_vehicles",
+      vehicleIds: [BMW_2016_ID, BMW_X1_ID],
+    }]);
+    expect(isImmediateSiteNavigation(action)).toBe(true);
+  });
+
+  it("opens an ordinal vehicle reference from the grounded result order", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "open the second one" }],
+        targets,
+        groundedVehicles: groundedBmws.slice(0, 2),
+        capabilities,
+      }),
+    ).toEqual([{
+      type: "navigate-target",
+      targetKey: "vehicle-detail",
+      params: { vehicleId: BMW_X1_ID },
+    }]);
+  });
+
+  it("opens the grounded vehicle inquiry for a test-drive request", () => {
+    const action = resolve(
+      [{ role: "user", content: "I want to test drive this one" }],
+      VEHICLE_ID,
+    );
+    expect(action).toEqual([{
+      type: "navigate-target",
+      targetKey: "vehicle-inquiry",
+      params: { vehicleId: VEHICLE_ID },
+    }]);
+    expect(isImmediateSiteNavigation(action)).toBe(true);
+  });
+
+  it("does not compare an arbitrary subset of a broad result list", () => {
+    expect(
+      resolveDeterministicConciergeNavigation({
+        messages: [{ role: "user", content: "compare BMWs" }],
+        targets,
+        groundedVehicles: [...groundedBmws, { ...groundedBmws[0]!, id: VEHICLE_ID }],
+        capabilities,
+      }),
+    ).toEqual([]);
+  });
+
   it("applies inherited trusted filters for a short price refinement", () => {
     expect(
       resolveDeterministicConciergeNavigation({
@@ -242,7 +341,7 @@ describe("deterministic concierge navigation", () => {
     }]);
   });
 
-  it("fails closed when a grounded vehicle description is still ambiguous", () => {
+  it("does not open an ambiguous vehicle but preserves its grounded inventory filter", () => {
     const duplicate = {
       ...groundedBmws[2]!,
       id: "f13ee5f8-2308-4e95-a615-1c86332fb118",
@@ -261,7 +360,13 @@ describe("deterministic concierge navigation", () => {
         inventoryFilters: { make: "Bmw", stockType: "Used", year: 2020 },
         capabilities,
       }),
-    ).toEqual([]);
+    ).toEqual([{
+      type: "filter_inventory",
+      make: "BMW",
+      stockType: "Used",
+      yearMin: 2020,
+      yearMax: 2020,
+    }]);
   });
 
   it("turns an affirmative reply to an inquiry offer into opening the real form", () => {
@@ -283,6 +388,36 @@ describe("deterministic concierge navigation", () => {
         params: { vehicleId: VEHICLE_ID },
       },
     ]);
+  });
+
+  it("opens a tenant-configured, vehicle-bound finance application only for a selected vehicle", () => {
+    const financeTargets = mergeConciergeTargets([{
+      key: "finance-application",
+      label: "Finance application",
+      kind: "route",
+      destination: "/finance/:vehicleId",
+      aiDescription: "Apply for financing for a selected vehicle.",
+      isConversion: true,
+      enabled: true,
+      examplePrompts: ["Apply for finance on this vehicle"],
+      sortOrder: 90,
+    }]);
+    const input = {
+      messages: [{ role: "user" as const, content: "I want to finance this one" }],
+      targets: financeTargets,
+      capabilities,
+    };
+    expect(
+      resolveDeterministicConciergeNavigation({
+        ...input,
+        selectedVehicleId: VEHICLE_ID,
+      }),
+    ).toEqual([{
+      type: "navigate-target",
+      targetKey: "finance-application",
+      params: { vehicleId: VEHICLE_ID },
+    }]);
+    expect(resolveDeterministicConciergeNavigation(input)).toEqual([]);
   });
 
   it("covers the reported Ferrari follow-up navigation sequence", () => {
@@ -439,6 +574,11 @@ describe("action-only acknowledgement", () => {
         { type: "navigate-target", targetKey: "products" },
       ]),
     ).toBe("Taking you there now.");
+    expect(
+      actionOnlyAcknowledgement([
+        { type: "compare_vehicles", vehicleIds: [BMW_2016_ID, BMW_X1_ID] },
+      ]),
+    ).toBe("I’ve opened a side-by-side comparison for you.");
     expect(actionOnlyAcknowledgement([])).toBe("");
   });
 });
@@ -467,7 +607,7 @@ describe("model navigation grounding", () => {
     ).toEqual(actions);
   });
 
-  it("recognizes only non-vehicle deterministic site navigation as immediate", () => {
+  it("recognizes direct grounded navigation and comparison actions as immediate", () => {
     expect(
       isImmediateSiteNavigation([
         { type: "navigate-target", targetKey: "contact-lead-form" },
@@ -481,7 +621,7 @@ describe("model navigation grounding", () => {
           params: { vehicleId: VEHICLE_ID },
         },
       ]),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isImmediateSiteNavigation([
         { type: "filter_inventory", make: "BMW" },

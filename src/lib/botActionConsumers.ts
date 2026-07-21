@@ -1,4 +1,5 @@
 import type {
+  BotCompareVehiclesAction,
   BotInventoryFilterAction,
   BotOpenLeadFormAction,
   LeadSourceContext,
@@ -20,10 +21,13 @@ export type LeadFormPrefill = Partial<{
 
 const PENDING_LEAD_FORM_PREFILL_KEY = "lume.bot.pending-lead-form-prefill.v1";
 const PENDING_LEAD_FORM_CONTEXT_KEY = "lume.bot.pending-lead-form-context.v1";
+const PENDING_COMPARE_VEHICLES_KEY = "lume.bot.pending-compare-vehicles.v1";
+const VEHICLE_COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
 const LEAD_FORM_FIELDS = ["firstName", "lastName", "email", "phone", "message"] as const;
 
 let pendingLeadFormPrefillFallback: LeadFormPrefill | null = null;
 let pendingLeadFormContextFallback: LeadSourceContext | null = null;
+let pendingCompareVehiclesFallback: string[] | null = null;
 
 /**
  * Maps free-form bot route strings to public app routes. Admin routes are
@@ -76,14 +80,23 @@ export function resolveBotNavigationRoute(route: string): AppRouteLocation | nul
   }
 }
 
-/** Converts a coarse bot inventory action into the full public vehicle filter state. */
+/** Converts trusted concierge constraints into the public vehicle filter state. */
 export function vehicleFiltersFromBotAction(
   action: BotInventoryFilterAction
 ): VehicleFilters {
   return {
     ...DEFAULT_FILTERS,
     make: textValue(action.make),
+    model: textValue(action.model),
+    stockType: textValue(action.stockType),
     bodyStyle: textValue(action.bodyStyle),
+    fuelType: textValue(action.fuelType),
+    drivetrain: textValue(action.drivetrain),
+    sellerState: textValue(action.sellerState),
+    sellerCity: textValue(action.sellerCity),
+    yearMin: nonNegativeNumber(action.yearMin) || DEFAULT_FILTERS.yearMin,
+    yearMax: nonNegativeNumber(action.yearMax) || DEFAULT_FILTERS.yearMax,
+    mileageMax: nonNegativeNumber(action.mileageMax),
     priceMin: nonNegativeNumber(action.priceMin),
     priceMax: nonNegativeNumber(action.priceMax),
   };
@@ -100,10 +113,37 @@ export function vehicleRouteFromBotAction(
     route: "vehicles",
     inventoryState: encodeVehicleUrlState(
       vehicleFiltersFromBotAction(action),
-      "recommended",
+      action.sort ?? "recommended",
       1,
     ),
   };
+}
+
+/** Preserve a trusted comparison selection through navigation to /vehicles. */
+export function storePendingVehicleComparison(
+  action: BotCompareVehiclesAction,
+): void {
+  const ids = normalizedComparisonIds(action.vehicleIds);
+  if (ids.length < 2) return;
+  pendingCompareVehiclesFallback = ids;
+  writeSessionJson(PENDING_COMPARE_VEHICLES_KEY, ids);
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(VEHICLE_COMPARE_STORAGE_KEY, JSON.stringify(ids));
+    } catch {
+      // The session fallback still opens the comparison in this tab.
+    }
+  }
+}
+
+/** Consume the one-shot request to open the side-by-side comparison. */
+export function consumePendingVehicleComparison(): string[] | null {
+  const stored = readSessionJson<string[]>(PENDING_COMPARE_VEHICLES_KEY);
+  removeSessionItem(PENDING_COMPARE_VEHICLES_KEY);
+  const fallback = pendingCompareVehiclesFallback;
+  pendingCompareVehiclesFallback = null;
+  const ids = normalizedComparisonIds(stored ?? fallback ?? []);
+  return ids.length >= 2 ? ids : null;
 }
 
 /** Extracts string fields from the bot lead-form payload and drops unsupported keys. */
@@ -212,6 +252,15 @@ function textValue(value: string | undefined): string {
 function nonNegativeNumber(value: number | undefined): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0;
   return Math.max(0, Math.round(value));
+}
+
+function normalizedComparisonIds(value: readonly unknown[]): string[] {
+  return [...new Set(
+    value
+      .filter((id): id is string => typeof id === "string")
+      .map((id) => id.trim())
+      .filter(Boolean),
+  )].slice(0, 3);
 }
 
 function writeSessionJson(key: string, value: unknown): void {

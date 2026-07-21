@@ -18,6 +18,8 @@ export const findVehiclesSchema = z.object({
   bodyStyle: z.string().describe("Body style, e.g. 'SUV', 'Coupe', 'Sedan'.").optional(),
   fuelType: z.string().describe("Fuel type, e.g. 'Gas', 'Electric', 'Hybrid'.").optional(),
   drivetrain: z.string().describe("Drivetrain, e.g. 'AWD', 'RWD'.").optional(),
+  sellerState: z.string().describe("US state or region where the vehicle is listed, e.g. 'FL'.").optional(),
+  sellerCity: z.string().describe("City where the vehicle is listed, e.g. 'Miami'.").optional(),
   stockType: z.enum(["New", "Used"]).describe("Whether the vehicle is new or used.").optional(),
   priceMin: z.number().nonnegative().describe("Minimum price in dollars.").optional(),
   priceMax: z.number().nonnegative().describe("Maximum price in dollars.").optional(),
@@ -51,6 +53,8 @@ export function buildVehicleQuery(args: FindVehiclesArgs): VehicleQuery {
   if (args.bodyStyle) query.bodyStyle = args.bodyStyle;
   if (args.fuelType) query.fuelType = args.fuelType;
   if (args.drivetrain) query.drivetrain = args.drivetrain;
+  if (args.sellerState) query.sellerState = args.sellerState;
+  if (args.sellerCity) query.sellerCity = args.sellerCity;
   if (args.stockType) query.stockType = args.stockType;
   if (args.priceMin !== undefined) query.priceMin = args.priceMin;
   if (args.priceMax !== undefined) query.priceMax = args.priceMax;
@@ -86,15 +90,25 @@ export const findVehiclesTool: BotTool<typeof findVehiclesSchema> = {
         hasMore: result.hasMore,
         vehicles: result.vehicles,
       },
-      // Mirror the search onto the public inventory UI. filter_inventory is
-      // intentionally coarse, matching BotInventoryFilterAction.
+      // Mirror every trusted search constraint onto the public inventory UI so
+      // the visitor never lands on a broader list than the concierge searched.
       actions: [
         {
           type: "filter_inventory",
           ...(args.make ? { make: args.make } : {}),
+          ...(args.model ? { model: args.model } : {}),
+          ...(args.stockType ? { stockType: args.stockType } : {}),
           ...(args.priceMin !== undefined ? { priceMin: args.priceMin } : {}),
           ...(args.priceMax !== undefined ? { priceMax: args.priceMax } : {}),
           ...(args.bodyStyle ? { bodyStyle: args.bodyStyle } : {}),
+          ...(args.fuelType ? { fuelType: args.fuelType } : {}),
+          ...(args.drivetrain ? { drivetrain: args.drivetrain } : {}),
+          ...(args.sellerState ? { sellerState: args.sellerState } : {}),
+          ...(args.sellerCity ? { sellerCity: args.sellerCity } : {}),
+          ...(args.yearMin !== undefined ? { yearMin: args.yearMin } : {}),
+          ...(args.yearMax !== undefined ? { yearMax: args.yearMax } : {}),
+          ...(args.mileageMax !== undefined ? { mileageMax: args.mileageMax } : {}),
+          ...(args.sort && args.sort !== "recommended" ? { sort: args.sort } : {}),
         },
       ],
     };

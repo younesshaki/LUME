@@ -15,6 +15,7 @@ describe("vehicle prompt grounding", () => {
       "TOTAL MATCHING (make=Mercedes-Benz): 0",
     );
     expect(assembled.prompt).toContain("No matching live vehicles.");
+    expect(assembled.prompt).toContain("GROUNDING RULE");
     expect(assembled.sourceCategories).toContain("vehicles");
   });
 
@@ -28,5 +29,17 @@ describe("vehicle prompt grounding", () => {
     });
 
     expect(assembled.prompt).not.toContain("Total vehicles in full inventory");
+  });
+
+  it("forbids broader inventory from leaking into a filtered answer", () => {
+    const assembled = assembleSystemPrompt({
+      contextChunks: [],
+      matchedVehicles: [],
+      totalMatched: 0,
+      filters: { make: "BMW", priceMin: 40_000, priceMax: 55_000 },
+    });
+
+    expect(assembled.prompt).toContain("only the vehicles in this matching block");
+    expect(assembled.prompt).toContain("outside these filters");
   });
 });
