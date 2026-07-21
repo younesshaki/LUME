@@ -29,7 +29,7 @@ export const compareVehiclesTool: BotTool<typeof compareVehiclesSchema> = {
   name: "compare_vehicles",
   description:
     "Compare 2–4 specific vehicles side by side on price, mileage and value. " +
-    "Scores each relative to the others and names the best value, highlighting it.",
+    "Scores each relative to the others and opens the public comparison experience.",
   schema: compareVehiclesSchema,
   async execute(args, ctx): Promise<BotToolResult> {
     if (!ctx.getVehicleById) {
@@ -73,7 +73,18 @@ export const compareVehiclesTool: BotTool<typeof compareVehiclesSchema> = {
       ok: true,
       summary: `Best value of the ${comparisons.length}: ${best.label} (deal score ${best.score}/100).`,
       data: { comparisons, bestValueVehicleId: best.vehicleId },
-      actions: [{ type: "highlight-vehicle", vehicleId: best.vehicleId }],
+      // The public comparison surface supports three vehicles. Keep the
+      // server-side comparison useful for up to four while always including
+      // the computed best value in the browser's decisive side-by-side view.
+      actions: [{
+        type: "compare_vehicles",
+        vehicleIds: [
+          best.vehicleId,
+          ...vehicles
+            .filter((vehicle) => vehicle.id !== best.vehicleId)
+            .map((vehicle) => vehicle.id),
+        ].slice(0, 3),
+      }],
     };
   },
 };

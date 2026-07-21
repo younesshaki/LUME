@@ -203,9 +203,19 @@ function isBotAction(value: unknown): value is BotAction {
     case "filter_inventory":
       return (
         isOptionalString(value.make) &&
+        isOptionalString(value.model) &&
+        isOptionalString(value.stockType) &&
         isOptionalNumber(value.priceMin) &&
         isOptionalNumber(value.priceMax) &&
-        isOptionalString(value.bodyStyle)
+        isOptionalString(value.bodyStyle) &&
+        isOptionalString(value.fuelType) &&
+        isOptionalString(value.drivetrain) &&
+        isOptionalString(value.sellerState) &&
+        isOptionalString(value.sellerCity) &&
+        isOptionalNumber(value.yearMin) &&
+        isOptionalNumber(value.yearMax) &&
+        isOptionalNumber(value.mileageMax) &&
+        isOptionalVehicleSort(value.sort)
       );
     case "navigate":
       return typeof value.route === "string";
@@ -217,6 +227,8 @@ function isBotAction(value: unknown): value is BotAction {
       );
     case "highlight-vehicle":
       return typeof value.vehicleId === "string";
+    case "compare_vehicles":
+      return isVehicleIdList(value.vehicleIds);
     case "open-lead-form":
       return (
         (value.prefill === undefined || isRecord(value.prefill)) &&
@@ -271,6 +283,29 @@ function isOptionalString(value: unknown): boolean {
 
 function isOptionalNumber(value: unknown): boolean {
   return value === undefined || typeof value === "number";
+}
+
+function isOptionalVehicleSort(value: unknown): boolean {
+  return value === undefined || [
+    "recommended",
+    "created_desc",
+    "price_asc",
+    "price_desc",
+    "year_desc",
+    "year_asc",
+    "mileage_asc",
+    "mileage_desc",
+  ].includes(String(value));
+}
+
+function isVehicleIdList(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 2 &&
+    value.length <= 3 &&
+    value.every((id) => typeof id === "string" && id.trim().length > 0) &&
+    new Set(value).size === value.length
+  );
 }
 
 function isLeadContact(value: unknown): boolean {

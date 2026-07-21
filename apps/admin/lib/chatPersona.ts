@@ -91,6 +91,12 @@ const ACTION_SHAPES: Record<string, ActionShape> = {
     advertise: false,
     hint: "Legacy vehicle-detail navigation. vehicleId must be an exact grounded inventory id.",
   },
+  compare_vehicles: {
+    example: `{"type":"compare_vehicles","vehicleIds":["string","string"]}`,
+    capability: "filterInventory",
+    advertise: false,
+    hint: "Emitted by the compare_vehicles tool only; every vehicle ID must be grounded by that tool result.",
+  },
   "open-lead-form": {
     example: `{"type":"open-lead-form","prefill":{}}`,
     capability: "openLeadForm",

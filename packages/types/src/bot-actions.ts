@@ -1,5 +1,6 @@
 import type { TenantId } from "./tenant";
 import type { ConciergeTargetClientDescriptor } from "./conciergeTargets";
+import type { VehicleSort } from "./vehicle";
 
 export type BotNavigationAction = {
   type: "navigate";
@@ -8,16 +9,32 @@ export type BotNavigationAction = {
 
 export type BotInventoryFilterAction = {
   type: "filter_inventory";
-  /** Fields intentionally limited vs VehicleQuery — bot filters are coarse by design. */
+  /** Grounded inventory constraints mirrored onto the public inventory UI. */
   make?: string;
+  model?: string;
+  stockType?: string;
   priceMin?: number;
   priceMax?: number;
   bodyStyle?: string;
+  fuelType?: string;
+  drivetrain?: string;
+  sellerState?: string;
+  sellerCity?: string;
+  yearMin?: number;
+  yearMax?: number;
+  mileageMax?: number;
+  sort?: VehicleSort;
 };
 
 export type BotHighlightVehicleAction = {
   type: "highlight-vehicle";
   vehicleId: string;
+};
+
+/** Opens the public side-by-side comparison with 2–3 grounded vehicles. */
+export type BotCompareVehiclesAction = {
+  type: "compare_vehicles";
+  vehicleIds: string[];
 };
 
 export type BotOpenLeadFormAction = {
@@ -37,6 +54,7 @@ export type BotAction =
   | BotNavigationAction
   | BotNavigateTargetAction
   | BotHighlightVehicleAction
+  | BotCompareVehiclesAction
   | BotOpenLeadFormAction
   | BotScrollToAction
   | BotCaptureLeadAction;

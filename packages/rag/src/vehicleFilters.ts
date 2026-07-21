@@ -2,9 +2,8 @@
  * Extract structured filters from a natural-language query, with typo tolerance.
  * Pure function — runtime-agnostic, no DB access.
  */
-import type { Vehicle, VehicleQuery } from "@lume/types";
-import { correctQuery } from "./fuzzyMatch";
-import { fuzzyLookup } from "./fuzzyMatch";
+import type { Vehicle, VehicleQuery, VehicleSort } from "@lume/types";
+import { correctQuery, fuzzyLookup, isFuzzyMatch } from "./fuzzyMatch";
 import {
   ALL_KNOWN_VEHICLE_TERMS,
   BODY_STYLE_ALIASES,
@@ -23,9 +22,12 @@ export type VehicleQueryFilters = {
   sellerState?: string;
   sellerCity?: string;
   year?: number;
+  yearMin?: number;
+  yearMax?: number;
   mileageMax?: number;
   priceMin?: number;
   priceMax?: number;
+  sort?: VehicleSort;
 };
 
 export type VehicleFilterVocabulary = {
@@ -58,13 +60,40 @@ const VEHICLE_INTENT_KEYWORDS = [
   "most expensive", "least expensive", "highest price", "lowest price", "budget",
 ];
 
-export function isVehicleQuery(query: string): boolean {
+// These words establish that someone is shopping, but are never evidence for
+// a particular catalog model. Without this guard, permissive typo matching
+// can turn "cars" into a similarly spelled model such as "Camry".
+const GENERIC_MODEL_FUZZY_TOKENS = new Set(
+  VEHICLE_INTENT_KEYWORDS.flatMap((keyword) => normalizePhrase(keyword).split(" ")),
+);
+const MODEL_FUZZY_STOPWORDS = new Set([
+  ...GENERIC_MODEL_FUZZY_TOKENS,
+  "a", "an", "the", "and", "or", "but", "for", "from", "to", "than", "then",
+  "in", "on", "at", "near", "around", "with", "without", "that", "this", "these",
+  "those", "it", "one", "ones", "all", "any", "only", "show", "find", "have",
+  "new", "newer", "older", "later", "earlier", "between", "under", "above", "below",
+  "more", "less", "over", "up", "max", "min", "grand", "thousand", "large",
+]);
+const SPOKEN_PRICE_WORD_VALUES: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+  ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30,
+  forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
+};
+const SPOKEN_PRICE_PART = "(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|and)";
+const SPOKEN_PRICE_AMOUNT = `${SPOKEN_PRICE_PART}(?:[\\s-]+${SPOKEN_PRICE_PART}){0,3}`;
+
+export function isVehicleQuery(
+  query: string,
+  vocabulary: VehicleFilterVocabulary = {},
+): boolean {
   const q = normalizePhrase(query);
   return (
     VEHICLE_INTENT_KEYWORDS.some((keyword) =>
       containsPhrase(q, normalizePhrase(keyword))
     ) ||
-    canonicalMakeFromText(query) !== null
+    canonicalMakeFromText(query) !== null ||
+    catalogModelFromText(query, vocabulary.models ?? []) !== null
   );
 }
 
@@ -98,7 +127,7 @@ export function extractVehicleFilters(
       if (token.length > 2) {
         const bodyStyle = fuzzyLookup(token, BODY_STYLE_ALIASES);
         if (bodyStyle) {
-          filters.bodyStyle = bodyStyle.charAt(0).toUpperCase() + bodyStyle.slice(1);
+          filters.bodyStyle = formatBodyStyle(bodyStyle);
           break;
         }
       }
@@ -128,8 +157,11 @@ export function extractVehicleFilters(
     filters.drivetrain = drivetrain.toUpperCase();
   }
 
-  const yearMatch = q.match(/\b(20\d{2})\b/);
-  if (yearMatch) filters.year = parseInt(yearMatch[1]);
+  // The typo corrector can mistake the conjunction "and" for AWD. Model
+  // year language must therefore be read from the visitor's original words.
+  Object.assign(filters, extractYearRange(query));
+  const sort = extractVehicleSort(query);
+  if (sort) filters.sort = sort;
 
   const priceRange = extractPriceRange(query);
   if (priceRange.priceMin !== undefined) filters.priceMin = priceRange.priceMin;
@@ -148,10 +180,18 @@ export function extractVehicleFilters(
   const normalizedQuery = normalizePhrase(query);
   for (const model of models) {
     const normalizedModel = normalizePhrase(model);
-    if (normalizedModel.length >= 2 && containsPhrase(normalizedQuery, normalizedModel)) {
+    if (
+      normalizedModel.length >= 2 &&
+      (containsPhrase(normalizedQuery, normalizedModel) ||
+        (!normalizedModel.endsWith("s") &&
+          containsPhrase(normalizedQuery, `${normalizedModel}s`)))
+    ) {
       filters.model = model;
       break;
     }
+  }
+  if (!filters.model) {
+    filters.model = catalogModelFromText(query, models) ?? undefined;
   }
 
   const states = uniqueTerms([
@@ -208,11 +248,18 @@ export function vehicleQueryFromFilters(
     ...(filters.year !== undefined
       ? { yearMin: filters.year, yearMax: filters.year }
       : {}),
+    ...(filters.year === undefined && filters.yearMin !== undefined
+      ? { yearMin: filters.yearMin }
+      : {}),
+    ...(filters.year === undefined && filters.yearMax !== undefined
+      ? { yearMax: filters.yearMax }
+      : {}),
     ...(filters.mileageMax !== undefined
       ? { mileageMax: filters.mileageMax }
       : {}),
     ...(filters.priceMin !== undefined ? { priceMin: filters.priceMin } : {}),
     ...(filters.priceMax !== undefined ? { priceMax: filters.priceMax } : {}),
+    ...(filters.sort ? { sort: filters.sort } : {}),
   };
 }
 
@@ -240,8 +287,10 @@ export function hasVehicleFilterConstraint(
 
 /**
  * Carry trusted visitor-authored scope into a short refinement such as
- * "for less than $40k?". Explicit scope in the current message wins and
- * numeric bounds never leak forward from an older request.
+ * "only AWD ones" or "in Florida". Visitors naturally refine one facet at
+ * a time; retaining the rest of the last search avoids silently broadening a
+ * high-intent request. An explicitly named make starts a new search, while
+ * every explicitly supplied current facet replaces that same prior facet.
  */
 export function inheritVehicleFilterContext(
   current: VehicleQueryFilters,
@@ -249,28 +298,33 @@ export function inheritVehicleFilterContext(
 ): VehicleQueryFilters {
   if (!previous) return current;
 
+  // Naming a make is the clearest visitor signal that they have started a
+  // different search ("what about Mercedes?"). Do not accidentally carry a
+  // previous BMW model, price, or location into it.
   if (current.make) return current;
 
-  const inherited: VehicleQueryFilters = {
-    ...current,
-    ...(previous.make ? { make: previous.make } : {}),
-  };
+  // Preserve the existing search and overlay the current visitor language.
+  // This makes a sequence such as "BMW SUVs under 70k" → "only AWD ones"
+  // mean BMW + SUV + under 70k + AWD, instead of dropping the earlier scope.
+  return { ...previous, ...current };
+}
 
-  const hasCurrentScope =
-    current.model !== undefined ||
-    current.bodyStyle !== undefined ||
-    current.stockType !== undefined ||
-    current.fuelType !== undefined ||
-    current.drivetrain !== undefined ||
-    current.sellerState !== undefined ||
-    current.sellerCity !== undefined ||
-    current.year !== undefined;
-
-  if (!hasCurrentScope && previous.model) {
-    inherited.model = previous.model;
+/**
+ * Reconstruct the active shopping scope from consecutive visitor turns. This
+ * is based only on visitor-authored text, so assistant prose and model tool
+ * arguments can never introduce constraints into the next inventory search.
+ */
+export function composeVehicleFilterHistory(
+  queries: readonly string[],
+  vocabulary: VehicleFilterVocabulary = {},
+): VehicleQueryFilters | null {
+  let active: VehicleQueryFilters | null = null;
+  for (const query of queries) {
+    const next = extractVehicleFilters(query, [], vocabulary);
+    if (!hasVehicleFilterConstraint(next)) continue;
+    active = inheritVehicleFilterContext(next, active);
   }
-
-  return inherited;
+  return active;
 }
 
 export type VehicleMatchResult = { results: Vehicle[]; totalMatched: number };
@@ -299,6 +353,12 @@ export function matchVehicles(
   if (filters.sellerState) results = results.filter((v) => v.sellerState === filters.sellerState);
   if (filters.sellerCity) results = results.filter((v) => v.sellerCity.toLowerCase() === filters.sellerCity!.toLowerCase());
   if (filters.year) results = results.filter((v) => v.year === filters.year);
+  if (filters.year === undefined && filters.yearMin !== undefined) {
+    results = results.filter((vehicle) => vehicle.year >= filters.yearMin!);
+  }
+  if (filters.year === undefined && filters.yearMax !== undefined) {
+    results = results.filter((vehicle) => vehicle.year <= filters.yearMax!);
+  }
   if (filters.mileageMax !== undefined) {
     results = results.filter(
       (vehicle) =>
@@ -315,10 +375,18 @@ export function matchVehicles(
   const totalMatched = results.length;
 
   const q = query.toLowerCase();
-  if (/most expensive|highest price|priciest|most valuable/.test(q)) {
+  if (filters.sort === "price_desc" || /most expensive|highest price|priciest|most valuable/.test(q)) {
     results = [...results].sort((a, b) => b.price - a.price);
-  } else if (/cheapest|least expensive|lowest price|most affordable|budget/.test(q)) {
+  } else if (filters.sort === "price_asc" || /cheapest|least expensive|lowest price|most affordable|budget/.test(q)) {
     results = [...results].sort((a, b) => a.price - b.price);
+  } else if (filters.sort === "year_desc") {
+    results = [...results].sort((a, b) => b.year - a.year);
+  } else if (filters.sort === "year_asc") {
+    results = [...results].sort((a, b) => a.year - b.year);
+  } else if (filters.sort === "mileage_asc") {
+    results = [...results].sort((a, b) => (a.mileage ?? Infinity) - (b.mileage ?? Infinity));
+  } else if (filters.sort === "mileage_desc") {
+    results = [...results].sort((a, b) => (b.mileage ?? -1) - (a.mileage ?? -1));
   }
 
   const cap = Object.keys(filters).length > 0 ? 30 : 15;
@@ -345,7 +413,88 @@ function canonicalMakeFromText(value: string): string | null {
     }
   }
 
+  // A visitor who writes "ferarri", "merceds", or "bmww" is still
+  // expressing a clear make intent. Restrict fuzzy matching to a whole token
+  // and require an unambiguous alias match so ordinary prose cannot become a
+  // fabricated inventory filter.
+  const fuzzyCandidates = new Set<string>();
+  for (const token of normalized.split(" ")) {
+    if (token.length < 3 || /^\d+$/.test(token)) continue;
+    for (const { canonical, alias } of aliases) {
+      if (alias.length < 3 || !isFuzzyMatch(token, alias)) continue;
+      fuzzyCandidates.add(canonical);
+    }
+  }
+  if (fuzzyCandidates.size === 1) return [...fuzzyCandidates][0] ?? null;
+
   return null;
+}
+
+/**
+ * Resolve a catalog model from exact wording or one unambiguous typo. Models
+ * are tenant vocabulary, not a global guess: this lets "cayene" work while
+ * refusing to turn everyday prose into a model filter. Short/numeric model
+ * names (X5, 911, i4) remain exact-only.
+ */
+function catalogModelFromText(
+  query: string,
+  catalogModels: readonly string[],
+): string | null {
+  const normalizedQuery = normalizePhrase(query);
+  const tokens = normalizedQuery.split(" ").filter(Boolean);
+  const compactWindows = tokenWindows(tokens, 3).map((window) => window.join(""));
+  const fuzzyCandidates = new Set<string>();
+
+  for (const model of uniqueTerms(catalogModels)) {
+    const normalizedModel = normalizePhrase(model);
+    if (!normalizedModel) continue;
+    if (
+      containsPhrase(normalizedQuery, normalizedModel) ||
+      (!normalizedModel.endsWith("s") &&
+        containsPhrase(normalizedQuery, `${normalizedModel}s`))
+    ) {
+      return model;
+    }
+
+    // Treat harmless separators in model codes as interchangeable: "X 3",
+    // "X-3", and "X3" should all find a catalog model named X3.
+    const compactModel = normalizedModel.replace(/\s/g, "");
+    if (
+      compactModel.length >= 2 &&
+      compactWindows.some(
+        (window) =>
+          window === compactModel ||
+          (!compactModel.endsWith("s") && window === `${compactModel}s`),
+      )
+    ) {
+      return model;
+    }
+
+    // Only fuzzy-match one-word, alphabetic model names of a meaningful
+    // length. This avoids unsafe guesses for short catalog codes such as X5.
+    if (!/^[a-z]{4,}$/.test(normalizedModel)) continue;
+    if (
+      tokens.some(
+        (token) =>
+          !MODEL_FUZZY_STOPWORDS.has(token) &&
+          isFuzzyMatch(token, normalizedModel),
+      )
+    ) {
+      fuzzyCandidates.add(model);
+    }
+  }
+
+  return fuzzyCandidates.size === 1 ? [...fuzzyCandidates][0] ?? null : null;
+}
+
+function tokenWindows(tokens: readonly string[], maximumLength: number): string[][] {
+  const windows: string[][] = [];
+  for (let start = 0; start < tokens.length; start += 1) {
+    for (let length = 1; length <= maximumLength && start + length <= tokens.length; length += 1) {
+      windows.push(tokens.slice(start, start + length));
+    }
+  }
+  return windows;
 }
 
 function exactAliasFromText<T extends string>(
@@ -390,6 +539,12 @@ function formatCanonicalMake(canonical: string): string {
   );
 }
 
+function formatBodyStyle(value: string): string {
+  return value === "suv"
+    ? "SUV"
+    : value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function normalizePhrase(value: string): string {
   return value
     .normalize("NFKD")
@@ -418,14 +573,86 @@ function matchesCatalogState(query: string, state: string): boolean {
   return containsPhrase(normalizePhrase(query), normalizePhrase(trimmed));
 }
 
-function extractPriceRange(
+function extractVehicleSort(query: string): VehicleSort | undefined {
+  const normalized = normalizePhrase(query);
+  if (/\b(?:cheapest|least expensive|lowest price|most affordable|best price)\b/.test(normalized)) {
+    return "price_asc";
+  }
+  if (/\b(?:most expensive|highest price|priciest|most valuable)\b/.test(normalized)) {
+    return "price_desc";
+  }
+  if (/\b(?:newest|latest|most recent)\b/.test(normalized)) return "year_desc";
+  if (/\b(?:oldest|earliest)\b/.test(normalized)) return "year_asc";
+  if (/\b(?:lowest mileage|least miles|fewest miles)\b/.test(normalized)) {
+    return "mileage_asc";
+  }
+  if (/\b(?:highest mileage|most miles)\b/.test(normalized)) {
+    return "mileage_desc";
+  }
+  return undefined;
+}
+
+/**
+ * Resolve ordinary model-year language without conflating it with a sticker
+ * price. Exact years retain the existing one-year behavior; ranges and
+ * relative language become inclusive bounds suitable for the inventory API.
+ */
+function extractYearRange(
   query: string,
+): Pick<VehicleQueryFilters, "year" | "yearMin" | "yearMax"> {
+  const range = /\b(?:between|from)\s+(20\d{2})\s*(?:and|to|through|[-–—])\s+(20\d{2})\b|\b(20\d{2})\s*(?:to|through|[-–—])\s*(20\d{2})\b/i.exec(query);
+  if (range) {
+    const first = Number(range[1] ?? range[3]);
+    const second = Number(range[2] ?? range[4]);
+    if (Number.isInteger(first) && Number.isInteger(second)) {
+      return { yearMin: Math.min(first, second), yearMax: Math.max(first, second) };
+    }
+  }
+
+  const newer = /\b(?:newer than|after)\s+(20\d{2})\b|\b(20\d{2})\s*(?:or|and)\s+(?:newer|later)\b|\b(20\d{2})\s*\+(?:\b|$)/i.exec(query);
+  if (newer) {
+    const strict = newer[1];
+    const year = Number(strict ?? newer[2] ?? newer[3]);
+    if (Number.isInteger(year)) return { yearMin: strict ? year + 1 : year };
+  }
+
+  const older = /\b(?:older than|before)\s+(20\d{2})\b|\b(20\d{2})\s*(?:or|and)\s+(?:older|earlier)\b/i.exec(query);
+  if (older) {
+    const strict = older[1];
+    const year = Number(strict ?? older[2]);
+    if (Number.isInteger(year)) return { yearMax: strict ? year - 1 : year };
+  }
+
+  const exact = /\b(20\d{2})\b/.exec(query);
+  return exact ? { year: Number(exact[1]) } : {};
+}
+
+function extractPriceRange(
+  rawQuery: string,
 ): Pick<VehicleQueryFilters, "priceMin" | "priceMax"> {
-  const comparison = /\b(under|below|less than|up to|at most|max(?:imum)?|over|above|more than|at least|min(?:imum)?)\s+\$?\s*([\d][\d,]*(?:\.\d+)?)\s*([km])?\b/gi;
+  const query = normalizeSpokenPriceAmounts(rawQuery);
+  const explicitRange = extractExplicitPriceRange(query);
+  if (explicitRange) return explicitRange;
+
+  const approximateRange = extractApproximatePriceRange(query);
+  if (approximateRange) return approximateRange;
+
+  const budget = extractBudgetMaximum(query);
+  if (budget !== null) return { priceMax: budget };
+
+  const comparison = /\b(no more than|not more than|no greater than|less than or equal to|under|below|less than|up to|at most|within|max(?:imum)?(?: of)?|cap(?:ped)? at|over|above|more than|at least|min(?:imum)?)\s+\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/gi;
   for (const match of query.matchAll(comparison)) {
     const end = (match.index ?? 0) + match[0].length;
     if (/^\s*(?:miles?|mi)\b/i.test(query.slice(end))) continue;
-    const amount = parseAbbreviatedNumber(match[2] ?? "", match[3]);
+    const hasVehiclePriceContext =
+      canonicalMakeFromText(query) !== null ||
+      /\b(?:car|cars|vehicle|vehicles|inventory|stock|price|budget|cost)\b/i.test(query);
+    const rawAmount = Number((match[2] ?? "").replace(/[\s,]/g, ""));
+    const amount = parsePriceRangeNumber(
+      match[2] ?? "",
+      match[3],
+      hasVehiclePriceContext || match[0].includes("$") || (rawAmount > 0 && rawAmount < 1_000),
+    );
     if (amount === null) continue;
     if (
       !match[0].includes("$") &&
@@ -436,7 +663,7 @@ function extractPriceRange(
       continue;
     }
     const direction = (match[1] ?? "").toLowerCase();
-    return /^(?:under|below|less than|up to|at most|max(?:imum)?)$/.test(
+    return /^(?:no more than|not more than|no greater than|less than or equal to|under|below|less than|up to|at most|within|max(?:imum)?(?: of)?|cap(?:ped)? at)$/.test(
       direction,
     )
       ? { priceMax: amount }
@@ -490,6 +717,172 @@ function extractPriceRange(
   return { priceMin: first.amount, priceMax: first.amount };
 }
 
+function normalizeSpokenPriceAmounts(query: string): string {
+  const unit = "(?:k|grand|thousand|large|dollars?)";
+  const range = new RegExp(
+    `\\b(${SPOKEN_PRICE_AMOUNT})\\s+(?:and|to)\\s+(${SPOKEN_PRICE_AMOUNT})\\s+(?=${unit}\\b)`,
+    "gi",
+  );
+  const withUnit = new RegExp(
+    `\\b(${SPOKEN_PRICE_AMOUNT})\\s+(?=${unit}\\b)`,
+    "gi",
+  );
+  return query
+    .replace(range, (_match, first: string, second: string) => {
+      const firstAmount = spokenPriceAmount(first);
+      const secondAmount = spokenPriceAmount(second);
+      return firstAmount === null || secondAmount === null
+        ? _match
+        : `${firstAmount} and ${secondAmount}`;
+    })
+    .replace(withUnit, (_match, value: string) => {
+      const amount = spokenPriceAmount(value);
+      return amount === null ? _match : String(amount);
+    });
+}
+
+function spokenPriceAmount(value: string): number | null {
+  let amount = 0;
+  for (const word of value.toLowerCase().split(/[\s-]+/)) {
+    if (word === "and") continue;
+    if (word === "hundred") {
+      amount = (amount || 1) * 100;
+      continue;
+    }
+    const part = SPOKEN_PRICE_WORD_VALUES[word];
+    if (part === undefined) return null;
+    amount += part;
+  }
+  return amount > 0 ? amount : null;
+}
+
+/**
+ * "Around 50k" is a preference, not an exact sticker-price request. Use a
+ * modest ±10% band so results remain useful without silently broadening into
+ * a different budget. The model receives the applied bounds in its grounded
+ * inventory block and can state them transparently.
+ */
+function extractApproximatePriceRange(
+  query: string,
+): Pick<VehicleQueryFilters, "priceMin" | "priceMax"> | null {
+  const match = /\b(?:around|about|roughly|approximately)\s+\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?(?:-?ish)?\b|\$\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?-?ish\b/i.exec(query);
+  if (!match) return null;
+  const value = match[1] ?? match[3] ?? "";
+  const unit = match[2] ?? match[4];
+  const rawAmount = Number(value.replace(/[\s,]/g, ""));
+  const hasVehiclePriceContext =
+    canonicalMakeFromText(query) !== null ||
+    /\b(?:car|cars|vehicle|vehicles|inventory|stock|price|budget|cost)\b/i.test(query);
+  const amount = parsePriceRangeNumber(
+    value,
+    unit,
+    Boolean(unit) || hasVehiclePriceContext || rawAmount > 0 && rawAmount < 1_000,
+  );
+  if (amount === null || (amount >= 1900 && amount <= 2099 && !unit)) return null;
+  const tolerance = Math.round(amount * 0.1);
+  return { priceMin: Math.max(0, amount - tolerance), priceMax: amount + tolerance };
+}
+
+function extractBudgetMaximum(query: string): number | null {
+  const patterns = [
+    /\b(?:budget(?:\s+(?:is|of|around|about))?|spend(?:ing)?(?:\s+(?:up to|under|below))?)\s*\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/i,
+    /\b(?:i(?:\s+am|'m)?\s+)?(?:have|got)\s+(?:about\s+)?\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\s+(?:to spend|available|set aside|all in)\b/i,
+    /\b(?:my\s+)?(?:max(?:imum)?|ceiling|cap)\s*(?:is|of|at)?\s*\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/i,
+  ];
+  const match = patterns.map((pattern) => pattern.exec(query)).find(Boolean);
+  if (!match) return null;
+  const rawAmount = Number((match[1] ?? "").replace(/[\s,]/g, ""));
+  const amount = parsePriceRangeNumber(
+    match[1] ?? "",
+    match[2],
+    rawAmount > 0 && rawAmount < 1_000,
+  );
+  if (amount === null || (amount >= 1900 && amount <= 2099 && !match[2])) {
+    return null;
+  }
+  return amount;
+}
+
+/**
+ * People naturally omit currency symbols: "BMWs between 40k and 55k",
+ * "from 30 grand to 70 grand", or "40–55k BMWs". Recognize those range
+ * forms before the single-price fallback. Bare small values are interpreted
+ * as thousands only in a clear inventory/price context; years and mileage
+ * ranges therefore remain untouched.
+ */
+function extractExplicitPriceRange(
+  query: string,
+): Pick<VehicleQueryFilters, "priceMin" | "priceMax"> | null {
+  const token = "\\$?\\s*([\\d][\\d,\\s]*(?:\\.\\d+)?)\\s*(k|m|grand|thousand)?";
+  const patterns = [
+    new RegExp(`\\b(?:between|btwn|from)\\s+${token}\\s*(?:and|to|through|[-–—])\\s+${token}\\b`, "i"),
+    new RegExp(`\\b${token}\\s*(?:to|through|[-–—])\\s*${token}\\b`, "i"),
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(query);
+    if (!match) continue;
+    const [firstValue, firstUnit, secondValue, secondUnit] =
+      match.length === 5
+        ? [match[1], match[2], match[3], match[4]]
+        : [undefined, undefined, undefined, undefined];
+    if (!firstValue || !secondValue) continue;
+    const matchedText = match[0] ?? "";
+    const hasExplicitMoney =
+      /\$|\b(?:grand|thousand|usd|dollars?)\b/i.test(matchedText) ||
+      Boolean(firstUnit || secondUnit);
+    const hasVehiclePriceContext =
+      canonicalMakeFromText(query) !== null ||
+      /\b(?:car|cars|vehicle|vehicles|inventory|stock|price|budget|cost)\b/i.test(query);
+    const first = parsePriceRangeNumber(
+      firstValue,
+      firstUnit,
+      hasExplicitMoney || hasVehiclePriceContext,
+    );
+    const second = parsePriceRangeNumber(
+      secondValue,
+      secondUnit,
+      hasExplicitMoney || hasVehiclePriceContext,
+    );
+    if (first === null || second === null) continue;
+
+    // 2019–2021 is a year range, not a price range. Nor should an unmarked
+    // range such as "between 40 and 55" be treated as money without an
+    // inventory cue.
+    if (
+      (!hasExplicitMoney && !hasVehiclePriceContext) ||
+      (first >= 1900 && first <= 2099 && second >= 1900 && second <= 2099)
+    ) {
+      continue;
+    }
+    return { priceMin: Math.min(first, second), priceMax: Math.max(first, second) };
+  }
+  return null;
+}
+
+function parsePriceRangeNumber(
+  value: string,
+  unit: string | undefined,
+  allowImplicitThousands: boolean,
+): number | null {
+  const parsed = Number(value.replace(/[\s,]/g, ""));
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  const normalizedUnit = unit?.toLowerCase();
+  if (normalizedUnit === "m") return Math.round(parsed * 1_000_000);
+  if (
+    normalizedUnit === "k" ||
+    normalizedUnit === "grand" ||
+    normalizedUnit === "thousand" ||
+    normalizedUnit === "large"
+  ) {
+    return Math.round(parsed * 1_000);
+  }
+  if (allowImplicitThousands && parsed > 0 && parsed < 1_000) {
+    return Math.round(parsed * 1_000);
+  }
+  return Math.round(parsed);
+}
+
 function extractMileageMaximum(query: string): number | null {
   const match =
     /\b([\d][\d,]*(?:\.\d+)?)\s*([km])?\s*(?:miles?|mi)\b/i.exec(query);
@@ -502,11 +895,12 @@ function parseAbbreviatedNumber(
   value: string,
   suffix?: string,
 ): number | null {
-  const parsed = Number(value.replace(/,/g, ""));
+  const parsed = Number(value.replace(/[\s,]/g, ""));
   if (!Number.isFinite(parsed) || parsed < 0) return null;
-  const multiplier = suffix?.toLowerCase() === "m"
+  const normalizedSuffix = suffix?.toLowerCase();
+  const multiplier = normalizedSuffix === "m"
     ? 1_000_000
-    : suffix?.toLowerCase() === "k"
+    : normalizedSuffix === "k" || normalizedSuffix === "grand" || normalizedSuffix === "thousand" || normalizedSuffix === "large"
       ? 1_000
       : 1;
   return Math.round(parsed * multiplier);

@@ -48,6 +48,7 @@ import {
 } from "@lume/bot";
 import {
   assembleSystemPrompt,
+  composeVehicleFilterHistory,
   extractVehicleFilters,
   hasVehicleFilterConstraint,
   inheritVehicleFilterContext,
@@ -285,7 +286,18 @@ export async function POST(request: Request): Promise<Response> {
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> = null;
   let visitorPreferenceContext: Awaited<ReturnType<typeof loadVisitorPreferenceContext>> = null;
   try {
-    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext, selectedVehicleResult] = await Promise.all([
+    // Load the bounded tenant vocabulary for every turn. A visitor can ask
+    // for a model without naming its make ("show me 911s"), which cannot be
+    // recognized reliably without knowing this tenant's actual catalog.
+    const initialCurrentFilters = extractVehicleFilters(lastUser.content);
+    const initialPriorFilters = composeVehicleFilterHistory(
+      priorVisitorQueries(cleanMessages),
+    );
+    const initialFilters = inheritVehicleFilterContext(
+      initialCurrentFilters,
+      initialPriorFilters,
+    );
+    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext, selectedVehicleResult, facetResult] = await Promise.all([
       supabase
         .from("rag_chunks")
         .select("text, category")
@@ -308,6 +320,11 @@ export async function POST(request: Request): Promise<Response> {
             .eq("status", "live")
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
+      supabase.rpc("vehicle_facets_v2", {
+        p_tenant_id: tenant.tenantId,
+        p_make: initialFilters.make ?? null,
+        p_state: initialFilters.sellerState ?? null,
+      }),
     ]);
     chatLoyaltyContext = loadedLoyaltyContext;
     visitorPreferenceContext = loadedPreferenceContext;
@@ -337,39 +354,30 @@ export async function POST(request: Request): Promise<Response> {
     let totalMatched: number | undefined;
     let filters;
 
-    const initialCurrentFilters = extractVehicleFilters(lastUser.content);
-    const initialPriorFilters = latestPriorVehicleFilters(cleanMessages);
-    const initialFilters = inheritVehicleFilterContext(
-      initialCurrentFilters,
-      initialPriorFilters,
+    if (facetResult.error) {
+      captureError("api/chat/vehicle-facets", facetResult.error, {
+        tenantId: tenant.tenantId,
+      });
+    }
+    const vocabulary = vehicleFilterVocabulary(facetResult.data);
+    const currentFilters = extractVehicleFilters(lastUser.content, [], vocabulary);
+    const priorFilters = composeVehicleFilterHistory(
+      priorVisitorQueries(cleanMessages),
+      vocabulary,
+    );
+    const filtersWithContext = inheritVehicleFilterContext(
+      currentFilters,
+      priorFilters,
     );
     const isTrustedVehicleContinuation =
-      hasVehicleFilterConstraint(initialCurrentFilters) &&
-      Boolean(initialPriorFilters?.make || initialPriorFilters?.model);
+      Boolean(priorFilters && hasVehicleFilterConstraint(priorFilters)) &&
+      (hasVehicleFilterConstraint(currentFilters) || isOrdinalVehicleSelection(lastUser.content));
 
-    if (isVehicleQuery(lastUser.content) || isTrustedVehicleContinuation) {
-      // Resolve catalog vocabulary through the bounded facets RPC, then let
-      // Postgres filter the complete tenant inventory. Pulling ".select(*)"
-      // here silently hit PostgREST's row cap on larger tenants and could turn
-      // a real make (for example Mercedes-Benz) into a false zero-result answer.
-      const { data: facetRows, error: facetError } = await supabase.rpc(
-        "vehicle_facets_v2",
-        {
-          p_tenant_id: tenant.tenantId,
-          p_make: initialFilters.make ?? null,
-          p_state: initialFilters.sellerState ?? null,
-        },
-      );
-      if (facetError) {
-        captureError("api/chat/vehicle-facets", facetError, {
-          tenantId: tenant.tenantId,
-        });
-      }
-      const vocabulary = vehicleFilterVocabulary(facetRows);
-      filters = inheritVehicleFilterContext(
-        extractVehicleFilters(lastUser.content, [], vocabulary),
-        latestPriorVehicleFilters(cleanMessages, vocabulary),
-      );
+    if (isVehicleQuery(lastUser.content, vocabulary) || isTrustedVehicleContinuation) {
+      // Let Postgres filter the complete tenant inventory. Pulling
+      // ".select(*)" here silently hit PostgREST's row cap on larger tenants
+      // and could turn a real make into a false zero-result answer.
+      filters = filtersWithContext;
       const match = await queryTenantVehicles(supabase, tenant.tenantId, {
         ...vehicleQueryFromFilters(filters),
         limit: 30,
@@ -734,6 +742,9 @@ export async function POST(request: Request): Promise<Response> {
         if (action.type === "highlight-vehicle") {
           groundedVehicleIds.add(action.vehicleId);
         }
+        if (action.type === "compare_vehicles") {
+          for (const vehicleId of action.vehicleIds) groundedVehicleIds.add(vehicleId);
+        }
       }
       const seenActionFingerprints = new Set<string>();
       const emittedActions: BotAction[] = [];
@@ -910,22 +921,16 @@ function vehicleFilterVocabulary(value: unknown): {
   };
 }
 
-function latestPriorVehicleFilters(
-  messages: readonly MemoryMessage[],
-  vocabulary: Parameters<typeof extractVehicleFilters>[2] = {},
-): ReturnType<typeof extractVehicleFilters> | null {
-  let skippedCurrentUser = false;
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (message?.role !== "user") continue;
-    if (!skippedCurrentUser) {
-      skippedCurrentUser = true;
-      continue;
-    }
-    const filters = extractVehicleFilters(message.content, [], vocabulary);
-    if (filters.make || filters.model) return filters;
-  }
-  return null;
+function priorVisitorQueries(messages: readonly MemoryMessage[]): string[] {
+  const queries = messages
+    .filter((message) => message.role === "user")
+    .map((message) => message.content);
+  queries.pop();
+  return queries;
+}
+
+function isOrdinalVehicleSelection(value: string): boolean {
+  return /\b(?:open|show|view|take me to)\s+(?:the\s+)?(?:first|second|third|last)\s+(?:one|vehicle|car|listing)\b/i.test(value);
 }
 
 function stringArray(value: unknown): string[] {

@@ -4,6 +4,7 @@ import type {
   BotPersonaCapabilities,
   ConciergeTarget,
   Vehicle,
+  VehicleSort,
 } from "@lume/types";
 import {
   extractDeepseekDsmlToolCalls,
@@ -42,9 +43,12 @@ type GroundedInventoryFilters = Partial<{
   sellerState: string;
   sellerCity: string;
   year: number;
+  yearMin: number;
+  yearMax: number;
   mileageMax: number;
   priceMin: number;
   priceMax: number;
+  sort: VehicleSort;
 }>;
 
 const UUID_PATTERN =
@@ -53,10 +57,17 @@ const AFFIRMATIVE_PATTERN =
   /^(?:yes|yes please|yeah|yep|sure|okay|ok|please do|do it|absolutely|i would|sounds good)[.! ]*$/;
 const EXPLICIT_NAVIGATION_PATTERN =
   /\b(?:take|bring|send|navigate|go|open|visit|show|view)\b/;
+const EXPLICIT_FINANCE_APPLICATION_PATTERN =
+  /\b(?:apply|application|start|begin|pre-?qualify|preapproval|pre-approval|(?:want|ready)\s+(?:to\s+)?(?:finance|apply)|would\s+like\s+to\s+(?:finance|apply))\b/;
+const FINANCE_INTENT_PATTERN =
+  /\b(?:finance|financing|credit|loan|payment|pre-?qualify|preapproval|pre-approval)\b/;
 const INVENTORY_DISCOVERY_PATTERN =
   /\b(?:do you have|have any|are there|any|available|availability|browse|carry|find|inventory|looking for|offer|show|stock|take|open|view)\b/;
 const INVENTORY_REFINEMENT_PATTERN =
   /\b(?:under|below|less than|up to|at most|over|above|more than|at least|between)\b/;
+const VEHICLE_COMPARISON_PATTERN = /\b(?:compare|comparison|versus|vs\.?)\b/;
+const ORDINAL_VEHICLE_PATTERN = /\b(first|second|third|last)\s+(?:one|vehicle|car|listing)\b/;
+const APPOINTMENT_INTENT_PATTERN = /\b(?:book|schedule|set up|arrange|want)\b[\s\S]{0,36}\b(?:test drive|appointment|come see|see (?:this|that) (?:car|vehicle|one))\b/;
 const IGNORED_TARGET_WORDS = new Set([
   "and",
   "form",
@@ -109,6 +120,16 @@ export function resolveDeterministicConciergeNavigation(
     );
   }
 
+  if (
+    input.selectedVehicleId &&
+    input.capabilities.openLeadForm !== false &&
+    APPOINTMENT_INTENT_PATTERN.test(userText)
+  ) {
+    return targetAction(input.targets, "vehicle-inquiry", {
+      vehicleId: input.selectedVehicleId,
+    }, true);
+  }
+
   const explicitNavigation = EXPLICIT_NAVIGATION_PATTERN.test(userText);
   if (explicitNavigation) {
     const exactVehicleId = exactGroundedVehicleId(
@@ -118,6 +139,15 @@ export function resolveDeterministicConciergeNavigation(
     if (exactVehicleId) {
       return targetAction(input.targets, "vehicle-detail", {
         vehicleId: exactVehicleId,
+      });
+    }
+    const ordinalVehicleId = ordinalGroundedVehicleId(
+      userText,
+      input.groundedVehicles ?? [],
+    );
+    if (ordinalVehicleId) {
+      return targetAction(input.targets, "vehicle-detail", {
+        vehicleId: ordinalVehicleId,
       });
     }
   }
@@ -135,6 +165,12 @@ export function resolveDeterministicConciergeNavigation(
     });
   }
 
+  const comparison = groundedComparisonAction(
+    userText,
+    input.groundedVehicles ?? [],
+  );
+  if (comparison) return [comparison];
+
   const inventoryFilter = groundedInventoryFilterAction(
     userText,
     input.inventoryFilters,
@@ -144,7 +180,14 @@ export function resolveDeterministicConciergeNavigation(
   if (inventoryFilter) return [inventoryFilter];
 
   const knownKey = knownTargetKey(userText);
-  if (!explicitNavigation && !isTerseKnownTargetRequest(userText, knownKey)) {
+  const financeApplicationRequested =
+    EXPLICIT_FINANCE_APPLICATION_PATTERN.test(userText) &&
+    FINANCE_INTENT_PATTERN.test(userText);
+  if (
+    !explicitNavigation &&
+    !financeApplicationRequested &&
+    !isTerseKnownTargetRequest(userText, knownKey)
+  ) {
     return [];
   }
   if (knownKey) {
@@ -154,6 +197,28 @@ export function resolveDeterministicConciergeNavigation(
       undefined,
       input.capabilities.openLeadForm !== false,
     );
+  }
+
+  // Finance applications are tenant-configured, not a hard-coded LUME
+  // destination. When a tenant has opted in with a conversion target, let
+  // clear "apply / finance this vehicle" language open it deterministically.
+  // A vehicle-bound destination is only opened when the selection is grounded.
+  if (
+    (explicitNavigation || financeApplicationRequested) &&
+    FINANCE_INTENT_PATTERN.test(userText)
+  ) {
+    const financeTarget = input.targets.find(isFinanceConversionTarget);
+    if (financeTarget) {
+      const needsVehicleId = financeTarget.destination.includes(":vehicleId");
+      if (!needsVehicleId || input.selectedVehicleId) {
+        return targetAction(
+          input.targets,
+          financeTarget.key,
+          needsVehicleId ? { vehicleId: input.selectedVehicleId! } : undefined,
+          input.capabilities.openLeadForm !== false,
+        );
+      }
+    }
   }
 
   const custom = input.targets.find((target) => {
@@ -198,7 +263,7 @@ export function filterModelNavigationActionsByUserIntent(
   );
 }
 
-/** Direct site destinations do not need an LLM round trip or inventory tool. */
+/** Direct, already-grounded destinations do not need an LLM round trip. */
 export function isImmediateSiteNavigation(
   actions: readonly BotAction[],
 ): boolean {
@@ -206,9 +271,7 @@ export function isImmediateSiteNavigation(
     actions.length > 0 &&
     actions.every(
       (action) =>
-        action.type === "navigate-target" &&
-        action.targetKey !== "vehicle-detail" &&
-        action.targetKey !== "vehicle-inquiry",
+        action.type === "compare_vehicles" || action.type === "navigate-target",
     )
   );
 }
@@ -266,9 +329,30 @@ export function exactGroundedVehicleId(
   return scored[0]?.id ?? null;
 }
 
+function ordinalGroundedVehicleId(
+  userText: string,
+  vehicles: readonly GroundedVehicleCandidate[],
+): string | null {
+  const match = ORDINAL_VEHICLE_PATTERN.exec(userText);
+  if (!match || vehicles.length === 0) return null;
+  const ordinal = match[1];
+  const index = ordinal === "first"
+    ? 0
+    : ordinal === "second"
+      ? 1
+      : ordinal === "third"
+        ? 2
+        : vehicles.length - 1;
+  const id = vehicles[index]?.id;
+  return id && UUID_PATTERN.test(id) ? id : null;
+}
+
 export function actionOnlyAcknowledgement(
   actions: readonly BotAction[],
 ): string {
+  if (actions.some((action) => action.type === "compare_vehicles")) {
+    return "I’ve opened a side-by-side comparison for you.";
+  }
   if (actions.some((action) => action.type === "filter_inventory")) {
     return "I’ve opened the inventory with those filters applied.";
   }
@@ -427,22 +511,38 @@ function groundedInventoryFilterAction(
     !allowed ||
     !filters ||
     (!INVENTORY_DISCOVERY_PATTERN.test(userText) &&
-      !INVENTORY_REFINEMENT_PATTERN.test(userText)) ||
-    filters.model ||
-    filters.stockType ||
-    filters.fuelType ||
-    filters.drivetrain ||
-    filters.sellerState ||
-    filters.sellerCity ||
-    filters.year !== undefined ||
-    filters.mileageMax !== undefined
+      !INVENTORY_REFINEMENT_PATTERN.test(userText))
   ) {
     return null;
   }
 
   const make = filters.make?.trim();
+  const model = filters.model?.trim();
   const bodyStyle = filters.bodyStyle?.trim();
-  if (!make && !bodyStyle) return null;
+  const stockType = filters.stockType?.trim();
+  const fuelType = filters.fuelType?.trim();
+  const drivetrain = filters.drivetrain?.trim();
+  const sellerState = filters.sellerState?.trim();
+  const sellerCity = filters.sellerCity?.trim();
+  if (
+    !make &&
+    !model &&
+    !bodyStyle &&
+    !stockType &&
+    !fuelType &&
+    !drivetrain &&
+    !sellerState &&
+    !sellerCity &&
+    filters.year === undefined &&
+    filters.yearMin === undefined &&
+    filters.yearMax === undefined &&
+    filters.mileageMax === undefined &&
+    filters.priceMin === undefined &&
+    filters.priceMax === undefined
+    && !filters.sort
+  ) {
+    return null;
+  }
   const canonicalMake = make
     ? vehicles.find(
         (vehicle) =>
@@ -452,10 +552,44 @@ function groundedInventoryFilterAction(
   return {
     type: "filter_inventory",
     ...(canonicalMake ? { make: canonicalMake } : {}),
+    ...(model ? { model } : {}),
+    ...(stockType ? { stockType } : {}),
     ...(bodyStyle ? { bodyStyle } : {}),
+    ...(fuelType ? { fuelType } : {}),
+    ...(drivetrain ? { drivetrain } : {}),
+    ...(sellerState ? { sellerState } : {}),
+    ...(sellerCity ? { sellerCity } : {}),
+    ...(filters.year !== undefined
+      ? { yearMin: filters.year, yearMax: filters.year }
+      : {}),
+    ...(filters.year === undefined && filters.yearMin !== undefined
+      ? { yearMin: filters.yearMin }
+      : {}),
+    ...(filters.year === undefined && filters.yearMax !== undefined
+      ? { yearMax: filters.yearMax }
+      : {}),
+    ...(filters.mileageMax !== undefined ? { mileageMax: filters.mileageMax } : {}),
     ...(filters.priceMin !== undefined ? { priceMin: filters.priceMin } : {}),
     ...(filters.priceMax !== undefined ? { priceMax: filters.priceMax } : {}),
+    ...(filters.sort ? { sort: filters.sort } : {}),
   };
+}
+
+function groundedComparisonAction(
+  userText: string,
+  vehicles: readonly GroundedVehicleCandidate[],
+): BotAction | null {
+  if (!VEHICLE_COMPARISON_PATTERN.test(userText)) return null;
+  const vehicleIds = [...new Set(vehicles.map((vehicle) => vehicle.id.trim()))]
+    .filter(Boolean)
+    .slice(0, 3);
+  // Comparing an arbitrary subset of a larger result list would be deceptive.
+  // Only open the side-by-side view when the current grounded search itself is
+  // a small, unambiguous set.
+  if (vehicles.length < 2 || vehicles.length > 3 || vehicleIds.length !== vehicles.length) {
+    return null;
+  }
+  return { type: "compare_vehicles", vehicleIds };
 }
 
 function previousAssistantMessage(
@@ -478,6 +612,13 @@ function targetWords(target: ConciergeTarget): string[] {
         !IGNORED_TARGET_WORDS.has(word),
     );
   return [...new Set(words)];
+}
+
+function isFinanceConversionTarget(target: ConciergeTarget): boolean {
+  if (!target.enabled || !target.isConversion) return false;
+  return FINANCE_INTENT_PATTERN.test(
+    normalizeIntentText(`${target.key} ${target.label}`),
+  );
 }
 
 function normalizeIntentText(value: string): string {

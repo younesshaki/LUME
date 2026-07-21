@@ -26,6 +26,7 @@ import {
   formatVehiclePrice,
   loadVehicleCount,
   loadVehicleFacets,
+  loadVehicleById,
   loadVehicleResults,
   vehicleDisplayImage,
   type Vehicle,
@@ -38,7 +39,10 @@ import {
   readVehicleUrlState,
   writeVehicleUrlState,
 } from "@/experience/vehicles/urlState";
-import { vehicleFiltersFromBotAction } from "@/lib/botActionConsumers";
+import {
+  consumePendingVehicleComparison,
+  vehicleFiltersFromBotAction,
+} from "@/lib/botActionConsumers";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import { useSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
@@ -946,6 +950,20 @@ export default function VehiclesPage({
   useEffect(() => {
     writeStoredIds(COMPARE_STORAGE_KEY, compareVehicleIds);
   }, [compareVehicleIds]);
+
+  useEffect(() => {
+    const pendingIds = consumePendingVehicleComparison();
+    if (!pendingIds) return;
+    setCompareVehicleIds(pendingIds);
+    void Promise.all(pendingIds.map((id) => loadVehicleById(id))).then((details) => {
+      const compared = details
+        .map((detail) => detail?.vehicle)
+        .filter((vehicle): vehicle is Vehicle => Boolean(vehicle));
+      if (compared.length < 2) return;
+      setVehicleLookup((current) => mergeVehicleLookup(current, compared));
+      setCompareOpen(true);
+    });
+  }, []);
 
   useEffect(() => {
     if (loading || restoredScrollRef.current) return;

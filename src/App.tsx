@@ -36,6 +36,7 @@ import { useBotAction } from "./lib/useBotAction";
 import {
   resolveBotNavigationRoute,
   storePendingLeadFormPrefill,
+  storePendingVehicleComparison,
   vehicleRouteFromBotAction,
 } from "./lib/botActionConsumers";
 import {
@@ -417,6 +418,15 @@ export default function App() {
     navigateTo(
       vehicleRouteFromBotAction(action),
       { source: "bot", analytics: { action: "bot_filter_inventory" } }
+    );
+  });
+
+  useBotAction("compare_vehicles", (action) => {
+    storePendingVehicleComparison(action);
+    setShowcaseChapterRevealed(false);
+    navigateTo(
+      { route: "vehicles" },
+      { source: "bot", analytics: { action: "bot_compare_vehicles" } },
     );
   });
 

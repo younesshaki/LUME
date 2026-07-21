@@ -98,6 +98,38 @@ describe("runBotTool", () => {
     });
   });
 
+  it("mirrors every grounded inventory constraint onto the browser action", async () => {
+    const result = await runBotTool(
+      "find_vehicles",
+      {
+        make: "BMW",
+        model: "X3",
+        stockType: "Used",
+        fuelType: "Gasoline",
+        drivetrain: "AWD",
+        yearMin: 2020,
+        yearMax: 2020,
+        mileageMax: 55_000,
+        priceMin: 40_000,
+        priceMax: 70_000,
+      },
+      baseCtx([makeVehicle({ make: "BMW", model: "X3", price: 64_500 })]),
+    );
+    expect(result.actions?.[0]).toMatchObject({
+      type: "filter_inventory",
+      make: "BMW",
+      model: "X3",
+      stockType: "Used",
+      fuelType: "Gasoline",
+      drivetrain: "AWD",
+      yearMin: 2020,
+      yearMax: 2020,
+      mileageMax: 55_000,
+      priceMin: 40_000,
+      priceMax: 70_000,
+    });
+  });
+
   it("captures executor errors as execution_error", async () => {
     const result = await runBotTool("find_vehicles", { make: "Porsche" }, {
       tenantId: "tenant-1",

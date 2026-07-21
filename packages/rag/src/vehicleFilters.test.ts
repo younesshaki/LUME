@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Vehicle } from "@lume/types";
 import {
+  composeVehicleFilterHistory,
   extractVehicleFilters,
   hasVehicleFilterConstraint,
   inheritVehicleFilterContext,
@@ -151,6 +152,86 @@ describe("vehicle query intent", () => {
     });
   });
 
+  it.each([
+    ["BMWs under 50", { make: "BMW", priceMax: 50_000 }],
+    ["BMW inventory below 50 grand", { make: "BMW", priceMax: 50_000 }],
+    ["BMWs over 30 thousand", { make: "BMW", priceMin: 30_000 }],
+    ["BMWs no more than 50", { make: "BMW", priceMax: 50_000 }],
+    ["BMWs within 50k", { make: "BMW", priceMax: 50_000 }],
+    ["my BMW budget is 50", { make: "BMW", priceMax: 50_000 }],
+    ["BMWs, I have 50k to spend", { make: "BMW", priceMax: 50_000 }],
+    ["BMWs, my ceiling is 45 grand", { make: "BMW", priceMax: 45_000 }],
+    ["BMWs, I have 60 large available", { make: "BMW", priceMax: 60_000 }],
+    ["BMWs under fifty grand", { make: "BMW", priceMax: 50_000 }],
+  ])("understands informal price ceilings and floors: %s", (query, expected) => {
+    expect(extractVehicleFilters(query)).toMatchObject(expected);
+  });
+
+  it.each([
+    ["BMWs around 50k", { make: "BMW", priceMin: 45_000, priceMax: 55_000 }],
+    ["BMW inventory about 50 grand", { make: "BMW", priceMin: 45_000, priceMax: 55_000 }],
+    ["show me BMWs $50k-ish", { make: "BMW", priceMin: 45_000, priceMax: 55_000 }],
+  ])("turns approximate budgets into a bounded, transparent range: %s", (query, expected) => {
+    expect(extractVehicleFilters(query)).toMatchObject(expected);
+  });
+
+  it.each([
+    ["any BMWs between 30k and 70k", { make: "BMW", priceMin: 30_000, priceMax: 70_000 }],
+    ["only show me BMWs between 40k and 55k", { make: "BMW", priceMin: 40_000, priceMax: 55_000 }],
+    ["BMWs from 30 grand to 70 grand", { make: "BMW", priceMin: 30_000, priceMax: 70_000 }],
+    ["BMW inventory 40 to 55", { make: "BMW", priceMin: 40_000, priceMax: 55_000 }],
+    ["BMWs $55k–$40k", { make: "BMW", priceMin: 40_000, priceMax: 55_000 }],
+    ["BMWs between thirty and seventy grand", { make: "BMW", priceMin: 30_000, priceMax: 70_000 }],
+  ])("grounds natural visitor price ranges: %s", (query, expected) => {
+    expect(extractVehicleFilters(query)).toMatchObject(expected);
+  });
+
+  it("keeps a year range distinct from a price range", () => {
+    expect(extractVehicleFilters("BMWs between 2019 and 2021")).toMatchObject({
+      make: "BMW",
+      yearMin: 2019,
+      yearMax: 2021,
+    });
+  });
+
+  it("resolves unambiguous make and catalog-model typos", () => {
+    expect(extractVehicleFilters("show me ferarri").make).toBe("Ferrari");
+    expect(extractVehicleFilters("any bwm").make).toBe("BMW");
+    expect(
+      extractVehicleFilters("find a cayene", [], { models: ["Cayenne", "Macan"] }),
+    ).toMatchObject({ model: "Cayenne" });
+  });
+
+  it("recognizes a catalog model without a make", () => {
+    const vocabulary = { models: ["911", "Cayenne", "X5"] };
+    expect(isVehicleQuery("show me 911s", vocabulary)).toBe(true);
+    expect(extractVehicleFilters("show me 911s", [], vocabulary)).toEqual({
+      model: "911",
+    });
+  });
+
+  it("never turns a generic vehicle word into a fuzzy catalog model", () => {
+    expect(
+      extractVehicleFilters("show cars under 50k", [], { models: ["Camry"] }),
+    ).toEqual({ priceMax: 50_000 });
+  });
+
+  it("never turns conversational glue words into a fuzzy catalog model", () => {
+    expect(
+      extractVehicleFilters("show cars newer than 2020", [], { models: ["Titan"] }),
+    ).toMatchObject({ yearMin: 2021 });
+    expect(
+      extractVehicleFilters("show cars newer than 2020", [], { models: ["Titan"] }).model,
+    ).toBeUndefined();
+  });
+
+  it("tolerates harmless spacing in short catalog model codes", () => {
+    const vocabulary = { models: ["X3", "X5"] };
+    expect(extractVehicleFilters("show me X 3s", [], vocabulary)).toEqual({
+      model: "X3",
+    });
+  });
+
   it("keeps abbreviated mileage distinct from price", () => {
     expect(extractVehicleFilters("BMWs under 20k miles")).toEqual({
       make: "BMW",
@@ -167,6 +248,24 @@ describe("vehicle query intent", () => {
       make: "BMW",
       year: 2020,
     });
+  });
+
+  it.each([
+    ["BMWs between 2019 and 2022", { make: "BMW", yearMin: 2019, yearMax: 2022 }],
+    ["BMWs newer than 2020", { make: "BMW", yearMin: 2021 }],
+    ["BMWs 2020 or newer", { make: "BMW", yearMin: 2020 }],
+    ["BMWs 2020+", { make: "BMW", yearMin: 2020 }],
+    ["BMWs before 2020", { make: "BMW", yearMax: 2019 }],
+  ])("understands natural model-year ranges: %s", (query, expected) => {
+    expect(extractVehicleFilters(query)).toMatchObject(expected);
+  });
+
+  it.each([
+    ["show me the cheapest BMWs", "price_asc"],
+    ["which SUVs are newest", "year_desc"],
+    ["show the lowest mileage cars", "mileage_asc"],
+  ] as const)("extracts ranking intent: %s", (query, sort) => {
+    expect(extractVehicleFilters(query).sort).toBe(sort);
   });
 });
 
@@ -196,6 +295,13 @@ describe("vehicle filter grounding", () => {
       yearMin: 2022,
       yearMax: 2022,
       sellerState: "FL",
+    });
+  });
+
+  it("maps a relative model-year request to server-side bounds", () => {
+    expect(vehicleQueryFromFilters({ make: "BMW", yearMin: 2021 })).toEqual({
+      make: "BMW",
+      yearMin: 2021,
     });
   });
 
@@ -264,14 +370,16 @@ describe("vehicle filter grounding", () => {
     });
   });
 
-  it("inherits a trusted make for a short budget refinement", () => {
+  it("composes a short budget refinement with the active trusted search", () => {
     expect(
       inheritVehicleFilterContext(
         { priceMax: 40_000 },
-        { make: "BMW", priceMax: 20_000 },
+        { make: "BMW", bodyStyle: "SUV", priceMin: 20_000, priceMax: 70_000 },
       ),
     ).toEqual({
       make: "BMW",
+      bodyStyle: "SUV",
+      priceMin: 20_000,
       priceMax: 40_000,
     });
   });
@@ -288,27 +396,53 @@ describe("vehicle filter grounding", () => {
     });
   });
 
-  it("retains an exact model only for a scope-free refinement", () => {
+  it("retains all active facets when a visitor adds one refinement", () => {
     expect(
       inheritVehicleFilterContext(
-        { priceMax: 40_000 },
-        { make: "BMW", model: "X3", year: 2020 },
+        { drivetrain: "AWD" },
+        {
+          make: "BMW",
+          model: "X3",
+          bodyStyle: "SUV",
+          stockType: "Used",
+          priceMax: 70_000,
+          sellerState: "FL",
+        },
       ),
     ).toEqual({
       make: "BMW",
       model: "X3",
-      priceMax: 40_000,
+      bodyStyle: "SUV",
+      stockType: "Used",
+      priceMax: 70_000,
+      sellerState: "FL",
+      drivetrain: "AWD",
     });
+  });
+
+  it("composes every visitor refinement in a multi-turn shopping search", () => {
     expect(
-      inheritVehicleFilterContext(
-        { bodyStyle: "SUV", priceMax: 40_000 },
-        { make: "BMW", model: "X3" },
-      ),
-    ).toEqual({
+      composeVehicleFilterHistory([
+        "show BMW SUVs under 70k",
+        "only AWD ones",
+        "in Florida",
+      ]),
+    ).toMatchObject({
       make: "BMW",
       bodyStyle: "SUV",
-      priceMax: 40_000,
+      drivetrain: "AWD",
+      sellerState: "FL",
+      priceMax: 70_000,
     });
+  });
+
+  it("resets a composed search when the visitor explicitly names a new make", () => {
+    expect(
+      composeVehicleFilterHistory([
+        "show BMW SUVs under 70k",
+        "what about Mercedes under 50k",
+      ]),
+    ).toMatchObject({ make: "Mercedes-Benz", priceMax: 50_000 });
   });
 
   it("detects whether a parsed message contains a trusted constraint", () => {

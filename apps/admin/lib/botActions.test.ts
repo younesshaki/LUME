@@ -116,6 +116,7 @@ describe("parseBotActionLine / isBotAction", () => {
       `{"type":"navigate","route":"/vehicles"}`,
       `{"type":"navigate-target","targetKey":"vehicle-detail","params":{"vehicleId":"v1"}}`,
       `{"type":"highlight-vehicle","vehicleId":"v1"}`,
+      `{"type":"compare_vehicles","vehicleIds":["v1","v2"]}`,
       `{"type":"open-lead-form"}`,
       `{"type":"capture_lead","contact":{"email":"a@b.c"}}`,
       `{"type":"scroll-to","sectionId":"hero"}`,
@@ -127,6 +128,7 @@ describe("parseBotActionLine / isBotAction", () => {
 
   it("rejects unknown types, wrong field types and prose", () => {
     expect(parseBotActionLine(`{"type":"drop_tables"}`)).toBeUndefined();
+    expect(parseBotActionLine(`{"type":"compare_vehicles","vehicleIds":["v1"]}`)).toBeUndefined();
     expect(parseBotActionLine(`{"type":"navigate","route":42}`)).toBeUndefined();
     expect(parseBotActionLine("Sure, here are your options:")).toBeUndefined();
     expect(parseBotActionLine(`{"type":"capture_lead","contact":{}}`)).toBeUndefined();
