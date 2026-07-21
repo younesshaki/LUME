@@ -66,15 +66,32 @@ export function transitionInventoryState(
   const nextTurn = current.turn + 1;
   const resetScope = hasScopeResetIntent(userText);
   const normalizedExtracted = pickFilters(extractedFilters);
-  const activeFilters = resetScope
-    ? mergeFilters(clearScopeFilters(current.activeFilters, userText), normalizedExtracted)
-    : mergeFilters(current.activeFilters, normalizedExtracted);
+  // Naming a different make starts a new search for that make: a model is
+  // make-specific, so a prior Toyota "Camry" must not survive into a Cadillac
+  // search ("do you have a camry?" -> "what about a caddy?"). Body style,
+  // price, and year are make-agnostic and are intentionally retained.
+  const switchesMake =
+    normalizedExtracted.make !== undefined &&
+    current.activeFilters.make !== undefined &&
+    normalizedExtracted.make !== current.activeFilters.make;
+  const clearsStrandedModel =
+    normalizedExtracted.make !== undefined &&
+    normalizedExtracted.model === undefined &&
+    current.activeFilters.model !== undefined &&
+    current.activeFilters.make !== normalizedExtracted.make;
+  const base = resetScope
+    ? clearScopeFilters(current.activeFilters, userText)
+    : switchesMake || clearsStrandedModel
+      ? dropModelScope(current.activeFilters)
+      : current.activeFilters;
+  const activeFilters = mergeFilters(base, normalizedExtracted);
   const hasExplicitFilters = Object.keys(normalizedExtracted).length > 0 || resetScope;
   const useStoredResultSet = !hasExplicitFilters && isPresentationRequest(userText) && current.resultSet !== null;
   const ordinal = ordinalResultSetVehicleId(userText, current.resultSet);
   const selectedAction = selectedResultSetVehicleId(userText, current);
   const rules = [
     ...(resetScope ? ["clear_make_model_scope"] : []),
+    ...(!resetScope && (switchesMake || clearsStrandedModel) ? ["clear_model_on_make_change"] : []),
     ...(useStoredResultSet ? ["reuse_result_set"] : []),
     ...(ordinal ? ["ordinal_from_result_set"] : []),
     ...(selectedAction ? ["selected_vehicle_from_result_set"] : []),
@@ -307,6 +324,12 @@ function filtersEqual(
 function clearScopeFilters(filters: VehicleQueryFilters, userText: string): VehicleQueryFilters {
   if (FULL_INVENTORY_RESET_PATTERN.test(userText)) return {};
   const { make: _make, model: _model, ...remaining } = filters;
+  return remaining;
+}
+
+/** Drop only the make-specific model; make-agnostic facets are retained. */
+function dropModelScope(filters: VehicleQueryFilters): VehicleQueryFilters {
+  const { model: _model, ...remaining } = filters;
   return remaining;
 }
 

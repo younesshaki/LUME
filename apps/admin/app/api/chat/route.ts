@@ -1311,11 +1311,31 @@ function inventoryFilterAction(
 
 /** Keep a refinement honest without silently widening to all inventory. */
 function zeroResultAnswer(filters: ReturnType<typeof extractVehicleFilters>): string {
+  // Every active facet must appear, so a refinement that eliminated the last
+  // match is named. Omitting e.g. drivetrain made "no BMW SUV under $70k" read
+  // as if none exist, when one does and is only excluded by the AWD filter.
+  const yearLabel =
+    filters.year !== undefined ? String(filters.year)
+      : filters.yearMin !== undefined && filters.yearMax !== undefined ? `${filters.yearMin}–${filters.yearMax}`
+        : filters.yearMin !== undefined ? `${filters.yearMin} or newer`
+          : filters.yearMax !== undefined ? `${filters.yearMax} or older`
+            : undefined;
+  const mileageLabel = filters.mileageMax !== undefined
+    ? `under ${filters.mileageMax.toLocaleString()} miles`
+    : undefined;
+  const location = [filters.sellerCity, filters.sellerState].filter(Boolean).join(", ");
+  const locationLabel = location ? `in ${location}` : undefined;
   const constraints = [
+    yearLabel,
+    filters.stockType,
+    filters.drivetrain,
+    filters.fuelType,
     filters.make,
     filters.model,
     filters.bodyStyle,
+    mileageLabel,
     priceConstraintLabel(filters),
+    locationLabel,
   ].filter((value): value is string => Boolean(value));
   const description = constraints.length > 0 ? constraints.join(" ") : "that refinement";
   return `Nothing matches ${description} right now. I’ve kept your previous results in place rather than widening the search—would you like to relax a constraint?`;

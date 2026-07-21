@@ -79,6 +79,25 @@ describe("chat conversation inventory state", () => {
     expect(transition.state.activeFilters).toEqual({ priceMax: 70_000, make: "BMW" });
   });
 
+  it("drops a stranded model when a new make is named ('camry' -> 'caddy')", () => {
+    const transition = transitionInventoryState({
+      ...emptyConversationInventoryState(),
+      activeFilters: { model: "Camry" },
+    }, "what about a caddy?", { make: "Cadillac" }, true);
+    expect(transition.state.activeFilters).toEqual({ make: "Cadillac" });
+    expect(transition.rules).toContain("clear_model_on_make_change");
+  });
+
+  it("clears the prior model when switching makes but keeps make-agnostic facets", () => {
+    const transition = transitionInventoryState({
+      ...emptyConversationInventoryState(),
+      activeFilters: { make: "BMW", model: "X5", bodyStyle: "SUV", priceMax: 70_000 },
+    }, "what about Mercedes?", { make: "Mercedes-Benz" }, true);
+    expect(transition.state.activeFilters).toEqual({
+      make: "Mercedes-Benz", bodyStyle: "SUV", priceMax: 70_000,
+    });
+  });
+
   it("resolves ordinals from stored order without a re-query", () => {
     const state = setConversationResultSet(emptyConversationInventoryState(), [vehicle(FIRST), vehicle(SECOND)], 2);
     const transition = transitionInventoryState(state, "open the second one", {}, true);

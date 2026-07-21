@@ -570,6 +570,11 @@ function catalogModelFromText(
       tokens.some(
         (token) =>
           !MODEL_FUZZY_STOPWORDS.has(token) &&
+          // Require the first three characters to agree, exactly as the make
+          // fuzzy path does. Otherwise a different word two edits away — e.g.
+          // "caddy" (Cadillac) → "Camry" — becomes a fabricated model filter.
+          // Ordinary model typos ("camri", "cayene") still share the prefix.
+          token.slice(0, 3) === normalizedModel.slice(0, 3) &&
           isFuzzyMatch(token, normalizedModel),
       )
     ) {

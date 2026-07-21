@@ -271,6 +271,23 @@ describe("vehicle query intent", () => {
     ).toEqual({ priceMax: 50_000 });
   });
 
+  it("does not let a make alias fuzzy-match a differently-prefixed model", () => {
+    // "caddy" is the Cadillac make alias; it must not also become model "Camry"
+    // (c-a-dd-y vs c-a-mr-y share only two leading chars).
+    expect(
+      extractVehicleFilters("what about a caddy?", [], {
+        makes: ["Cadillac", "Toyota"],
+        models: ["Camry", "Escalade"],
+      }),
+    ).toEqual({ make: "Cadillac" });
+  });
+
+  it("still fuzzy-matches a real model typo that shares the prefix", () => {
+    expect(
+      extractVehicleFilters("do you have a cayene?", [], { models: ["Cayenne"] }),
+    ).toEqual({ model: "Cayenne" });
+  });
+
   it("never turns conversational glue words into a fuzzy catalog model", () => {
     expect(
       extractVehicleFilters("show cars newer than 2020", [], { models: ["Titan"] }),
