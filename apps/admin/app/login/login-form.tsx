@@ -70,11 +70,11 @@ export function LoginShell({
   onPasswordChange?: (value: string) => void;
 }) {
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm border-amber-100/20 bg-black/65 text-stone-50 backdrop-blur-md">
       <form onSubmit={onSubmit}>
         <CardHeader className="pb-4">
           <CardTitle>Sign in to LUME Admin</CardTitle>
-          <CardDescription>Manage your site, inventory, and AI concierge.</CardDescription>
+          <CardDescription className="text-stone-300">Manage your site, inventory, and AI concierge.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -105,9 +105,9 @@ export function LoginShell({
           <Button type="submit" disabled={pending || !onSubmit} className="w-full">
             {pending ? "Signing in..." : "Sign in"}
           </Button>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-stone-300">
             New to LUME?{" "}
-            <a href="/signup" className="underline underline-offset-2 hover:text-foreground">
+            <a href="/signup" className="underline underline-offset-2 hover:text-amber-200">
               Create your site
             </a>
           </p>
