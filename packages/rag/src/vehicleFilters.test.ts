@@ -210,6 +210,21 @@ describe("vehicle query intent", () => {
     });
   });
 
+  it("does not mistake a model name for a similarly spelled make alias", () => {
+    expect(
+      extractVehicleFilters("you have a 2026 camry?", [], {
+        makes: ["Toyota", "Cadillac"],
+        models: ["Camry", "Escalade"],
+      }),
+    ).toEqual({ year: 2026, model: "Camry" });
+  });
+
+  it("does not turn an ordinal continuation into a fuzzy model filter", () => {
+    expect(
+      extractVehicleFilters("open the first one", [], { models: ["Fiesta"] }),
+    ).toEqual({});
+  });
+
   it("never turns a generic vehicle word into a fuzzy catalog model", () => {
     expect(
       extractVehicleFilters("show cars under 50k", [], { models: ["Camry"] }),

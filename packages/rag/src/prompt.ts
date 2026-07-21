@@ -57,6 +57,9 @@ function formatVehiclesBlock(
       : `Total vehicles in full inventory: ${totalInventory}\n`) +
     `TOTAL MATCHING${filterSummary}: ${totalMatched}\n` +
     `${showingNote}\n` +
+    `AVAILABILITY TRUTH RULE: TOTAL MATCHING is authoritative. When it is greater than 0, ` +
+    `you MUST say matching inventory is available and MUST NOT say it is unavailable, absent, ` +
+    `or that the listed matching vehicles are another make/model. When it is 0, say none match.\n` +
     `GROUNDING RULE: For this visitor request, mention, recommend, count, or ` +
     `navigate only the vehicles in this matching block. Do not substitute or ` +
     `describe vehicles outside these filters. If no vehicles match, say so ` +

@@ -71,6 +71,7 @@ const MODEL_FUZZY_STOPWORDS = new Set([
   "a", "an", "the", "and", "or", "but", "for", "from", "to", "than", "then",
   "in", "on", "at", "near", "around", "with", "without", "that", "this", "these",
   "those", "it", "one", "ones", "all", "any", "only", "show", "find", "have",
+  "first", "second", "third", "last",
   "new", "newer", "older", "later", "earlier", "between", "under", "above", "below",
   "more", "less", "over", "up", "max", "min", "grand", "thousand", "large",
 ]);
@@ -419,9 +420,21 @@ function canonicalMakeFromText(value: string): string | null {
   // fabricated inventory filter.
   const fuzzyCandidates = new Set<string>();
   for (const token of normalized.split(" ")) {
-    if (token.length < 3 || /^\d+$/.test(token)) continue;
+    if (
+      token.length < 3 ||
+      /^\d+$/.test(token) ||
+      MODEL_FUZZY_STOPWORDS.has(token)
+    ) continue;
     for (const { canonical, alias } of aliases) {
-      if (alias.length < 3 || !isFuzzyMatch(token, alias)) continue;
+      // A model name must never become a make through a loose alias match:
+      // e.g. "Camry" is two edits from Cadillac's "caddy" alias. Requiring
+      // the first three characters to agree still accepts ordinary make
+      // typos such as "ferarri", "porche", and "bmww".
+      if (
+        alias.length < 3 ||
+        token.slice(0, 3) !== alias.slice(0, 3) ||
+        !isFuzzyMatch(token, alias)
+      ) continue;
       fuzzyCandidates.add(canonical);
     }
   }

@@ -282,6 +282,10 @@ export async function POST(request: Request): Promise<Response> {
   const groundedVehicleIds = new Set<string>();
   let groundedVehicles: Vehicle[] = [];
   let groundedInventoryFilters: ReturnType<typeof extractVehicleFilters> | null = null;
+  let matchedVehicles: Vehicle[] | undefined;
+  let totalMatched: number | undefined;
+  let filters: ReturnType<typeof extractVehicleFilters> | undefined;
+  let deterministicAvailabilityAnswer: string | null = null;
   let selectedVehicleId: string | null = null;
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> = null;
   let visitorPreferenceContext: Awaited<ReturnType<typeof loadVisitorPreferenceContext>> = null;
@@ -350,28 +354,29 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    let matchedVehicles;
-    let totalMatched: number | undefined;
-    let filters;
-
     if (facetResult.error) {
       captureError("api/chat/vehicle-facets", facetResult.error, {
         tenantId: tenant.tenantId,
       });
     }
     const vocabulary = vehicleFilterVocabulary(facetResult.data);
-    const currentFilters = extractVehicleFilters(lastUser.content, [], vocabulary);
+    const ordinalSelection = isOrdinalVehicleSelection(lastUser.content);
+    // "Open the first one" is a reference to the already-grounded result
+    // order, not a new inventory search. Do not let any incidental fuzzy
+    // match in the ordinal wording replace that prior scope.
+    const currentFilters = ordinalSelection
+      ? {}
+      : extractVehicleFilters(lastUser.content, [], vocabulary);
     const priorFilters = composeVehicleFilterHistory(
       priorVisitorQueries(cleanMessages),
       vocabulary,
     );
-    const filtersWithContext = inheritVehicleFilterContext(
-      currentFilters,
-      priorFilters,
-    );
+    const filtersWithContext = ordinalSelection && priorFilters
+      ? priorFilters
+      : inheritVehicleFilterContext(currentFilters, priorFilters);
     const isTrustedVehicleContinuation =
       Boolean(priorFilters && hasVehicleFilterConstraint(priorFilters)) &&
-      (hasVehicleFilterConstraint(currentFilters) || isOrdinalVehicleSelection(lastUser.content));
+      (hasVehicleFilterConstraint(currentFilters) || ordinalSelection);
 
     if (isVehicleQuery(lastUser.content, vocabulary) || isTrustedVehicleContinuation) {
       // Let Postgres filter the complete tenant inventory. Pulling
@@ -387,6 +392,12 @@ export async function POST(request: Request): Promise<Response> {
       groundedInventoryFilters = filters;
       for (const vehicle of matchedVehicles) groundedVehicleIds.add(vehicle.id);
       totalMatched = match.totalCount ?? matchedVehicles.length;
+      deterministicAvailabilityAnswer = availabilityAnswerFromGroundedInventory(
+        lastUser.content,
+        filters,
+        matchedVehicles,
+        totalMatched,
+      );
       const matchedIds = matchedVehicles.slice(0, 20).map((vehicle) => vehicle.id);
       if (matchedIds.length > 0) {
         const { data: imageDescriptions } = await supabase
@@ -454,7 +465,7 @@ export async function POST(request: Request): Promise<Response> {
     ...(visitorTurn ? { sessionId: visitorTurn.sessionId } : {}),
   });
 
-  if (isImmediateSiteNavigation(deterministicActions)) {
+  if (isImmediateSiteNavigation(deterministicActions) || deterministicAvailabilityAnswer) {
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
         groundLeadCaptureActions(
@@ -467,7 +478,7 @@ export async function POST(request: Request): Promise<Response> {
       conciergeTargets,
       actionAttribution,
     );
-    const visibleContent = actionOnlyAcknowledgement(actions);
+    const visibleContent = deterministicAvailabilityAnswer ?? actionOnlyAcknowledgement(actions);
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -927,6 +938,34 @@ function priorVisitorQueries(messages: readonly MemoryMessage[]): string[] {
     .map((message) => message.content);
   queries.pop();
   return queries;
+}
+
+/** Answer direct availability questions from the verified inventory match set. */
+function availabilityAnswerFromGroundedInventory(
+  userText: string,
+  filters: ReturnType<typeof extractVehicleFilters>,
+  vehicles: readonly Vehicle[],
+  totalMatched: number,
+): string | null {
+  const isAvailabilityQuestion = /\b(?:do you have|you have|have any|are there|is there|any)\b/i.test(userText);
+  if (!isAvailabilityQuestion || (!filters.make && !filters.model)) return null;
+
+  const requested = [
+    filters.year,
+    filters.make,
+    filters.model,
+  ].filter((value): value is string | number => value !== undefined).join(" ") || "matching vehicles";
+
+  if (totalMatched === 0) return `No — there are no ${requested} vehicles in inventory right now.`;
+
+  const count = `${totalMatched} matching ${requested} vehicle${totalMatched === 1 ? "" : "s"}`;
+  const examples = vehicles.slice(0, 3).map((vehicle) => {
+    const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+      .filter(Boolean)
+      .join(" ");
+    return `${label} — Est. $${vehicle.price.toLocaleString()}.`;
+  });
+  return `Yes — ${count} ${totalMatched === 1 ? "is" : "are"} available.${examples.length ? ` ${examples.join(" ")}` : ""}`;
 }
 
 function isOrdinalVehicleSelection(value: string): boolean {
