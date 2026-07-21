@@ -74,6 +74,61 @@ describe("parseVehicleCsv", () => {
     expect(result.rows).toHaveLength(MAX_IMPORT_ROWS);
     expect(result.errors[0]?.message).toContain("only the first");
   });
+
+  it("strips a UTF-8 BOM and accepts blank optional fields", () => {
+    const result = parseVehicleCsv("﻿year,make,model,price,trim\r\n2020,Ford,Escape,10000,\r\n");
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({ make: "Ford", trim: "" });
+  });
+
+  it("rejects tab-delimited files with a clear comma-CSV message", () => {
+    const result = parseVehicleCsv("year\tmake\tmodel\tprice\n2020\tFord\tEscape\t10000");
+    expect(result.rows).toEqual([]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.message).toContain("tab-separated");
+    expect(result.errors[0]?.message).toContain("comma-separated CSV");
+  });
+});
+
+describe("parseVehicleCsv — Google vehicle-feed dialect", () => {
+  it("maps brand/color/condition/id/image_link and feed-formatted numbers", () => {
+    const result = parseVehicleCsv(
+      [
+        "id,brand,model,year,price,color,condition,mileage,image_link,additional_image_link",
+        'feed-1,FORD,ESCAPE,2018,10956.00 USD,GOLD,used,102598 MILES,https://cdn.example.com/a.jpg,"https://cdn.example.com/a.jpg,https://cdn.example.com/b.jpg"',
+      ].join("\n"),
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({
+      external_id: "feed-1",
+      make: "FORD",
+      model: "ESCAPE",
+      price: 10956,
+      mileage: 102598,
+      exterior_color: "GOLD",
+      stock_type: "Used",
+      image_src: "https://cdn.example.com/a.jpg",
+    });
+    // The quoted additional_image_link list feeds the external gallery.
+    expect(result.rows[0]?.feed_image_urls).toEqual([
+      "https://cdn.example.com/a.jpg",
+      "https://cdn.example.com/b.jpg",
+    ]);
+  });
+
+  it("normalizes new/used case-insensitively and passes unknown conditions through", () => {
+    const result = parseVehicleCsv(
+      "year,make,model,price,condition\n2018,Ford,Escape,9000,NEW\n2019,Ford,Edge,9500,Certified pre-owned",
+    );
+    expect(result.rows[0]?.stock_type).toBe("New");
+    expect(result.rows[1]?.stock_type).toBe("Certified pre-owned");
+  });
+
+  it("does not silently zero fundamentally invalid feed numbers", () => {
+    const result = parseVehicleCsv("year,make,model,price\n2018,Ford,Escape,call for price");
+    expect(result.rows).toEqual([]);
+    expect(result.errors[0]?.message).toContain("invalid price");
+  });
 });
 
 describe("findDuplicates", () => {

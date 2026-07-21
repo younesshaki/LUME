@@ -89,6 +89,7 @@ export function parseCsv(text: string): string[][] {
 const HEADER_ALIASES: Record<string, string> = {
   year: "year",
   make: "make",
+  brand: "make",
   model: "model",
   trim: "trim",
   price: "price",
@@ -97,6 +98,7 @@ const HEADER_ALIASES: Record<string, string> = {
   bodystyle: "body_style",
   exterior_color: "exterior_color",
   exteriorcolor: "exterior_color",
+  color: "exterior_color",
   interior_color: "interior_color",
   interiorcolor: "interior_color",
   drivetrain: "drivetrain",
@@ -119,8 +121,10 @@ const HEADER_ALIASES: Record<string, string> = {
   state: "seller_state",
   stock_type: "stock_type",
   stocktype: "stock_type",
+  condition: "stock_type",
   external_id: "external_id",
   externalid: "external_id",
+  id: "external_id",
   stock: "external_id",
   vin: "feed_vin",
   sellingprice: "price",
@@ -137,9 +141,27 @@ const HEADER_ALIASES: Record<string, string> = {
 const REQUIRED_COLUMNS = ["year", "make", "model", "price"] as const;
 
 export function parseVehicleCsv(text: string): VehicleImportResult {
-  const table = parseCsv(text);
+  // Strip a UTF-8 BOM (common in spreadsheet exports) so the first header
+  // isn't silently mangled.
+  const table = parseCsv(text.replace(/^\uFEFF/, ""));
   if (table.length === 0) {
     return { rows: [], errors: [{ line: 1, message: "File is empty." }], recognizedHeaders: [] };
+  }
+
+  // Tab-delimited exports (e.g. some Homenet feeds) parse as one comma-less
+  // column. Refuse them with a clear message instead of failing later with a
+  // confusing "missing required column" error or, worse for sync mode,
+  // shifting data into the wrong fields.
+  if (table[0].length === 1 && table[0][0].includes("\t")) {
+    return {
+      rows: [],
+      errors: [{
+        line: 1,
+        message:
+          "This file looks tab-separated. LUME imports require a standard comma-separated CSV — re-export the file as CSV (comma delimited) and try again.",
+      }],
+      recognizedHeaders: [],
+    };
   }
 
   const headerCells = table[0].map((h) => h.trim().toLowerCase());
@@ -212,7 +234,7 @@ export function parseVehicleCsv(text: string): VehicleImportResult {
       feed_updated_at: null,
       seller_city: record.seller_city ?? "",
       seller_state: record.seller_state ?? "",
-      stock_type: record.stock_type || null,
+      stock_type: normalizeStockType(record.stock_type),
       external_id: record.external_id || null,
       is_special: parseBoolean(record.is_special),
       special_image_src: record.special_image_src || null,
@@ -347,11 +369,29 @@ function parseIntStrict(value: string | undefined): number | null {
   return parseInt(value, 10);
 }
 
+/**
+ * Feed exports commonly suffix numbers with a currency or distance unit
+ * ("10956.00 USD", "102598 MILES"). Strip a single known trailing unit word,
+ * then parse strictly — a fundamentally invalid number stays invalid (never
+ * silently coerced to zero).
+ */
+const NUMERIC_UNIT_SUFFIX = /\s+(usd|eur|gbp|cad|aud|miles?|mi|kms?)\.?$/i;
+
 function parseNumberStrict(value: string | undefined): number | null {
   if (!value) return null;
-  const cleaned = value.replace(/[$,\s]/g, "");
+  const withoutUnit = value.trim().replace(NUMERIC_UNIT_SUFFIX, "");
+  const cleaned = withoutUnit.replace(/[$,\s]/g, "");
   if (!/^-?\d+(\.\d+)?$/.test(cleaned)) return null;
   return Number(cleaned);
+}
+
+/** Feed `condition`/stock values → LUME stock-type convention ("New"/"Used"). */
+function normalizeStockType(value: string | undefined): string | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "new") return "New";
+  if (normalized === "used") return "Used";
+  return value.trim();
 }
 
 function parseBoolean(value: string | undefined): boolean {
