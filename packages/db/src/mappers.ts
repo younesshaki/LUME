@@ -25,6 +25,8 @@ export function rowToVehicle(row: VehicleRow): Vehicle {
     id: row.id,
     tenantId: row.tenant_id,
     externalId: row.external_id ?? undefined,
+    feedVin: row.feed_vin ?? undefined,
+    feedImageUrls: row.feed_image_urls,
     stockType: row.stock_type ?? "",
     year: row.year,
     make: row.make,
