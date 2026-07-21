@@ -3,6 +3,36 @@ export type DeleteVehicleImageResult = {
   warning: string | null;
 };
 
+export type FeedImageImportResult = {
+  imported: number;
+  skipped: number;
+  errors: Array<{ url: string; error: string }>;
+};
+
+export async function importFeedVehicleImages(
+  vehicleId: string,
+  tenantSlug: string,
+  urls: string[],
+): Promise<FeedImageImportResult> {
+  const payload = await request(
+    `/api/vehicles/${encodeURIComponent(vehicleId)}/images/import-feed`,
+    tenantSlug,
+    { method: "POST", body: JSON.stringify({ urls }) },
+  );
+  return {
+    imported: typeof payload.imported === "number" ? payload.imported : 0,
+    skipped: typeof payload.skipped === "number" ? payload.skipped : 0,
+    errors: Array.isArray(payload.errors)
+      ? payload.errors.flatMap((value) => {
+        if (isRecord(value) && typeof value.url === "string" && typeof value.error === "string") {
+          return [{ url: value.url, error: value.error }];
+        }
+        return [];
+      })
+      : [],
+  };
+}
+
 export async function persistVehicleImageOrder(
   vehicleId: string,
   tenantSlug: string,

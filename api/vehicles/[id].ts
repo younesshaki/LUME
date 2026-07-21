@@ -79,6 +79,8 @@ const PUBLIC_VEHICLE_DETAIL_COLUMNS =
   "id, tenant_id, external_id, stock_type, year, make, model, trim, price, mileage, " +
   "body_style, exterior_color, interior_color, drivetrain, fuel_type, image_src, " +
   "seller_city, seller_state, is_special, special_image_src, status, sold_at, sold_price";
+const PUBLIC_VEHICLE_DETAIL_COLUMNS_WITH_FEED =
+  `${PUBLIC_VEHICLE_DETAIL_COLUMNS}, feed_image_urls`;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") {
@@ -126,13 +128,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return json(req, res, { error: "Unknown or inactive tenant" }, 404);
   }
 
-  const { data: row, error } = await supabase
+  let { data: row, error } = await supabase
     .from("vehicles")
-    .select(PUBLIC_VEHICLE_DETAIL_COLUMNS)
+    .select(PUBLIC_VEHICLE_DETAIL_COLUMNS_WITH_FEED)
     .eq("tenant_id", tenant.tenantId)
     .eq("id", vehicleId)
     .eq("status", "live")
     .maybeSingle();
+
+  // Deploying code before migration 075 must preserve the existing public
+  // detail endpoint. Retry the legacy projection when the new column is not
+  // yet present in a database.
+  if (error && isMissingFeedImageColumn(error.message)) {
+    ({ data: row, error } = await supabase
+      .from("vehicles")
+      .select(PUBLIC_VEHICLE_DETAIL_COLUMNS)
+      .eq("tenant_id", tenant.tenantId)
+      .eq("id", vehicleId)
+      .eq("status", "live")
+      .maybeSingle());
+  }
 
   if (error) {
     console.error("[/api/vehicles/:id] query error:", error.message);
@@ -161,12 +176,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }];
     });
 
-  const primary = gallery[0];
+  const resolvedGallery = gallery.length > 0 ? gallery : feedGallery(row);
+  const primary = resolvedGallery[0];
   const vehicle = rowToVehicle(row, primary);
-  const response: VehicleDetailResponse = { vehicle, images: gallery };
+  const response: VehicleDetailResponse = { vehicle, images: resolvedGallery };
 
   res.setHeader("Cache-Control", "private, no-store");
   return json(req, res, response, 200);
+}
+
+function feedGallery(row: Record<string, unknown>): GalleryImage[] {
+  const source = [
+    typeof row.image_src === "string" ? row.image_src : "",
+    ...(Array.isArray(row.feed_image_urls) ? row.feed_image_urls : []),
+  ];
+  const seen = new Set<string>();
+  const urls = source.flatMap((candidate) => {
+    if (typeof candidate !== "string" || !isHttpsImageUrl(candidate) || seen.has(candidate)) return [];
+    seen.add(candidate);
+    return [candidate];
+  }).slice(0, 50);
+  const title = [row.year, row.make, row.model].filter(Boolean).join(" ");
+  return urls.map((src, index) => ({ src, alt: title, isPrimary: index === 0, sortOrder: index }));
+}
+
+function isHttpsImageUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function isMissingFeedImageColumn(message: string): boolean {
+  return /feed_image_urls|column .* does not exist/i.test(message);
 }
 
 async function loadManagedGallery(

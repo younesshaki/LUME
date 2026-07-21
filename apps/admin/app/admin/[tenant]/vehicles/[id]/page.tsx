@@ -3,6 +3,7 @@ import type { TenantTheme } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { readR2PublicBaseUrl } from "@/lib/r2Config";
 import { vehicleImagePublicUrl } from "@/lib/vehicleImages";
+import { resolveFeedVehicleImageUrls } from "@/lib/feedVehicleImages";
 import VehicleForm from "../VehicleForm";
 import { VehicleImageManager } from "../VehicleImageManager";
 import { VehiclePriceHistory } from "../VehiclePriceHistory";
@@ -86,6 +87,13 @@ export default async function EditVehiclePage({ params }: PageProps) {
           ...image,
           url: r2PublicBaseUrl ? vehicleImagePublicUrl(r2PublicBaseUrl, image.r2_key) ?? "" : "",
         }))}
+        feedImages={resolveFeedVehicleImageUrls({
+          image_src: vehicle.image_src,
+          feed_image_urls: vehicle.feed_image_urls,
+        })}
+        feedImportWarning={Array.isArray(vehicle.feed_image_urls)
+          ? null
+          : "Apply migration 075_vehicle_feed_sync_images.sql to import supplier images into R2."}
         migrationWarning={imagesResult.error
           ? "Vehicle image metadata is not configured. Apply migration 043_vehicle_images.sql first."
           : null}

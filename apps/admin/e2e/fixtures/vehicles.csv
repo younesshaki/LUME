@@ -1,6 +1,6 @@
-year,make,model,trim,price,mileage,body_style,exterior_color,stock_type,external_id
-2021,Porsche,911,Carrera S,129900,12000,Coupe,Silver,used,E2E-PORSCHE-911
-2020,Toyota,Camry,SE,21500,45000,Sedan,White,used,E2E-TOYOTA-CAMRY
-2022,Ford,F-150,XLT,44900,18000,Truck,Blue,used,E2E-FORD-F150
-2019,Honda,Civic,LX,17800,52000,Sedan,Black,used,E2E-HONDA-CIVIC
-2023,Tesla,Model 3,Long Range,38900,8000,Sedan,Red,used,E2E-TESLA-M3
+year,make,model,trim,price,mileage,body_style,exterior_color,stock_type,external_id,image_link,additional_image_link
+2021,Porsche,911,Carrera S,129900,12000,Coupe,Silver,used,E2E-PORSCHE-911,https://images.example.test/e2e-porsche.jpg,"https://images.example.test/e2e-porsche.jpg,https://images.example.test/e2e-porsche-side.jpg"
+2020,Toyota,Camry,SE,21500,45000,Sedan,White,used,E2E-TOYOTA-CAMRY,,
+2022,Ford,F-150,XLT,44900,18000,Truck,Blue,used,E2E-FORD-F150,,
+2019,Honda,Civic,LX,17800,52000,Sedan,Black,used,E2E-HONDA-CIVIC,,
+2023,Tesla,Model 3,Long Range,38900,8000,Sedan,Red,used,E2E-TESLA-M3,,

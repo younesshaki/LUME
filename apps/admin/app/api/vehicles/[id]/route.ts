@@ -22,6 +22,7 @@ import { getTenantFromRequest } from "@/lib/tenant";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import { readR2PublicBaseUrl } from "@/lib/r2Config";
 import { vehicleImagePublicUrl } from "@/lib/vehicleImages";
+import { resolveFeedVehicleImageUrls } from "@/lib/feedVehicleImages";
 import { checkPublicApiQuota } from "@/lib/quota.server";
 
 export const runtime = "nodejs";
@@ -75,14 +76,25 @@ export async function GET(
   // Service-role read for image metadata (see file header) — anon RLS on
   // vehicle_images is unreadable, so anon returns an empty gallery.
   const gallery = await loadGallery(createServiceClient(), tenant.tenantId, vehicleId);
-  const primary = gallery[0];
+  const resolvedGallery = gallery.length > 0
+    ? gallery
+    : resolveFeedVehicleImageUrls({
+      image_src: row.image_src,
+      feed_image_urls: row.feed_image_urls,
+    }).map((src, index) => ({
+      src,
+      alt: `${row.year} ${row.make} ${row.model}`,
+      isPrimary: index === 0,
+      sortOrder: index,
+    }));
+  const primary = resolvedGallery[0];
   const response: VehicleDetailResponse = {
     vehicle: {
       ...rowToVehicle(row),
       primaryImageSrc: primary?.src,
       primaryImageAlt: primary?.alt,
     },
-    images: gallery,
+    images: resolvedGallery,
   };
   return json(response, 200, request, quotaHeaders);
 }
