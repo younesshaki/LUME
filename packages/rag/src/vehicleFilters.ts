@@ -37,6 +37,11 @@ export type VehicleFilterVocabulary = {
   cities?: readonly string[];
 };
 
+/** Explicit visitor language that starts a new make/model-agnostic search. */
+export function hasInventoryScopeResetIntent(query: string): boolean {
+  return /\b(?:all\s+(?:inventory|vehicles|cars)|in\s+general|regardless\s+of\s+(?:make|brand)|forget\s+(?:about\s+)?[a-z][a-z-]*|(?:not|without|except)\s+(?:talking\s+about\s+)?(?:a\s+)?[a-z][a-z-]*|no\s+(?!more\b|less\b)(?:talking\s+about\s+)?(?:a\s+)?[a-z][a-z-]*)\b/i.test(query);
+}
+
 const US_STATE_NAMES: Record<string, string> = {
   alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
   colorado: "CO", connecticut: "CT", delaware: "DE", florida: "FL", georgia: "GA",
@@ -71,6 +76,8 @@ const MODEL_FUZZY_STOPWORDS = new Set([
   "a", "an", "the", "and", "or", "but", "for", "from", "to", "than", "then",
   "in", "on", "at", "near", "around", "with", "without", "that", "this", "these",
   "those", "it", "one", "ones", "all", "any", "only", "show", "find", "have",
+  "got", "looking", "spend",
+  "first", "second", "third", "last",
   "new", "newer", "older", "later", "earlier", "between", "under", "above", "below",
   "more", "less", "over", "up", "max", "min", "grand", "thousand", "large",
 ]);
@@ -106,11 +113,20 @@ export function extractVehicleFilters(
   const q = corrected.toLowerCase();
   const filters: VehicleQueryFilters = {};
   const tokens = q.split(/\s+/);
+  // Scope-reset/negation language is evaluated before make/model lookup. A
+  // phrase such as "not Toyota, in general" must never turn Toyota into the
+  // next active make filter.
+  const resetInventoryScope = hasInventoryScopeResetIntent(query);
 
   // Make matching must be grounded in the visitor's original words. The
   // generic typo corrector is intentionally broad and can turn common words
   // into vehicle terms (for example, "less" into "lexus").
-  const canonicalMake = canonicalMakeFromText(query);
+  // A reset can also contain an affirmative replacement: "not Toyota, show
+  // BMWs instead" must clear Toyota while keeping BMW. Only the explicitly
+  // negated term is excluded; the rest of the visitor's message still counts.
+  const canonicalMake = resetInventoryScope
+    ? canonicalAffirmativeMakeFromText(query)
+    : canonicalMakeFromText(query);
   if (canonicalMake) {
     const availableMakes = uniqueTerms([
       ...vehicles.map((vehicle) => vehicle.make),
@@ -182,16 +198,21 @@ export function extractVehicleFilters(
     const normalizedModel = normalizePhrase(model);
     if (
       normalizedModel.length >= 2 &&
-      (containsPhrase(normalizedQuery, normalizedModel) ||
+      ((resetInventoryScope
+        ? containsAffirmativePhrase(normalizedQuery, normalizedModel)
+        : containsPhrase(normalizedQuery, normalizedModel)) ||
         (!normalizedModel.endsWith("s") &&
-          containsPhrase(normalizedQuery, `${normalizedModel}s`)))
+          (resetInventoryScope
+            ? containsAffirmativePhrase(normalizedQuery, `${normalizedModel}s`)
+            : containsPhrase(normalizedQuery, `${normalizedModel}s`))))
     ) {
       filters.model = model;
       break;
     }
   }
-  if (!filters.model) {
-    filters.model = catalogModelFromText(query, models) ?? undefined;
+  if (!filters.model && !resetInventoryScope) {
+    const catalogModel = catalogModelFromText(query, models);
+    if (catalogModel) filters.model = catalogModel;
   }
 
   const states = uniqueTerms([
@@ -419,15 +440,87 @@ function canonicalMakeFromText(value: string): string | null {
   // fabricated inventory filter.
   const fuzzyCandidates = new Set<string>();
   for (const token of normalized.split(" ")) {
-    if (token.length < 3 || /^\d+$/.test(token)) continue;
+    if (
+      token.length < 3 ||
+      /^\d+$/.test(token) ||
+      MODEL_FUZZY_STOPWORDS.has(token)
+    ) continue;
     for (const { canonical, alias } of aliases) {
-      if (alias.length < 3 || !isFuzzyMatch(token, alias)) continue;
+      // A model name must never become a make through a loose alias match:
+      // e.g. "Camry" is two edits from Cadillac's "caddy" alias. Requiring
+      // the first three characters to agree still accepts ordinary make
+      // typos such as "ferarri", "porche", and "bmww".
+      if (
+        alias.length < 3 ||
+        token.slice(0, 3) !== alias.slice(0, 3) ||
+        !isFuzzyMatch(token, alias)
+      ) continue;
       fuzzyCandidates.add(canonical);
     }
   }
   if (fuzzyCandidates.size === 1) return [...fuzzyCandidates][0] ?? null;
 
   return null;
+}
+
+/**
+ * Finds an explicitly named make that is not being rejected by the visitor.
+ * This deliberately uses exact aliases only: when correcting scope, an
+ * unambiguous stated make is safer than a fuzzy guess.
+ */
+function canonicalAffirmativeMakeFromText(value: string): string | null {
+  const normalized = normalizePhrase(value);
+  const aliases = Object.entries(MAKE_ALIASES)
+    .flatMap(([canonical, values]) =>
+      [canonical, ...values].map((alias) => ({
+        canonical,
+        alias: normalizePhrase(alias),
+      }))
+    )
+    .sort((left, right) => right.alias.length - left.alias.length);
+
+  const matches: Array<{ canonical: string; index: number }> = [];
+  for (const { canonical, alias } of aliases) {
+    let start = 0;
+    while (start < normalized.length) {
+      const index = normalized.indexOf(alias, start);
+      if (index < 0) break;
+      const before = index === 0 ? " " : normalized[index - 1] ?? " ";
+      const after = normalized[index + alias.length] ?? " ";
+      const pluralSuffix =
+        after === "s" &&
+        !alias.endsWith("s") &&
+        !/[a-z0-9]/.test(normalized[index + alias.length + 1] ?? " ");
+      if (!/[a-z0-9]/.test(before) && (!/[a-z0-9]/.test(after) || pluralSuffix)) {
+        matches.push({ canonical, index });
+      }
+      start = index + alias.length;
+    }
+  }
+  return matches
+    .sort((left, right) => left.index - right.index)
+    .find(({ index }) => !isNegatedTermAt(normalized, index))
+    ?.canonical ?? null;
+}
+
+function containsAffirmativePhrase(normalizedText: string, phrase: string): boolean {
+  let start = 0;
+  while (start < normalizedText.length) {
+    const index = normalizedText.indexOf(phrase, start);
+    if (index < 0) return false;
+    const before = index === 0 ? " " : normalizedText[index - 1] ?? " ";
+    const after = normalizedText[index + phrase.length] ?? " ";
+    if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after) && !isNegatedTermAt(normalizedText, index)) {
+      return true;
+    }
+    start = index + phrase.length;
+  }
+  return false;
+}
+
+function isNegatedTermAt(normalizedText: string, termIndex: number): boolean {
+  const preceding = normalizedText.slice(Math.max(0, termIndex - 40), termIndex);
+  return /\b(?:not|no|without|except|other than)(?:\s+(?:talking|speaking|about|a|an|the))*\s*$/i.test(preceding);
 }
 
 /**
@@ -477,6 +570,11 @@ function catalogModelFromText(
       tokens.some(
         (token) =>
           !MODEL_FUZZY_STOPWORDS.has(token) &&
+          // Require the first three characters to agree, exactly as the make
+          // fuzzy path does. Otherwise a different word two edits away — e.g.
+          // "caddy" (Cadillac) → "Camry" — becomes a fabricated model filter.
+          // Ordinary model typos ("camri", "cayene") still share the prefix.
+          token.slice(0, 3) === normalizedModel.slice(0, 3) &&
           isFuzzyMatch(token, normalizedModel),
       )
     ) {
@@ -786,6 +884,8 @@ function extractApproximatePriceRange(
 function extractBudgetMaximum(query: string): number | null {
   const patterns = [
     /\b(?:budget(?:\s+(?:is|of|around|about))?|spend(?:ing)?(?:\s+(?:up to|under|below))?)\s*\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/i,
+    /\b(?:i(?:\s+am|'m)?\s+)?(?:have|got)\s+(?:a\s+)?(?:about\s+)?\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\s+budget\b/i,
+    /\b(?:looking\s+to\s+)?spend\s+\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/i,
     /\b(?:i(?:\s+am|'m)?\s+)?(?:have|got)\s+(?:about\s+)?\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\s+(?:to spend|available|set aside|all in)\b/i,
     /\b(?:my\s+)?(?:max(?:imum)?|ceiling|cap)\s*(?:is|of|at)?\s*\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/i,
   ];

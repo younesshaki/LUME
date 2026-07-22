@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { LoginSilkBackground } from "@/components/login-silk-background";
 import { LoginForm, LoginShell } from "./login-form";
 
 export const metadata: Metadata = {
@@ -22,10 +23,11 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+    <main className="relative min-h-screen overflow-hidden bg-black text-stone-50">
+      <LoginSilkBackground />
+      <header className="sticky top-0 z-10 border-b border-amber-100/15 bg-black/45 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <a href="/login" className="text-sm font-semibold tracking-[0.2em] text-primary">
+          <a href="/login" className="text-sm font-semibold tracking-[0.2em] text-amber-200">
             LUME
           </a>
           <nav aria-label="Page" className="flex items-center gap-2">
@@ -39,19 +41,19 @@ export default function LoginPage() {
         </div>
       </header>
 
-      <section aria-labelledby="hero-heading" className="relative overflow-hidden px-6 pb-20 pt-24 text-center">
+      <section aria-labelledby="hero-heading" className="relative z-0 overflow-hidden px-6 pb-20 pt-24 text-center">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 [background:radial-gradient(50rem_24rem_at_50%_-20%,color-mix(in_oklch,var(--primary)_16%,transparent),transparent_70%)]"
+          className="pointer-events-none absolute inset-0 bg-black/25"
         />
         <div className="relative mx-auto max-w-3xl">
-          <p className="text-sm font-semibold tracking-[0.2em] text-primary">
+          <p className="text-sm font-semibold tracking-[0.2em] text-amber-200">
             LUME — AI SALES PLATFORM
           </p>
           <h1 id="hero-heading" className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
             A cinematic storefront. A concierge that sells.
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-stone-200">
             Give us your inventory. LUME gives you a premium site, an AI concierge,
             and a daily sales cockpit — built for dealers, live in days.
           </p>
@@ -66,13 +68,13 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <section id="plans" aria-labelledby="plans-heading" className="scroll-mt-20 px-6 py-20">
+      <section id="plans" aria-labelledby="plans-heading" className="relative z-0 scroll-mt-20 px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <div className="text-center">
             <h2 id="plans-heading" className="text-3xl font-semibold tracking-tight">
               Choose your plan
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
+            <p className="mx-auto mt-3 max-w-2xl text-stone-200">
               Every plan includes the cinematic storefront, inventory, CRM, and lead
               capture. The difference is what your concierge can do.
             </p>
@@ -88,16 +90,16 @@ export default function LoginPage() {
       <section
         id="sign-in"
         aria-labelledby="signin-heading"
-        className="scroll-mt-20 border-t bg-muted/40 px-6 py-20"
+        className="relative z-0 scroll-mt-20 border-t border-amber-100/15 bg-black/35 px-6 py-20"
       >
         <div className="mx-auto flex max-w-md flex-col items-center text-center">
-          <p className="text-sm font-semibold tracking-[0.2em] text-primary">
+          <p className="text-sm font-semibold tracking-[0.2em] text-amber-200">
             EXISTING CUSTOMERS
           </p>
           <h2 id="signin-heading" className="mt-3 text-2xl font-semibold tracking-tight">
             Sign in to your cockpit
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-stone-200">
             Already running LUME? Pick up where you left off.
           </p>
           <div className="mt-8 grid w-full place-items-center text-left">
@@ -108,8 +110,8 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <footer className="border-t px-6 py-8">
-        <p className="text-center text-xs text-muted-foreground">
+      <footer className="relative z-0 border-t border-amber-100/15 bg-black/35 px-6 py-8">
+        <p className="text-center text-xs text-stone-300">
           LUME — plans and prices shown are early-access placeholders and may change
           before general availability.
         </p>
@@ -122,8 +124,8 @@ function PlanCard({ plan }: { plan: PlanCatalogEntry }) {
   return (
     <Card
       className={cn(
-        "relative flex h-full flex-col",
-        plan.highlighted && "border-primary/50 shadow-lg shadow-primary/5 ring-1 ring-primary/40",
+        "relative flex h-full flex-col border-amber-100/20 bg-black/55 text-stone-50 backdrop-blur-md",
+        plan.highlighted && "border-amber-300/65 shadow-lg shadow-amber-400/10 ring-1 ring-amber-300/40",
       )}
     >
       {plan.badge && (
@@ -143,7 +145,7 @@ function PlanCard({ plan }: { plan: PlanCatalogEntry }) {
         <ul className="space-y-2.5">
           {plan.features.map((feature) => (
             <li key={feature} className="flex items-start gap-2.5 text-sm">
-              <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+          <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-amber-200" />
               <span>{feature}</span>
             </li>
           ))}

@@ -46,6 +46,20 @@ describe("conversation memory", () => {
     ]);
   });
 
+  it("persists opaque server-owned conversation state with the same TTL", async () => {
+    const store = new InMemoryConversationMemoryStore();
+    await store.append("session", {
+      conversationState: {
+        activeFilters: { priceMax: 10_000 },
+        resultSet: { orderedIds: ["vehicle-1"], totalCount: 1 },
+      },
+    });
+    await store.append("session", { messages: [{ role: "user", content: "show me" }] });
+    await expect(store.get("session")).resolves.toMatchObject({
+      conversationState: { activeFilters: { priceMax: 10_000 } },
+    });
+  });
+
   it("falls back when the primary provider is unavailable", async () => {
     const unavailable: ConversationMemoryStore = {
       get: async () => { throw new Error("offline"); },

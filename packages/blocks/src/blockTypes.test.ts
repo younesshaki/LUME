@@ -95,4 +95,22 @@ describe("block descriptors", () => {
       items: [{ label: "Unsafe", body: "javascript:alert(1)" }],
     }).ok).toBe(false);
   });
+
+  it("validates the vehicle-card style and colour used by the live preview", () => {
+    const inventory = getBlockDescriptor("vehicle-inventory");
+    expect(inventory?.validate({
+      ...inventory.defaultProps,
+      cardStyle: "notch",
+      cardColor: "#1A6E8C",
+    })).toEqual({ ok: true });
+    expect(inventory?.validate({
+      ...inventory.defaultProps,
+      cardStyle: "notch",
+      cardColor: "gold",
+    }).ok).toBe(false);
+    expect(inventory?.validate({
+      ...inventory.defaultProps,
+      cardStyle: "unknown",
+    }).ok).toBe(false);
+  });
 });

@@ -1,4 +1,4 @@
-import { MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import {
   Check,
@@ -112,6 +112,8 @@ function VehicleCard({
   saved,
   compared,
   compareDisabled,
+  cardStyle,
+  cardColor,
   onViewDetails,
   onToggleSaved,
   onToggleCompare,
@@ -120,6 +122,8 @@ function VehicleCard({
   saved: boolean;
   compared: boolean;
   compareDisabled: boolean;
+  cardStyle: "classic" | "notch";
+  cardColor: string;
   onViewDetails: () => void;
   onToggleSaved: () => void;
   onToggleCompare: () => void;
@@ -134,7 +138,12 @@ function VehicleCard({
 
   return (
     <article
-      className="vehiclesPage__card"
+      className={`vehiclesPage__card${cardStyle === "notch" ? " vehiclesPage__card--notch" : ""}`}
+      style={
+        cardStyle === "notch"
+          ? ({ "--vehicle-card-accent": cardColor } as CSSProperties & Record<"--vehicle-card-accent", string>)
+          : undefined
+      }
       onMouseEnter={() => play(vehiclePageSoundActions.cardHover)}
       onMouseMove={handleMouseMove}
     >
@@ -291,6 +300,9 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const isStandard = mode === "standard";
   const title = stringProp(block, "title");
   const showFilters = booleanProp(block, "showFilters", true);
+  const cardStyle = stringProp(block, "cardStyle", "classic") === "notch" ? "notch" : "classic";
+  const rawCardColor = stringProp(block, "cardColor", "#B68A35");
+  const cardColor = /^#[0-9a-fA-F]{6}$/.test(rawCardColor) ? rawCardColor : "#B68A35";
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [facets, setFacets] = useState<VehicleFacets>(EMPTY_VEHICLE_FACETS);
@@ -563,6 +575,8 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                       saved={savedVehicleIds.includes(vehicle.id)}
                       compared={compared}
                       compareDisabled={!compared && compareVehicleIds.length >= 3}
+                      cardStyle={cardStyle}
+                      cardColor={cardColor}
                       onViewDetails={() => handleViewDetails(vehicle.id)}
                       onToggleSaved={() => toggleSaved(vehicle.id)}
                       onToggleCompare={() => toggleCompare(vehicle.id)}

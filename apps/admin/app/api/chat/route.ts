@@ -48,10 +48,7 @@ import {
 } from "@lume/bot";
 import {
   assembleSystemPrompt,
-  composeVehicleFilterHistory,
   extractVehicleFilters,
-  hasVehicleFilterConstraint,
-  inheritVehicleFilterContext,
   isVehicleQuery,
   mergeTrustedVehicleQuery,
   retrieveByKeywords,
@@ -122,7 +119,28 @@ import {
   conversationMemoryKey,
   getConversationMemoryStore,
 } from "@/lib/conversationMemory.server";
-import { captureError } from "@/lib/observability";
+import { captureDebug, captureError } from "@/lib/observability";
+import {
+  filterActionsByConversationStateWithDiagnostics,
+  hasScopeResetIntent,
+  isAmbiguousAffirmation,
+  isOrdinalVehicleActionRequest,
+  isOrdinalVehicleReference,
+  isPresentationRequest,
+  isSelectedVehicleActionRequest,
+  isSelectedVehicleDetailRequest,
+  isTruncatedLastOrdinalReference,
+  isUnsupportedVehicleFactRequest,
+  normalizeConversationInventoryState,
+  ordinalResultSetVehicleId,
+  preserveResultSetForZeroResults,
+  selectConversationVehicle,
+  selectedResultSetVehicleId,
+  setConversationResultSet,
+  transitionInventoryState,
+  vehicleSatisfiesActiveFilters,
+  type ConversationInventoryState,
+} from "@/lib/chatConversationState";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -233,13 +251,29 @@ export async function POST(request: Request): Promise<Response> {
   const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
   const tenantName = tenant.name ?? tenant.slug;
   const memoryStore = getConversationMemoryStore();
-  const memoryKey = visitor ? conversationMemoryKey(tenant.tenantId, visitor.id) : null;
+  // Public visitors need the same deterministic continuity as signed-in
+  // visitors. The opaque, server-issued ID is only a memory namespace; it is
+  // never used for identity, authorization, preferences, or lead data.
+  const anonymousConversationId = !visitor
+    ? resolveAnonymousConversationId(
+        typeof body.sessionId === "string" ? body.sessionId : undefined,
+        body.startNewSession === true,
+      )
+    : null;
+  const memoryKey = conversationMemoryKey(
+    tenant.tenantId,
+    visitor ? visitor.id : `anonymous:${anonymousConversationId!}`,
+  );
   const remembered = memoryKey
     ? await memoryStore.get(memoryKey).catch((error: unknown) => {
         captureError("api/chat/memory-read", error, { tenantId: tenant.tenantId });
         return null;
       })
     : null;
+  let conversationState: ConversationInventoryState = normalizeConversationInventoryState(
+    remembered?.conversationState,
+  );
+  const conversationStateBefore = conversationState;
   const cleanRememberedMessages: MemoryMessage[] = (
     remembered?.messages ?? []
   ).flatMap((message): MemoryMessage[] => {
@@ -256,6 +290,13 @@ export async function POST(request: Request): Promise<Response> {
     cleanRememberedMessages,
     cleanMessages,
   );
+  const previousAssistantContent = previousAssistantContentForLastUser(modelMessages);
+  const deterministicClarifier = isAmbiguousAffirmation(
+    lastUser.content,
+    previousAssistantContent,
+  )
+    ? "I want to make sure I take the right direction: do you mean the first option or the second?"
+    : null;
   const visitorTurn = visitor
     ? await openVisitorPreferenceTurn(supabase, {
         tenantId: tenant.tenantId,
@@ -274,6 +315,10 @@ export async function POST(request: Request): Promise<Response> {
   const currentPageVehicleId = vehicleIdFromPublicPagePath(body.pagePath);
   const selectedVehicleCandidate =
     currentPageVehicleId ??
+    // Keep "tell me more about it" grounded even before navigation finishes
+    // and updates pagePath. This ID was created only from the verified
+    // current result set by selectConversationVehicle().
+    conversationState.selectedVehicleId ??
     recentVehicleIdFromToolResults(remembered?.toolResults ?? []) ??
     rememberedHistoryVehicleId ??
     historyVehicleId;
@@ -282,6 +327,23 @@ export async function POST(request: Request): Promise<Response> {
   const groundedVehicleIds = new Set<string>();
   let groundedVehicles: Vehicle[] = [];
   let groundedInventoryFilters: ReturnType<typeof extractVehicleFilters> | null = null;
+  let matchedVehicles: Vehicle[] | undefined;
+  let totalMatched: number | undefined;
+  let filters: ReturnType<typeof extractVehicleFilters> | undefined;
+  let deterministicAvailabilityAnswer: string | null = null;
+  let deterministicInventoryAnswer: string | null = null;
+  let deterministicInventoryAction: BotAction | null = null;
+  let deterministicZeroResultAnswer: string | null = null;
+  let deterministicOrdinalUnavailableAnswer: string | null = null;
+  let deterministicOrdinalReferenceAnswer: string | null = null;
+  let deterministicSelectedVehicleAnswer: string | null = null;
+  let deterministicSelectedVehicleUnavailableAnswer: string | null = null;
+  let deterministicUnsupportedFactAnswer: string | null = null;
+  let stateOrdinalVehicleId: string | null = null;
+  let stateSelectedVehicleId: string | null = null;
+  let statePresentationRequest = false;
+  let extractedInventoryFilters: ReturnType<typeof extractVehicleFilters> = {};
+  let stateRules: string[] = [];
   let selectedVehicleId: string | null = null;
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> = null;
   let visitorPreferenceContext: Awaited<ReturnType<typeof loadVisitorPreferenceContext>> = null;
@@ -289,14 +351,7 @@ export async function POST(request: Request): Promise<Response> {
     // Load the bounded tenant vocabulary for every turn. A visitor can ask
     // for a model without naming its make ("show me 911s"), which cannot be
     // recognized reliably without knowing this tenant's actual catalog.
-    const initialCurrentFilters = extractVehicleFilters(lastUser.content);
-    const initialPriorFilters = composeVehicleFilterHistory(
-      priorVisitorQueries(cleanMessages),
-    );
-    const initialFilters = inheritVehicleFilterContext(
-      initialCurrentFilters,
-      initialPriorFilters,
-    );
+    const initialFilters = conversationState.activeFilters;
     const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext, selectedVehicleResult, facetResult] = await Promise.all([
       supabase
         .from("rag_chunks")
@@ -312,14 +367,8 @@ export async function POST(request: Request): Promise<Response> {
           })
         : Promise.resolve(null),
       selectedVehicleCandidate
-        ? supabase
-            .from("vehicles")
-            .select("id, year, make, model, trim")
-            .eq("tenant_id", tenant.tenantId)
-            .eq("id", selectedVehicleCandidate)
-            .eq("status", "live")
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
+        ? getTenantVehicle(supabase, tenant.tenantId, selectedVehicleCandidate)
+        : Promise.resolve(null),
       supabase.rpc("vehicle_facets_v2", {
         p_tenant_id: tenant.tenantId,
         p_make: initialFilters.make ?? null,
@@ -336,23 +385,35 @@ export async function POST(request: Request): Promise<Response> {
       lastUser.content,
       7
     );
-    if (selectedVehicleResult.data) {
-      const selectedVehicle = selectedVehicleResult.data;
+    const unsupportedVehicleFactRequest = isUnsupportedVehicleFactRequest(lastUser.content);
+    const selectedVehicleDetailRequest = isSelectedVehicleDetailRequest(lastUser.content);
+    if (unsupportedVehicleFactRequest) {
+      deterministicUnsupportedFactAnswer = unsupportedVehicleFactAnswer(
+        lastUser.content,
+        selectedVehicleResult,
+      );
+    }
+    if (selectedVehicleResult) {
+      const selectedVehicle = selectedVehicleResult;
       selectedVehicleId = selectedVehicle.id;
       groundedVehicleIds.add(selectedVehicle.id);
+      if (selectedVehicleDetailRequest) {
+        deterministicSelectedVehicleAnswer = selectedVehicleDetailAnswer(
+          lastUser.content,
+          selectedVehicle,
+        );
+      }
       contextChunks.unshift({
         category:
           selectedVehicle.id === currentPageVehicleId
             ? "current-page"
             : "recent-selection",
-        text: `${selectedVehicle.id === currentPageVehicleId ? "Current public page is" : "The visitor's most recently selected vehicle is"} the live vehicle ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}${selectedVehicle.trim ? ` ${selectedVehicle.trim}` : ""}. Exact vehicleId: ${selectedVehicle.id}.`,
+        text: `${selectedVehicle.id === currentPageVehicleId ? "Current public page is" : "The visitor's most recently selected vehicle is"} the live vehicle ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}${selectedVehicle.trim ? ` ${selectedVehicle.trim}` : ""}. Exact vehicleId: ${selectedVehicle.id}. Price: $${selectedVehicle.price.toLocaleString()}. Mileage: ${selectedVehicle.mileage === null ? "not listed" : `${selectedVehicle.mileage.toLocaleString()} mi`}. Drivetrain: ${selectedVehicle.drivetrain || "not listed"}. Fuel: ${selectedVehicle.fuelType || "not listed"}. Location: ${selectedVehicle.sellerCity && selectedVehicle.sellerState ? `${selectedVehicle.sellerCity}, ${selectedVehicle.sellerState}` : "not listed"}.`,
         score: 2,
       });
+    } else if (selectedVehicleDetailRequest) {
+      deterministicSelectedVehicleUnavailableAnswer = "I don’t have a selected vehicle to answer that about yet. Open a listing or tell me which result you mean, and I’ll check its verified details.";
     }
-
-    let matchedVehicles;
-    let totalMatched: number | undefined;
-    let filters;
 
     if (facetResult.error) {
       captureError("api/chat/vehicle-facets", facetResult.error, {
@@ -360,24 +421,78 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
     const vocabulary = vehicleFilterVocabulary(facetResult.data);
-    const currentFilters = extractVehicleFilters(lastUser.content, [], vocabulary);
-    const priorFilters = composeVehicleFilterHistory(
-      priorVisitorQueries(cleanMessages),
-      vocabulary,
+    const extractedFilters = unsupportedVehicleFactRequest || selectedVehicleDetailRequest
+      ? {}
+      : extractVehicleFilters(lastUser.content, [], vocabulary);
+    extractedInventoryFilters = extractedFilters;
+    const hasInventoryIntent = !unsupportedVehicleFactRequest && !selectedVehicleDetailRequest && (
+      isVehicleQuery(lastUser.content, vocabulary) ||
+      Object.keys(extractedFilters).length > 0 ||
+      Boolean(conversationState.resultSet && (isOrdinalVehicleReference(lastUser.content) || isSelectedVehicleActionRequest(lastUser.content) || isPresentationRequest(lastUser.content))) ||
+      hasScopeResetIntent(lastUser.content)
     );
-    const filtersWithContext = inheritVehicleFilterContext(
-      currentFilters,
-      priorFilters,
+    const stateTransition = transitionInventoryState(
+      conversationState,
+      lastUser.content,
+      extractedFilters,
+      hasInventoryIntent,
     );
-    const isTrustedVehicleContinuation =
-      Boolean(priorFilters && hasVehicleFilterConstraint(priorFilters)) &&
-      (hasVehicleFilterConstraint(currentFilters) || isOrdinalVehicleSelection(lastUser.content));
+    conversationState = stateTransition.state;
+    stateRules = stateTransition.rules;
+    statePresentationRequest = stateTransition.useStoredResultSet;
+    stateOrdinalVehicleId = ordinalResultSetVehicleId(
+      lastUser.content,
+      conversationState.resultSet,
+    );
+    stateSelectedVehicleId = selectedResultSetVehicleId(
+      lastUser.content,
+      conversationState,
+    );
+    const stateReferencedVehicleId = stateOrdinalVehicleId ?? stateSelectedVehicleId;
 
-    if (isVehicleQuery(lastUser.content, vocabulary) || isTrustedVehicleContinuation) {
+    if (stateTransition.useStoredResultSet) {
+      filters = conversationState.activeFilters;
+      groundedInventoryFilters = filters;
+      for (const id of conversationState.resultSet?.orderedIds ?? []) groundedVehicleIds.add(id);
+      totalMatched = conversationState.resultSet?.totalCount;
+    }
+
+    if (stateReferencedVehicleId) {
+      const selected = await getTenantVehicle(
+        supabase,
+        tenant.tenantId,
+        stateReferencedVehicleId,
+      );
+      if (selected && vehicleSatisfiesActiveFilters(selected, conversationState.activeFilters)) {
+        selectedVehicleId = selected.id;
+        groundedVehicleIds.add(selected.id);
+        groundedVehicles = [selected];
+        conversationState = selectConversationVehicle(conversationState, selected.id);
+        if (!isOrdinalVehicleActionRequest(lastUser.content) && !isSelectedVehicleActionRequest(lastUser.content)) {
+          deterministicOrdinalReferenceAnswer = ordinalVehicleReferenceAnswer(
+            lastUser.content,
+            selected,
+          );
+        }
+      } else {
+        stateOrdinalVehicleId = null;
+        stateSelectedVehicleId = null;
+        deterministicOrdinalUnavailableAnswer = "That result no longer satisfies your active filters, so I haven’t opened it. Would you like to relax a constraint or see the current matches?";
+      }
+    } else if (isOrdinalVehicleReference(lastUser.content) || isSelectedVehicleActionRequest(lastUser.content)) {
+      deterministicOrdinalUnavailableAnswer = isTruncatedLastOrdinalReference(
+        lastUser.content,
+        conversationState.resultSet,
+      )
+        ? `There are ${conversationState.resultSet?.totalCount ?? "more"} matching vehicles, but I only have the current result page safely anchored here. Please choose first, second, or third—or narrow the search.`
+        : "I don’t have a current result list to safely resolve that reference. Please tell me what you’d like to search for.";
+    }
+
+    if (stateTransition.shouldQuery) {
       // Let Postgres filter the complete tenant inventory. Pulling
       // ".select(*)" here silently hit PostgREST's row cap on larger tenants
       // and could turn a real make into a false zero-result answer.
-      filters = filtersWithContext;
+      filters = conversationState.activeFilters;
       const match = await queryTenantVehicles(supabase, tenant.tenantId, {
         ...vehicleQueryFromFilters(filters),
         limit: 30,
@@ -387,6 +502,41 @@ export async function POST(request: Request): Promise<Response> {
       groundedInventoryFilters = filters;
       for (const vehicle of matchedVehicles) groundedVehicleIds.add(vehicle.id);
       totalMatched = match.totalCount ?? matchedVehicles.length;
+      if (totalMatched === 0 && conversationState.resultSet) {
+        // Roll back to the filters that were active before this turn — a
+        // zero-yield refinement must not compound into the next turn, and the
+        // public inventory link should keep pointing at the last filters that
+        // actually returned matches, not the dead combination just attempted.
+        conversationState = preserveResultSetForZeroResults(
+          conversationState,
+          conversationStateBefore.activeFilters,
+        );
+        groundedInventoryFilters = conversationStateBefore.activeFilters;
+        deterministicZeroResultAnswer = zeroResultAnswer(filters);
+      } else {
+        conversationState = setConversationResultSet(
+          conversationState,
+          matchedVehicles,
+          totalMatched,
+        );
+      }
+      deterministicAvailabilityAnswer = availabilityAnswerFromGroundedInventory(
+        lastUser.content,
+        filters,
+        matchedVehicles,
+        totalMatched,
+      );
+      if (
+        !deterministicAvailabilityAnswer &&
+        totalMatched > 0 &&
+        (isDirectInventoryPresentationRequest(lastUser.content, filters) ||
+          isInventoryRecommendationRequest(lastUser.content))
+      ) {
+        deterministicInventoryAnswer = isInventoryRecommendationRequest(lastUser.content)
+          ? inventoryRecommendationAnswer(matchedVehicles, totalMatched)
+          : inventoryResultAnswer(matchedVehicles, totalMatched);
+        deterministicInventoryAction = inventoryFilterAction(filters);
+      }
       const matchedIds = matchedVehicles.slice(0, 20).map((vehicle) => vehicle.id);
       if (matchedIds.length > 0) {
         const { data: imageDescriptions } = await supabase
@@ -424,17 +574,57 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "Failed to build context" }, 500, request, quotaHeaders);
   }
 
+  const stateActions: BotAction[] = [
+    ...((stateOrdinalVehicleId && isOrdinalVehicleActionRequest(lastUser.content)) || stateSelectedVehicleId
+      ? [{
+        type: "navigate-target",
+        targetKey: "vehicle-detail",
+        params: { vehicleId: stateOrdinalVehicleId ?? stateSelectedVehicleId! },
+      } satisfies BotAction]
+      : []),
+    ...(deterministicInventoryAction ? [deterministicInventoryAction] : []),
+  ];
   const deterministicActions = chatActionsEnabled
-    ? resolveDeterministicConciergeNavigation({
+    ? [...stateActions, ...((deterministicOrdinalReferenceAnswer || deterministicOrdinalUnavailableAnswer || deterministicUnsupportedFactAnswer) ? [] : resolveDeterministicConciergeNavigation({
         messages: modelMessages,
         targets: conciergeTargets,
         selectedVehicleId,
         groundedVehicles,
         inventoryFilters: groundedInventoryFilters,
         capabilities: persona.capabilities,
-      })
+      }))]
     : [];
   const hasDeterministicActions = deterministicActions.length > 0;
+  const filterConversationActions = (actions: readonly BotAction[]): BotAction[] => {
+    const decision = filterActionsByConversationStateWithDiagnostics(
+      actions,
+      conversationState,
+      stateOrdinalVehicleId || stateSelectedVehicleId
+        ? [stateOrdinalVehicleId ?? stateSelectedVehicleId!]
+        : [],
+    );
+    if (decision.dropped.length > 0) {
+      captureDebug("api/chat/actions", {
+        tenantId: tenant.tenantId,
+        actionsDropped: decision.dropped,
+      });
+    }
+    return decision.allowed;
+  };
+  captureDebug("api/chat/conversation-state", {
+    tenantId: tenant.tenantId,
+    extractedFilters: extractedInventoryFilters,
+    activeFiltersBefore: conversationStateBefore.activeFilters,
+    activeFiltersAfter: conversationState.activeFilters,
+    resultSetBefore: conversationStateBefore.resultSet
+      ? { totalCount: conversationStateBefore.resultSet.totalCount, orderedIds: conversationStateBefore.resultSet.orderedIds }
+      : null,
+    resultSetAfter: conversationState.resultSet
+      ? { totalCount: conversationState.resultSet.totalCount, orderedIds: conversationState.resultSet.orderedIds }
+      : null,
+    deterministicActions: deterministicActions.map((action) => ({ type: action.type, vehicleId: action.type === "navigate-target" ? action.params?.vehicleId : undefined })),
+    rules: stateRules,
+  });
   const cors = corsHeadersFor(request);
   const sseHeaders = new Headers({
     "Content-Type": "text/event-stream",
@@ -451,15 +641,17 @@ export async function POST(request: Request): Promise<Response> {
     // Capability level for client display only — enforcement is the
     // server-side plan gate above, never this hint.
     capabilities: { actions: chatActionsEnabled },
-    ...(visitorTurn ? { sessionId: visitorTurn.sessionId } : {}),
+    sessionId: visitorTurn?.sessionId ?? anonymousConversationId ?? undefined,
   });
 
-  if (isImmediateSiteNavigation(deterministicActions)) {
+  if (isImmediateSiteNavigation(deterministicActions) || statePresentationRequest || deterministicAvailabilityAnswer || deterministicInventoryAnswer || deterministicZeroResultAnswer || deterministicOrdinalUnavailableAnswer || deterministicOrdinalReferenceAnswer || deterministicSelectedVehicleAnswer || deterministicSelectedVehicleUnavailableAnswer || deterministicUnsupportedFactAnswer || deterministicClarifier) {
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
-        groundLeadCaptureActions(
-          filterPlanAllowedActions(chatActionsEnabled, deterministicActions, persona.capabilities),
-          modelMessages,
+        filterConversationActions(
+          groundLeadCaptureActions(
+            filterPlanAllowedActions(chatActionsEnabled, deterministicActions, persona.capabilities),
+            modelMessages,
+          ),
         ),
         conciergeTargets,
         groundedVehicleIds,
@@ -467,7 +659,11 @@ export async function POST(request: Request): Promise<Response> {
       conciergeTargets,
       actionAttribution,
     );
-    const visibleContent = actionOnlyAcknowledgement(actions);
+    const visibleContent = deterministicClarifier ?? deterministicZeroResultAnswer ?? deterministicOrdinalUnavailableAnswer ?? deterministicOrdinalReferenceAnswer ?? deterministicSelectedVehicleAnswer ?? deterministicSelectedVehicleUnavailableAnswer ?? deterministicUnsupportedFactAnswer ?? deterministicAvailabilityAnswer ?? deterministicInventoryAnswer ?? actionOnlyAcknowledgement(actions);
+    captureDebug("api/chat/actions", {
+      tenantId: tenant.tenantId,
+      actionsEmitted: actionDebugSummary(actions),
+    });
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -493,6 +689,7 @@ export async function POST(request: Request): Promise<Response> {
         if (memoryKey && visibleContent) {
           await memoryStore.append(memoryKey, {
             messages: [lastUser, { role: "assistant", content: visibleContent }],
+            conversationState,
           }).catch((error: unknown) => {
             captureError("api/chat/memory-write", error, {
               tenantId: tenant.tenantId,
@@ -612,9 +809,11 @@ export async function POST(request: Request): Promise<Response> {
         );
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
-        groundLeadCaptureActions(
-          filterPlanAllowedActions(chatActionsEnabled, modelActions, persona.capabilities),
-          modelMessages,
+        filterConversationActions(
+          groundLeadCaptureActions(
+            filterPlanAllowedActions(chatActionsEnabled, modelActions, persona.capabilities),
+            modelMessages,
+          ),
         ),
         conciergeTargets,
         groundedVehicleIds,
@@ -624,6 +823,10 @@ export async function POST(request: Request): Promise<Response> {
     );
     const visibleContent =
       filteredContent || actionOnlyAcknowledgement(actions);
+    captureDebug("api/chat/actions", {
+      tenantId: tenant.tenantId,
+      actionsEmitted: actionDebugSummary(actions),
+    });
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -647,6 +850,7 @@ export async function POST(request: Request): Promise<Response> {
         if (memoryKey && visibleContent) {
           await memoryStore.append(memoryKey, {
             messages: [lastUser, { role: "assistant", content: visibleContent }],
+            conversationState,
           }).catch((error: unknown) => {
             captureError("api/chat/memory-write", error, { tenantId: tenant.tenantId });
           });
@@ -756,9 +960,11 @@ export async function POST(request: Request): Promise<Response> {
           );
       for (const action of prepareBotActionsForClient(
         filterGroundedVehicleActions(
-          groundLeadCaptureActions(
-            filterPlanAllowedActions(chatActionsEnabled, initialActions, persona.capabilities),
-            modelMessages,
+          filterConversationActions(
+            groundLeadCaptureActions(
+              filterPlanAllowedActions(chatActionsEnabled, initialActions, persona.capabilities),
+              modelMessages,
+            ),
           ),
           conciergeTargets,
           groundedVehicleIds,
@@ -770,6 +976,10 @@ export async function POST(request: Request): Promise<Response> {
         controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
         emittedActions.push(action);
       }
+      captureDebug("api/chat/actions", {
+        tenantId: tenant.tenantId,
+        actionsEmitted: actionDebugSummary(emittedActions),
+      });
 
       const reader = upstreamBody.getReader();
       let sseLineBuffer = "";
@@ -782,16 +992,18 @@ export async function POST(request: Request): Promise<Response> {
         if (hasDeterministicActions) return;
         for (const action of prepareBotActionsForClient(
           filterGroundedVehicleActions(
-            groundLeadCaptureActions(
-              filterPlanAllowedActions(
-                chatActionsEnabled,
-                filterModelNavigationActionsByUserIntent(
-                  actions,
-                  modelMessages,
+            filterConversationActions(
+              groundLeadCaptureActions(
+                filterPlanAllowedActions(
+                  chatActionsEnabled,
+                  filterModelNavigationActionsByUserIntent(
+                    actions,
+                    modelMessages,
+                  ),
+                  persona.capabilities,
                 ),
-                persona.capabilities,
+                modelMessages,
               ),
-              modelMessages,
             ),
             conciergeTargets,
             groundedVehicleIds,
@@ -803,6 +1015,10 @@ export async function POST(request: Request): Promise<Response> {
           controller.enqueue(encoder.encode(sseEvent({ type: "action", action })));
           emittedActions.push(action);
         }
+        captureDebug("api/chat/actions", {
+          tenantId: tenant.tenantId,
+          actionsEmitted: actionDebugSummary(emittedActions),
+        });
       };
 
       const emitActionOnlyAcknowledgement = () => {
@@ -888,6 +1104,7 @@ export async function POST(request: Request): Promise<Response> {
         if (streamCompletionObserved && memoryKey && assistantContent.trim()) {
           await memoryStore.append(memoryKey, {
             messages: [lastUser, { role: "assistant", content: assistantContent }],
+            conversationState,
             toolResults: turn.steps.map((step) => ({
               name: step.call.name,
               result: step.result,
@@ -929,8 +1146,227 @@ function priorVisitorQueries(messages: readonly MemoryMessage[]): string[] {
   return queries;
 }
 
-function isOrdinalVehicleSelection(value: string): boolean {
-  return /\b(?:open|show|view|take me to)\s+(?:the\s+)?(?:first|second|third|last)\s+(?:one|vehicle|car|listing)\b/i.test(value);
+function previousAssistantContentForLastUser(
+  messages: readonly MemoryMessage[],
+): string | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role !== "user") continue;
+    const previous = messages[index - 1];
+    return previous?.role === "assistant" ? previous.content : null;
+  }
+  return null;
+}
+
+function resolveAnonymousConversationId(
+  requested: string | undefined,
+  startNewSession: boolean,
+): string {
+  if (!startNewSession && requested && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requested)) {
+    return requested;
+  }
+  return crypto.randomUUID();
+}
+
+/** Answer direct availability questions from the verified inventory match set. */
+function availabilityAnswerFromGroundedInventory(
+  userText: string,
+  filters: ReturnType<typeof extractVehicleFilters>,
+  vehicles: readonly Vehicle[],
+  totalMatched: number,
+): string | null {
+  const isAvailabilityQuestion = /\b(?:do you have|you have|have any|are there|is there|any)\b/i.test(userText);
+  if (!isAvailabilityQuestion || (!filters.make && !filters.model)) return null;
+
+  const requested = [
+    filters.year,
+    filters.make,
+    filters.model,
+  ].filter((value): value is string | number => value !== undefined).join(" ") || "matching vehicles";
+
+  if (totalMatched === 0) return `No — there are no ${requested} vehicles in inventory right now.`;
+
+  const count = `${totalMatched} matching ${requested} vehicle${totalMatched === 1 ? "" : "s"}`;
+  const examples = vehicles.slice(0, 3).map((vehicle) => {
+    const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+      .filter(Boolean)
+      .join(" ");
+    return `${label} — Est. $${vehicle.price.toLocaleString()}.`;
+  });
+  return `Yes — ${count} ${totalMatched === 1 ? "is" : "are"} available.${examples.length ? ` ${examples.join(" ")}` : ""}`;
+}
+
+function isDirectInventoryPresentationRequest(
+  userText: string,
+  filters: ReturnType<typeof extractVehicleFilters>,
+): boolean {
+  if (Object.keys(filters).length === 0) return false;
+  if (/\b(?:do you have|you have|have any|are there|is there)\b/i.test(userText)) return false;
+  return /\b(?:show|find|browse|list|inventory|under|over|between|budget|looking|need|want|cars?|vehicles?|cheapest|least\s+expensive|most\s+expensive|lowest|highest)\b/i.test(userText);
+}
+
+function inventoryResultAnswer(
+  vehicles: readonly Vehicle[],
+  totalMatched: number,
+): string {
+  const examples = vehicles.slice(0, 3).map((vehicle, index) => {
+    const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+      .filter(Boolean)
+      .join(" ");
+    return `${index + 1}. ${label} — Est. $${vehicle.price.toLocaleString()}`;
+  });
+  return `${totalMatched} matching vehicle${totalMatched === 1 ? "" : "s"} found.${examples.length ? ` ${examples.join(" · ")}.` : ""}`;
+}
+
+/** Recommendation language must not make the model invent market or condition claims. */
+function isInventoryRecommendationRequest(userText: string): boolean {
+  return /\b(?:recommend(?:ation)?|suggest(?:ion)?|help\s+me\s+choose|which\s+(?:one|vehicle|car)\s+(?:should|would)|best\s+(?:one|vehicle|car|bmw|toyota|suv|sedan))\b/i.test(userText);
+}
+
+function inventoryRecommendationAnswer(
+  vehicles: readonly Vehicle[],
+  totalMatched: number,
+): string {
+  const examples = vehicles.slice(0, 3).map((vehicle, index) => {
+    const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+      .filter(Boolean)
+      .join(" ");
+    const details = [
+      `Est. $${vehicle.price.toLocaleString()}`,
+      vehicle.mileage === null ? null : `${vehicle.mileage.toLocaleString()} mi`,
+      vehicle.bodyStyle || null,
+      vehicle.drivetrain || null,
+    ].filter((value): value is string => Boolean(value));
+    return `${index + 1}. ${label} — ${details.join(" · ")}`;
+  });
+  return `${totalMatched} verified matching vehicle${totalMatched === 1 ? "" : "s"} are available. ${examples.join(" · ")}. Tell me your budget, preferred body style, or mileage target and I’ll narrow the list.`;
+}
+
+/** A non-navigational ordinal follow-up is answered from the stored result, never a fresh query. */
+function ordinalVehicleReferenceAnswer(userText: string, vehicle: Vehicle): string {
+  const ordinal = /\b(first|second|third|last)\s+(?:one|vehicle|car|listing)\b/i.exec(userText)?.[1]?.toLowerCase() ?? "selected";
+  const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+    .filter(Boolean)
+    .join(" ");
+  const details = [
+    vehicle.mileage !== null ? `${vehicle.mileage.toLocaleString()} mi` : null,
+    vehicle.drivetrain || null,
+    vehicle.sellerCity && vehicle.sellerState ? `${vehicle.sellerCity}, ${vehicle.sellerState}` : null,
+  ].filter((value): value is string => Boolean(value));
+  return `The ${ordinal} result is ${label} — Est. $${vehicle.price.toLocaleString()}${details.length ? ` · ${details.join(" · ")}` : ""}.`;
+}
+
+function selectedVehicleDetailAnswer(userText: string, vehicle: Vehicle): string {
+  const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+    .filter(Boolean)
+    .join(" ");
+  const requestedDrivetrain = /\b(?:awd|fwd|rwd)\b/i.exec(userText)?.[0]?.toUpperCase();
+  if (requestedDrivetrain) {
+    const listed = vehicle.drivetrain || "not listed";
+    return listed.toUpperCase() === requestedDrivetrain
+      ? `Yes — ${label} is listed as ${listed}.`
+      : `No — ${label} is listed as ${listed}.`;
+  }
+  if (/\bhow\s+many\s+(?:miles|mileage)\b/i.test(userText)) {
+    return vehicle.mileage === null
+      ? `${label} does not have mileage listed in the current inventory data.`
+      : `${label} is listed with ${vehicle.mileage.toLocaleString()} miles.`;
+  }
+  const details = [
+    `Est. $${vehicle.price.toLocaleString()}`,
+    vehicle.mileage === null ? null : `${vehicle.mileage.toLocaleString()} mi`,
+    vehicle.drivetrain || null,
+    vehicle.fuelType || null,
+    vehicle.sellerCity && vehicle.sellerState ? `${vehicle.sellerCity}, ${vehicle.sellerState}` : null,
+  ].filter((value): value is string => Boolean(value));
+  return `${label} — ${details.join(" · ")}.`;
+}
+
+function unsupportedVehicleFactAnswer(
+  userText: string,
+  vehicle: Vehicle | null,
+): string {
+  const rawTopic = /\b(?:reliab(?:le|ility)|accident|carfax|history|condition|maintenance|service\s+records?|heated\s+seats?|ventilated\s+seats?|options?|features?)\b/i.exec(userText)?.[0]?.toLowerCase();
+  const topic = rawTopic?.startsWith("reliab") ? "reliability"
+    : rawTopic ?? "that detail";
+  const label = vehicle
+    ? [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ")
+    : null;
+  return `I don’t have verified ${topic} information${label ? ` for ${label}` : " in the current inventory data"}, so I won’t guess. I can help with the listed price, mileage, drivetrain, fuel type, and location—or you can contact the seller to confirm it.`;
+}
+
+function inventoryFilterAction(
+  filters: ReturnType<typeof extractVehicleFilters>,
+): BotAction {
+  return {
+    type: "filter_inventory",
+    ...(filters.make ? { make: filters.make } : {}),
+    ...(filters.model ? { model: filters.model } : {}),
+    ...(filters.bodyStyle ? { bodyStyle: filters.bodyStyle } : {}),
+    ...(filters.stockType ? { stockType: filters.stockType } : {}),
+    ...(filters.fuelType ? { fuelType: filters.fuelType } : {}),
+    ...(filters.drivetrain ? { drivetrain: filters.drivetrain } : {}),
+    ...(filters.sellerState ? { sellerState: filters.sellerState } : {}),
+    ...(filters.sellerCity ? { sellerCity: filters.sellerCity } : {}),
+    ...(filters.year !== undefined ? { yearMin: filters.year, yearMax: filters.year } : {}),
+    ...(filters.year === undefined && filters.yearMin !== undefined ? { yearMin: filters.yearMin } : {}),
+    ...(filters.year === undefined && filters.yearMax !== undefined ? { yearMax: filters.yearMax } : {}),
+    ...(filters.mileageMax !== undefined ? { mileageMax: filters.mileageMax } : {}),
+    ...(filters.priceMin !== undefined ? { priceMin: filters.priceMin } : {}),
+    ...(filters.priceMax !== undefined ? { priceMax: filters.priceMax } : {}),
+    ...(filters.sort ? { sort: filters.sort } : {}),
+  };
+}
+
+/** Keep a refinement honest without silently widening to all inventory. */
+function zeroResultAnswer(filters: ReturnType<typeof extractVehicleFilters>): string {
+  // Every active facet must appear, so a refinement that eliminated the last
+  // match is named. Omitting e.g. drivetrain made "no BMW SUV under $70k" read
+  // as if none exist, when one does and is only excluded by the AWD filter.
+  const yearLabel =
+    filters.year !== undefined ? String(filters.year)
+      : filters.yearMin !== undefined && filters.yearMax !== undefined ? `${filters.yearMin}–${filters.yearMax}`
+        : filters.yearMin !== undefined ? `${filters.yearMin} or newer`
+          : filters.yearMax !== undefined ? `${filters.yearMax} or older`
+            : undefined;
+  const mileageLabel = filters.mileageMax !== undefined
+    ? `under ${filters.mileageMax.toLocaleString()} miles`
+    : undefined;
+  const location = [filters.sellerCity, filters.sellerState].filter(Boolean).join(", ");
+  const locationLabel = location ? `in ${location}` : undefined;
+  const constraints = [
+    yearLabel,
+    filters.stockType,
+    filters.drivetrain,
+    filters.fuelType,
+    filters.make,
+    filters.model,
+    filters.bodyStyle,
+    mileageLabel,
+    priceConstraintLabel(filters),
+    locationLabel,
+  ].filter((value): value is string => Boolean(value));
+  const description = constraints.length > 0 ? constraints.join(" ") : "that refinement";
+  return `Nothing matches ${description} right now. I’ve kept your previous results in place rather than widening the search—would you like to relax a constraint?`;
+}
+
+function priceConstraintLabel(filters: ReturnType<typeof extractVehicleFilters>): string | undefined {
+  if (filters.priceMin !== undefined && filters.priceMax !== undefined) {
+    return `between $${filters.priceMin.toLocaleString()} and $${filters.priceMax.toLocaleString()}`;
+  }
+  if (filters.priceMax !== undefined) return `under $${filters.priceMax.toLocaleString()}`;
+  if (filters.priceMin !== undefined) return `over $${filters.priceMin.toLocaleString()}`;
+  return undefined;
+}
+
+function actionDebugSummary(actions: readonly BotAction[]): Array<Record<string, string | undefined>> {
+  return actions.map((action) => ({
+    type: action.type,
+    vehicleId: action.type === "navigate-target"
+      ? action.params?.vehicleId
+      : action.type === "highlight-vehicle" || action.type === "open-lead-form" || action.type === "capture_lead"
+        ? action.vehicleId
+        : undefined,
+  }));
 }
 
 function stringArray(value: unknown): string[] {

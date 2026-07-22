@@ -129,7 +129,7 @@ export const DEFAULT_PAGES: DefaultPageSeed[] = [
         {
           id: "vehicles-inventory",
           type: "vehicle-inventory",
-          props: { title: "", showFilters: true },
+          props: { title: "", showFilters: true, cardStyle: "classic", cardColor: "#B68A35" },
         },
       ],
     },
