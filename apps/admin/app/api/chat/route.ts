@@ -503,7 +503,15 @@ export async function POST(request: Request): Promise<Response> {
       for (const vehicle of matchedVehicles) groundedVehicleIds.add(vehicle.id);
       totalMatched = match.totalCount ?? matchedVehicles.length;
       if (totalMatched === 0 && conversationState.resultSet) {
-        conversationState = preserveResultSetForZeroResults(conversationState);
+        // Roll back to the filters that were active before this turn — a
+        // zero-yield refinement must not compound into the next turn, and the
+        // public inventory link should keep pointing at the last filters that
+        // actually returned matches, not the dead combination just attempted.
+        conversationState = preserveResultSetForZeroResults(
+          conversationState,
+          conversationStateBefore.activeFilters,
+        );
+        groundedInventoryFilters = conversationStateBefore.activeFilters;
         deterministicZeroResultAnswer = zeroResultAnswer(filters);
       } else {
         conversationState = setConversationResultSet(

@@ -71,6 +71,25 @@ describe("chat conversation inventory state", () => {
     expect(transition.rules).toContain("clear_make_model_scope");
   });
 
+  it("resets fully on 'all makes' — this phrasing previously failed to match", () => {
+    const transition = transitionInventoryState({
+      ...emptyConversationInventoryState(),
+      activeFilters: { make: "BMW", bodyStyle: "SUV", drivetrain: "AWD", priceMax: 70_000 },
+    }, "show me all makes", {}, true);
+    expect(transition.state.activeFilters).toEqual({});
+    expect(transition.rules).toContain("clear_make_model_scope");
+  });
+
+  it("resets fully on 'a different make' / 'another make'", () => {
+    for (const phrase of ["what about a different make?", "show me another make"]) {
+      const transition = transitionInventoryState({
+        ...emptyConversationInventoryState(),
+        activeFilters: { make: "BMW", bodyStyle: "SUV", priceMax: 70_000 },
+      }, phrase, {}, true);
+      expect(transition.state.activeFilters).toEqual({});
+    }
+  });
+
   it("replaces a negated make with the visitor's newly named make", () => {
     const transition = transitionInventoryState({
       ...emptyConversationInventoryState(),
@@ -260,8 +279,30 @@ describe("chat conversation inventory state", () => {
     expect(allInventory.state.activeFilters).toEqual({ priceMax: 10_000 });
 
     const emptyRefinement = { ...allInventory.state, resultSet: state.resultSet };
-    expect(preserveResultSetForZeroResults(emptyRefinement).resultSet).toEqual(state.resultSet);
+    const preserved = preserveResultSetForZeroResults(emptyRefinement, budget.state.activeFilters);
+    expect(preserved.resultSet).toEqual(state.resultSet);
+    expect(preserved.activeFilters).toEqual(budget.state.activeFilters);
     expect(ordinalResultSetVehicleId("open the second one", emptyRefinement.resultSet)).toBe(SECOND);
     expect(vehicleSatisfiesActiveFilters(vehicle(SECOND, 26_000), allInventory.state.activeFilters)).toBe(false);
+  });
+
+  it("rolls active filters back to pre-turn state on a zero-yield refinement (reproduces the 'stuck on BMW' failure)", () => {
+    // "BMW SUVs under 70k" -> "only AWD ones" (zero matches) must not
+    // permanently graft drivetrain:AWD onto every later turn.
+    const priorFilters = { make: "BMW", bodyStyle: "SUV", priceMax: 70_000 };
+    const zeroYieldState = {
+      ...emptyConversationInventoryState(),
+      activeFilters: { ...priorFilters, drivetrain: "AWD" },
+      resultSet: { orderedIds: [FIRST], totalCount: 1, filtersApplied: priorFilters, createdAtTurn: 0 },
+    };
+    const preserved = preserveResultSetForZeroResults(zeroYieldState, priorFilters);
+    expect(preserved.activeFilters).toEqual(priorFilters);
+    expect(preserved.activeFilters.drivetrain).toBeUndefined();
+    expect(preserved.resultSet).toEqual(zeroYieldState.resultSet);
+
+    // Repeating the same make afterward must resolve against the rolled-back
+    // (working) filters, not re-merge the dead drivetrain constraint.
+    const repeated = transitionInventoryState(preserved, "BMW", { make: "BMW" }, true);
+    expect(repeated.state.activeFilters).toEqual(priorFilters);
   });
 });

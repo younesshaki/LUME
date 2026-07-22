@@ -28,8 +28,15 @@ const FILTER_KEYS = [
   "priceMin", "priceMax", "sort",
 ] as const satisfies readonly (keyof VehicleQueryFilters)[];
 
-const SCOPE_RESET_PATTERN = /\b(?:all\s+(?:inventory|vehicles|cars)|in\s+general|regardless\s+of\s+(?:make|brand)|(?:not|without|except)\s+(?:talking\s+about\s+)?(?:a\s+)?[a-z][a-z-]*|no\s+(?!more\b|less\b)(?:talking\s+about\s+)?(?:a\s+)?[a-z][a-z-]*|forget\s+(?:about\s+)?[a-z][a-z-]*)\b/i;
-const FULL_INVENTORY_RESET_PATTERN = /\b(?:all\s+(?:inventory|vehicles|cars)|in\s+general|regardless\s+of\s+(?:make|brand))\b/i;
+// "all makes" and "different/another make" are as explicit a reset signal as
+// "all inventory" — live-reproduced 2026-07-22: this phrasing silently failed
+// to match, so the concierge stayed pinned to a dead filter combination with
+// no way out short of the exact words "all inventory".
+const FULL_INVENTORY_RESET_PATTERN = /\b(?:all\s+(?:inventory|vehicles|cars|makes)|in\s+general|regardless\s+of\s+(?:make|brand)|(?:a\s+|any\s+)?(?:different|another)\s+make)\b/i;
+const SCOPE_RESET_PATTERN = new RegExp(
+  `${FULL_INVENTORY_RESET_PATTERN.source}|(?:not|without|except)\\s+(?:talking\\s+about\\s+)?(?:a\\s+)?[a-z][a-z-]*|no\\s+(?!more\\b|less\\b)(?:talking\\s+about\\s+)?(?:a\\s+)?[a-z][a-z-]*|forget\\s+(?:about\\s+)?[a-z][a-z-]*`,
+  "i",
+);
 const PRESENTATION_PATTERN = /^(?:show\s+me|(?:show|browse|view)\s+(?:me\s+)?(?:them|those|the\s+(?:results|list|inventory)))\s*[.!?]*$/i;
 const ORDINAL_REFERENCE_PATTERN = /\b(?:the\s+)?(first|second|third|last)\s+(?:one|vehicle|car|listing)\b/i;
 const ORDINAL_ACTION_PATTERN = /\b(?:open|show|view|take\s+me\s+to)\s+(?:the\s+)?(?:first|second|third|last)\s+(?:one|vehicle|car|listing)\b/i;
@@ -124,10 +131,20 @@ export function setConversationResultSet(
   };
 }
 
+/**
+ * A refinement that matches nothing must not become sticky. Without rolling
+ * activeFilters back to how they stood before this turn, every zero-yield
+ * facet ("AWD", then "2026", ...) permanently compounds onto the next turn —
+ * live-reproduced 2026-07-22: BMW SUV <70k -> AWD -> 2026 accumulated into an
+ * unrecoverable dead filter combo that no later turn (even repeating the same
+ * make) could escape without the visitor guessing "all inventory" verbatim.
+ * The result-set snapshot and turn counter are still preserved for continuity.
+ */
 export function preserveResultSetForZeroResults(
   state: ConversationInventoryState,
+  priorFilters: VehicleQueryFilters,
 ): ConversationInventoryState {
-  return { ...state };
+  return { ...state, activeFilters: priorFilters };
 }
 
 export function selectConversationVehicle(
