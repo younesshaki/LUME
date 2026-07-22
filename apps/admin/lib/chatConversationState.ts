@@ -66,10 +66,13 @@ export function transitionInventoryState(
   const nextTurn = current.turn + 1;
   const resetScope = hasScopeResetIntent(userText);
   const normalizedExtracted = pickFilters(extractedFilters);
-  // Naming a different make starts a new search for that make: a model is
-  // make-specific, so a prior Toyota "Camry" must not survive into a Cadillac
-  // search ("do you have a camry?" -> "what about a caddy?"). Body style,
-  // price, and year are make-agnostic and are intentionally retained.
+  // Naming a different make starts a new search for that make. A model AND a
+  // model year are tied to the specific vehicle the visitor had in mind — a
+  // prior "2026 Camry" must not silently survive into "what about a caddy?"
+  // (dropping Camry) or into "BMW SUVs under 70k" three turns later (dropping
+  // year:2026, which previously forced a real BMW match to a false zero-result
+  // — reproduced live 2026-07-22). Body style, price, drivetrain, mileage, and
+  // location read as standing visitor preferences and are intentionally kept.
   const switchesMake =
     normalizedExtracted.make !== undefined &&
     current.activeFilters.make !== undefined &&
@@ -79,10 +82,11 @@ export function transitionInventoryState(
     normalizedExtracted.model === undefined &&
     current.activeFilters.model !== undefined &&
     current.activeFilters.make !== normalizedExtracted.make;
+  const clearsVehicleScope = switchesMake || clearsStrandedModel;
   const base = resetScope
     ? clearScopeFilters(current.activeFilters, userText)
-    : switchesMake || clearsStrandedModel
-      ? dropModelScope(current.activeFilters)
+    : clearsVehicleScope
+      ? dropVehicleSpecificScope(current.activeFilters)
       : current.activeFilters;
   const activeFilters = mergeFilters(base, normalizedExtracted);
   const hasExplicitFilters = Object.keys(normalizedExtracted).length > 0 || resetScope;
@@ -91,7 +95,7 @@ export function transitionInventoryState(
   const selectedAction = selectedResultSetVehicleId(userText, current);
   const rules = [
     ...(resetScope ? ["clear_make_model_scope"] : []),
-    ...(!resetScope && (switchesMake || clearsStrandedModel) ? ["clear_model_on_make_change"] : []),
+    ...(!resetScope && clearsVehicleScope ? ["clear_model_on_make_change"] : []),
     ...(useStoredResultSet ? ["reuse_result_set"] : []),
     ...(ordinal ? ["ordinal_from_result_set"] : []),
     ...(selectedAction ? ["selected_vehicle_from_result_set"] : []),
@@ -327,9 +331,13 @@ function clearScopeFilters(filters: VehicleQueryFilters, userText: string): Vehi
   return remaining;
 }
 
-/** Drop only the make-specific model; make-agnostic facets are retained. */
-function dropModelScope(filters: VehicleQueryFilters): VehicleQueryFilters {
-  const { model: _model, ...remaining } = filters;
+/**
+ * Drop the model and model-year — both describe the specific vehicle the
+ * visitor had in mind, not a standing preference. Body style, price,
+ * drivetrain, mileage, stock type, and location are retained.
+ */
+function dropVehicleSpecificScope(filters: VehicleQueryFilters): VehicleQueryFilters {
+  const { model: _model, year: _year, yearMin: _yearMin, yearMax: _yearMax, ...remaining } = filters;
   return remaining;
 }
 

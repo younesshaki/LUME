@@ -98,6 +98,38 @@ describe("chat conversation inventory state", () => {
     });
   });
 
+  it("clears a stranded model YEAR on a make switch (reproduces the 2026-07-22 live failure)", () => {
+    // "do you have a 2026 Camry?" -> ... -> "BMW SUVs under 70k" three turns
+    // later must not silently stay pinned to year:2026 — that previously
+    // forced a real BMW match to a false zero-result.
+    const transition = transitionInventoryState({
+      ...emptyConversationInventoryState(),
+      activeFilters: { make: "Toyota", model: "Camry", year: 2026 },
+    }, "BMW SUVs under 70k", { make: "BMW", bodyStyle: "SUV", priceMax: 70_000 }, true);
+    expect(transition.state.activeFilters).toEqual({
+      make: "BMW", bodyStyle: "SUV", priceMax: 70_000,
+    });
+    expect(transition.state.activeFilters.year).toBeUndefined();
+  });
+
+  it("clears a yearMin/yearMax range on a make switch, same as an exact year", () => {
+    const transition = transitionInventoryState({
+      ...emptyConversationInventoryState(),
+      activeFilters: { make: "Toyota", yearMin: 2024, yearMax: 2026 },
+    }, "what about Honda", { make: "Honda" }, true);
+    expect(transition.state.activeFilters).toEqual({ make: "Honda" });
+  });
+
+  it("keeps model year when the visitor stays on the same make", () => {
+    const transition = transitionInventoryState({
+      ...emptyConversationInventoryState(),
+      activeFilters: { make: "Toyota", model: "Camry", year: 2026 },
+    }, "under 40k", { priceMax: 40_000 }, true);
+    expect(transition.state.activeFilters).toEqual({
+      make: "Toyota", model: "Camry", year: 2026, priceMax: 40_000,
+    });
+  });
+
   it("resolves ordinals from stored order without a re-query", () => {
     const state = setConversationResultSet(emptyConversationInventoryState(), [vehicle(FIRST), vehicle(SECOND)], 2);
     const transition = transitionInventoryState(state, "open the second one", {}, true);
