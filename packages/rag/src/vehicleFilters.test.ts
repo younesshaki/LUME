@@ -163,8 +163,48 @@ describe("vehicle query intent", () => {
     ["BMWs, my ceiling is 45 grand", { make: "BMW", priceMax: 45_000 }],
     ["BMWs, I have 60 large available", { make: "BMW", priceMax: 60_000 }],
     ["BMWs under fifty grand", { make: "BMW", priceMax: 50_000 }],
+    ["I got a 10k budget", { priceMax: 10_000 }],
+    ["budget of 10k", { priceMax: 10_000 }],
+    ["looking to spend 10k", { priceMax: 10_000 }],
   ])("understands informal price ceilings and floors: %s", (query, expected) => {
     expect(extractVehicleFilters(query)).toMatchObject(expected);
+  });
+
+  it("does not extract a negated make during an all-inventory reset", () => {
+    expect(
+      extractVehicleFilters(
+        "I'm not talking about Toyota, I'm talking in general",
+        [],
+        { makes: ["Toyota"], models: ["Camry"] },
+      ),
+    ).toEqual({});
+    expect(
+      extractVehicleFilters(
+        "all inventory under 10k, regardless of make",
+        [],
+        { makes: ["Toyota"], models: ["Camry"] },
+      ),
+    ).toEqual({ priceMax: 10_000 });
+  });
+
+  it("keeps an affirmative replacement make/model after a negated scope", () => {
+    const vocabulary = {
+      makes: ["Toyota", "BMW"],
+      models: ["Camry", "X5"],
+    };
+    expect(
+      extractVehicleFilters("not Toyota — show me BMWs X5s instead under 70k", [], vocabulary),
+    ).toEqual({ make: "BMW", model: "X5", priceMax: 70_000 });
+    expect(
+      extractVehicleFilters("no Camry, I want an X5", [], vocabulary),
+    ).toEqual({ model: "X5" });
+  });
+
+  it("keeps a natural budget statement free of fuzzy make/model filters", () => {
+    expect(extractVehicleFilters("I got a 10k budget", [], {
+      makes: ["Toyota"],
+      models: ["Ghost", "Camry"],
+    })).toEqual({ priceMax: 10_000 });
   });
 
   it.each([
@@ -210,10 +250,42 @@ describe("vehicle query intent", () => {
     });
   });
 
+  it("does not mistake a model name for a similarly spelled make alias", () => {
+    expect(
+      extractVehicleFilters("you have a 2026 camry?", [], {
+        makes: ["Toyota", "Cadillac"],
+        models: ["Camry", "Escalade"],
+      }),
+    ).toEqual({ year: 2026, model: "Camry" });
+  });
+
+  it("does not turn an ordinal continuation into a fuzzy model filter", () => {
+    expect(
+      extractVehicleFilters("open the first one", [], { models: ["Fiesta"] }),
+    ).toEqual({});
+  });
+
   it("never turns a generic vehicle word into a fuzzy catalog model", () => {
     expect(
       extractVehicleFilters("show cars under 50k", [], { models: ["Camry"] }),
     ).toEqual({ priceMax: 50_000 });
+  });
+
+  it("does not let a make alias fuzzy-match a differently-prefixed model", () => {
+    // "caddy" is the Cadillac make alias; it must not also become model "Camry"
+    // (c-a-dd-y vs c-a-mr-y share only two leading chars).
+    expect(
+      extractVehicleFilters("what about a caddy?", [], {
+        makes: ["Cadillac", "Toyota"],
+        models: ["Camry", "Escalade"],
+      }),
+    ).toEqual({ make: "Cadillac" });
+  });
+
+  it("still fuzzy-matches a real model typo that shares the prefix", () => {
+    expect(
+      extractVehicleFilters("do you have a cayene?", [], { models: ["Cayenne"] }),
+    ).toEqual({ model: "Cayenne" });
   });
 
   it("never turns conversational glue words into a fuzzy catalog model", () => {

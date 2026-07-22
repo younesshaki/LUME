@@ -20,7 +20,7 @@ export type ChatRequest = {
 export type ChatStreamMeta = {
   type: "meta";
   sourceCategories: string[];
-  /** Present only for a signed-in visitor with persisted chat history. */
+  /** Opaque server-issued ID used to retain bounded chat continuity. */
   sessionId?: string;
 };
 

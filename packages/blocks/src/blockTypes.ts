@@ -7,6 +7,7 @@ export type BlockValidationResult = { ok: true } | { ok: false; errors: string[]
 
 export type BlockFieldType =
   | "text"
+  | "color"
   | "textarea"
   | "number"
   | "boolean"
@@ -87,6 +88,10 @@ export type HeroBlockProps = z.infer<typeof heroSchema>;
 const requiredShortText = z.string().trim().min(1, "This field is required").max(180);
 const optionalShortText = z.string().max(180).optional().default("");
 const optionalBodyText = z.string().max(2_000).optional().default("");
+const hexColor = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Use a six-digit hex colour, for example #B68A35")
+  .default("#B68A35");
 const requiredBodyText = z.string().trim().min(1, "This field is required").max(2_000);
 const labelBodyItemSchema = z.object({
   label: z.string().trim().min(1, "Label is required").max(180),
@@ -408,14 +413,34 @@ export const BLOCK_DESCRIPTORS = {
     defaultProps: {
       title: "Vehicles",
       showFilters: true,
+      cardStyle: "classic" as const,
+      cardColor: "#B68A35",
     },
     schema: z.object({
       title: nullableString,
       showFilters: z.boolean().default(true),
+      cardStyle: z.enum(["classic", "notch"]).default("classic"),
+      cardColor: hexColor,
     }),
     fields: [
       { name: "title", label: "Title", type: "text" },
       { name: "showFilters", label: "Show filters", type: "boolean" },
+      {
+        name: "cardStyle",
+        label: "Vehicle card style",
+        type: "select",
+        options: [
+          { label: "Classic", value: "classic" },
+          { label: "Notch", value: "notch" },
+        ],
+        helpText: "Notch keeps all vehicle actions while adding a colour-led presentation.",
+      },
+      {
+        name: "cardColor",
+        label: "Notch card colour",
+        type: "color",
+        helpText: "Shown only with the Notch style. Changes appear in the live preview immediately.",
+      },
     ],
   }),
 

@@ -26,6 +26,26 @@ export type CapturedError = {
   at: string;
 };
 
+/** Opt-in, structured diagnostics for local/staging investigation. */
+export function captureDebug(
+  scope: string,
+  detail: Record<string, unknown>,
+): void {
+  if (process.env.LUME_CHAT_DEBUG?.trim() !== "1") return;
+  try {
+    const serialized = JSON.stringify({
+      level: "debug",
+      scope,
+      detail: boundedDebugDetail(detail),
+      at: new Date().toISOString(),
+    });
+    // Keep debug output separate from captureError's error telemetry.
+    console.info(serialized.slice(0, 12_000));
+  } catch {
+    // Debugging must never affect the request path.
+  }
+}
+
 const DEDUPE_WINDOW_MS = 60_000;
 const MAX_TRACKED_SIGNATURES = 1_000;
 const MAX_STACK_FRAMES = 8;
@@ -141,6 +161,16 @@ function sanitizeContext(context: ErrorContext): ErrorContext {
   for (const [key, value] of Object.entries(context)) {
     if (value === undefined) continue;
     out[key] = typeof value === "string" ? value.slice(0, 300) : value;
+  }
+  return out;
+}
+
+function boundedDebugDetail(value: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry === "string") out[key] = entry.slice(0, 300);
+    else if (Array.isArray(entry)) out[key] = entry.slice(0, 30);
+    else out[key] = entry;
   }
   return out;
 }
