@@ -11,7 +11,9 @@ import {
   updatePageNavOrder,
   validateNewPageSlug,
 } from "@lume/db";
+import { LayoutList, PanelsTopLeft } from "lucide-react";
 import type { Page } from "@lume/types";
+import Carousel, { type CarouselSlide } from "@/components/ui/carousel";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -27,6 +29,8 @@ type StatusState =
   | { type: "success"; message: string }
   | { type: "error"; message: string };
 
+type PagesView = "list" | "carousel";
+
 export default function PagesListClient({
   tenantId,
   tenantSlug,
@@ -35,6 +39,7 @@ export default function PagesListClient({
   const router = useRouter();
   const [pages, setPages] = useState(initialPages);
   const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
+  const [view, setView] = useState<PagesView>("list");
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
 
   async function reorderPages(activePageId: string, overPageId: string) {
@@ -123,6 +128,61 @@ export default function PagesListClient({
     }
   }
 
+  const pageActions = (page: Page) => (
+    <>
+      <Link
+        href={`/admin/${tenantSlug}/pages/${page.id}`}
+        className="text-xs font-medium text-neutral-200 hover:text-white"
+      >
+        Edit
+      </Link>
+      <button
+        type="button"
+        onClick={() => void handleDuplicate(page)}
+        className="text-xs font-medium text-neutral-200 hover:text-white"
+      >
+        Duplicate
+      </button>
+      <ConfirmActionDialog
+        title={`Archive /${page.slug}?`}
+        description="The page disappears from public navigation and stops rendering on the site. Its content and revisions are kept, so it can be restored later."
+        actionLabel="Archive page"
+        destructive={false}
+        onConfirm={() => void handleArchive(page)}
+      >
+        <button
+          type="button"
+          disabled={page.isReserved || Boolean(page.archivedAt)}
+          className="text-xs font-medium text-neutral-200 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Archive
+        </button>
+      </ConfirmActionDialog>
+      <ConfirmActionDialog
+        title={`Delete /${page.slug}?`}
+        description="This permanently removes the page and every one of its revisions. This action cannot be undone."
+        actionLabel="Delete page"
+        onConfirm={() => void handleDelete(page)}
+      >
+        <button
+          type="button"
+          disabled={page.isReserved}
+          className="text-xs font-medium text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Delete
+        </button>
+      </ConfirmActionDialog>
+    </>
+  );
+
+  const carouselSlides: CarouselSlide[] = pages.map((page) => ({
+    id: page.id,
+    title: page.title || page.slug,
+    description: `/${page.slug} · ${pageStatus(page)}${page.isReserved ? " · Reserved" : ""}`,
+    imageSrc: pagePreviewSrc(tenantSlug, page.slug),
+    footer: pageActions(page),
+  }));
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -131,12 +191,34 @@ export default function PagesListClient({
             Drag rows to reorder public navigation. Reserved pages cannot be deleted.
           </p>
         </div>
-        <Link
-          href={`/admin/${tenantSlug}/pages/new`}
-          className="rounded-md bg-neutral-950 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-        >
-          New Page
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border border-neutral-200 p-0.5 dark:border-neutral-800" aria-label="Pages view">
+            <button
+              type="button"
+              aria-label="List view"
+              aria-pressed={view === "list"}
+              onClick={() => setView("list")}
+              className={`rounded p-1.5 ${view === "list" ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950" : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+            >
+              <LayoutList className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Carousel view"
+              aria-pressed={view === "carousel"}
+              onClick={() => setView("carousel")}
+              className={`rounded p-1.5 ${view === "carousel" ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950" : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+            >
+              <PanelsTopLeft className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+          <Link
+            href={`/admin/${tenantSlug}/pages/new`}
+            className="rounded-md bg-neutral-950 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+          >
+            New Page
+          </Link>
+        </div>
       </div>
 
       {status.message && (
@@ -154,6 +236,15 @@ export default function PagesListClient({
         </div>
       )}
 
+      {view === "carousel" ? (
+        carouselSlides.length === 0 ? (
+          <div className="rounded-xl border px-4 py-12 text-center text-sm text-muted-foreground">
+            No pages found for this tenant.
+          </div>
+        ) : (
+          <Carousel slides={carouselSlides} />
+        )
+      ) : (
       <div className="overflow-hidden rounded-xl border">
         <table className="w-full text-sm">
           <thead>
@@ -260,6 +351,7 @@ export default function PagesListClient({
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
@@ -298,4 +390,10 @@ function createPageServiceClient(): Parameters<typeof updatePageNavOrder>[0] {
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function pagePreviewSrc(tenantSlug: string, slug: string): string | undefined {
+  if (tenantSlug !== "demo") return undefined;
+  const supported = new Set(["home", "vehicles", "products", "showcase", "contact"]);
+  return supported.has(slug) ? `/page-previews/demo-${slug}.jpg` : undefined;
 }
