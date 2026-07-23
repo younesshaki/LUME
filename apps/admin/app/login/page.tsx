@@ -34,7 +34,7 @@ export default function LoginPage() {
             <Button asChild variant="ghost" size="sm">
               <a href="#plans">Plans</a>
             </Button>
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="text-neutral-950">
               <a href="#sign-in">Sign in</a>
             </Button>
           </nav>
@@ -61,7 +61,7 @@ export default function LoginPage() {
             <Button asChild size="lg">
               <a href="#plans">View plans</a>
             </Button>
-            <Button asChild size="lg" variant="outline">
+            <Button asChild size="lg" variant="outline" className="text-neutral-950">
               <a href="#sign-in">Sign in</a>
             </Button>
           </div>
@@ -151,11 +151,11 @@ function PlanCard({ plan }: { plan: PlanCatalogEntry }) {
           ))}
         </ul>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="border-amber-100/15 bg-black/30">
         <Button
           asChild
           variant={plan.highlighted ? "default" : "outline"}
-          className="w-full"
+          className={cn("w-full", !plan.highlighted && "text-neutral-950")}
         >
           <a href={plan.ctaHref}>{plan.ctaLabel}</a>
         </Button>

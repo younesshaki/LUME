@@ -419,7 +419,7 @@ export const BLOCK_DESCRIPTORS = {
     schema: z.object({
       title: nullableString,
       showFilters: z.boolean().default(true),
-      cardStyle: z.enum(["classic", "notch"]).default("classic"),
+      cardStyle: z.enum(["classic", "notch", "bento"]).default("classic"),
       cardColor: hexColor,
     }),
     fields: [
@@ -432,14 +432,15 @@ export const BLOCK_DESCRIPTORS = {
         options: [
           { label: "Classic", value: "classic" },
           { label: "Notch", value: "notch" },
+          { label: "Bento", value: "bento" },
         ],
-        helpText: "Notch keeps all vehicle actions while adding a colour-led presentation.",
+        helpText: "Notch keeps all vehicle actions while adding a colour-led presentation. Bento arranges vehicles in an asymmetric grid with periodic larger tiles.",
       },
       {
         name: "cardColor",
-        label: "Notch card colour",
+        label: "Notch / Bento accent colour",
         type: "color",
-        helpText: "Shown only with the Notch style. Changes appear in the live preview immediately.",
+        helpText: "Shown with the Notch and Bento styles. Changes appear in the live preview immediately.",
       },
     ],
   }),

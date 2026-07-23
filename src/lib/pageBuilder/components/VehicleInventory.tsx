@@ -12,6 +12,7 @@ import {
 import {
   DEFAULT_FILTERS,
   VEHICLE_SORT_OPTIONS,
+  activeFilterChips,
   countActiveFilters,
   formatVehiclePrice,
   loadVehicleCount,
@@ -107,8 +108,14 @@ function IconButton({
   );
 }
 
+// Every 5th tile (0-indexed: 4, 9, 14, ...) is the Bento layout's larger
+// "featured" tile — periodic rather than fixed indices so the effect reads
+// consistently regardless of how many vehicles the current page/filter has.
+const BENTO_FEATURED_INTERVAL = 5;
+
 function VehicleCard({
   vehicle,
+  index,
   saved,
   compared,
   compareDisabled,
@@ -119,16 +126,19 @@ function VehicleCard({
   onToggleCompare,
 }: {
   vehicle: Vehicle;
+  index: number;
   saved: boolean;
   compared: boolean;
   compareDisabled: boolean;
-  cardStyle: "classic" | "notch";
+  cardStyle: "classic" | "notch" | "bento";
   cardColor: string;
   onViewDetails: () => void;
   onToggleSaved: () => void;
   onToggleCompare: () => void;
 }) {
   const { play } = useSound();
+  const isBentoFeatured =
+    cardStyle === "bento" && index % BENTO_FEATURED_INTERVAL === BENTO_FEATURED_INTERVAL - 1;
 
   const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -138,9 +148,14 @@ function VehicleCard({
 
   return (
     <article
-      className={`vehiclesPage__card${cardStyle === "notch" ? " vehiclesPage__card--notch" : ""}`}
+      className={[
+        "vehiclesPage__card",
+        cardStyle === "notch" && "vehiclesPage__card--notch",
+        cardStyle === "bento" && "vehiclesPage__card--bento",
+        isBentoFeatured && "vehiclesPage__card--bento-featured",
+      ].filter(Boolean).join(" ")}
       style={
-        cardStyle === "notch"
+        cardStyle === "notch" || cardStyle === "bento"
           ? ({ "--vehicle-card-accent": cardColor } as CSSProperties & Record<"--vehicle-card-accent", string>)
           : undefined
       }
@@ -300,7 +315,8 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const isStandard = mode === "standard";
   const title = stringProp(block, "title");
   const showFilters = booleanProp(block, "showFilters", true);
-  const cardStyle = stringProp(block, "cardStyle", "classic") === "notch" ? "notch" : "classic";
+  const rawCardStyle = stringProp(block, "cardStyle", "classic");
+  const cardStyle = rawCardStyle === "notch" || rawCardStyle === "bento" ? rawCardStyle : "classic";
   const rawCardColor = stringProp(block, "cardColor", "#B68A35");
   const cardColor = /^#[0-9a-fA-F]{6}$/.test(rawCardColor) ? rawCardColor : "#B68A35";
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -391,6 +407,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const totalPages = totalCount === null ? Math.max(1, page) : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
+  const filterChips = useMemo(() => activeFilterChips(filters), [filters]);
 
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
@@ -526,6 +543,38 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
             </div>
           )}
 
+          {showFilters && filterChips.length > 0 && (
+            <div className="vehiclesPage__activeFilters" aria-label="Active filters">
+              {filterChips.map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  className="vehiclesPage__activeFilterChip"
+                  onClick={() => {
+                    play(vehiclePageSoundActions.filterChange);
+                    handleFilterChange(chip.clear);
+                  }}
+                >
+                  <span>{chip.label}</span>
+                  <X size={12} aria-hidden="true" />
+                  <span className="vehiclesPage__srOnly">Remove filter: {chip.label}</span>
+                </button>
+              ))}
+              {filterChips.length > 1 && (
+                <button
+                  type="button"
+                  className="vehiclesPage__activeFiltersClearAll"
+                  onClick={() => {
+                    setFilters(DEFAULT_FILTERS);
+                    setPage(1);
+                  }}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          )}
+
           <p className="vehiclesPage__demoNotice">
             Concept demo: prices and imagery are representative until verified listing data is connected.
           </p>
@@ -560,18 +609,19 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
           ) : (
             <>
               <motion.div
-                className="vehiclesPage__grid"
+                className={`vehiclesPage__grid${cardStyle === "bento" ? " vehiclesPage__grid--bento" : ""}`}
                 key={`${safePage}-${JSON.stringify(filters)}-${sort}`}
                 initial={{ opacity: 0, y: isStandard ? 0 : 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: isStandard ? 0.18 : 0.3 }}
               >
-                {vehicles.map((vehicle) => {
+                {vehicles.map((vehicle, index) => {
                   const compared = compareVehicleIds.includes(vehicle.id);
                   return (
                     <VehicleCard
                       key={vehicle.id}
                       vehicle={vehicle}
+                      index={index}
                       saved={savedVehicleIds.includes(vehicle.id)}
                       compared={compared}
                       compareDisabled={!compared && compareVehicleIds.length >= 3}

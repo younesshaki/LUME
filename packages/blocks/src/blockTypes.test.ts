@@ -112,5 +112,15 @@ describe("block descriptors", () => {
       ...inventory.defaultProps,
       cardStyle: "unknown",
     }).ok).toBe(false);
+    expect(inventory?.validate({
+      ...inventory.defaultProps,
+      cardStyle: "bento",
+      cardColor: "#1A6E8C",
+    })).toEqual({ ok: true });
+    expect(inventory?.validate({
+      ...inventory.defaultProps,
+      cardStyle: "bento",
+      cardColor: "teal",
+    }).ok).toBe(false);
   });
 });

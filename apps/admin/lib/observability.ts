@@ -46,6 +46,45 @@ export function captureDebug(
   }
 }
 
+export type ConciergeTranscriptTurn = {
+  sessionId: string;
+  tenantId: string;
+  /** Matches ConversationInventoryState.turn, so a transcript line and its
+   * corresponding conversation-state debug line can be correlated. */
+  turn: number;
+  userText: string;
+  assistantText: string;
+  /** Which response path produced assistantText — the single most useful
+   * field for spotting "this should have been deterministic but wasn't." */
+  source: "deterministic" | "model" | "tool";
+  actions: readonly Record<string, unknown>[];
+  toolCalls?: readonly { name: string; result: unknown }[];
+};
+
+/**
+ * One line per concierge turn with the FULL visitor message and FULL
+ * assistant reply — deliberately not size-bounded per-field like
+ * captureDebug, since a truncated transcript defeats the point of having
+ * one. Tag "level":"transcript" so it can be grepped independently of the
+ * lower-level "level":"debug" filter-state lines that share this same log
+ * stream. Gated by the same LUME_CHAT_DEBUG flag — never on by default, and
+ * this is server console output only, never sent to the visitor.
+ */
+export function captureConciergeTranscript(turn: ConciergeTranscriptTurn): void {
+  if (process.env.LUME_CHAT_DEBUG?.trim() !== "1") return;
+  try {
+    const serialized = JSON.stringify({
+      level: "transcript",
+      scope: "api/chat/transcript",
+      ...turn,
+      at: new Date().toISOString(),
+    });
+    console.info(serialized.slice(0, 40_000));
+  } catch {
+    // Debugging must never affect the request path.
+  }
+}
+
 const DEDUPE_WINDOW_MS = 60_000;
 const MAX_TRACKED_SIGNATURES = 1_000;
 const MAX_STACK_FRAMES = 8;
