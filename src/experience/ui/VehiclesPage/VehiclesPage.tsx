@@ -922,11 +922,11 @@ export default function VehiclesPage({
     return scheduleAfterPaint(() => setBackgroundReady(true));
   }, [backgroundReady, loadError, loading]);
 
+  // Write synchronously, not debounced: a debounced write left a window
+  // where a reload right after a filter change would read the stale hash
+  // and silently lose the filter (confirmed via Playwright, 2026-07-23).
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      writeVehicleUrlState(filters, sort, page);
-    }, 180);
-    return () => window.clearTimeout(timeout);
+    writeVehicleUrlState(filters, sort, page);
   }, [filters, page, sort]);
 
   const totalPages = totalCount === null ? Math.max(1, page) : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
