@@ -12,8 +12,15 @@
  *
  * Extend this file freely as new scenarios are designed — it's the running
  * regression suite for the concierge, not a fixed list.
+ *
+ * The exported `scenarios` compose the starter set below with the two
+ * exploration batches (concierge-scenarios-explore{,2}.mjs, 2026-07-23
+ * autonomous session), so the runner's default path covers everything.
  */
-export const scenarios = [
+import { scenarios as exploreScenarios } from "./concierge-scenarios-explore.mjs";
+import { scenarios as explore2Scenarios } from "./concierge-scenarios-explore2.mjs";
+
+const starterScenarios = [
   {
     name: "make-switch clears the stranded model (Camry -> Cadillac)",
     turns: [
@@ -51,65 +58,57 @@ export const scenarios = [
     ],
   },
   {
-    name: "CONFIRMED BUG 2026-07-23: 'a different make' asks a clarifying question but still shows the old make's results",
+    name: "FIXED 2026-07-23: 'a different make' gets a deterministic clarifier, never the old make's results",
     turns: [
       "show me BMW SUVs",
       {
         text: "what about a different make?",
+        expect: "which make",
         reject: "bmw",
-        // Live-reproduced 2026-07-23, source: "model". The reply correctly
-        // asks "What make are you interested in?" — the right move for an
-        // ambiguous "a different make" with no make named — but then, in
-        // the SAME reply, still lists the old BMW SUV results underneath
-        // ("Meanwhile, here's what I have... BMW SUVs Available: ..."),
-        // directly contradicting its own question. The full-reset regex fix
-        // (FULL_INVENTORY_RESET_PATTERN matching "a different make") is
-        // confirmed working for OTHER phrasings ("what about a different
-        // make?" -> BMW dropped is NOT what's broken) — the bug is that
-        // when the visitor doesn't name the new make, the model still has
-        // the old grounded BMW vehicles in its context and volunteers them
-        // anyway instead of waiting for an answer. Look at whether
-        // groundedVehicles/context should be suppressed (not just
-        // activeFilters cleared) when a reset fires without a replacement
-        // make in the same turn.
+        // Fixed 2026-07-23: isAmbiguousMakeSwitchRequest() in
+        // chatConversationState.ts now routes this to a deterministic
+        // clarifier ("which make would you like to see instead?") with NO
+        // query and NO grounded old-make vehicles — the reply can no longer
+        // contradict itself by listing BMWs under its own question, and it
+        // no longer depends on the model choosing to behave (source was
+        // "model" and flaky before; now source: "deterministic").
       },
     ],
   },
   {
-    name: "CONFIRMED WORSE THAN DOCUMENTED 2026-07-23: numeral ordinals can return a confidently WRONG vehicle, not just fail loudly",
+    name: "FIXED 2026-07-23: numeral ordinals resolve through the deterministic path",
     turns: [
       "do you have a 20k budget worth of cars?",
-      // No expect/reject — this needs a human/Codex reading the transcript,
-      // not a substring check, because the failure mode is silent
-      // incorrectness, not an error string. Live-reproduced 2026-07-23:
-      // turn 1 offered (in order) 2026 kimi kimi $200, 2011 Ford Fiesta SE
-      // $5,388, 2013 Nissan Altima $8,888, 2011 Dodge Grand Caravan $10,891.
-      // "open the 3rd one" should mean the Nissan Altima. Instead the model
-      // (source: "tool", via get_vehicle_details) confidently returned the
-      // Dodge Grand Caravan — the 4TH item, not the 3rd — with "Here it is:"
-      // and no hedging. A previous run of this exact same scenario instead
-      // failed loudly with "vehicle ID could not be verified" (also
-      // real, also live-reproduced). Same root cause (numeral ordinals
-      // aren't in ORDINAL_REFERENCE_PATTERN/ORDINAL_ACTION_PATTERN, so this
-      // never reaches the safe deterministic path), TWO different failure
-      // modes depending on what the model does when left to improvise —
-      // the wrong-vehicle-with-confidence case is worse than the loud
-      // failure because a human wouldn't notice anything is wrong from the
-      // reply text alone. Fixing the regex gap (accept 1st/2nd/3rd/4th and
-      // "#3"/"number 3" forms, mapped through the SAME deterministic
-      // ordinalResultSetVehicleId() path as the spelled-out words) should
-      // make this scenario resolve through source:"deterministic" instead
-      // of ever reaching the model — verify that after the fix.
-      "open the 3rd one",
+      {
+        text: "open the 3rd one",
+        expect: "taking you",
+        // Fixed 2026-07-23: ORDINAL_TOKEN_PATTERN + ORDINAL_STANDALONE_PATTERN
+        // in chatConversationState.ts accept 1st/2nd/3rd…, fourth–tenth, and
+        // "#3"/"number 3", all mapped through the same deterministic
+        // ordinalResultSetVehicleId() lookup as the spelled-out words.
+        // Verified live: position 3 of the stored resultSet (0a71954e) is
+        // exactly the vehicleId in the emitted navigate-target action, and
+        // the turn answers with source: "deterministic" instead of the model
+        // improvising (previously: wrong vehicle with confidence, or
+        // "vehicle ID could not be verified" — same root cause, two modes).
+      },
     ],
   },
   {
-    name: "KNOWN GAP (open at handoff): 'whole inventory' reset synonym",
+    name: "FIXED 2026-07-23: 'whole'/'entire' inventory reset synonyms",
     turns: [
       "any bmws less than 70k?",
       {
         text: "back to the whole inventory",
-        reject: "bmw",
+        expect: "1,283",
+        reject: "6 matching",
+        // Fixed 2026-07-23: FULL_INVENTORY_RESET_PATTERN now covers
+        // whole/entire/full/complete + inventory/vehicles/cars/makes/stock.
+        // Pre-fix this answered "6 matching vehicles found" (the stale BMW
+        // scope); post-fix it shows the real full inventory. NOTE: the
+        // "1,283" count is data-dependent — update it if the demo tenant's
+        // inventory changes. Do NOT reject "bmw" here: a correct
+        // full-inventory listing may legitimately include one.
       },
     ],
   },
@@ -147,4 +146,11 @@ export const scenarios = [
       },
     ],
   },
+];
+
+/** The full regression suite: starter scenarios + both exploration batches. */
+export const scenarios = [
+  ...starterScenarios,
+  ...exploreScenarios,
+  ...explore2Scenarios,
 ];

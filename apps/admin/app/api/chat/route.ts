@@ -121,11 +121,14 @@ import {
 } from "@/lib/conversationMemory.server";
 import { captureConciergeTranscript, captureDebug, captureError } from "@/lib/observability";
 import {
+  compareOrdinalIndexesFromText,
   filterActionsByConversationStateWithDiagnostics,
   hasScopeResetIntent,
   isAmbiguousAffirmation,
+  isAmbiguousMakeSwitchRequest,
   isOrdinalVehicleActionRequest,
   isOrdinalVehicleReference,
+  isOutOfRangeOrdinalReference,
   isPresentationRequest,
   isSelectedVehicleActionRequest,
   isSelectedVehicleDetailRequest,
@@ -339,6 +342,9 @@ export async function POST(request: Request): Promise<Response> {
   let deterministicSelectedVehicleAnswer: string | null = null;
   let deterministicSelectedVehicleUnavailableAnswer: string | null = null;
   let deterministicUnsupportedFactAnswer: string | null = null;
+  let deterministicMakeSwitchClarifier: string | null = null;
+  let deterministicCompareAnswer: string | null = null;
+  let deterministicCompareUnavailableAnswer: string | null = null;
   let stateOrdinalVehicleId: string | null = null;
   let stateSelectedVehicleId: string | null = null;
   let statePresentationRequest = false;
@@ -450,6 +456,46 @@ export async function POST(request: Request): Promise<Response> {
     );
     const stateReferencedVehicleId = stateOrdinalVehicleId ?? stateSelectedVehicleId;
 
+    if (isAmbiguousMakeSwitchRequest(lastUser.content, extractedFilters)) {
+      // Ambiguous make switch: the reset already cleared the scope in state.
+      // Ask which make — do NOT query, and do NOT let the model volunteer the
+      // old make's grounded results underneath its own clarifying question.
+      deterministicMakeSwitchClarifier =
+        "Of course — which make would you like to see instead? Or ask for the full inventory and I’ll show you everything.";
+    }
+
+    // Comparisons of result-set positions ("compare the first two") resolve
+    // from the stored, verified list — never from the model improvising.
+    const compareIndexes = stateReferencedVehicleId
+      ? null
+      : compareOrdinalIndexesFromText(lastUser.content);
+    if (compareIndexes) {
+      const orderedIds = conversationState.resultSet?.orderedIds ?? [];
+      if (orderedIds.length === 0) {
+        deterministicCompareUnavailableAnswer =
+          "I don’t have a current result list to compare from yet — tell me what you’d like to search for first.";
+      } else if (compareIndexes.some((index) => index >= orderedIds.length)) {
+        deterministicCompareUnavailableAnswer =
+          `The current list has ${orderedIds.length} results — please compare numbers between 1 and ${orderedIds.length}.`;
+      } else {
+        const compareIds = compareIndexes.map((index) => orderedIds[index]!);
+        const compared = (await Promise.all(
+          compareIds.map((id) => getTenantVehicle(supabase, tenant.tenantId, id)),
+        )).filter((vehicle): vehicle is Vehicle => Boolean(vehicle));
+        if (
+          compared.length === compareIds.length &&
+          compared.every((vehicle) =>
+            vehicleSatisfiesActiveFilters(vehicle, conversationState.activeFilters))
+        ) {
+          deterministicCompareAnswer = compareVehiclesAnswer(compareIndexes, compared);
+          for (const vehicle of compared) groundedVehicleIds.add(vehicle.id);
+        } else {
+          deterministicCompareUnavailableAnswer =
+            "Those results no longer satisfy your active filters, so I haven’t compared them. Would you like to relax a constraint or see the current matches?";
+        }
+      }
+    }
+
     if (stateTransition.useStoredResultSet) {
       filters = conversationState.activeFilters;
       groundedInventoryFilters = filters;
@@ -485,10 +531,12 @@ export async function POST(request: Request): Promise<Response> {
         conversationState.resultSet,
       )
         ? `There are ${conversationState.resultSet?.totalCount ?? "more"} matching vehicles, but I only have the current result page safely anchored here. Please choose first, second, or third—or narrow the search.`
-        : "I don’t have a current result list to safely resolve that reference. Please tell me what you’d like to search for.";
+        : isOutOfRangeOrdinalReference(lastUser.content, conversationState.resultSet)
+          ? `The current list has ${conversationState.resultSet?.orderedIds.length ?? 0} results — please pick a number between 1 and ${conversationState.resultSet?.orderedIds.length ?? 0}.`
+          : "I don’t have a current result list to safely resolve that reference. Please tell me what you’d like to search for.";
     }
 
-    if (stateTransition.shouldQuery) {
+    if (stateTransition.shouldQuery && !deterministicMakeSwitchClarifier) {
       // Let Postgres filter the complete tenant inventory. Pulling
       // ".select(*)" here silently hit PostgREST's row cap on larger tenants
       // and could turn a real make into a false zero-result answer.
@@ -585,7 +633,7 @@ export async function POST(request: Request): Promise<Response> {
     ...(deterministicInventoryAction ? [deterministicInventoryAction] : []),
   ];
   const deterministicActions = chatActionsEnabled
-    ? [...stateActions, ...((deterministicOrdinalReferenceAnswer || deterministicOrdinalUnavailableAnswer || deterministicUnsupportedFactAnswer) ? [] : resolveDeterministicConciergeNavigation({
+    ? [...stateActions, ...((deterministicOrdinalReferenceAnswer || deterministicOrdinalUnavailableAnswer || deterministicUnsupportedFactAnswer || deterministicMakeSwitchClarifier || deterministicCompareAnswer || deterministicCompareUnavailableAnswer) ? [] : resolveDeterministicConciergeNavigation({
         messages: modelMessages,
         targets: conciergeTargets,
         selectedVehicleId,
@@ -647,7 +695,7 @@ export async function POST(request: Request): Promise<Response> {
     sessionId: visitorTurn?.sessionId ?? anonymousConversationId ?? undefined,
   });
 
-  if (isImmediateSiteNavigation(deterministicActions) || statePresentationRequest || deterministicAvailabilityAnswer || deterministicInventoryAnswer || deterministicZeroResultAnswer || deterministicOrdinalUnavailableAnswer || deterministicOrdinalReferenceAnswer || deterministicSelectedVehicleAnswer || deterministicSelectedVehicleUnavailableAnswer || deterministicUnsupportedFactAnswer || deterministicClarifier) {
+  if (isImmediateSiteNavigation(deterministicActions) || statePresentationRequest || deterministicAvailabilityAnswer || deterministicInventoryAnswer || deterministicZeroResultAnswer || deterministicOrdinalUnavailableAnswer || deterministicOrdinalReferenceAnswer || deterministicSelectedVehicleAnswer || deterministicSelectedVehicleUnavailableAnswer || deterministicUnsupportedFactAnswer || deterministicMakeSwitchClarifier || deterministicCompareAnswer || deterministicCompareUnavailableAnswer || deterministicClarifier) {
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
         filterConversationActions(
@@ -662,7 +710,7 @@ export async function POST(request: Request): Promise<Response> {
       conciergeTargets,
       actionAttribution,
     );
-    const visibleContent = deterministicClarifier ?? deterministicZeroResultAnswer ?? deterministicOrdinalUnavailableAnswer ?? deterministicOrdinalReferenceAnswer ?? deterministicSelectedVehicleAnswer ?? deterministicSelectedVehicleUnavailableAnswer ?? deterministicUnsupportedFactAnswer ?? deterministicAvailabilityAnswer ?? deterministicInventoryAnswer ?? actionOnlyAcknowledgement(actions);
+    const visibleContent = deterministicClarifier ?? deterministicMakeSwitchClarifier ?? deterministicCompareAnswer ?? deterministicCompareUnavailableAnswer ?? deterministicZeroResultAnswer ?? deterministicOrdinalUnavailableAnswer ?? deterministicOrdinalReferenceAnswer ?? deterministicSelectedVehicleAnswer ?? deterministicSelectedVehicleUnavailableAnswer ?? deterministicUnsupportedFactAnswer ?? deterministicAvailabilityAnswer ?? deterministicInventoryAnswer ?? actionOnlyAcknowledgement(actions);
     captureDebug("api/chat/actions", {
       tenantId: tenant.tenantId,
       actionsEmitted: actionDebugSummary(actions),
@@ -1279,7 +1327,7 @@ function inventoryRecommendationAnswer(
 
 /** A non-navigational ordinal follow-up is answered from the stored result, never a fresh query. */
 function ordinalVehicleReferenceAnswer(userText: string, vehicle: Vehicle): string {
-  const ordinal = /\b(first|second|third|last)\s+(?:one|vehicle|car|listing)\b/i.exec(userText)?.[1]?.toLowerCase() ?? "selected";
+  const ordinal = /\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|last|\d{1,2}(?:st|nd|rd|th))\s+(?:one|vehicle|car|listing)\b/i.exec(userText)?.[1]?.toLowerCase() ?? "selected";
   const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
     .filter(Boolean)
     .join(" ");
@@ -1289,6 +1337,38 @@ function ordinalVehicleReferenceAnswer(userText: string, vehicle: Vehicle): stri
     vehicle.sellerCity && vehicle.sellerState ? `${vehicle.sellerCity}, ${vehicle.sellerState}` : null,
   ].filter((value): value is string => Boolean(value));
   return `The ${ordinal} result is ${label} — Est. $${vehicle.price.toLocaleString()}${details.length ? ` · ${details.join(" · ")}` : ""}.`;
+}
+
+const ORDINAL_POSITION_WORDS = [
+  "First", "Second", "Third", "Fourth", "Fifth",
+  "Sixth", "Seventh", "Eighth", "Ninth", "Tenth",
+] as const;
+
+function ordinalPositionLabel(index: number): string {
+  return ORDINAL_POSITION_WORDS[index] ?? `#${index + 1}`;
+}
+
+/** Deterministic comparison of result-set positions — real fields only. */
+function compareVehiclesAnswer(indexes: number[], vehicles: Vehicle[]): string {
+  const lines = vehicles.map((vehicle, position) => {
+    const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+      .filter(Boolean)
+      .join(" ");
+    const mileage = vehicle.mileage === null
+      ? "mileage not listed"
+      : `${vehicle.mileage.toLocaleString()} mi`;
+    return `${ordinalPositionLabel(indexes[position]!)}: ${label} — Est. $${vehicle.price.toLocaleString()} · ${mileage} · ${vehicle.drivetrain || "drivetrain not listed"}`;
+  });
+  const byPrice = [...vehicles].sort((a, b) => a.price - b.price);
+  const cheapest = byPrice[0]!;
+  const priciest = byPrice[byPrice.length - 1]!;
+  const cheapestLabel = [cheapest.year, cheapest.make, cheapest.model, cheapest.trim]
+    .filter(Boolean)
+    .join(" ");
+  const verdict = priciest.price > cheapest.price
+    ? `\nThe ${cheapestLabel} is the lower-priced by $${(priciest.price - cheapest.price).toLocaleString()}.`
+    : "";
+  return `Here’s the comparison:\n${lines.map((line) => `• ${line}`).join("\n")}${verdict}`;
 }
 
 function selectedVehicleDetailAnswer(userText: string, vehicle: Vehicle): string {

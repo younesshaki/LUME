@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { Vehicle } from "@lume/types";
 import {
+  compareOrdinalIndexesFromText,
   emptyConversationInventoryState,
   filterActionsByConversationState,
   filterActionsByConversationStateWithDiagnostics,
   isAmbiguousAffirmation,
+  isAmbiguousMakeSwitchRequest,
+  hasScopeResetIntent,
   isOrdinalVehicleActionRequest,
   isOrdinalVehicleReference,
+  isOutOfRangeOrdinalReference,
   isPresentationRequest,
   isSelectedVehicleActionRequest,
   isSelectedVehicleDetailRequest,
@@ -87,6 +91,43 @@ describe("chat conversation inventory state", () => {
         activeFilters: { make: "BMW", bodyStyle: "SUV", priceMax: 70_000 },
       }, phrase, {}, true);
       expect(transition.state.activeFilters).toEqual({});
+    }
+  });
+
+  it("clears ALL filters on filter-explicit resets — 'forget the filters' previously kept a $70k cap", () => {
+    // Live-reproduced 2026-07-23: "forget the filters, show me everything"
+    // answered 1,142 vehicles (the price cap survived a make/model-only
+    // clear) instead of the real 1,283 full inventory.
+    for (const phrase of [
+      "forget the filters, show me everything",
+      "no filters",
+      "clear all filters",
+      "reset the filters",
+      "show me everything",
+      "everything you have",
+      "let's start over",
+    ]) {
+      const transition = transitionInventoryState({
+        ...emptyConversationInventoryState(),
+        activeFilters: { make: "BMW", priceMax: 70_000 },
+      }, phrase, {}, true);
+      expect(transition.state.activeFilters).toEqual({});
+    }
+  });
+
+  it("does not treat 'everything about it' detail questions as a reset", () => {
+    expect(hasScopeResetIntent("tell me everything about it")).toBe(false);
+    expect(hasScopeResetIntent("show me everything about this one")).toBe(false);
+  });
+
+  it("resets fully on 'whole' / 'entire' inventory synonyms (reproduces the 2026-07-23 '6 BMWs' failure)", () => {
+    for (const phrase of ["back to the whole inventory", "show me the entire inventory", "the whole inventory, no filters"]) {
+      const transition = transitionInventoryState({
+        ...emptyConversationInventoryState(),
+        activeFilters: { make: "BMW", priceMax: 70_000 },
+      }, phrase, {}, true);
+      expect(transition.state.activeFilters).toEqual({});
+      expect(transition.rules).toContain("clear_make_model_scope");
     }
   });
 
@@ -176,6 +217,75 @@ describe("chat conversation inventory state", () => {
     expect(ordinalResultSetVehicleId("open the last one", state.resultSet)).toBeNull();
     expect(isTruncatedLastOrdinalReference("open the last one", state.resultSet)).toBe(true);
     expect(ordinalResultSetVehicleId("open the third one", state.resultSet)).toBeNull();
+  });
+
+  it("resolves numeral ordinals deterministically — 'open the 3rd one' never reaches the model", () => {
+    const THIRD = "33333333-3333-4333-8333-333333333333";
+    const state = setConversationResultSet(
+      emptyConversationInventoryState(),
+      [vehicle(FIRST), vehicle(SECOND), vehicle(THIRD)],
+      3,
+    );
+    // Live-reproduced 2026-07-23: this phrasing fell through to the model,
+    // which either failed loudly or confidently opened the WRONG vehicle.
+    expect(ordinalResultSetVehicleId("open the 3rd one", state.resultSet)).toBe(THIRD);
+    expect(ordinalResultSetVehicleId("open the 1st one", state.resultSet)).toBe(FIRST);
+    expect(ordinalResultSetVehicleId("show me the 2nd vehicle", state.resultSet)).toBe(SECOND);
+    expect(isOrdinalVehicleActionRequest("open the 3rd one")).toBe(true);
+    const transition = transitionInventoryState(state, "open the 3rd one", {}, true);
+    expect(transition.shouldQuery).toBe(false);
+    expect(transition.rules).toContain("ordinal_from_result_set");
+  });
+
+  it("resolves '#3' and 'number 3' standalone forms as ordinal navigation", () => {
+    const THIRD = "33333333-3333-4333-8333-333333333333";
+    const state = setConversationResultSet(
+      emptyConversationInventoryState(),
+      [vehicle(FIRST), vehicle(SECOND), vehicle(THIRD)],
+      3,
+    );
+    expect(ordinalResultSetVehicleId("#3", state.resultSet)).toBe(THIRD);
+    expect(ordinalResultSetVehicleId("number 3", state.resultSet)).toBe(THIRD);
+    expect(ordinalResultSetVehicleId("open number 2", state.resultSet)).toBe(SECOND);
+    expect(isOrdinalVehicleActionRequest("#3")).toBe(true);
+    expect(isOrdinalVehicleReference("number 3")).toBe(true);
+  });
+
+  it("flags an ambiguous make switch (no make named) for a clarifier instead of a query", () => {
+    expect(isAmbiguousMakeSwitchRequest("what about a different make?", {})).toBe(true);
+    expect(isAmbiguousMakeSwitchRequest("show me another make", {})).toBe(true);
+    // A named replacement make is NOT ambiguous — the normal make-switch path runs.
+    expect(isAmbiguousMakeSwitchRequest("what about a different make, like Mazda?", { make: "Mazda" })).toBe(false);
+    expect(isAmbiguousMakeSwitchRequest("show me BMW SUVs", { make: "BMW" })).toBe(false);
+  });
+
+  it("parses ordinal comparisons from the stored result set", () => {
+    expect(compareOrdinalIndexesFromText("compare the first two")).toEqual([0, 1]);
+    expect(compareOrdinalIndexesFromText("compare the first three")).toEqual([0, 1, 2]);
+    expect(compareOrdinalIndexesFromText("compare the first and the third")).toEqual([0, 2]);
+    expect(compareOrdinalIndexesFromText("compare the first one and the second one")).toEqual([0, 1]);
+    expect(compareOrdinalIndexesFromText("compare #1 and #3")).toEqual([0, 2]);
+    expect(compareOrdinalIndexesFromText("compare the 2nd with the 4th")).toEqual([1, 3]);
+  });
+
+  it("declines non-comparisons and degenerate comparisons", () => {
+    expect(compareOrdinalIndexesFromText("compare them")).toBeNull();
+    expect(compareOrdinalIndexesFromText("compare prices")).toBeNull();
+    expect(compareOrdinalIndexesFromText("compare the first and first")).toBeNull();
+    expect(compareOrdinalIndexesFromText("show me the second one")).toBeNull();
+  });
+
+  it("supports spelled-out ordinals beyond third and flags out-of-range positions", () => {
+    const state = setConversationResultSet(
+      emptyConversationInventoryState(),
+      [vehicle(FIRST), vehicle(SECOND)],
+      2,
+    );
+    expect(ordinalResultSetVehicleId("open the fourth one", state.resultSet)).toBeNull();
+    expect(isOutOfRangeOrdinalReference("open the fourth one", state.resultSet)).toBe(true);
+    expect(isOutOfRangeOrdinalReference("open the 9th one", state.resultSet)).toBe(true);
+    expect(isOutOfRangeOrdinalReference("open the second one", state.resultSet)).toBe(false);
+    expect(isOutOfRangeOrdinalReference("open the fourth one", null)).toBe(false);
   });
 
   it("resolves 'open it' only from the selected current result", () => {

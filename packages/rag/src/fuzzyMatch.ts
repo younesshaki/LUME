@@ -155,12 +155,17 @@ export type Correction = {
  * @param query The user's raw query (e.g., "ferari lamborghni")
  * @param knownTerms Set of all known vehicle terms (canonicals + aliases)
  * @param maxDistance Optional max edit distance
+ * @param neverCorrect Ordinary words that must never be rewritten into a
+ *   vehicle term — live-reproduced 2026-07-23: "compare the first two" had
+ *   "compare" corrected into the catalog model "compass", producing
+ *   "Nothing matches 2026 Compass" for a comparison request.
  * @returns Object with corrected query string and list of corrections applied
  */
 export function correctQuery(
   query: string,
   knownTerms: Set<string>,
-  maxDistance?: number
+  maxDistance?: number,
+  neverCorrect?: ReadonlySet<string>,
 ): { corrected: string; corrections: Correction[] } {
   const tokens = query
     .toLowerCase()
@@ -171,6 +176,12 @@ export function correctQuery(
   const correctedTokens = tokens.map((token) => {
     // Try exact match first
     if (knownTerms.has(token)) {
+      return token;
+    }
+
+    // Ordinary vocabulary stays as the visitor wrote it — only real typos of
+    // real vehicle terms may be rewritten.
+    if (neverCorrect?.has(token)) {
       return token;
     }
 

@@ -78,6 +78,11 @@ const MODEL_FUZZY_STOPWORDS = new Set([
   "those", "it", "one", "ones", "all", "any", "only", "show", "find", "have",
   "got", "looking", "spend",
   "first", "second", "third", "last",
+  // Comparison language: "compare the first two" must never become a model
+  // named "Compass" — neither via fuzzy model matching nor via the typo
+  // corrector rewriting the ordinary word (live-reproduced 2026-07-23).
+  "compare", "compares", "comparing", "comparison", "comparisons",
+  "versus", "vs", "difference", "differences", "contrast", "contrasting",
   "new", "newer", "older", "later", "earlier", "between", "under", "above", "below",
   "more", "less", "over", "up", "max", "min", "grand", "thousand", "large",
 ]);
@@ -109,7 +114,7 @@ export function extractVehicleFilters(
   vehicles: readonly Vehicle[] = [],
   vocabulary: VehicleFilterVocabulary = {},
 ): VehicleQueryFilters {
-  const { corrected } = correctQuery(query, ALL_KNOWN_VEHICLE_TERMS);
+  const { corrected } = correctQuery(query, ALL_KNOWN_VEHICLE_TERMS, undefined, MODEL_FUZZY_STOPWORDS);
   const q = corrected.toLowerCase();
   const filters: VehicleQueryFilters = {};
   const tokens = q.split(/\s+/);
