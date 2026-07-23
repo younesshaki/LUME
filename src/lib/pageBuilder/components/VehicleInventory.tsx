@@ -7,6 +7,7 @@ import {
   GitCompare,
   Heart,
   Search,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
 import {
@@ -34,6 +35,7 @@ import { useSound } from "@/lib/sound";
 import { useOptionalSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
 import { trackConversion } from "@/lib/conversionAnalytics";
 import { vehiclePageSoundActions } from "@/experience/ui/VehiclesPage/VehiclesPage.sounds";
+import { AdvancedFilters } from "@/experience/ui/VehiclesPage/AdvancedFilters";
 import type { BlockComponentProps } from "../registry";
 import { usePageBuilderRenderContext } from "../renderContext";
 import { booleanProp, stringProp } from "./props";
@@ -329,6 +331,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const [filters, setFilters] = useState<VehicleFilters>(initialState.filters);
   const [sort, setSort] = useState<VehicleSort>(initialState.sort);
   const [page, setPage] = useState(initialState.page);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [previewSavedVehicleIds, setPreviewSavedVehicleIds] = useState<string[]>(() =>
     readStoredIds(SAVED_STORAGE_KEY)
   );
@@ -430,10 +433,16 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
     setPage(1);
   };
 
+  const handleClear = () => {
+    setFilters(DEFAULT_FILTERS);
+    setPage(1);
+  };
+
   useBotAction("filter_inventory", (action) => {
     setFilters(vehicleFiltersFromBotAction(action));
     setSort("recommended");
     setPage(1);
+    setFiltersOpen(false);
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
@@ -549,6 +558,19 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                 </select>
               </label>
 
+              <button
+                type="button"
+                className="vehiclesPage__filterToggle"
+                onClick={() => {
+                  play(vehiclePageSoundActions.filterOpen);
+                  setFiltersOpen(true);
+                }}
+              >
+                <SlidersHorizontal size={16} />
+                Filters
+                {activeCount > 0 && <span>{activeCount}</span>}
+              </button>
+
               <span className="vehiclesPage__savedCount">
                 {activeCount > 0 ? `${activeCount} active` : `${savedVehicleIds.length} saved`}
               </span>
@@ -660,6 +682,18 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
             </>
           )}
         </>
+      )}
+
+      {showFilters && (
+        <AdvancedFilters
+          open={filtersOpen}
+          facets={facets}
+          filters={filters}
+          activeCount={activeCount}
+          onChange={handleFilterChange}
+          onClear={handleClear}
+          onClose={() => setFiltersOpen(false)}
+        />
       )}
     </section>
   );
