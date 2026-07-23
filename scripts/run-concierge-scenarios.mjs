@@ -8,8 +8,8 @@
  * Each scenario is an ordered list of visitor messages sent in one session
  * (a shared sessionId is carried turn to turn, exactly like a real chat).
  * Optional per-turn `expect`/`reject` substrings do a light pass/fail check
- * on the visible bot text; omit them to just log the conversation for
- * manual/log-based review instead.
+ * on the visible bot text. `expectAction`/`rejectAction` check emitted action
+ * types so a correct-sounding answer cannot hide a UI no-op.
  *
  * Usage:
  *   node scripts/run-concierge-scenarios.mjs [scenarios-file.mjs]
@@ -110,6 +110,37 @@ async function runScenario(scenario) {
         failures += 1;
         console.log(`  ✗ FAIL: content unexpectedly included "${step.reject}"`);
       }
+      const actionTypes = actions.map((action) => action?.type);
+      if (step.expectAction && !actionTypes.includes(step.expectAction)) {
+        failures += 1;
+        console.log(`  ✗ FAIL: expected action type "${step.expectAction}"`);
+      }
+      if (step.rejectAction && actionTypes.includes(step.rejectAction)) {
+        failures += 1;
+        console.log(`  ✗ FAIL: action type "${step.rejectAction}" was unexpectedly emitted`);
+      }
+      if (step.expectActionFields) {
+        const matchingAction = actions.find((action) =>
+          Object.entries(step.expectActionFields).every(
+            ([key, value]) => action?.[key] === value,
+          )
+        );
+        if (!matchingAction) {
+          failures += 1;
+          console.log(`  ✗ FAIL: no action matched fields ${JSON.stringify(step.expectActionFields)}`);
+        }
+      }
+      if (step.rejectActionFields) {
+        const rejectedAction = actions.find((action) =>
+          Object.entries(step.rejectActionFields).every(
+            ([key, value]) => action?.[key] === value,
+          )
+        );
+        if (rejectedAction) {
+          failures += 1;
+          console.log(`  ✗ FAIL: an action unexpectedly matched fields ${JSON.stringify(step.rejectActionFields)}`);
+        }
+      }
     }
 
     await sleep(TURN_DELAY_MS);
@@ -124,9 +155,30 @@ async function main() {
     ? resolve(process.argv[2])
     : resolve(import.meta.dirname, "concierge-scenarios.mjs");
   const { scenarios } = await import(pathToFileURL(scenariosPath).href);
+  const scenarioIndexValue = process.env.CONCIERGE_TEST_SCENARIO_INDEX;
+  const scenarioIndex = scenarioIndexValue === undefined
+    ? null
+    : Number(scenarioIndexValue);
+  const scenarioPattern = process.env.CONCIERGE_TEST_SCENARIO_PATTERN;
+  const selectedScenarios = scenarioIndex !== null
+    ? Number.isSafeInteger(scenarioIndex) && scenarioIndex >= 0 && scenarioIndex < scenarios.length
+      ? [scenarios[scenarioIndex]]
+      : []
+    : scenarioPattern
+    ? scenarios.filter((scenario) =>
+        scenario.name.toLowerCase().includes(scenarioPattern.toLowerCase())
+      )
+    : scenarios;
+  if (selectedScenarios.length === 0) {
+    throw new Error(
+      scenarioIndex !== null
+        ? `No scenario exists at CONCIERGE_TEST_SCENARIO_INDEX="${scenarioIndexValue}"`
+        : `No scenarios matched CONCIERGE_TEST_SCENARIO_PATTERN="${scenarioPattern}"`,
+    );
+  }
 
   const results = [];
-  for (const scenario of scenarios) {
+  for (const scenario of selectedScenarios) {
     results.push(await runScenario(scenario));
   }
 

@@ -13,6 +13,8 @@ export type ConversationInventoryState = {
   resultSet: ConversationResultSet | null;
   selectedVehicleId: string | null;
   turn: number;
+  /** Last inventory-intent timestamp; non-inventory chat must not refresh it. */
+  lastInventoryActivityAt: string | null;
 };
 
 export type InventoryStateTransition = {
@@ -27,6 +29,9 @@ const FILTER_KEYS = [
   "sellerState", "sellerCity", "year", "yearMin", "yearMax", "mileageMax",
   "priceMin", "priceMax", "sort",
 ] as const satisfies readonly (keyof VehicleQueryFilters)[];
+
+export const INVENTORY_SCOPE_STALE_AFTER_MS = 30 * 60 * 1_000;
+export const INVENTORY_SCOPE_STALE_AFTER_TURNS = 7;
 
 // "all makes" and "different/another make" are as explicit a reset signal as
 // "all inventory" — live-reproduced 2026-07-22: this phrasing silently failed
@@ -79,7 +84,13 @@ const COMPARE_COUNT_PATTERN = /\bcompare\s+(?:the\s+)?first\s+(two|three|four)\b
 const COMPARE_PAIR_PATTERN = /\bcompare\s+(?:the\s+)?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\d{1,2}(?:st|nd|rd|th)|#\d{1,2})\s*(?:one|vehicle|car|listing)?\s+(?:and|with|to|against|vs\.?|versus)\s+(?:the\s+)?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\d{1,2}(?:st|nd|rd|th)|#\d{1,2})\s*(?:one|vehicle|car|listing)?\b/i;
 
 export function emptyConversationInventoryState(): ConversationInventoryState {
-  return { activeFilters: {}, resultSet: null, selectedVehicleId: null, turn: 0 };
+  return {
+    activeFilters: {},
+    resultSet: null,
+    selectedVehicleId: null,
+    turn: 0,
+    lastInventoryActivityAt: null,
+  };
 }
 
 export function normalizeConversationInventoryState(value: unknown): ConversationInventoryState {
@@ -96,8 +107,23 @@ export function normalizeConversationInventoryState(value: unknown): Conversatio
   const turn = typeof turnValue === "number" && Number.isSafeInteger(turnValue) && turnValue >= 0
     ? turnValue
     : 0;
-  return { activeFilters, resultSet, selectedVehicleId, turn };
+  const lastInventoryActivityAt =
+    typeof value.lastInventoryActivityAt === "string" &&
+    Number.isFinite(Date.parse(value.lastInventoryActivityAt))
+      ? value.lastInventoryActivityAt
+      : null;
+  return {
+    activeFilters,
+    resultSet,
+    selectedVehicleId,
+    turn,
+    lastInventoryActivityAt,
+  };
 }
+
+export type InventoryTransitionContext = {
+  nowMs: number;
+};
 
 /** A new visitor turn only changes filters the visitor explicitly supplied. */
 export function transitionInventoryState(
@@ -105,10 +131,17 @@ export function transitionInventoryState(
   userText: string,
   extractedFilters: VehicleQueryFilters,
   hasInventoryIntent: boolean,
+  context?: InventoryTransitionContext,
 ): InventoryStateTransition {
   const nextTurn = current.turn + 1;
   const resetScope = hasScopeResetIntent(userText);
   const normalizedExtracted = pickFilters(extractedFilters);
+  const clearsStaleBroadScope = shouldStartFreshBroadInventorySearch(
+    current,
+    userText,
+    normalizedExtracted,
+    context?.nowMs,
+  );
   // Naming a different make starts a new search for that make. A model AND a
   // model year are tied to the specific vehicle the visitor had in mind — a
   // prior "2026 Camry" must not silently survive into "what about a caddy?"
@@ -125,12 +158,26 @@ export function transitionInventoryState(
     normalizedExtracted.model === undefined &&
     current.activeFilters.model !== undefined &&
     current.activeFilters.make !== normalizedExtracted.make;
-  const clearsVehicleScope = switchesMake || clearsStrandedModel;
-  const base = resetScope
+  // Catalog extraction can identify "Camry" without its make. If a make from
+  // an older query is active, preserving it fabricates an impossible combined
+  // scope (live: BMW + Camry). An explicitly different model is authoritative:
+  // discard the old named-vehicle scope while preserving generic preferences.
+  const switchesModelWithoutMake =
+    normalizedExtracted.model !== undefined &&
+    normalizedExtracted.make === undefined &&
+    current.activeFilters.make !== undefined &&
+    normalizedExtracted.model !== current.activeFilters.model;
+  const clearsVehicleScope =
+    switchesMake || clearsStrandedModel || switchesModelWithoutMake;
+  const base = clearsStaleBroadScope
+    ? {}
+    : resetScope
     ? clearScopeFilters(current.activeFilters, userText)
-    : clearsVehicleScope
-      ? dropVehicleSpecificScope(current.activeFilters)
-      : current.activeFilters;
+    : switchesModelWithoutMake
+      ? dropNamedVehicleScope(current.activeFilters)
+      : clearsVehicleScope
+        ? dropVehicleSpecificScope(current.activeFilters)
+        : current.activeFilters;
   const activeFilters = mergeFilters(base, normalizedExtracted);
   const hasExplicitFilters = Object.keys(normalizedExtracted).length > 0 || resetScope;
   const useStoredResultSet = !hasExplicitFilters && isPresentationRequest(userText) && current.resultSet !== null;
@@ -138,7 +185,13 @@ export function transitionInventoryState(
   const selectedAction = selectedResultSetVehicleId(userText, current);
   const rules = [
     ...(resetScope ? ["clear_make_model_scope"] : []),
-    ...(!resetScope && clearsVehicleScope ? ["clear_model_on_make_change"] : []),
+    ...(clearsStaleBroadScope ? ["clear_stale_scope_for_broad_query"] : []),
+    ...(!resetScope && !clearsStaleBroadScope && switchesModelWithoutMake
+      ? ["clear_make_on_model_change"]
+      : []),
+    ...(!resetScope && !clearsStaleBroadScope && !switchesModelWithoutMake && clearsVehicleScope
+      ? ["clear_model_on_make_change"]
+      : []),
     ...(useStoredResultSet ? ["reuse_result_set"] : []),
     ...(ordinal ? ["ordinal_from_result_set"] : []),
     ...(selectedAction ? ["selected_vehicle_from_result_set"] : []),
@@ -148,6 +201,9 @@ export function transitionInventoryState(
       ...current,
       activeFilters,
       turn: nextTurn,
+      ...(hasInventoryIntent && context
+        ? { lastInventoryActivityAt: new Date(context.nowMs).toISOString() }
+        : {}),
       // A scope reset abandons whatever was on screen: the verified selection
       // and the stored result list belong to the old scope. Live-reproduced
       // 2026-07-23 (session 2c19e8d4): a selection made two turns earlier
@@ -155,7 +211,9 @@ export function transitionInventoryState(
       // turn's grounding, and the model narrated the old Jeep instead of the
       // reset inventory. The route re-queries and rebuilds the result set on
       // reset turns anyway, so this only removes stale state.
-      ...(resetScope ? { selectedVehicleId: null, resultSet: null } : {}),
+      ...(resetScope || clearsStaleBroadScope
+        ? { selectedVehicleId: null, resultSet: null }
+        : {}),
     },
     shouldQuery: hasInventoryIntent && !useStoredResultSet && !ordinal && !selectedAction,
     useStoredResultSet,
@@ -220,6 +278,10 @@ export function isAmbiguousAffirmation(
 
 export function hasScopeResetIntent(userText: string): boolean {
   return SCOPE_RESET_PATTERN.test(userText);
+}
+
+export function hasFullInventoryResetIntent(userText: string): boolean {
+  return FULL_INVENTORY_RESET_PATTERN.test(userText);
 }
 
 const DIFFERENT_MAKE_PATTERN = /\b(?:a\s+|any\s+)?(?:different|another)\s+make\b/i;
@@ -474,6 +536,61 @@ function clearScopeFilters(filters: VehicleQueryFilters, userText: string): Vehi
 function dropVehicleSpecificScope(filters: VehicleQueryFilters): VehicleQueryFilters {
   const { model: _model, year: _year, yearMin: _yearMin, yearMax: _yearMax, ...remaining } = filters;
   return remaining;
+}
+
+function dropNamedVehicleScope(filters: VehicleQueryFilters): VehicleQueryFilters {
+  const {
+    make: _make,
+    model: _model,
+    bodyStyle: _bodyStyle,
+    year: _year,
+    yearMin: _yearMin,
+    yearMax: _yearMax,
+    ...remaining
+  } = filters;
+  return remaining;
+}
+
+/**
+ * A price-only query naming generic cars/vehicles/inventory starts fresh once
+ * the prior inventory scope is old. Immediate short refinements ("under 40k")
+ * still inherit; only broad shopping language plus a time/turn boundary
+ * prevents a model/year from 90 minutes and many unrelated turns ago leaking
+ * into a new search.
+ */
+function shouldStartFreshBroadInventorySearch(
+  current: ConversationInventoryState,
+  userText: string,
+  extractedFilters: VehicleQueryFilters,
+  nowMs: number | undefined,
+): boolean {
+  const extractedKeys = Object.keys(extractedFilters);
+  const isPriceOnly =
+    extractedKeys.length > 0 &&
+    extractedKeys.every((key) =>
+      key === "priceMin" || key === "priceMax" || key === "sort"
+    ) &&
+    (extractedFilters.priceMin !== undefined ||
+      extractedFilters.priceMax !== undefined);
+  if (
+    !isPriceOnly ||
+    !/\b(?:cars?|vehicles?|inventory)\b/i.test(userText) ||
+    Object.keys(current.activeFilters).length === 0
+  ) {
+    return false;
+  }
+  const lastInventoryAt = current.lastInventoryActivityAt
+    ? Date.parse(current.lastInventoryActivityAt)
+    : Number.NaN;
+  const staleByTime =
+    nowMs !== undefined &&
+    Number.isFinite(lastInventoryAt) &&
+    nowMs - lastInventoryAt >= INVENTORY_SCOPE_STALE_AFTER_MS;
+  const staleByTurns =
+    current.resultSet !== null &&
+    current.turn - current.resultSet.createdAtTurn >=
+      INVENTORY_SCOPE_STALE_AFTER_TURNS;
+  return staleByTime || staleByTurns;
 }
 
 function mergeFilters(

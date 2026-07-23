@@ -29,9 +29,13 @@ export const scenarios = [
     name: "explore: reset phrasing 'show me the entire inventory'",
     turns: [
       "any bmws less than 70k?",
-      // verified: full reset fires (activeFilters {} / 1,283) and the
-      // concierge navigates to the inventory page with an ack
-      { text: "show me the entire inventory", expect: "taking you" },
+      // Full reset now answers deterministically with the verified count and
+      // must emit the UI filter action; navigation may also be emitted.
+      {
+        text: "show me the entire inventory",
+        expect: "1,283",
+        expectAction: "filter_inventory",
+      },
     ],
   },
   {

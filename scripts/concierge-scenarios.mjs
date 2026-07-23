@@ -20,6 +20,7 @@
 import { scenarios as exploreScenarios } from "./concierge-scenarios-explore.mjs";
 import { scenarios as explore2Scenarios } from "./concierge-scenarios-explore2.mjs";
 import { scenarios as explore3Scenarios } from "./concierge-scenarios-explore3.mjs";
+import { scenarios as stateDriftScenarios } from "./concierge-scenarios-state-drift.mjs";
 
 const starterScenarios = [
   {
@@ -155,4 +156,5 @@ export const scenarios = [
   ...exploreScenarios,
   ...explore2Scenarios,
   ...explore3Scenarios,
+  ...stateDriftScenarios,
 ];
