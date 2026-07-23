@@ -27,7 +27,8 @@ import {
 import {
   vehicleFiltersFromBotAction,
 } from "@/lib/botActionConsumers";
-import { readVehicleUrlState } from "@/experience/vehicles/urlState";
+import { readVehicleUrlState, writeVehicleUrlState } from "@/experience/vehicles/urlState";
+import { ROUTE_PATHS } from "@/app-shell/routePaths";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import { useOptionalSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
@@ -403,6 +404,17 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   useEffect(() => {
     writeStoredIds(COMPARE_STORAGE_KEY, compareVehicleIds);
   }, [compareVehicleIds]);
+
+  // This block is placed either as the /vehicles route's page-builder content
+  // or embedded on an arbitrary tenant page. Only write filter state into the
+  // #vehicles hash when it's actually driving the /vehicles route — writing
+  // it from an embedded instance would hijack an unrelated page's URL. Without
+  // this write at all, a filter set here (manually or by the concierge) never
+  // reached the URL, so it was silently lost on every reload.
+  useEffect(() => {
+    if (typeof window === "undefined" || window.location.pathname !== ROUTE_PATHS.vehicles) return;
+    writeVehicleUrlState(filters, sort, page);
+  }, [filters, page, sort]);
 
   const totalPages = totalCount === null ? Math.max(1, page) : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
