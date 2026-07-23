@@ -144,7 +144,19 @@ export function transitionInventoryState(
     ...(selectedAction ? ["selected_vehicle_from_result_set"] : []),
   ];
   return {
-    state: { ...current, activeFilters, turn: nextTurn },
+    state: {
+      ...current,
+      activeFilters,
+      turn: nextTurn,
+      // A scope reset abandons whatever was on screen: the verified selection
+      // and the stored result list belong to the old scope. Live-reproduced
+      // 2026-07-23 (session 2c19e8d4): a selection made two turns earlier
+      // survived a filter change and a full reset, leaked into the next
+      // turn's grounding, and the model narrated the old Jeep instead of the
+      // reset inventory. The route re-queries and rebuilds the result set on
+      // reset turns anyway, so this only removes stale state.
+      ...(resetScope ? { selectedVehicleId: null, resultSet: null } : {}),
+    },
     shouldQuery: hasInventoryIntent && !useStoredResultSet && !ordinal && !selectedAction,
     useStoredResultSet,
     rules,

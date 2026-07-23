@@ -259,6 +259,44 @@ describe("chat conversation inventory state", () => {
     expect(isAmbiguousMakeSwitchRequest("show me BMW SUVs", { make: "BMW" })).toBe(false);
   });
 
+  it("clears the selection AND result set on a scope reset (session 2c19e8d4 selection-leak repro)", () => {
+    const JEEP = "0a71954e-1bdb-4353-a3ae-ad1caae377a1";
+    // Turn 1-2: budget search, then "open the 3rd one" selects the Jeep.
+    let state = setConversationResultSet(
+      emptyConversationInventoryState(),
+      [vehicle(FIRST), vehicle(SECOND), vehicle(JEEP)],
+      128,
+    );
+    state = selectConversationVehicle(state, JEEP);
+    expect(state.selectedVehicleId).toBe(JEEP);
+    // Turn 3: a filter change keeps the selection in state (setConversationResultSet
+    // never touches it), even though the Jeep is not in the new BMW list.
+    const afterFilterChange = transitionInventoryState(state, "any bmws less than 70k?", { make: "BMW", priceMax: 70_000 }, true);
+    state = setConversationResultSet(
+      { ...afterFilterChange.state, selectedVehicleId: state.selectedVehicleId },
+      [vehicle(FIRST)],
+      6,
+    );
+    expect(state.selectedVehicleId).toBe(JEEP);
+    // Turn 4: "back to the whole inventory" must forget the Jeep entirely —
+    // it must not leak into a later turn's grounding context.
+    const afterReset = transitionInventoryState(state, "back to the whole inventory", {}, true);
+    expect(afterReset.state.selectedVehicleId).toBeNull();
+    expect(afterReset.state.resultSet).toBeNull();
+    expect(afterReset.state.activeFilters).toEqual({});
+    expect(afterReset.rules).toContain("clear_make_model_scope");
+  });
+
+  it("keeps the selection on non-reset turns (regression guard)", () => {
+    const state = selectConversationVehicle(
+      setConversationResultSet(emptyConversationInventoryState(), [vehicle(FIRST), vehicle(SECOND)], 2),
+      SECOND,
+    );
+    const transition = transitionInventoryState(state, "only AWD ones", { drivetrain: "AWD" }, true);
+    expect(transition.state.selectedVehicleId).toBe(SECOND);
+    expect(transition.state.resultSet).not.toBeNull();
+  });
+
   it("parses ordinal comparisons from the stored result set", () => {
     expect(compareOrdinalIndexesFromText("compare the first two")).toEqual([0, 1]);
     expect(compareOrdinalIndexesFromText("compare the first three")).toEqual([0, 1, 2]);
