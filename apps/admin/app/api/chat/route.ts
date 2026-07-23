@@ -316,15 +316,22 @@ export async function POST(request: Request): Promise<Response> {
       (typeof body.sessionId === "string" ? body.sessionId : undefined),
   );
   const currentPageVehicleId = vehicleIdFromPublicPagePath(body.pagePath);
-  const selectedVehicleCandidate =
-    currentPageVehicleId ??
-    // Keep "tell me more about it" grounded even before navigation finishes
-    // and updates pagePath. This ID was created only from the verified
-    // current result set by selectConversationVehicle().
-    conversationState.selectedVehicleId ??
-    recentVehicleIdFromToolResults(remembered?.toolResults ?? []) ??
-    rememberedHistoryVehicleId ??
-    historyVehicleId;
+  // A scope-reset turn ("back to the whole inventory") abandons the current
+  // selection entirely — grounding the model in the previously selected (or
+  // currently displayed) vehicle invites it to narrate the old vehicle
+  // instead of honoring the reset (live-reproduced 2026-07-23, session
+  // 2c19e8d4 turn 4: Jeep detail text duplicated, on a full-reset turn).
+  const scopeResetRequested = hasScopeResetIntent(lastUser.content);
+  const selectedVehicleCandidate = scopeResetRequested
+    ? null
+    : currentPageVehicleId ??
+      // Keep "tell me more about it" grounded even before navigation finishes
+      // and updates pagePath. This ID was created only from the verified
+      // current result set by selectConversationVehicle().
+      conversationState.selectedVehicleId ??
+      recentVehicleIdFromToolResults(remembered?.toolResults ?? []) ??
+      rememberedHistoryVehicleId ??
+      historyVehicleId;
 
   let assembled;
   const groundedVehicleIds = new Set<string>();

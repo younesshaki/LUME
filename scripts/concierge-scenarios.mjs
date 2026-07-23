@@ -19,6 +19,7 @@
  */
 import { scenarios as exploreScenarios } from "./concierge-scenarios-explore.mjs";
 import { scenarios as explore2Scenarios } from "./concierge-scenarios-explore2.mjs";
+import { scenarios as explore3Scenarios } from "./concierge-scenarios-explore3.mjs";
 
 const starterScenarios = [
   {
@@ -148,9 +149,10 @@ const starterScenarios = [
   },
 ];
 
-/** The full regression suite: starter scenarios + both exploration batches. */
+/** The full regression suite: starter scenarios + all exploration batches. */
 export const scenarios = [
   ...starterScenarios,
   ...exploreScenarios,
   ...explore2Scenarios,
+  ...explore3Scenarios,
 ];

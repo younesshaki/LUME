@@ -4,6 +4,30 @@
  */
 export const scenarios = [
   {
+    name: "explore2: full reset after a selection forgets the selected vehicle (session 2c19e8d4 repro)",
+    turns: [
+      "do you have a 20k budget worth of cars?",
+      { text: "open the 3rd one", expect: "taking you" },
+      "any bmws less than 70k?",
+      {
+        text: "back to the whole inventory",
+        expect: "1,283",
+        reject: "details on that",
+        // FIXED 2026-07-23: turn 4 of session 2c19e8d4 replied with the
+        // previously SELECTED Jeep Grand Cherokee's detail text ("Here are
+        // the details on that 2018 Jeep Grand Cherokee Limited", duplicated)
+        // instead of the reset inventory. Root cause: transitionInventoryState
+        // cleared filters on resetScope but kept selectedVehicleId, and the
+        // route grounded the model in that stale selection. Now resetScope
+        // clears selectedVehicleId + resultSet, and reset turns skip the
+        // selection-grounding candidate entirely. NOTE: reject targets the
+        // failure's detail-narration phrasing, NOT "grand cherokee" — the
+        // full-inventory list may legitimately include that Jeep. "1,283"
+        // is data-dependent — update if demo inventory changes.
+      },
+    ],
+  },
+  {
     name: "explore2: 'yes' after an either/or clarifier is never guessed",
     turns: [
       "show me BMW SUVs",
