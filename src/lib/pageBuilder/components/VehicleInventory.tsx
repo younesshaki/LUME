@@ -12,6 +12,7 @@ import {
 import {
   DEFAULT_FILTERS,
   VEHICLE_SORT_OPTIONS,
+  activeFilterChips,
   countActiveFilters,
   formatVehiclePrice,
   loadVehicleCount,
@@ -406,6 +407,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const totalPages = totalCount === null ? Math.max(1, page) : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
+  const filterChips = useMemo(() => activeFilterChips(filters), [filters]);
 
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
@@ -538,6 +540,38 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
               <span className="vehiclesPage__savedCount">
                 {activeCount > 0 ? `${activeCount} active` : `${savedVehicleIds.length} saved`}
               </span>
+            </div>
+          )}
+
+          {showFilters && filterChips.length > 0 && (
+            <div className="vehiclesPage__activeFilters" aria-label="Active filters">
+              {filterChips.map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  className="vehiclesPage__activeFilterChip"
+                  onClick={() => {
+                    play(vehiclePageSoundActions.filterChange);
+                    handleFilterChange(chip.clear);
+                  }}
+                >
+                  <span>{chip.label}</span>
+                  <X size={12} aria-hidden="true" />
+                  <span className="vehiclesPage__srOnly">Remove filter: {chip.label}</span>
+                </button>
+              ))}
+              {filterChips.length > 1 && (
+                <button
+                  type="button"
+                  className="vehiclesPage__activeFiltersClearAll"
+                  onClick={() => {
+                    setFilters(DEFAULT_FILTERS);
+                    setPage(1);
+                  }}
+                >
+                  Clear all
+                </button>
+              )}
             </div>
           )}
 

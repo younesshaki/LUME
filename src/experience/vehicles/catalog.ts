@@ -983,6 +983,83 @@ export function countActiveFilters(filters: VehicleFilters): number {
   return count;
 }
 
+export type VehicleFilterChip = {
+  /** Stable identity for React keys — not shown to the visitor. */
+  id: string;
+  label: string;
+  /** Patch that removes exactly this facet, applied with handleFilterChange. */
+  clear: Partial<VehicleFilters>;
+};
+
+/**
+ * One removable chip per active facet, so a filter set anywhere — including
+ * one the AI concierge applied programmatically — is always visible and
+ * individually clearable without opening the filters drawer. Keep the
+ * conditions here in sync with countActiveFilters(): every facet that counts
+ * toward the badge must also produce a chip, or a filter can be "active but
+ * invisible" again.
+ */
+export function activeFilterChips(filters: VehicleFilters): VehicleFilterChip[] {
+  const chips: VehicleFilterChip[] = [];
+  if (filters.query.trim()) {
+    chips.push({ id: "query", label: `"${filters.query.trim()}"`, clear: { query: "" } });
+  }
+  if (filters.make) {
+    chips.push({ id: "make", label: filters.make, clear: { make: "", model: "" } });
+  }
+  if (filters.model) {
+    chips.push({ id: "model", label: filters.model, clear: { model: "" } });
+  }
+  if (filters.stockType) {
+    chips.push({ id: "stockType", label: filters.stockType, clear: { stockType: "" } });
+  }
+  if (filters.bodyStyle) {
+    chips.push({ id: "bodyStyle", label: filters.bodyStyle, clear: { bodyStyle: "" } });
+  }
+  if (filters.fuelType) {
+    chips.push({ id: "fuelType", label: filters.fuelType, clear: { fuelType: "" } });
+  }
+  if (filters.drivetrain) {
+    chips.push({ id: "drivetrain", label: filters.drivetrain, clear: { drivetrain: "" } });
+  }
+  if (filters.sellerState) {
+    chips.push({
+      id: "sellerState",
+      label: filters.sellerCity ? filters.sellerState : `In ${filters.sellerState}`,
+      clear: { sellerState: "", sellerCity: "" },
+    });
+  }
+  if (filters.sellerCity) {
+    chips.push({ id: "sellerCity", label: filters.sellerCity, clear: { sellerCity: "" } });
+  }
+  if (filters.yearMin > YEAR_MIN || filters.yearMax < YEAR_MAX) {
+    const label =
+      filters.yearMin > YEAR_MIN && filters.yearMax < YEAR_MAX
+        ? `${filters.yearMin}–${filters.yearMax}`
+        : filters.yearMin > YEAR_MIN
+          ? `${filters.yearMin}+`
+          : `${filters.yearMax} or older`;
+    chips.push({ id: "year", label, clear: { yearMin: YEAR_MIN, yearMax: YEAR_MAX } });
+  }
+  if (filters.mileageMax > 0) {
+    chips.push({
+      id: "mileageMax",
+      label: `Under ${filters.mileageMax.toLocaleString()} mi`,
+      clear: { mileageMax: 0 },
+    });
+  }
+  if (filters.priceMin > 0 || filters.priceMax > 0) {
+    const label =
+      filters.priceMin > 0 && filters.priceMax > 0
+        ? `$${filters.priceMin.toLocaleString()}–$${filters.priceMax.toLocaleString()}`
+        : filters.priceMax > 0
+          ? `Under $${filters.priceMax.toLocaleString()}`
+          : `Over $${filters.priceMin.toLocaleString()}`;
+    chips.push({ id: "price", label, clear: { priceMin: 0, priceMax: 0 } });
+  }
+  return chips;
+}
+
 function getSearchText(vehicle: Vehicle): string {
   return [
     vehicle.year,
