@@ -5,6 +5,7 @@ import {
   emptyConversationInventoryState,
   filterActionsByConversationState,
   filterActionsByConversationStateWithDiagnostics,
+  hasFullInventoryResetIntent,
   isAmbiguousAffirmation,
   isAmbiguousMakeSwitchRequest,
   hasScopeResetIntent,
@@ -23,6 +24,7 @@ import {
   setConversationResultSet,
   transitionInventoryState,
   vehicleSatisfiesActiveFilters,
+  type ConversationInventoryState,
 } from "./chatConversationState";
 
 const FIRST = "11111111-1111-4111-8111-111111111111";
@@ -131,6 +133,12 @@ describe("chat conversation inventory state", () => {
     }
   });
 
+  it("marks a full inventory reset for mandatory UI synchronization", () => {
+    expect(hasFullInventoryResetIntent("back to the whole inventory")).toBe(true);
+    expect(hasFullInventoryResetIntent("clear all filters")).toBe(true);
+    expect(hasFullInventoryResetIntent("not Toyota, show me BMWs")).toBe(false);
+  });
+
   it("replaces a negated make with the visitor's newly named make", () => {
     const transition = transitionInventoryState({
       ...emptyConversationInventoryState(),
@@ -188,6 +196,120 @@ describe("chat conversation inventory state", () => {
     expect(transition.state.activeFilters).toEqual({
       make: "Toyota", model: "Camry", year: 2026, priceMax: 40_000,
     });
+  });
+
+  it("clears a stale make when an explicitly different model is named without its make", () => {
+    // Exact live sequence: Camry -> BMW under $70k -> #2 -> detail -> Camry.
+    // Extraction recognizes Camry but intentionally does not invent Toyota;
+    // the state layer must still prevent the old BMW make from surviving.
+    let state: ConversationInventoryState = {
+      ...emptyConversationInventoryState(),
+      activeFilters: { make: "BMW", priceMax: 70_000 },
+      turn: 28,
+    };
+    state = setConversationResultSet(state, [vehicle(FIRST), vehicle(SECOND)], 6);
+    state = selectConversationVehicle(state, SECOND);
+
+    const detail = transitionInventoryState(state, "how much is it?", {}, false);
+    const camry = transitionInventoryState(
+      detail.state,
+      "do you have a 2026 Camry?",
+      { model: "Camry", year: 2026 },
+      true,
+    );
+
+    expect(camry.state.activeFilters).toEqual({
+      model: "Camry",
+      year: 2026,
+      priceMax: 70_000,
+    });
+    expect(camry.state.activeFilters.make).toBeUndefined();
+    expect(camry.rules).toContain("clear_make_on_model_change");
+  });
+
+  it("clears a stranded body class when an explicit model starts a new named-vehicle search", () => {
+    const transition = transitionInventoryState({
+      ...emptyConversationInventoryState(),
+      activeFilters: { make: "BMW", bodyStyle: "SUV", priceMax: 70_000 },
+    }, "do you have a 2026 Camry?", { model: "Camry", year: 2026 }, true);
+    expect(transition.state.activeFilters).toEqual({
+      model: "Camry",
+      year: 2026,
+      priceMax: 70_000,
+    });
+    expect(transition.rules).toContain("clear_make_on_model_change");
+  });
+
+  it("keeps an immediate broad budget refinement in the current scope", () => {
+    const nowMs = Date.parse("2026-07-23T20:00:00.000Z");
+    const state = setConversationResultSet({
+      ...emptyConversationInventoryState(),
+      activeFilters: { model: "Camry", year: 2026 },
+      turn: 1,
+      lastInventoryActivityAt: new Date(nowMs).toISOString(),
+    }, [vehicle(FIRST)], 9);
+    const transition = transitionInventoryState(
+      state,
+      "I have a 20k budget for cars",
+      { priceMax: 20_000 },
+      true,
+      { nowMs: nowMs + 60_000 },
+    );
+    expect(transition.state.activeFilters).toEqual({
+      model: "Camry",
+      year: 2026,
+      priceMax: 20_000,
+    });
+    expect(transition.rules).not.toContain("clear_stale_scope_for_broad_query");
+  });
+
+  it("starts a fresh broad budget search after many unrelated turns", () => {
+    const nowMs = Date.parse("2026-07-23T20:00:00.000Z");
+    let state = setConversationResultSet({
+      ...emptyConversationInventoryState(),
+      activeFilters: { model: "Camry", year: 2026 },
+      turn: 1,
+      lastInventoryActivityAt: new Date(nowMs).toISOString(),
+    }, [vehicle(FIRST)], 9);
+    for (let index = 0; index < 9; index += 1) {
+      state = transitionInventoryState(
+        state,
+        "what verified information can you provide?",
+        {},
+        false,
+        { nowMs: nowMs + (index + 1) * 60_000 },
+      ).state;
+    }
+    const budget = transitionInventoryState(
+      state,
+      "do you have a 20k budget worth of cars?",
+      { priceMax: 20_000 },
+      true,
+      { nowMs: nowMs + 10 * 60_000 },
+    );
+    expect(budget.state.activeFilters).toEqual({ priceMax: 20_000 });
+    expect(budget.state.resultSet).toBeNull();
+    expect(budget.state.selectedVehicleId).toBeNull();
+    expect(budget.rules).toContain("clear_stale_scope_for_broad_query");
+  });
+
+  it("starts a fresh broad budget search after 90 minutes of inventory inactivity", () => {
+    const nowMs = Date.parse("2026-07-23T20:00:00.000Z");
+    const state = setConversationResultSet({
+      ...emptyConversationInventoryState(),
+      activeFilters: { model: "Camry", year: 2026 },
+      turn: 1,
+      lastInventoryActivityAt: new Date(nowMs).toISOString(),
+    }, [vehicle(FIRST)], 9);
+    const budget = transitionInventoryState(
+      state,
+      "do you have a 20k budget worth of cars?",
+      { priceMax: 20_000 },
+      true,
+      { nowMs: nowMs + 90 * 60_000 },
+    );
+    expect(budget.state.activeFilters).toEqual({ priceMax: 20_000 });
+    expect(budget.rules).toContain("clear_stale_scope_for_broad_query");
   });
 
   it("resolves ordinals from stored order without a re-query", () => {

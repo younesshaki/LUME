@@ -123,6 +123,7 @@ import { captureConciergeTranscript, captureDebug, captureError } from "@/lib/ob
 import {
   compareOrdinalIndexesFromText,
   filterActionsByConversationStateWithDiagnostics,
+  hasFullInventoryResetIntent,
   hasScopeResetIntent,
   isAmbiguousAffirmation,
   isAmbiguousMakeSwitchRequest,
@@ -322,6 +323,10 @@ export async function POST(request: Request): Promise<Response> {
   // instead of honoring the reset (live-reproduced 2026-07-23, session
   // 2c19e8d4 turn 4: Jeep detail text duplicated, on a full-reset turn).
   const scopeResetRequested = hasScopeResetIntent(lastUser.content);
+  const fullInventoryResetRequested = hasFullInventoryResetIntent(
+    lastUser.content,
+  );
+  const turnNowMs = Date.now();
   const selectedVehicleCandidate = scopeResetRequested
     ? null
     : currentPageVehicleId ??
@@ -364,7 +369,6 @@ export async function POST(request: Request): Promise<Response> {
     // Load the bounded tenant vocabulary for every turn. A visitor can ask
     // for a model without naming its make ("show me 911s"), which cannot be
     // recognized reliably without knowing this tenant's actual catalog.
-    const initialFilters = conversationState.activeFilters;
     const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext, selectedVehicleResult, facetResult] = await Promise.all([
       supabase
         .from("rag_chunks")
@@ -384,8 +388,14 @@ export async function POST(request: Request): Promise<Response> {
         : Promise.resolve(null),
       supabase.rpc("vehicle_facets_v2", {
         p_tenant_id: tenant.tenantId,
-        p_make: initialFilters.make ?? null,
-        p_state: initialFilters.sellerState ?? null,
+        // Extraction vocabulary must be tenant-wide, never narrowed by the
+        // previous turn's active scope. With BMW active, p_make:"BMW"
+        // excluded "Camry" from the model vocabulary, so the next explicit
+        // "2026 Camry" query extracted only the year and silently retained
+        // BMW. Filters are applied by queryTenantVehicles later; vocabulary
+        // discovery is deliberately scope-independent.
+        p_make: null,
+        p_state: null,
       }),
     ]);
     chatLoyaltyContext = loadedLoyaltyContext;
@@ -449,6 +459,7 @@ export async function POST(request: Request): Promise<Response> {
       lastUser.content,
       extractedFilters,
       hasInventoryIntent,
+      { nowMs: turnNowMs },
     );
     conversationState = stateTransition.state;
     stateRules = stateTransition.rules;
@@ -581,7 +592,17 @@ export async function POST(request: Request): Promise<Response> {
         matchedVehicles,
         totalMatched,
       );
-      if (
+      if (fullInventoryResetRequested) {
+        // A full reset changes the public inventory UI even when the filter
+        // object is empty. Previously this action was left to the model, so
+        // the assistant could claim "all filters cleared" while emitting no
+        // filter_inventory action at all after long conversations.
+        deterministicInventoryAnswer = inventoryResultAnswer(
+          matchedVehicles,
+          totalMatched,
+        );
+        deterministicInventoryAction = inventoryFilterAction(filters);
+      } else if (
         !deterministicAvailabilityAnswer &&
         totalMatched > 0 &&
         (isDirectInventoryPresentationRequest(lastUser.content, filters) ||
@@ -671,6 +692,9 @@ export async function POST(request: Request): Promise<Response> {
     extractedFilters: extractedInventoryFilters,
     activeFiltersBefore: conversationStateBefore.activeFilters,
     activeFiltersAfter: conversationState.activeFilters,
+    lastInventoryActivityAtBefore:
+      conversationStateBefore.lastInventoryActivityAt,
+    lastInventoryActivityAtAfter: conversationState.lastInventoryActivityAt,
     resultSetBefore: conversationStateBefore.resultSet
       ? { totalCount: conversationStateBefore.resultSet.totalCount, orderedIds: conversationStateBefore.resultSet.orderedIds }
       : null,
@@ -1291,7 +1315,14 @@ function isDirectInventoryPresentationRequest(
   filters: ReturnType<typeof extractVehicleFilters>,
 ): boolean {
   if (Object.keys(filters).length === 0) return false;
-  if (/\b(?:do you have|you have|have any|are there|is there)\b/i.test(userText)) return false;
+  // Make/model availability has its own deterministic phrasing above. Broad
+  // constrained availability ("do you have cars under 20k?") still belongs
+  // on this deterministic result/action path; otherwise UI synchronization
+  // is again left to optional model tool behavior.
+  if (
+    /\b(?:do you have|you have|have any|are there|is there)\b/i.test(userText) &&
+    (filters.make || filters.model)
+  ) return false;
   return /\b(?:show|find|browse|list|inventory|under|over|between|budget|looking|need|want|cars?|vehicles?|cheapest|least\s+expensive|most\s+expensive|lowest|highest)\b/i.test(userText);
 }
 
@@ -1305,7 +1336,7 @@ function inventoryResultAnswer(
       .join(" ");
     return `${index + 1}. ${label} — Est. $${vehicle.price.toLocaleString()}`;
   });
-  return `${totalMatched} matching vehicle${totalMatched === 1 ? "" : "s"} found.${examples.length ? ` ${examples.join(" · ")}.` : ""}`;
+  return `${totalMatched.toLocaleString()} matching vehicle${totalMatched === 1 ? "" : "s"} found.${examples.length ? ` ${examples.join(" · ")}.` : ""}`;
 }
 
 /** Recommendation language must not make the model invent market or condition claims. */
