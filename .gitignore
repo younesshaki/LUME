@@ -50,6 +50,8 @@ dist-ssr
 !apps/admin/public/brand/loader-logo.png
 !public/brand/loader-logo.png
 *.jpg
+!apps/admin/public/page-previews/
+!apps/admin/public/page-previews/demo-*.jpg
 *.jpeg
 *.gif
 *.webp

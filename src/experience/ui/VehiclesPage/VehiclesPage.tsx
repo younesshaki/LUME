@@ -22,6 +22,7 @@ import {
   VEHICLE_SORT_OPTIONS,
   YEAR_MAX,
   YEAR_MIN,
+  activeFilterChips,
   countActiveFilters,
   formatVehiclePrice,
   loadVehicleCount,
@@ -32,6 +33,7 @@ import {
   type Vehicle,
   type VehicleFacets,
   type VehicleFilters,
+  type VehicleFilterChip,
   type VehicleSort,
 } from "@/experience/vehicles/catalog";
 import {
@@ -930,6 +932,7 @@ export default function VehiclesPage({
   const totalPages = totalCount === null ? Math.max(1, page) : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
+  const filterChips = useMemo(() => activeFilterChips(filters), [filters]);
   const compareVehicles = useMemo(
     () => compareVehicleIds
       .map((id) => vehicleLookup[id])
@@ -1071,6 +1074,35 @@ export default function VehiclesPage({
                 onSortChange={handleSortChange}
                 onOpenFilters={() => setFiltersOpen(true)}
               />
+
+              {filterChips.length > 0 && (
+                <div className="vehiclesPage__activeFilters" aria-label="Active filters">
+                  {filterChips.map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      className="vehiclesPage__activeFilterChip"
+                      onClick={() => {
+                        play(vehiclePageSoundActions.filterChange);
+                        handleFilterChange(chip.clear);
+                      }}
+                    >
+                      <span>{chip.label}</span>
+                      <X size={12} aria-hidden="true" />
+                      <span className="vehiclesPage__srOnly">Remove filter: {chip.label}</span>
+                    </button>
+                  ))}
+                  {filterChips.length > 1 && (
+                    <button
+                      type="button"
+                      className="vehiclesPage__activeFiltersClearAll"
+                      onClick={handleClear}
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+              )}
 
               <DemoNotice />
 

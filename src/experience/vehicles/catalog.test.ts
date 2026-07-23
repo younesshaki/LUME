@@ -3,6 +3,7 @@ import {
   DEFAULT_FILTERS,
   YEAR_MAX,
   YEAR_MIN,
+  activeFilterChips,
   countActiveFilters,
   type VehicleFilters,
   filterVehicles,
@@ -145,6 +146,43 @@ describe("vehicle catalog", () => {
         sellerCity: "Los Angeles",
       })
     ).toBe(3);
+  });
+
+  it("produces a removable chip for every active facet, including ones the visitor cannot reach via the main toolbar", () => {
+    const chips = activeFilterChips({
+      ...DEFAULT_FILTERS,
+      make: "BMW",
+      drivetrain: "AWD",
+      sellerState: "CA",
+      priceMax: 70_000,
+    });
+    expect(chips.map((chip) => chip.id)).toEqual(["make", "drivetrain", "sellerState", "price"]);
+    expect(chips.find((chip) => chip.id === "drivetrain")).toEqual({
+      id: "drivetrain",
+      label: "AWD",
+      clear: { drivetrain: "" },
+    });
+    expect(chips.find((chip) => chip.id === "price")).toEqual({
+      id: "price",
+      label: "Under $70,000",
+      clear: { priceMin: 0, priceMax: 0 },
+    });
+  });
+
+  it("clearing the make chip also clears the make-specific model", () => {
+    const chips = activeFilterChips({ ...DEFAULT_FILTERS, make: "BMW", model: "X5" });
+    expect(chips.find((chip) => chip.id === "make")?.clear).toEqual({ make: "", model: "" });
+  });
+
+  it("combines a year range into one chip and resets both bounds on removal", () => {
+    const chips = activeFilterChips({ ...DEFAULT_FILTERS, yearMin: 2020, yearMax: 2023 });
+    expect(chips).toEqual([
+      { id: "year", label: "2020–2023", clear: { yearMin: YEAR_MIN, yearMax: YEAR_MAX } },
+    ]);
+  });
+
+  it("produces no chips when no filters are active", () => {
+    expect(activeFilterChips(DEFAULT_FILTERS)).toEqual([]);
   });
 
   it("returns vehicles by id and formats estimated demo prices", () => {

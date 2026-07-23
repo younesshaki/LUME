@@ -101,7 +101,7 @@ export function LoginShell({
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
-        <CardFooter className="flex-col gap-3 pt-2">
+        <CardFooter className="flex-col gap-3 border-amber-100/15 bg-black/30 pt-2">
           <Button type="submit" disabled={pending || !onSubmit} className="w-full">
             {pending ? "Signing in..." : "Sign in"}
           </Button>

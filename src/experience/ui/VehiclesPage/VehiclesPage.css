@@ -372,6 +372,61 @@
   white-space: nowrap;
 }
 
+/* Every active filter — including one the AI concierge applied on the
+   visitor's behalf — must be visible and individually removable without
+   opening the filters drawer. This row is the single source of truth for
+   "what is currently filtering my results." */
+.vehiclesPage__activeFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.vehiclesPage__activeFilterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 1.9rem;
+  padding: 0 0.55rem 0 0.75rem;
+  border: 1px solid rgba(217, 183, 106, 0.32);
+  border-radius: 999px;
+  background: rgba(217, 183, 106, 0.1);
+  color: var(--lume-cream, #fff8ec);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.vehiclesPage__activeFilterChip:hover,
+.vehiclesPage__activeFilterChip:focus-visible {
+  border-color: rgba(217, 183, 106, 0.6);
+  background: rgba(217, 183, 106, 0.18);
+}
+
+.vehiclesPage__activeFilterChip svg {
+  opacity: 0.7;
+}
+
+.vehiclesPage__activeFiltersClearAll {
+  height: 1.9rem;
+  padding: 0 0.65rem;
+  border: 1px solid rgba(255, 248, 236, 0.14);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--lume-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.vehiclesPage__activeFiltersClearAll:hover,
+.vehiclesPage__activeFiltersClearAll:focus-visible {
+  border-color: rgba(255, 248, 236, 0.35);
+  color: var(--lume-cream, #fff8ec);
+}
+
 .vehiclesPage__demoNotice {
   margin: 0.85rem 0 0;
   color: rgba(255, 248, 236, 0.5);
@@ -472,8 +527,11 @@
 
 .vehiclesPage__card--notch::before {
   background:
-    radial-gradient(340px circle at var(--spotlight-x) var(--spotlight-y), color-mix(in srgb, var(--vehicle-card-accent) 40%, white), transparent 62%);
+    radial-gradient(300px circle at var(--spotlight-x) var(--spotlight-y), color-mix(in srgb, var(--vehicle-card-accent) 16%, transparent), transparent 52%);
 }
+
+/* Keep a subtle cursor glow on the Notch card, well below the classic card's. */
+.vehiclesPage__card--notch:hover::before { opacity: 0.4; }
 
 .vehiclesPage__card--notch::after {
   content: "";
@@ -515,6 +573,48 @@
   border-color: color-mix(in srgb, var(--vehicle-card-accent) 72%, white);
   background: color-mix(in srgb, var(--vehicle-card-accent) 26%, transparent);
   color: color-mix(in srgb, var(--vehicle-card-accent) 70%, white);
+}
+
+/* Page Builder's optional Bento layout. Every 5th tile (see
+   BENTO_FEATURED_INTERVAL in VehicleInventory.tsx) spans two grid columns and
+   gets a taller hero image; the rest keep the standard single-column tile.
+   Same rule as Notch: markup, actions, filters, save, and compare are
+   untouched — only the container/tile classes and accent colour differ. */
+.vehiclesPage__grid--bento {
+  grid-auto-flow: dense;
+}
+
+.vehiclesPage__card--bento {
+  border-radius: 0.625rem;
+  border-color: rgba(255, 248, 236, 0.14);
+}
+
+.vehiclesPage__card--bento::before {
+  background:
+    radial-gradient(300px circle at var(--spotlight-x) var(--spotlight-y), color-mix(in srgb, var(--vehicle-card-accent) 14%, transparent), transparent 52%);
+}
+
+/* Deliberately restrained — a strong cursor glow read as "too much" on the
+   Notch card's first pass, so Bento starts at the lower value directly. */
+.vehiclesPage__card--bento:hover::before { opacity: 0.35; }
+
+.vehiclesPage__card--bento:hover {
+  border-color: color-mix(in srgb, var(--vehicle-card-accent) 55%, rgba(255, 248, 236, 0.2));
+  box-shadow: 0 22px 56px color-mix(in srgb, var(--vehicle-card-accent) 14%, transparent);
+}
+
+.vehiclesPage__card--bento-featured {
+  grid-column: span 2;
+  border-color: color-mix(in srgb, var(--vehicle-card-accent) 45%, rgba(255, 248, 236, 0.16));
+}
+
+.vehiclesPage__card--bento-featured .vehiclesPage__cardImage {
+  aspect-ratio: 21 / 10;
+}
+
+.vehiclesPage__card--bento-featured .vehiclesPage__cardPrice,
+.vehiclesPage__card--bento-featured .vehiclesPage__cardYear {
+  color: color-mix(in srgb, var(--vehicle-card-accent) 68%, white);
 }
 
 .vehiclesPage__cardImage {
@@ -1114,6 +1214,14 @@
   .vehiclesPage__grid,
   .vehiclesPage__compareGrid {
     grid-template-columns: 1fr;
+  }
+
+  .vehiclesPage__card--bento-featured {
+    grid-column: span 1;
+  }
+
+  .vehiclesPage__card--bento-featured .vehiclesPage__cardImage {
+    aspect-ratio: 16 / 10;
   }
 
   .vehiclesPage__drawerOverlay {

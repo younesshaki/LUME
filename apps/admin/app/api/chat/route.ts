@@ -119,7 +119,7 @@ import {
   conversationMemoryKey,
   getConversationMemoryStore,
 } from "@/lib/conversationMemory.server";
-import { captureDebug, captureError } from "@/lib/observability";
+import { captureConciergeTranscript, captureDebug, captureError } from "@/lib/observability";
 import {
   filterActionsByConversationStateWithDiagnostics,
   hasScopeResetIntent,
@@ -634,6 +634,9 @@ export async function POST(request: Request): Promise<Response> {
     ...quotaHeaders,
     ...cors,
   });
+  // One stable id per turn's log lines (transcript + conversation-state +
+  // actions debug) so they can be correlated by grepping this value.
+  const transcriptSessionId = visitorTurn?.sessionId ?? anonymousConversationId ?? "unknown";
   const metaEvent = sseEvent({
     type: "meta",
     sourceCategories: assembled.sourceCategories,
@@ -663,6 +666,15 @@ export async function POST(request: Request): Promise<Response> {
     captureDebug("api/chat/actions", {
       tenantId: tenant.tenantId,
       actionsEmitted: actionDebugSummary(actions),
+    });
+    captureConciergeTranscript({
+      sessionId: transcriptSessionId,
+      tenantId: tenant.tenantId,
+      turn: conversationState.turn,
+      userText: lastUser.content,
+      assistantText: visibleContent,
+      source: "deterministic",
+      actions: actionDebugSummary(actions),
     });
     const stream = new ReadableStream({
       async start(controller) {
@@ -826,6 +838,15 @@ export async function POST(request: Request): Promise<Response> {
     captureDebug("api/chat/actions", {
       tenantId: tenant.tenantId,
       actionsEmitted: actionDebugSummary(actions),
+    });
+    captureConciergeTranscript({
+      sessionId: transcriptSessionId,
+      tenantId: tenant.tenantId,
+      turn: conversationState.turn,
+      userText: lastUser.content,
+      assistantText: visibleContent,
+      source: "model",
+      actions: actionDebugSummary(actions),
     });
     const stream = new ReadableStream({
       async start(controller) {
@@ -1111,6 +1132,21 @@ export async function POST(request: Request): Promise<Response> {
             })),
           }).catch((error: unknown) => {
             captureError("api/chat/memory-write", error, { tenantId: tenant.tenantId });
+          });
+        }
+        if (streamCompletionObserved) {
+          captureConciergeTranscript({
+            sessionId: transcriptSessionId,
+            tenantId: tenant.tenantId,
+            turn: conversationState.turn,
+            userText: lastUser.content,
+            assistantText: assistantContent,
+            source: "tool",
+            actions: actionDebugSummary(emittedActions),
+            toolCalls: turn.steps.map((step) => ({
+              name: step.call.name,
+              result: step.result,
+            })),
           });
         }
         reader.releaseLock();

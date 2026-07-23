@@ -11,7 +11,9 @@ import {
   updatePageNavOrder,
   validateNewPageSlug,
 } from "@lume/db";
+import { LayoutGrid, LayoutList, PanelsTopLeft } from "lucide-react";
 import type { Page } from "@lume/types";
+import Carousel, { type CarouselSlide } from "@/components/ui/carousel";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -27,6 +29,12 @@ type StatusState =
   | { type: "success"; message: string }
   | { type: "error"; message: string };
 
+type PagesView = "list" | "carousel" | "bento";
+
+// Every 4th tile is the Bento layout's larger "featured" tile — periodic
+// rather than fixed indices so it looks intentional at any page count.
+const BENTO_FEATURED_INTERVAL = 4;
+
 export default function PagesListClient({
   tenantId,
   tenantSlug,
@@ -35,6 +43,7 @@ export default function PagesListClient({
   const router = useRouter();
   const [pages, setPages] = useState(initialPages);
   const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
+  const [view, setView] = useState<PagesView>("list");
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
 
   async function reorderPages(activePageId: string, overPageId: string) {
@@ -123,6 +132,61 @@ export default function PagesListClient({
     }
   }
 
+  const pageActions = (page: Page) => (
+    <>
+      <Link
+        href={`/admin/${tenantSlug}/pages/${page.id}`}
+        className="text-xs font-medium text-neutral-200 hover:text-white"
+      >
+        Edit
+      </Link>
+      <button
+        type="button"
+        onClick={() => void handleDuplicate(page)}
+        className="text-xs font-medium text-neutral-200 hover:text-white"
+      >
+        Duplicate
+      </button>
+      <ConfirmActionDialog
+        title={`Archive /${page.slug}?`}
+        description="The page disappears from public navigation and stops rendering on the site. Its content and revisions are kept, so it can be restored later."
+        actionLabel="Archive page"
+        destructive={false}
+        onConfirm={() => void handleArchive(page)}
+      >
+        <button
+          type="button"
+          disabled={page.isReserved || Boolean(page.archivedAt)}
+          className="text-xs font-medium text-neutral-200 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Archive
+        </button>
+      </ConfirmActionDialog>
+      <ConfirmActionDialog
+        title={`Delete /${page.slug}?`}
+        description="This permanently removes the page and every one of its revisions. This action cannot be undone."
+        actionLabel="Delete page"
+        onConfirm={() => void handleDelete(page)}
+      >
+        <button
+          type="button"
+          disabled={page.isReserved}
+          className="text-xs font-medium text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Delete
+        </button>
+      </ConfirmActionDialog>
+    </>
+  );
+
+  const carouselSlides: CarouselSlide[] = pages.map((page) => ({
+    id: page.id,
+    title: page.title || page.slug,
+    description: `/${page.slug} · ${pageStatus(page)}${page.isReserved ? " · Reserved" : ""}`,
+    imageSrc: pagePreviewSrc(tenantSlug, page.slug),
+    footer: pageActions(page),
+  }));
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -131,12 +195,43 @@ export default function PagesListClient({
             Drag rows to reorder public navigation. Reserved pages cannot be deleted.
           </p>
         </div>
-        <Link
-          href={`/admin/${tenantSlug}/pages/new`}
-          className="rounded-md bg-neutral-950 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-        >
-          New Page
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border border-neutral-200 p-0.5 dark:border-neutral-800" aria-label="Pages view">
+            <button
+              type="button"
+              aria-label="List view"
+              aria-pressed={view === "list"}
+              onClick={() => setView("list")}
+              className={`rounded p-1.5 ${view === "list" ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950" : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+            >
+              <LayoutList className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Carousel view"
+              aria-pressed={view === "carousel"}
+              onClick={() => setView("carousel")}
+              className={`rounded p-1.5 ${view === "carousel" ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950" : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+            >
+              <PanelsTopLeft className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Bento view"
+              aria-pressed={view === "bento"}
+              onClick={() => setView("bento")}
+              className={`rounded p-1.5 ${view === "bento" ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950" : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+            >
+              <LayoutGrid className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+          <Link
+            href={`/admin/${tenantSlug}/pages/new`}
+            className="rounded-md bg-neutral-950 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+          >
+            New Page
+          </Link>
+        </div>
       </div>
 
       {status.message && (
@@ -154,6 +249,75 @@ export default function PagesListClient({
         </div>
       )}
 
+      {view === "carousel" ? (
+        carouselSlides.length === 0 ? (
+          <div className="rounded-xl border px-4 py-12 text-center text-sm text-muted-foreground">
+            No pages found for this tenant.
+          </div>
+        ) : (
+          <Carousel slides={carouselSlides} />
+        )
+      ) : view === "bento" ? (
+        pages.length === 0 ? (
+          <div className="rounded-xl border px-4 py-12 text-center text-sm text-muted-foreground">
+            No pages found for this tenant.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 [grid-auto-flow:dense] sm:grid-cols-2 lg:grid-cols-3">
+            {pages.map((page, index) => {
+              const featured = index % BENTO_FEATURED_INTERVAL === BENTO_FEATURED_INTERVAL - 1;
+              const previewSrc = pagePreviewSrc(tenantSlug, page.slug);
+              return (
+                <article
+                  key={page.id}
+                  className={`group relative flex flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 transition hover:border-neutral-600 ${featured ? "sm:col-span-2" : ""}`}
+                >
+                  <div
+                    className={`relative w-full overflow-hidden bg-neutral-900 ${featured ? "aspect-[21/9]" : "aspect-[16/10]"}`}
+                  >
+                    {previewSrc ? (
+                      <img
+                        src={previewSrc}
+                        alt={`Screenshot of ${page.title || page.slug}`}
+                        className="size-full object-contain object-center"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div
+                        className="size-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.14),transparent_35%),linear-gradient(135deg,#292524,#0a0a0a)]"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1 p-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="truncate text-sm font-semibold text-white">
+                        {page.title || page.slug}
+                      </h3>
+                      {page.isReserved && (
+                        <span className="shrink-0 rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] font-medium text-neutral-300">
+                          Reserved
+                        </span>
+                      )}
+                      {page.archivedAt && (
+                        <span className="shrink-0 rounded-full bg-amber-950 px-2 py-0.5 text-[11px] font-medium text-amber-300">
+                          Archived
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-neutral-400">
+                      /{page.slug} · {pageStatus(page)}
+                    </p>
+                  </div>
+                  <div className="mt-auto flex flex-wrap items-center gap-3 border-t border-neutral-800 px-4 py-3">
+                    {pageActions(page)}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )
+      ) : (
       <div className="overflow-hidden rounded-xl border">
         <table className="w-full text-sm">
           <thead>
@@ -260,6 +424,7 @@ export default function PagesListClient({
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
@@ -298,4 +463,10 @@ function createPageServiceClient(): Parameters<typeof updatePageNavOrder>[0] {
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function pagePreviewSrc(tenantSlug: string, slug: string): string | undefined {
+  if (tenantSlug !== "demo") return undefined;
+  const supported = new Set(["home", "vehicles", "products", "showcase", "contact"]);
+  return supported.has(slug) ? `/page-previews/demo-${slug}.jpg` : undefined;
 }
