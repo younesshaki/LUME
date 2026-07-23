@@ -81,6 +81,19 @@ export async function destroyE2EUser(service: SupabaseClient): Promise<void> {
     .filter((membership) => membership.role === "owner")
     .map((membership) => membership.tenant_id);
   if (ownedTenantIds.length > 0) {
+    // Delete vehicles (and their images) BEFORE the tenant: the migration-061
+    // inventory-version trigger inserts into tenant_inventory_versions on
+    // every vehicle delete, and if it fires during the tenant's FK cascade —
+    // after the version row is already gone — the insert violates the FK and
+    // the whole cleanup fails. Deleting vehicles while the tenant exists
+    // lets the trigger bump the version normally.
+    const { error: vehiclesError } = await service
+      .from("vehicles")
+      .delete()
+      .in("tenant_id", ownedTenantIds);
+    if (vehiclesError) {
+      throw new Error(`vehicle cleanup failed: ${vehiclesError.message}`);
+    }
     const { error } = await service.from("tenants").delete().in("id", ownedTenantIds);
     if (error) throw new Error(`tenant cleanup failed: ${error.message}`);
   }

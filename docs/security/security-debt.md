@@ -27,9 +27,9 @@ rediscovering them later.
 
 | ID | Feature | Risk | Severity (at scale) | Status |
 |----|---------|------|---------------------|--------|
-| SD-001 | Feed image → R2 import | SSRF via DNS rebinding (TOCTOU between validation and fetch) | Medium | Open |
-| SD-002 | Feed image → R2 import | IPv4-mapped IPv6 (`::ffff:127.0.0.1`) bypasses the private-IP blocklist | Low–Medium | Open |
-| SD-003 | Feed image → R2 import | Response body is fully buffered before the size check (Content-Length can be omitted) | Low | Open |
+| SD-001 | Feed image → R2 import | SSRF via DNS rebinding (TOCTOU between validation and fetch) | Medium | Fixed |
+| SD-002 | Feed image → R2 import | IPv4-mapped IPv6 (`::ffff:127.0.0.1`) bypasses the private-IP blocklist | Low–Medium | Fixed |
+| SD-003 | Feed image → R2 import | Response body is fully buffered before the size check (Content-Length can be omitted) | Low | Fixed |
 
 ---
 
@@ -51,10 +51,17 @@ rediscovering them later.
   internal address and discard the result unless it's a valid image" — very low
   exfiltration value. `redirect: "error"` already closes the redirect-based
   variant.
-- **Fix before market:** Resolve the host once, validate the address, then
-  connect **to that validated IP** (custom `lookup`/agent that pins or
-  re-validates the socket address), so the fetch cannot reach a different IP
-  than the one we checked. Re-validate on the actual connected socket.
+- **Status: Fixed.** `apps/admin/lib/remoteImageFetch.ts` implements the planned
+  fix: `resolvePublicRemoteTargets` resolves and validates the address **once**,
+  and `fetchPinnedRemoteImage` connects via a node `http`/`https` `request` with
+  a custom `lookup` that returns **only** the validated address (DNS is never
+  re-resolved). The Host header and TLS SNI/certificate verification still use
+  the real hostname (TLS verification is **not** disabled), redirects are
+  rejected (any 3xx is an error), and the connected socket's `remoteAddress` is
+  re-verified against the validated address (IPv6-normalized comparison). The
+  body is streamed under the size cap. Tests:
+  `apps/admin/lib/remoteImageFetch.test.ts` (resolve validation incl.
+  rebind-shaped cases, redirect rejection, local-server pinned fetch).
 
 ## SD-002 — IPv4-mapped IPv6 loopback bypasses the blocklist
 
@@ -64,9 +71,14 @@ rediscovering them later.
   `::ffff:7f00:1`, which route to IPv4 loopback/private ranges.
 - **Why it's tolerable today:** Same constrained threat model as SD-001, and a
   host resolving to an IPv4-mapped IPv6 loopback is unusual. Blind SSRF only.
-- **Fix before market:** Detect IPv4-mapped IPv6 (`::ffff:a.b.c.d`), extract the
-  embedded IPv4, and run it through the IPv4 private-range check. Fold this into
-  the SD-001 pin-to-validated-IP fix.
+- **Status: Fixed.** In `apps/admin/lib/remoteImageFetch.ts`,
+  `isPublicAddress` / `parseIpv6Groups` / `ipv4MappedOctets` handle the
+  `::ffff:a.b.c.d` and `::ffff:hex:hex` mapped forms in both expanded and
+  compressed notation, and the embedded IPv4 is run through the same IPv4
+  private-range check. The test matrix in
+  `apps/admin/lib/remoteImageFetch.test.ts` covers loopback, RFC1918,
+  link-local, 169.254.169.254, CGNAT, unspecified, and multicast (v4 + v6),
+  including the mapped forms.
 
 ## SD-003 — Unbounded body buffering before the size check
 
@@ -78,9 +90,13 @@ rediscovering them later.
   before the check trips. `AbortSignal.timeout(15s)` bounds it loosely.
 - **Why it's tolerable today:** Authenticated-editor-only, low request volume,
   10 MB nominal cap, timeout ceiling. A memory-pressure nuisance, not a breach.
-- **Fix before market:** Stream the response and enforce the byte cap
-  incrementally (abort as soon as the counter exceeds `MAX_VEHICLE_IMAGE_BYTES`),
-  never trusting `Content-Length` and never buffering an unbounded body.
+- **Status: Fixed.** `readBodyBounded` in `apps/admin/lib/remoteImageFetch.ts`
+  enforces the 10 MB cap incrementally while streaming and aborts as soon as
+  the running total exceeds it. `Content-Length` is never trusted — a header
+  over the cap is only a fast-fail. Tests in
+  `apps/admin/lib/remoteImageFetch.test.ts` cover: valid small body, exact cap,
+  cap+1, chunked oversize, dishonest/absent `Content-Length`, timeout, and
+  non-image bytes.
 
 ---
 

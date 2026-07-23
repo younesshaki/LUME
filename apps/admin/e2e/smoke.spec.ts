@@ -57,10 +57,21 @@ test("signup provisions a tenant through onboarding", async () => {
 test("admin shell renders sidebar, tenant switcher, and no platform entry", async () => {
   // Tenant switcher shows the provisioned site's name.
   await expect(page.getByRole("button", { name: new RegExp(E2E_SITE_NAME) })).toBeVisible();
-  // Core nav sections exist.
-  for (const section of ["Website", "Vehicles", "Leads", "Pages", "Team"]) {
+  // Top-level destinations and collapsible sections exist (the sidebar
+  // groups CRM/Website/AI Concierge/Settings behind section buttons).
+  for (const section of ["Overview", "Vehicles", "Analytics"]) {
     await expect(page.getByRole("link", { name: section, exact: true })).toBeVisible();
   }
+  for (const section of ["CRM", "Website", "AI Concierge", "Settings"]) {
+    await expect(page.getByRole("button", { name: section, exact: true })).toBeVisible();
+  }
+  // Child destinations render once their section is expanded.
+  await page.getByRole("button", { name: "Website", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Pages", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "CRM", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Leads", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Team", exact: true })).toBeVisible();
   // Fresh signups are not platform admins — no Platform nav entry.
   await expect(page.getByRole("link", { name: "Platform", exact: true })).toHaveCount(0);
 });
@@ -93,9 +104,11 @@ test("CSV import previews and inserts rows", async () => {
   await page.setInputFiles('input[type="file"]', path.join(fixturesDir, "vehicles.csv"));
 
   await expect(page.getByText("5 valid rows")).toBeVisible();
-  await expect(page.getByText(/1 of 5 rows include a primary photo/)).toBeVisible();
-  await expect(page.getByText(/plus 1 additional photo URL detected/)).toBeVisible();
-  await expect(page.getByRole("img", { name: "Primary photo for 2021 Porsche 911" })).toBeVisible();
+  // Import modes on this branch: add, replace, and feed synchronization.
+  await expect(page.getByRole("radio", { name: /Add to inventory/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Synchronize inventory feed/ })).toBeVisible();
+  // The parsed preview table shows the fixture rows (photo URLs map to
+  // image_src/image_list via the importer's image_link aliases).
   await expect(page.getByRole("cell", { name: "Porsche" }).first()).toBeVisible();
   await page.getByRole("button", { name: "Import 5 vehicles" }).click();
   await expect(page.getByText("Imported 5 vehicles.")).toBeVisible();
@@ -215,15 +228,32 @@ test("leads page renders its empty state", async () => {
 
 test("website hub lists editable surfaces and the live preview", async () => {
   await page.goto(`/admin/${tenantSlug}/website`);
-  await expect(page.getByRole("heading", { name: "Website", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Website" })).toBeVisible();
   // Entry points into every editable surface.
   await expect(page.getByRole("link", { name: /Pages & content/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Header & navigation/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Templates/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Templates Preview and prepare/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Website design/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Logo & favicons/ })).toBeVisible();
   // The true-to-production preview surface.
   await expect(page.getByText("Published website preview")).toBeVisible();
+});
+
+test("website studio shows launch readiness reflecting real tenant state", async () => {
+  await page.goto(`/admin/${tenantSlug}/website`);
+  await expect(page.getByRole("heading", { name: "Launch readiness" })).toBeVisible();
+  // Both profiles are evaluated server-side; toggling is instant.
+  await expect(page.getByRole("button", { name: "Pilot", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Public", exact: true })).toBeVisible();
+  // This tenant imported fixture vehicles earlier in the journey — inventory
+  // presence must read as a pass, not a blocker.
+  await expect(page.getByText(/live vehicle\(s\) in inventory/i)).toBeVisible();
+  // Remediation links point into existing admin surfaces.
+  const section = page.locator('section[aria-labelledby="launch-readiness-heading"]');
+  await expect(section.getByRole("link").first()).toBeVisible();
+  // The public profile renders its own verdict (possibly stricter).
+  await page.getByRole("button", { name: "Public", exact: true }).click();
+  await expect(page.getByText(/Not ready for public launch|Ready for public launch/)).toBeVisible();
 });
 
 test("website design publishes separate dark and light backgrounds", async () => {

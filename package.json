@@ -31,7 +31,8 @@
     "staging:refresh-from-prod": "node scripts/staging-refresh-from-prod.mjs",
     "embed": "tsx scripts/generateEmbeddings.ts",
     "seed:default-tenant": "tsx scripts/seed-default-tenant.ts",
-    "create:tenant": "tsx scripts/create-tenant.ts"
+    "create:tenant": "tsx scripts/create-tenant.ts",
+    "audit:tenant-launch": "tsx scripts/tenant-launch-audit.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
