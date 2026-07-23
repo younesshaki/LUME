@@ -2,11 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BookOpen, Car, FileText, Inbox } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import {
-  isBotPersonaConfigured,
-  tenantThemeHasLogo,
-  type OnboardingChecklistItem,
-} from "@/lib/onboardingChecklist";
+import { evaluateLaunchReadiness } from "@/lib/launchReadiness";
+import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
+import type { OnboardingChecklistItem } from "@/lib/onboardingChecklist";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -30,51 +28,31 @@ export default async function TenantOverviewPage({ params }: PageProps) {
 
   if (!tenant) notFound();
 
+  // The launch snapshot is the shared source of truth for setup state —
+  // the checklist below derives from it instead of ad-hoc queries. The
+  // remaining queries feed only the stat cards (and the domain rule below).
+  const snapshot = await loadTenantLaunchSnapshot(supabase, slug);
+  if (!snapshot) notFound();
+
   const [
     { count: vehicleCount },
     { count: ragCount },
     { count: leadCount },
     { count: pageCount },
     { count: publishedPageCount },
-    personaResult,
-    { count: memberCount },
-    { count: inviteCount },
-    { count: verifiedDomainCount },
-    rootLogoResult,
-    nestedLogoResult,
   ] = await Promise.all([
     supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
     supabase.from("rag_chunks").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
     supabase.from("pages").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+    // Any published, non-archived page satisfies the domain rule — the
+    // snapshot only tracks the home page, so this query stays.
     supabase
       .from("pages")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenant.id)
       .not("published_revision_id", "is", null)
       .is("archived_at", null),
-    supabase
-      .from("bot_personas")
-      .select("name, tone, system_prompt, created_at, updated_at")
-      .eq("tenant_id", tenant.id)
-      .eq("is_active", true)
-      .maybeSingle(),
-    supabase
-      .from("tenant_members")
-      .select("user_id", { count: "exact", head: true })
-      .eq("tenant_id", tenant.id),
-    supabase
-      .from("tenant_invites")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenant.id)
-      .in("status", ["pending", "accepted"]),
-    supabase
-      .from("tenant_domains")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenant.id)
-      .eq("verified", true),
-    supabase.storage.from("tenant-logos").list(tenant.id, { limit: 100 }),
-    supabase.storage.from("tenant-logos").list(`${tenant.id}/logos`, { limit: 100 }),
   ]);
 
   const stats = [
@@ -83,34 +61,38 @@ export default async function TenantOverviewPage({ params }: PageProps) {
     { label: "Pages", value: pageCount ?? 0, href: `/admin/${slug}/pages`, icon: FileText },
     { label: "Knowledge chunks", value: ragCount ?? 0, href: `/admin/${slug}/knowledge`, icon: BookOpen },
   ];
-  const logoObjects = [...(rootLogoResult.data ?? []), ...(nestedLogoResult.data ?? [])];
-  const hasLogo =
-    tenantThemeHasLogo(tenant.theme) || logoObjects.some((object) => Boolean(object.id));
+  const launchReport = evaluateLaunchReadiness(snapshot, "pilot", new Date().toISOString());
+  const logoCheck = launchReport.checks.find((check) => check.id === "branding.logo");
   const setupItems: OnboardingChecklistItem[] = [
-    { id: "logo", label: "Upload logo", complete: hasLogo, href: `/admin/${slug}/branding` },
+    {
+      id: "logo",
+      label: "Upload logo",
+      complete: logoCheck?.status === "pass",
+      href: `/admin/${slug}/branding`,
+    },
     {
       id: "inventory",
       label: "Import first vehicles",
-      complete: (vehicleCount ?? 0) > 0,
+      complete: snapshot.vehicles.live > 0,
       href: `/admin/${slug}/vehicles`,
     },
     {
       id: "persona",
       label: "Configure bot persona",
-      complete: isBotPersonaConfigured(personaResult.data),
+      complete: snapshot.personaConfigured,
       href: `/admin/${slug}/persona`,
     },
     {
       id: "team",
       label: "Invite a team member",
-      complete: (memberCount ?? 0) > 1 || (inviteCount ?? 0) > 0,
+      complete: snapshot.memberCount > 1 || snapshot.pendingInviteCount > 0,
       href: `/admin/${slug}/team`,
     },
     {
       id: "domain",
       label: "Connect domain or publish",
       complete:
-        (verifiedDomainCount ?? 0) > 0 ||
+        snapshot.verifiedDomainCount > 0 ||
         (tenant.status === "active" && (publishedPageCount ?? 0) > 0),
       href: `/admin/${slug}/domains`,
     },

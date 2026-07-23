@@ -5,6 +5,8 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { setSiteNavLoaderEnabled } from "./actions";
+import LaunchReadinessSection from "./LaunchReadinessSection";
+import type { LaunchReadinessReport } from "@/lib/launchReadiness";
 import {
   ExternalLink,
   FileText,
@@ -26,6 +28,9 @@ type WebsiteClientProps = {
   publicSiteBaseUrl: string;
   pages: Page[];
   navLoaderEnabled: boolean;
+  pilotReport: LaunchReadinessReport | null;
+  publicReport: LaunchReadinessReport | null;
+  launchLoadError: boolean;
 };
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -53,6 +58,9 @@ export default function WebsiteClient({
   publicSiteBaseUrl,
   pages,
   navLoaderEnabled,
+  pilotReport,
+  publicReport,
+  launchLoadError,
 }: WebsiteClientProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [reloadKey, setReloadKey] = useState(0);
@@ -157,6 +165,14 @@ export default function WebsiteClient({
           </Link>
         ))}
       </section>
+
+      <LaunchReadinessSection
+        pilotReport={pilotReport}
+        publicReport={publicReport}
+        tenantSlug={tenantSlug}
+        publicSiteBaseUrl={publicSiteBaseUrl}
+        loadError={launchLoadError}
+      />
 
       <section className="rounded-xl border border-neutral-200 dark:border-neutral-800">
         <div className="flex items-start justify-between gap-4 p-4">
