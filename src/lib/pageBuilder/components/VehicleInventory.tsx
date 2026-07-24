@@ -1,4 +1,11 @@
-import { CSSProperties, MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  CSSProperties,
+  MouseEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { motion } from "motion/react";
 import {
   Check,
@@ -6,12 +13,10 @@ import {
   ChevronRight,
   GitCompare,
   Heart,
-  Search,
   X,
 } from "lucide-react";
 import {
   DEFAULT_FILTERS,
-  VEHICLE_SORT_OPTIONS,
   activeFilterChips,
   countActiveFilters,
   formatVehiclePrice,
@@ -24,15 +29,17 @@ import {
   type VehicleFilters,
   type VehicleSort,
 } from "@/experience/vehicles/catalog";
-import {
-  vehicleFiltersFromBotAction,
-} from "@/lib/botActionConsumers";
+import { vehicleFiltersFromBotAction } from "@/lib/botActionConsumers";
 import { readVehicleUrlState } from "@/experience/vehicles/urlState";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
 import { useOptionalSavedVehicles } from "@/lib/visitor/SavedVehiclesContext";
 import { trackConversion } from "@/lib/conversionAnalytics";
 import { vehiclePageSoundActions } from "@/experience/ui/VehiclesPage/VehiclesPage.sounds";
+import {
+  AdvancedFilters,
+  MarketplaceToolbar,
+} from "@/experience/ui/VehiclesPage/VehicleFilters";
 import type { BlockComponentProps } from "../registry";
 import { usePageBuilderRenderContext } from "../renderContext";
 import { booleanProp, stringProp } from "./props";
@@ -69,7 +76,9 @@ function readStoredIds(key: string): string[] {
   if (typeof window === "undefined") return [];
   try {
     const parsed = JSON.parse(window.localStorage.getItem(key) ?? "[]");
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((id) => typeof id === "string")
+      : [];
   } catch {
     return [];
   }
@@ -138,12 +147,19 @@ function VehicleCard({
 }) {
   const { play } = useSound();
   const isBentoFeatured =
-    cardStyle === "bento" && index % BENTO_FEATURED_INTERVAL === BENTO_FEATURED_INTERVAL - 1;
+    cardStyle === "bento" &&
+    index % BENTO_FEATURED_INTERVAL === BENTO_FEATURED_INTERVAL - 1;
 
   const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    event.currentTarget.style.setProperty("--spotlight-x", `${event.clientX - rect.left}px`);
-    event.currentTarget.style.setProperty("--spotlight-y", `${event.clientY - rect.top}px`);
+    event.currentTarget.style.setProperty(
+      "--spotlight-x",
+      `${event.clientX - rect.left}px`,
+    );
+    event.currentTarget.style.setProperty(
+      "--spotlight-y",
+      `${event.clientY - rect.top}px`,
+    );
   };
 
   return (
@@ -153,10 +169,13 @@ function VehicleCard({
         cardStyle === "notch" && "vehiclesPage__card--notch",
         cardStyle === "bento" && "vehiclesPage__card--bento",
         isBentoFeatured && "vehiclesPage__card--bento-featured",
-      ].filter(Boolean).join(" ")}
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={
         cardStyle === "notch" || cardStyle === "bento"
-          ? ({ "--vehicle-card-accent": cardColor } as CSSProperties & Record<"--vehicle-card-accent", string>)
+          ? ({ "--vehicle-card-accent": cardColor } as CSSProperties &
+              Record<"--vehicle-card-accent", string>)
           : undefined
       }
       onMouseEnter={() => play(vehiclePageSoundActions.cardHover)}
@@ -166,7 +185,10 @@ function VehicleCard({
         {vehicleDisplayImage(vehicle) ? (
           <img
             src={vehicleDisplayImage(vehicle)}
-            alt={vehicle.primaryImageAlt || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+            alt={
+              vehicle.primaryImageAlt ||
+              `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+            }
           />
         ) : (
           <div className="vehiclesPage__cardImagePlaceholder">
@@ -178,25 +200,39 @@ function VehicleCard({
             Special
           </span>
         )}
-        <span className={`vehiclesPage__badge vehiclesPage__badge--${vehicle.stockType.toLowerCase()} ${vehicle.isSpecial ? "vehiclesPage__badge--stockOffset" : ""}`}>
+        <span
+          className={`vehiclesPage__badge vehiclesPage__badge--${vehicle.stockType.toLowerCase()} ${vehicle.isSpecial ? "vehiclesPage__badge--stockOffset" : ""}`}
+        >
           {vehicle.stockType}
         </span>
       </div>
 
       <div className="vehiclesPage__cardBody">
         <p className="vehiclesPage__cardYear">{vehicle.year}</p>
-        <h2 className="vehiclesPage__cardTitle">{vehicle.make} {vehicle.model}</h2>
-        {vehicle.trim && <p className="vehiclesPage__cardTrim">{vehicle.trim}</p>}
+        <h2 className="vehiclesPage__cardTitle">
+          {vehicle.make} {vehicle.model}
+        </h2>
+        {vehicle.trim && (
+          <p className="vehiclesPage__cardTrim">{vehicle.trim}</p>
+        )}
       </div>
 
       <div className="vehiclesPage__cardMeta" aria-label="Vehicle details">
-        <span className="vehiclesPage__cardStat">{formatMileage(vehicle.mileage)}</span>
-        {vehicle.fuelType && <span className="vehiclesPage__cardStat">{vehicle.fuelType}</span>}
-        {vehicle.drivetrain && <span className="vehiclesPage__cardStat">{vehicle.drivetrain}</span>}
+        <span className="vehiclesPage__cardStat">
+          {formatMileage(vehicle.mileage)}
+        </span>
+        {vehicle.fuelType && (
+          <span className="vehiclesPage__cardStat">{vehicle.fuelType}</span>
+        )}
+        {vehicle.drivetrain && (
+          <span className="vehiclesPage__cardStat">{vehicle.drivetrain}</span>
+        )}
       </div>
 
       <div className="vehiclesPage__cardFooter">
-        <span className="vehiclesPage__cardPrice">{formatVehiclePrice(vehicle.price)}</span>
+        <span className="vehiclesPage__cardPrice">
+          {formatVehiclePrice(vehicle.price)}
+        </span>
         {vehicle.sellerCity && (
           <span className="vehiclesPage__cardLocation">
             {vehicle.sellerCity}, {vehicle.sellerState}
@@ -255,7 +291,11 @@ function Pagination({
 
   const pages: (number | "...")[] = [];
   for (let index = 1; index <= totalPages; index += 1) {
-    if (index === 1 || index === totalPages || (index >= page - 2 && index <= page + 2)) {
+    if (
+      index === 1 ||
+      index === totalPages ||
+      (index >= page - 2 && index <= page + 2)
+    ) {
       pages.push(index);
     } else if (pages[pages.length - 1] !== "...") {
       pages.push("...");
@@ -263,7 +303,10 @@ function Pagination({
   }
 
   return (
-    <nav className="vehiclesPage__pagination" aria-label="Vehicle results pagination">
+    <nav
+      className="vehiclesPage__pagination"
+      aria-label="Vehicle results pagination"
+    >
       <button
         className="vehiclesPage__pageBtn"
         disabled={page === 1}
@@ -277,7 +320,12 @@ function Pagination({
       </button>
       {pages.map((item, index) =>
         item === "..." ? (
-          <span key={`ellipsis-${index}`} className="vehiclesPage__pageEllipsis">...</span>
+          <span
+            key={`ellipsis-${index}`}
+            className="vehiclesPage__pageEllipsis"
+          >
+            ...
+          </span>
         ) : (
           <button
             key={item}
@@ -291,7 +339,7 @@ function Pagination({
           >
             {item}
           </button>
-        )
+        ),
       )}
       <button
         className="vehiclesPage__pageBtn"
@@ -316,9 +364,14 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const title = stringProp(block, "title");
   const showFilters = booleanProp(block, "showFilters", true);
   const rawCardStyle = stringProp(block, "cardStyle", "classic");
-  const cardStyle = rawCardStyle === "notch" || rawCardStyle === "bento" ? rawCardStyle : "classic";
+  const cardStyle =
+    rawCardStyle === "notch" || rawCardStyle === "bento"
+      ? rawCardStyle
+      : "classic";
   const rawCardColor = stringProp(block, "cardColor", "#B68A35");
-  const cardColor = /^#[0-9a-fA-F]{6}$/.test(rawCardColor) ? rawCardColor : "#B68A35";
+  const cardColor = /^#[0-9a-fA-F]{6}$/.test(rawCardColor)
+    ? rawCardColor
+    : "#B68A35";
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [facets, setFacets] = useState<VehicleFacets>(EMPTY_VEHICLE_FACETS);
@@ -328,11 +381,12 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const [filters, setFilters] = useState<VehicleFilters>(initialState.filters);
   const [sort, setSort] = useState<VehicleSort>(initialState.sort);
   const [page, setPage] = useState(initialState.page);
-  const [previewSavedVehicleIds, setPreviewSavedVehicleIds] = useState<string[]>(() =>
-    readStoredIds(SAVED_STORAGE_KEY)
-  );
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [previewSavedVehicleIds, setPreviewSavedVehicleIds] = useState<
+    string[]
+  >(() => readStoredIds(SAVED_STORAGE_KEY));
   const [compareVehicleIds, setCompareVehicleIds] = useState<string[]>(() =>
-    readStoredIds(COMPARE_STORAGE_KEY).slice(0, 3)
+    readStoredIds(COMPARE_STORAGE_KEY).slice(0, 3),
   );
   const gridRef = useRef<HTMLDivElement>(null);
   const queryKey = useMemo(
@@ -397,14 +451,18 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
     // The page-preview iframe has no visitor session provider. Keep its
     // existing local-only interaction, but never let it overwrite the public
     // visitor queue once the authoritative provider is available.
-    if (!visitorSaves) writeStoredIds(SAVED_STORAGE_KEY, previewSavedVehicleIds);
+    if (!visitorSaves)
+      writeStoredIds(SAVED_STORAGE_KEY, previewSavedVehicleIds);
   }, [previewSavedVehicleIds, visitorSaves]);
 
   useEffect(() => {
     writeStoredIds(COMPARE_STORAGE_KEY, compareVehicleIds);
   }, [compareVehicleIds]);
 
-  const totalPages = totalCount === null ? Math.max(1, page) : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const totalPages =
+    totalCount === null
+      ? Math.max(1, page)
+      : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
   const filterChips = useMemo(() => activeFilterChips(filters), [filters]);
@@ -430,7 +488,9 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
       onSelectVehicle(vehicleId);
       return;
     }
-    console.warn(`[pageBuilder] vehicle selected without route handler: ${vehicleId}`);
+    console.warn(
+      `[pageBuilder] vehicle selected without route handler: ${vehicleId}`,
+    );
   };
 
   const savedVehicleIds = visitorSaves?.savedIds ?? previewSavedVehicleIds;
@@ -439,14 +499,17 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
     if (visitorSaves) {
       const wasSaved = visitorSaves.savedIds.includes(vehicleId);
       void visitorSaves.toggleSaved(vehicleId).then((changed) => {
-        if (changed) trackConversion(wasSaved ? "vehicle_unsaved" : "vehicle_saved", { vehicleId });
+        if (changed)
+          trackConversion(wasSaved ? "vehicle_unsaved" : "vehicle_saved", {
+            vehicleId,
+          });
       });
       return;
     }
     setPreviewSavedVehicleIds((ids) =>
       ids.includes(vehicleId)
         ? ids.filter((id) => id !== vehicleId)
-        : [...ids, vehicleId]
+        : [...ids, vehicleId],
     );
   };
 
@@ -473,78 +536,29 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
         </div>
       ) : (
         <>
-          {showFilters && (
-            <div className="vehiclesPage__toolbar" aria-label="Vehicle marketplace controls">
-              <label className="vehiclesPage__search">
-                <Search size={16} aria-hidden="true" />
-                <span className="vehiclesPage__srOnly">Search vehicles</span>
-                <input
-                  type="search"
-                  value={filters.query}
-                  placeholder="Search make, model, city..."
-                  onChange={(event) => handleFilterChange({ query: event.target.value })}
-                />
-                {filters.query && (
-                  <button
-                    type="button"
-                    aria-label="Clear search"
-                    onClick={() => {
-                      play(vehiclePageSoundActions.searchClear);
-                      handleFilterChange({ query: "" });
-                    }}
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </label>
-
-              <label className="vehiclesPage__toolbarField">
-                <span>Sort</span>
-                <select
-                  value={sort}
-                  onChange={(event) => {
-                    play(vehiclePageSoundActions.filterChange);
-                    setSort(event.target.value as VehicleSort);
-                    setPage(1);
-                  }}
-                >
-                  {VEHICLE_SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="vehiclesPage__toolbarField vehiclesPage__toolbarField--optional">
-                <span>Make</span>
-                <select
-                  value={filters.make}
-                  onChange={(event) => handleFilterChange({ make: event.target.value, model: "" })}
-                >
-                  <option value="">All Makes</option>
-                  {facets.makes.map((make) => <option key={make} value={make}>{make}</option>)}
-                </select>
-              </label>
-
-              <label className="vehiclesPage__toolbarField vehiclesPage__toolbarField--optional">
-                <span>Model</span>
-                <select
-                  value={filters.model}
-                  disabled={!filters.make}
-                  onChange={(event) => handleFilterChange({ model: event.target.value })}
-                >
-                  <option value="">All Models</option>
-                  {facets.models.map((model) => <option key={model} value={model}>{model}</option>)}
-                </select>
-              </label>
-
-              <span className="vehiclesPage__savedCount">
-                {activeCount > 0 ? `${activeCount} active` : `${savedVehicleIds.length} saved`}
-              </span>
-            </div>
-          )}
+          {showFilters ? (
+            <MarketplaceToolbar
+              filters={filters}
+              sort={sort}
+              activeCount={activeCount}
+              savedCount={savedVehicleIds.length}
+              makes={facets.makes}
+              models={facets.models}
+              onFiltersChange={handleFilterChange}
+              onSortChange={(nextSort) => {
+                play(vehiclePageSoundActions.filterChange);
+                setSort(nextSort);
+                setPage(1);
+              }}
+              onOpenFilters={() => setFiltersOpen(true)}
+            />
+          ) : null}
 
           {showFilters && filterChips.length > 0 && (
-            <div className="vehiclesPage__activeFilters" aria-label="Active filters">
+            <div
+              className="vehiclesPage__activeFilters"
+              aria-label="Active filters"
+            >
               {filterChips.map((chip) => (
                 <button
                   key={chip.id}
@@ -557,7 +571,9 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                 >
                   <span>{chip.label}</span>
                   <X size={12} aria-hidden="true" />
-                  <span className="vehiclesPage__srOnly">Remove filter: {chip.label}</span>
+                  <span className="vehiclesPage__srOnly">
+                    Remove filter: {chip.label}
+                  </span>
                 </button>
               ))}
               {filterChips.length > 1 && (
@@ -576,7 +592,8 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
           )}
 
           <p className="vehiclesPage__demoNotice">
-            Concept demo: prices and imagery are representative until verified listing data is connected.
+            Concept demo: prices and imagery are representative until verified
+            listing data is connected.
           </p>
 
           <div className="vehiclesPage__resultsBar" ref={gridRef}>
@@ -624,7 +641,9 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                       index={index}
                       saved={savedVehicleIds.includes(vehicle.id)}
                       compared={compared}
-                      compareDisabled={!compared && compareVehicleIds.length >= 3}
+                      compareDisabled={
+                        !compared && compareVehicleIds.length >= 3
+                      }
                       cardStyle={cardStyle}
                       cardColor={cardColor}
                       onViewDetails={() => handleViewDetails(vehicle.id)}
@@ -641,7 +660,10 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                   totalPages={totalPages}
                   onPage={(nextPage) => {
                     setPage(nextPage);
-                    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    gridRef.current?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
                   }}
                 />
               )}
@@ -649,6 +671,20 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
           )}
         </>
       )}
+      {showFilters ? (
+        <AdvancedFilters
+          open={filtersOpen}
+          facets={facets}
+          filters={filters}
+          activeCount={activeCount}
+          onChange={handleFilterChange}
+          onClear={() => {
+            setFilters(DEFAULT_FILTERS);
+            setPage(1);
+          }}
+          onClose={() => setFiltersOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }
