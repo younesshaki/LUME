@@ -19,7 +19,12 @@
  * the page is already published, unless FORCE=1.
  */
 import { createClient } from "@supabase/supabase-js";
-import { DEFAULT_PAGES } from "@lume/blocks";
+import { DEALER_PAGE_TEMPLATES, DEFAULT_PAGES } from "@lume/blocks";
+
+// The 5 reserved pages mirror the current hardcoded site; the Tier-1 dealer
+// templates (financing, trade-in, specials, service, about, reviews, faq,
+// privacy) give a new tenant a publish-ready page set to start from.
+const SEED_PAGES = [...DEFAULT_PAGES, ...DEALER_PAGE_TEMPLATES];
 
 // Untyped client (matches scripts/seed-default-tenant.ts) — the seed writes a
 // handful of rows and doesn't need the generated Database typing.
@@ -55,9 +60,9 @@ async function main() {
     process.exit(1);
   }
   const tenantId = tenant.id as string;
-  console.log(`→ Seeding ${DEFAULT_PAGES.length} pages for tenant "${TENANT_SLUG}" (${tenantId})`);
+  console.log(`→ Seeding ${SEED_PAGES.length} pages for tenant "${TENANT_SLUG}" (${tenantId})`);
 
-  for (const seed of DEFAULT_PAGES) {
+  for (const seed of SEED_PAGES) {
     await seedPage(supabase, tenantId, seed);
   }
   console.log("✓ Done.");
@@ -66,7 +71,7 @@ async function main() {
 async function seedPage(
   supabase: AnyClient,
   tenantId: string,
-  seed: (typeof DEFAULT_PAGES)[number]
+  seed: (typeof SEED_PAGES)[number]
 ) {
   // Upsert page metadata by (tenant_id, slug).
   const { data: pageRow, error: upsertErr } = await supabase
