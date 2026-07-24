@@ -36,4 +36,21 @@ describe("inventory integration credentials", () => {
     const encrypted = encryptInventoryIntegrationCredential({ kind: "basic", username: "dealer", password: "secret" }, key);
     expect(() => decryptInventoryIntegrationCredential(`${encrypted}x`, key)).toThrow(/could not be decrypted/);
   });
+
+  it("encrypts SFTP passwords but never permits them as HTTPS headers", () => {
+    const input = parseInventoryIntegrationCredential({
+      authType: "sftp_password",
+      username: "supplier-user",
+      password: "supplier-password",
+    });
+    expect(input).toEqual({
+      ok: true,
+      value: { kind: "sftp_password", username: "supplier-user", password: "supplier-password" },
+    });
+    if (!input.ok || !input.value) throw new Error("expected SFTP credential");
+    const encrypted = encryptInventoryIntegrationCredential(input.value, key);
+    expect(encrypted).not.toContain("supplier-password");
+    expect(decryptInventoryIntegrationCredential(encrypted, key)).toEqual(input.value);
+    expect(() => inventoryIntegrationCredentialHeaders(input.value)).toThrow(/SFTP credentials/i);
+  });
 });

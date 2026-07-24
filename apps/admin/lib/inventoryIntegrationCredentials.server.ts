@@ -13,7 +13,9 @@ const MAX_CREDENTIAL_VALUE_LENGTH = 2_000;
 export type InventoryIntegrationCredential =
   | { kind: "bearer"; token: string }
   | { kind: "basic"; username: string; password: string }
-  | { kind: "header"; name: string; value: string };
+  | { kind: "header"; name: string; value: string }
+  /** SFTP-only password authentication; it can never become an HTTP header. */
+  | { kind: "sftp_password"; username: string; password: string };
 
 export type InventoryIntegrationCredentialInput = {
   authType?: unknown;
@@ -49,6 +51,15 @@ export function parseInventoryIntegrationCredential(
     return { ok: true, value: { kind: "basic", username, password } };
   }
 
+  if (authType === "sftp_password") {
+    const username = stringValue(input.username);
+    const password = stringValue(input.password);
+    if (!isCredentialValue(username) || !isCredentialValue(password)) {
+      return { ok: false, error: "SFTP username and password must each be between 1 and 2,000 characters." };
+    }
+    return { ok: true, value: { kind: "sftp_password", username, password } };
+  }
+
   if (authType === "header") {
     const name = stringValue(input.headerName);
     const value = stringValue(input.headerValue);
@@ -65,7 +76,7 @@ export function parseInventoryIntegrationCredential(
     return { ok: true, value: { kind: "header", name, value } };
   }
 
-  return { ok: false, error: "Choose no auth, bearer, basic, or one custom header." };
+  return { ok: false, error: "Choose no auth, bearer, basic, SFTP password, or one custom header." };
 }
 
 export function encryptInventoryIntegrationCredential(
@@ -123,6 +134,9 @@ export function inventoryIntegrationCredentialHeaders(
   if (credential.kind === "basic") {
     return { Authorization: `Basic ${Buffer.from(`${credential.username}:${credential.password}`, "utf8").toString("base64")}` };
   }
+  if (credential.kind === "sftp_password") {
+    throw new Error("SFTP credentials cannot be used for an HTTPS inventory feed.");
+  }
   return { [credential.name]: credential.value };
 }
 
@@ -134,6 +148,9 @@ function parseDecryptedCredential(value: unknown): InventoryIntegrationCredentia
   }
   if (record.kind === "basic" && isCredentialValue(record.username) && isCredentialValue(record.password)) {
     return { kind: "basic", username: stringValue(record.username), password: stringValue(record.password) };
+  }
+  if (record.kind === "sftp_password" && isCredentialValue(record.username) && isCredentialValue(record.password)) {
+    return { kind: "sftp_password", username: stringValue(record.username), password: stringValue(record.password) };
   }
   if (record.kind === "header" && typeof record.name === "string" &&
     /^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,100}$/.test(record.name) &&

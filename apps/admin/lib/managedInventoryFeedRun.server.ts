@@ -14,6 +14,10 @@ import {
 } from "@/lib/inventoryIntegrationCredentials.server";
 import { fetchManagedFeed, MAX_MANAGED_FEED_BYTES } from "@/lib/managedFeedRemoteFetch.server";
 import {
+  fetchManagedSftpFeed,
+  validateManagedSftpFeedConfig,
+} from "@/lib/managedFeedSftpFetch.server";
+import {
   materializeManagedFeedCreate,
   materializeManagedFeedUpdate,
   parseManagedFeed,
@@ -39,9 +43,13 @@ export { shouldSkipUnchangedManagedFeed } from "./managedInventoryFeedPolicy";
 
 type ServiceClient = SupabaseClient<Database, "public">;
 type FeedSnapshot = {
-  sourceKind: "https" | "storage";
+  sourceKind: "https" | "storage" | "sftp";
   sourceUrl: string | null;
   sourceObjectPath: string | null;
+  sftpHost: string | null;
+  sftpPort: number | null;
+  sftpRemotePath: string | null;
+  sftpHostKeyFingerprint: string | null;
   sourceFormat: "csv" | "json" | "xml";
   profile: Record<string, unknown>;
   syncMode: "hybrid" | "mirror";
@@ -183,7 +191,13 @@ function parseFeedSnapshot(value: Record<string, unknown>): FeedSnapshot {
   const profile = value.profile;
   const sourceUrl = nullableString(value.sourceUrl);
   const sourceObjectPath = nullableString(value.sourceObjectPath);
-  if ((sourceKind !== "https" && sourceKind !== "storage") ||
+  const sftpHost = nullableString(value.sftpHost);
+  const sftpPort = typeof value.sftpPort === "number" && Number.isInteger(value.sftpPort)
+    ? value.sftpPort
+    : null;
+  const sftpRemotePath = nullableString(value.sftpRemotePath);
+  const sftpHostKeyFingerprint = nullableString(value.sftpHostKeyFingerprint);
+  if ((sourceKind !== "https" && sourceKind !== "storage" && sourceKind !== "sftp") ||
     (sourceFormat !== "csv" && sourceFormat !== "json" && sourceFormat !== "xml") ||
     (syncMode !== "hybrid" && syncMode !== "mirror") ||
     typeof configVersion !== "number" || !Number.isInteger(configVersion) || configVersion < 1 ||
@@ -192,7 +206,28 @@ function parseFeedSnapshot(value: Record<string, unknown>): FeedSnapshot {
   }
   if (sourceKind === "https" && !sourceUrl) throw new Error("Managed feed source URL is missing.");
   if (sourceKind === "storage" && !sourceObjectPath) throw new Error("Managed feed source file is missing.");
-  return { sourceKind, sourceUrl, sourceObjectPath, sourceFormat, profile, syncMode, configVersion };
+  if (sourceKind === "sftp") {
+    const config = validateManagedSftpFeedConfig({
+      host: sftpHost ?? "",
+      port: sftpPort ?? 0,
+      remotePath: sftpRemotePath ?? "",
+      hostKeyFingerprint: sftpHostKeyFingerprint ?? "",
+    });
+    if (!config.ok) throw new Error(config.error);
+  }
+  return {
+    sourceKind,
+    sourceUrl,
+    sourceObjectPath,
+    sftpHost,
+    sftpPort,
+    sftpRemotePath,
+    sftpHostKeyFingerprint,
+    sourceFormat,
+    profile,
+    syncMode,
+    configVersion,
+  };
 }
 
 async function readFeedSource(
@@ -211,6 +246,20 @@ async function readFeedSource(
       inventoryIntegrationCredentialHeaders(credential),
     );
     bytes = response.bytes;
+  } else if (snapshot.sourceKind === "sftp") {
+    if (!credentialCiphertext) throw new Error("SFTP source credentials are missing.");
+    const credential = decryptInventoryIntegrationCredential(credentialCiphertext);
+    if (credential.kind !== "sftp_password") {
+      throw new Error("SFTP source has an invalid credential type.");
+    }
+    bytes = await fetchManagedSftpFeed({
+      host: snapshot.sftpHost!,
+      port: snapshot.sftpPort!,
+      remotePath: snapshot.sftpRemotePath!,
+      hostKeyFingerprint: snapshot.sftpHostKeyFingerprint!,
+      username: credential.username,
+      password: credential.password,
+    });
   } else {
     const objectPath = snapshot.sourceObjectPath!;
     if (!isTenantOwnedPath(tenantId, objectPath)) throw new Error("Managed feed storage path is outside this tenant.");

@@ -55,9 +55,9 @@ import { isSensitiveManagedIntegrationQueryKey } from "@/lib/managedIntegrationU
  */
 export type InventoryIntegrationFormat = "csv" | "json" | "xml";
 export type InventoryIntegrationHttpMethod = "POST" | "PUT";
-export type InventoryFeedSourceKind = "https" | "storage";
+export type InventoryFeedSourceKind = "https" | "storage" | "sftp";
 /** `configured` means an existing opaque credential whose kind is intentionally never read back. */
-export type InventoryIntegrationAuthKind = "none" | "configured" | "bearer" | "basic" | "custom";
+export type InventoryIntegrationAuthKind = "none" | "configured" | "bearer" | "basic" | "custom" | "sftp_password";
 export type ManagedFeedMode = "hybrid" | "mirror";
 export type InventoryIntegrationHealth = "healthy" | "degraded" | "failing" | "unknown";
 export type InventoryIntegrationRunStatus =
@@ -77,6 +77,10 @@ export type InventoryFeedSourceRow = {
   sourceKind: InventoryFeedSourceKind;
   endpointUrl: string;
   sourceObjectPath: string | null;
+  sftpHost: string | null;
+  sftpPort: number | null;
+  sftpRemotePath: string | null;
+  sftpHostKeyFingerprint: string | null;
   format: InventoryIntegrationFormat;
   mappingProfile: Record<string, unknown>;
   mode: ManagedFeedMode;
@@ -130,11 +134,17 @@ export type InventoryIntegrationAuthInput =
   | { kind: "none" }
   | { kind: "bearer"; token: string }
   | { kind: "basic"; username: string; password: string }
-  | { kind: "custom"; headerName: string; headerValue: string };
+  | { kind: "custom"; headerName: string; headerValue: string }
+  | { kind: "sftp_password"; username: string; password: string };
 
 export type ManagedFeedSourceInput = {
   name: string;
-  endpointUrl: string;
+  sourceKind: "https" | "sftp";
+  endpointUrl?: string;
+  sftpHost?: string;
+  sftpPort?: number;
+  sftpRemotePath?: string;
+  sftpHostKeyFingerprint?: string;
   profile: Record<string, unknown>;
   mode: ManagedFeedMode;
   scheduleMinutes: number;
@@ -232,6 +242,7 @@ const AUTH_LABELS: Record<InventoryIntegrationAuthKind, string> = {
   bearer: "Bearer token",
   basic: "Basic authentication",
   custom: "Custom header",
+  sftp_password: "SFTP username and password",
 };
 
 export default function InventoryFeedsClient({
@@ -456,7 +467,7 @@ export default function InventoryFeedsClient({
             <DialogHeader>
               <DialogTitle>{sourceEditor === "new" ? "Add inventory source" : "Configure inventory source"}</DialogTitle>
               <DialogDescription>
-                LUME fetches this HTTPS feed from the server. Profiles are declarative only—no scripts,
+                LUME fetches this HTTPS or SFTP feed from the server. Profiles are declarative only—no scripts,
                 templates, or credentials belong in the mapping JSON.
               </DialogDescription>
             </DialogHeader>
@@ -536,7 +547,9 @@ function SourceCard({
             <CardDescription className="mt-2 break-all font-mono text-xs">
               {source.sourceKind === "storage"
                 ? source.sourceObjectPath ?? "Private storage object"
-                : redactEndpointUrl(source.endpointUrl)}
+                : source.sourceKind === "sftp"
+                  ? `sftp://${source.sftpHost ?? "host"}:${source.sftpPort ?? 22}${source.sftpRemotePath ?? "/"}`
+                  : redactEndpointUrl(source.endpointUrl)}
             </CardDescription>
           </div>
           <Switch
@@ -563,7 +576,7 @@ function SourceCard({
       <CardFooter className="flex flex-wrap justify-between gap-2">
         <p className="text-xs text-muted-foreground">Last attempted {formatDate(source.lastAttemptAt, "never")}</p>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={onConfigure} disabled={disabled || source.sourceKind !== "https"}>
+          <Button type="button" size="sm" variant="outline" onClick={onConfigure} disabled={disabled || source.sourceKind === "storage"}>
             Configure
           </Button>
           <Button type="button" size="sm" variant="outline" onClick={onToggle} disabled={disabled || isToggling}>
@@ -690,6 +703,7 @@ function SourceEditorForm({
   onCancel: () => void;
   onSubmit: (input: ManagedFeedSourceInput) => void;
 }) {
+  const [sourceKind, setSourceKind] = useState<"https" | "sftp">(source?.sourceKind === "sftp" ? "sftp" : "https");
   const [format, setFormat] = useState<InventoryIntegrationFormat>(source?.format ?? "csv");
   const [mode, setMode] = useState<ManagedFeedMode>(source?.mode ?? "hybrid");
   const [authKind, setAuthKind] = useState<InventoryIntegrationAuthKind>(source?.authKind ?? "none");
@@ -723,20 +737,27 @@ function SourceEditorForm({
       setError("The sync mode must match the profile’s mode field.");
       return;
     }
-    const auth = readAuthInput(form, authKind, source);
+    const auth = readAuthInput(form, authKind, source, sourceKind === "sftp");
     if (auth.error) {
       setError(auth.error);
       return;
     }
     const name = readRequired(form, "name", "Source name");
-    const endpointUrl = readHttpsUrl(form, "endpointUrl", "Source URL");
+    const endpointUrl = sourceKind === "https"
+      ? readHttpsUrl(form, "endpointUrl", "Source URL")
+      : null;
+    const sftp = sourceKind === "sftp" ? readSftpInput(form) : null;
     const scheduleMinutes = readSchedule(form);
     if (!name.ok) {
       setError(name.error);
       return;
     }
-    if (!endpointUrl.ok) {
+    if (endpointUrl && !endpointUrl.ok) {
       setError(endpointUrl.error);
+      return;
+    }
+    if (sftp && !sftp.ok) {
+      setError(sftp.error);
       return;
     }
     if (!scheduleMinutes.ok) {
@@ -745,7 +766,9 @@ function SourceEditorForm({
     }
     onSubmit({
       name: name.value,
-      endpointUrl: endpointUrl.value,
+      sourceKind,
+      ...(endpointUrl?.ok ? { endpointUrl: endpointUrl.value } : {}),
+      ...(sftp?.ok ? sftp.value : {}),
       profile: profile.value,
       mode,
       scheduleMinutes: scheduleMinutes.value,
@@ -766,9 +789,36 @@ function SourceEditorForm({
             <option value="xml">XML</option>
           </select>
         </Field>
-        <Field label="Public HTTPS feed URL" htmlFor="source-endpoint" className="md:col-span-2">
-          <Input id="source-endpoint" name="endpointUrl" type="url" required maxLength={2_048} defaultValue={source ? safeEndpointValue(source.endpointUrl) : undefined} placeholder={source && hasSensitiveUrlQuery(source.endpointUrl) ? "Re-enter a credential-free HTTPS URL" : "https://inventory.example.com/feed.csv"} inputMode="url" autoCapitalize="none" autoCorrect="off" />
+        <Field label="Transport" htmlFor="source-transport">
+          <select id="source-transport" value={sourceKind} onChange={(event) => {
+            const next = event.target.value as "https" | "sftp";
+            setSourceKind(next);
+            setAuthKind(next === "sftp" ? "sftp_password" : "none");
+          }} disabled={disabled || Boolean(source)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm">
+            <option value="https">HTTPS</option>
+            <option value="sftp">SFTP (SSH encrypted)</option>
+          </select>
         </Field>
+        {sourceKind === "https" ? (
+          <Field label="Public HTTPS feed URL" htmlFor="source-endpoint" className="md:col-span-2">
+            <Input id="source-endpoint" name="endpointUrl" type="url" required maxLength={2_048} defaultValue={source ? safeEndpointValue(source.endpointUrl) : undefined} placeholder={source && hasSensitiveUrlQuery(source.endpointUrl) ? "Re-enter a credential-free HTTPS URL" : "https://inventory.example.com/feed.csv"} inputMode="url" autoCapitalize="none" autoCorrect="off" />
+          </Field>
+        ) : (
+          <>
+            <Field label="SFTP host" htmlFor="source-sftp-host">
+              <Input id="source-sftp-host" name="sftpHost" required maxLength={253} defaultValue={source?.sftpHost ?? ""} placeholder="sftp.supplier.example" autoCapitalize="none" autoCorrect="off" />
+            </Field>
+            <Field label="SFTP port" htmlFor="source-sftp-port">
+              <Input id="source-sftp-port" name="sftpPort" type="number" min={1} max={65_535} required defaultValue={source?.sftpPort ?? 22} />
+            </Field>
+            <Field label="Remote file path" htmlFor="source-sftp-path" className="md:col-span-2">
+              <Input id="source-sftp-path" name="sftpRemotePath" required maxLength={2_048} defaultValue={source?.sftpRemotePath ?? ""} placeholder="/exports/inventory.csv" autoCapitalize="none" autoCorrect="off" />
+            </Field>
+            <Field label="Supplier SSH host-key fingerprint" htmlFor="source-sftp-fingerprint" className="md:col-span-2" hint="Required. Get this SHA256 fingerprint from the supplier through a separate trusted channel. LUME refuses changed or untrusted host keys.">
+              <Input id="source-sftp-fingerprint" name="sftpHostKeyFingerprint" required maxLength={60} defaultValue={source?.sftpHostKeyFingerprint ?? ""} placeholder="SHA256:abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO12" autoCapitalize="none" autoCorrect="off" />
+            </Field>
+          </>
+        )}
         <Field label="Update mode" htmlFor="source-mode">
           <select id="source-mode" value={mode} onChange={(event) => onModeChange(event.target.value as ManagedFeedMode)} disabled={disabled} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm">
             <option value="hybrid">Hybrid — preserve values absent from the feed</option>
@@ -798,11 +848,12 @@ function SourceEditorForm({
         existingCredentialsConfigured={Boolean(source?.credentialsConfigured)}
         existingAuthKind={source?.authKind ?? "none"}
         disabled={disabled}
+        sftpOnly={sourceKind === "sftp"}
       />
 
       {error ? <InlineError>{error}</InlineError> : null}
       <DialogFooter className="gap-2 sm:justify-between">
-        <p className="text-xs text-muted-foreground">The endpoint is revalidated server-side before every fetch.</p>
+        <p className="text-xs text-muted-foreground">The endpoint and host key are revalidated server-side before every fetch.</p>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={onCancel} disabled={disabled}>Cancel</Button>
           <Button type="submit" disabled={disabled}>
@@ -951,6 +1002,7 @@ function AuthFields({
   existingCredentialsConfigured,
   existingAuthKind,
   disabled,
+  sftpOnly = false,
 }: {
   prefix: string;
   authKind: InventoryIntegrationAuthKind;
@@ -958,6 +1010,7 @@ function AuthFields({
   existingCredentialsConfigured: boolean;
   existingAuthKind: InventoryIntegrationAuthKind;
   disabled: boolean;
+  sftpOnly?: boolean;
 }) {
   const preservingExisting = existingCredentialsConfigured && authKind === existingAuthKind;
 
@@ -966,15 +1019,22 @@ function AuthFields({
       <legend className="px-1 text-sm font-medium">Authentication</legend>
       <p className="-mt-2 text-sm text-muted-foreground">
         Credentials are encrypted at rest and never displayed here after saving.
+        {sftpOnly ? " SFTP requires a supplier username and password; SSH-key login is a future enhancement." : ""}
         {preservingExisting ? " Leave fields blank to keep the current credentials." : ""}
       </p>
       <Field label="Authentication method" htmlFor={`${prefix}-auth-kind`}>
           <select id={`${prefix}-auth-kind`} value={authKind} onChange={(event) => onAuthKindChange(event.target.value as InventoryIntegrationAuthKind)} disabled={disabled} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm">
           {existingCredentialsConfigured ? <option value="configured">Configured credential (keep encrypted)</option> : null}
-          <option value="none">None</option>
-          <option value="bearer">Bearer token</option>
-          <option value="basic">Basic authentication</option>
-          <option value="custom">Custom header</option>
+          {sftpOnly ? (
+            <option value="sftp_password">SFTP username and password</option>
+          ) : (
+            <>
+              <option value="none">None</option>
+              <option value="bearer">Bearer token</option>
+              <option value="basic">Basic authentication</option>
+              <option value="custom">Custom header</option>
+            </>
+          )}
         </select>
       </Field>
       {authKind === "bearer" ? (
@@ -989,6 +1049,16 @@ function AuthFields({
           </Field>
           <Field label="Password" htmlFor={`${prefix}-basic-password`}>
             <Input id={`${prefix}-basic-password`} name="basicPassword" type="password" autoComplete="new-password" placeholder={preservingExisting ? "Configured — leave blank to keep" : "Password"} disabled={disabled} />
+          </Field>
+        </div>
+      ) : null}
+      {authKind === "sftp_password" ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="SFTP username" htmlFor={`${prefix}-sftp-username`}>
+            <Input id={`${prefix}-sftp-username`} name="sftpUsername" autoComplete="off" placeholder={preservingExisting ? "Configured — leave blank to keep" : "Supplier username"} disabled={disabled} />
+          </Field>
+          <Field label="SFTP password" htmlFor={`${prefix}-sftp-password`}>
+            <Input id={`${prefix}-sftp-password`} name="sftpPassword" type="password" autoComplete="new-password" placeholder={preservingExisting ? "Configured — leave blank to keep" : "Supplier password"} disabled={disabled} />
           </Field>
         </div>
       ) : null}
@@ -1203,6 +1273,7 @@ function readAuthInput(
   form: FormData,
   kind: InventoryIntegrationAuthKind,
   existing: Pick<InventoryFeedSourceRow | InventoryExportDestinationRow, "authKind" | "credentialsConfigured"> | null,
+  sftpOnly = false,
 ): { value?: InventoryIntegrationAuthInput; error?: string } {
   if (kind === "configured") {
     return existing?.credentialsConfigured
@@ -1216,6 +1287,8 @@ function readAuthInput(
   const bearerToken = formString(form, "bearerToken");
   const username = formString(form, "basicUsername");
   const password = formString(form, "basicPassword");
+  const sftpUsername = formString(form, "sftpUsername");
+  const sftpPassword = formString(form, "sftpPassword");
   const headerName = formString(form, "customHeaderName");
   const headerValue = formString(form, "customHeaderValue");
 
@@ -1228,6 +1301,12 @@ function readAuthInput(
     if (!username && !password && isUnchangedKind) return {};
     return { error: "Provide both a username and password for basic authentication." };
   }
+  if (kind === "sftp_password") {
+    if (!sftpOnly) return { error: "SFTP credentials may only be used with an SFTP source." };
+    if (sftpUsername && sftpPassword) return { value: { kind, username: sftpUsername, password: sftpPassword } };
+    if (!sftpUsername && !sftpPassword && isUnchangedKind) return {};
+    return { error: "Provide both an SFTP username and password." };
+  }
   if (headerName && headerValue) {
     if (!/^[A-Za-z0-9-]{1,100}$/.test(headerName)) {
       return { error: "Custom header names may contain only letters, numbers, and hyphens." };
@@ -1236,6 +1315,37 @@ function readAuthInput(
   }
   if (!headerName && !headerValue && isUnchangedKind) return {};
   return { error: "Provide both a custom header name and value." };
+}
+
+function readSftpInput(form: FormData):
+  | { ok: true; value: Pick<ManagedFeedSourceInput, "sftpHost" | "sftpPort" | "sftpRemotePath" | "sftpHostKeyFingerprint"> }
+  | { ok: false; error: string } {
+  const host = formString(form, "sftpHost").toLowerCase();
+  const remotePath = formString(form, "sftpRemotePath");
+  const fingerprintRaw = formString(form, "sftpHostKeyFingerprint");
+  const fingerprint = fingerprintRaw.endsWith("=") ? fingerprintRaw.slice(0, -1) : fingerprintRaw;
+  const port = Number(formString(form, "sftpPort"));
+  if (!host || host.length > 253 || /[\s@/?#]/.test(host)) {
+    return { ok: false, error: "SFTP host must be a hostname or IP address without credentials or a path." };
+  }
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    return { ok: false, error: "SFTP port must be between 1 and 65,535." };
+  }
+  if (!remotePath || remotePath.length > 2_048 || !remotePath.startsWith("/") || /(^|\/)\.\.?(\/|$)/.test(remotePath) || /[\u0000\r\n]/.test(remotePath)) {
+    return { ok: false, error: "SFTP remote path must be an absolute file path without dot segments." };
+  }
+  if (!/^SHA256:[A-Za-z0-9+/]{43}$/.test(fingerprint)) {
+    return { ok: false, error: "Enter the supplier’s OpenSSH SHA256 host-key fingerprint (SHA256:…)." };
+  }
+  return {
+    ok: true,
+    value: {
+      sftpHost: host,
+      sftpPort: port,
+      sftpRemotePath: remotePath,
+      sftpHostKeyFingerprint: fingerprint,
+    },
+  };
 }
 
 function parseSafeProfile(

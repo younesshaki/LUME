@@ -184,6 +184,9 @@ export type ValidatedRemoteTarget = {
   family: number;
 };
 
+/** A public DNS result that can be pinned by non-HTTP transports such as SFTP. */
+export type ValidatedRemoteAddress = Omit<ValidatedRemoteTarget, "url">;
+
 export type ResolveLookup = typeof dnsLookup;
 
 /**
@@ -198,7 +201,19 @@ export async function resolvePublicRemoteTargets(
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new RemoteFetchError("Feed image URL must be http or https.");
   }
-  const hostname = url.hostname.toLowerCase();
+  const addresses = await resolvePublicRemoteHost(url.hostname, lookupFn);
+  return addresses.map((target) => ({ ...target, url }));
+}
+
+/**
+ * Resolve a hostname once and retain only public addresses. This is shared by
+ * HTTP and SFTP so both transports have the same DNS-rebinding boundary.
+ */
+export async function resolvePublicRemoteHost(
+  hostnameValue: string,
+  lookupFn: ResolveLookup = dnsLookup,
+): Promise<ValidatedRemoteAddress[]> {
+  const hostname = hostnameValue.toLowerCase();
   if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local")) {
     throw new RemoteFetchError("Feed image host is not publicly reachable.");
   }
@@ -207,14 +222,13 @@ export async function resolvePublicRemoteTargets(
     throw new RemoteFetchError("Feed image host is not publicly reachable.");
   }
   return addresses.map(({ address, family }) => ({
-    url,
-    hostname: url.hostname,
+    hostname: hostnameValue,
     address,
     family,
   }));
 }
 
-function addressesEqual(left: string, right: string): boolean {
+export function remoteAddressesEqual(left: string, right: string): boolean {
   if (left === right) return true;
   // Normalize IPv6 spellings (compressed vs expanded) before comparing.
   const leftGroups = parseIpv6Groups(left);
@@ -284,7 +298,7 @@ export function fetchPinnedRemote(
 
     request.on("response", (response) => {
       const remoteAddress = request.socket?.remoteAddress;
-      if (!remoteAddress || !addressesEqual(remoteAddress, target.address)) {
+      if (!remoteAddress || !remoteAddressesEqual(remoteAddress, target.address)) {
         fail(new RemoteFetchError("Connected address does not match the validated address."));
         return;
       }
