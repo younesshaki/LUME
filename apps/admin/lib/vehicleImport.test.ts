@@ -286,4 +286,23 @@ describe("resolveFeedSync", () => {
     );
     expect(resolved.get(0)).toEqual({ status: "create" });
   });
+
+  it("keeps matching a stable identity beyond a thousand loaded inventory records", () => {
+    const existing = Array.from({ length: 1_001 }, (_, index) => ({
+      id: `vehicle-${index}`,
+      feed_vin: null,
+      external_id: index === 1_000 ? "OW26220" : `OTHER-${index}`,
+      year: 2024,
+      make: "BMW",
+      model: "X3",
+      trim: "",
+      mileage: null,
+    }));
+
+    expect(resolveFeedSync([row({ external_id: "ow26220" })], existing).get(0)).toEqual({
+      status: "update",
+      vehicleId: "vehicle-1000",
+      matchedBy: "external_id",
+    });
+  });
 });
