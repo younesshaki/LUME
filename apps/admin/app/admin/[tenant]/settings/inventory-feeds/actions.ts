@@ -18,6 +18,7 @@ import {
 } from "@/lib/inventoryIntegrationCredentials.server";
 import { validateManagedFeedProfile } from "@/lib/managedFeed";
 import { validateManagedHttpsEndpoint } from "@/lib/managedFeedRemoteFetch.server";
+import { validateManagedSftpFeedConfig } from "@/lib/managedFeedSftpFetch.server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   assertValidInventorySyndicationProfile,
@@ -34,12 +35,24 @@ import type {
 
 const DEFAULT_RETRY_DELAYS_SECONDS = [60, 300, 1_800, 3_600, 21_600];
 type Validation<T> = { ok: true; value: T } | { ok: false; error: string };
-type ValidatedFeedInput = {
+type ValidatedHttpsFeedInput = {
   name: string;
+  sourceKind: "https";
   endpointUrl: string;
   profile: ManagedFeedProfile;
   scheduleMinutes: number;
 };
+type ValidatedSftpFeedInput = {
+  name: string;
+  sourceKind: "sftp";
+  sftpHost: string;
+  sftpPort: number;
+  sftpRemotePath: string;
+  sftpHostKeyFingerprint: string;
+  profile: ManagedFeedProfile;
+  scheduleMinutes: number;
+};
+type ValidatedFeedInput = ValidatedHttpsFeedInput | ValidatedSftpFeedInput;
 type ValidatedExportInput = {
   name: string;
   endpointUrl: string;
@@ -56,24 +69,43 @@ export async function createManagedFeedSource(
   if (!authorized) return denied();
   const validated = validateFeedInput(input);
   if (!validated.ok) return { error: validated.error };
-  const credential = credentialForMutation(input.auth);
+  const credential = credentialForMutation(input.auth, validated.value.sourceKind);
   if (!credential.ok) return { error: credential.error };
+  if (validated.value.sourceKind === "sftp" && !credential.value.ciphertext) {
+    return { error: "SFTP sources require a username and password." };
+  }
 
   const service = createServiceClient();
-  const { data, error } = await service.rpc("create_inventory_feed_source", {
-    p_tenant_id: authorized.tenantId,
-    p_name: validated.value.name,
-    p_source_kind: "https",
-    p_source_url: validated.value.endpointUrl,
-    p_source_object_path: null,
-    p_source_format: validated.value.profile.format,
-    p_profile: validated.value.profile,
-    p_sync_mode: validated.value.profile.mode,
-    p_schedule_minutes: validated.value.scheduleMinutes,
-    p_retry_delays_seconds: DEFAULT_RETRY_DELAYS_SECONDS,
-    p_enabled: true,
-    p_credential_ciphertext: credential.value.ciphertext,
-  });
+  const { data, error } = validated.value.sourceKind === "sftp"
+    ? await service.rpc("create_inventory_sftp_feed_source", {
+      p_tenant_id: authorized.tenantId,
+      p_name: validated.value.name,
+      p_sftp_host: validated.value.sftpHost,
+      p_sftp_port: validated.value.sftpPort,
+      p_sftp_remote_path: validated.value.sftpRemotePath,
+      p_sftp_host_key_fingerprint: validated.value.sftpHostKeyFingerprint,
+      p_source_format: validated.value.profile.format,
+      p_profile: validated.value.profile,
+      p_sync_mode: validated.value.profile.mode,
+      p_schedule_minutes: validated.value.scheduleMinutes,
+      p_retry_delays_seconds: DEFAULT_RETRY_DELAYS_SECONDS,
+      p_enabled: true,
+      p_credential_ciphertext: credential.value.ciphertext!,
+    })
+    : await service.rpc("create_inventory_feed_source", {
+      p_tenant_id: authorized.tenantId,
+      p_name: validated.value.name,
+      p_source_kind: "https",
+      p_source_url: validated.value.endpointUrl,
+      p_source_object_path: null,
+      p_source_format: validated.value.profile.format,
+      p_profile: validated.value.profile,
+      p_sync_mode: validated.value.profile.mode,
+      p_schedule_minutes: validated.value.scheduleMinutes,
+      p_retry_delays_seconds: DEFAULT_RETRY_DELAYS_SECONDS,
+      p_enabled: true,
+      p_credential_ciphertext: credential.value.ciphertext,
+    });
   if (error || !data) return { error: "Unable to create the managed feed source." };
   await auditWrite({
     tenantId: authorized.tenantId,
@@ -81,7 +113,7 @@ export async function createManagedFeedSource(
     action: "inventory_feed_source.created",
     resourceType: "inventory_feed_source",
     resourceId: data,
-    metadata: { format: validated.value.profile.format, mode: validated.value.profile.mode },
+    metadata: { transport: validated.value.sourceKind, format: validated.value.profile.format, mode: validated.value.profile.mode },
   }).catch(() => undefined);
   revalidateInventoryFeeds(slug);
   return { message: "Managed feed source created." };
@@ -96,33 +128,57 @@ export async function updateManagedFeedSource(
   if (!authorized || !sourceId) return denied();
   const validated = validateFeedInput(input);
   if (!validated.ok) return { error: validated.error };
-  const credential = credentialForMutation(input.auth);
+  const credential = credentialForMutation(input.auth, validated.value.sourceKind);
   if (!credential.ok) return { error: credential.error };
 
   const service = createServiceClient();
   const { data: current, error: currentError } = await service.from("inventory_feed_sources")
-    .select("enabled")
+    .select("enabled, source_kind")
     .eq("tenant_id", authorized.tenantId)
     .eq("id", sourceId)
     .is("archived_at", null)
     .maybeSingle();
   if (currentError || !current) return { error: "Managed feed source not found." };
-  const { data, error } = await service.rpc("update_inventory_feed_source", {
-    p_feed_source_id: sourceId,
-    p_tenant_id: authorized.tenantId,
-    p_name: validated.value.name,
-    p_source_kind: "https",
-    p_source_url: validated.value.endpointUrl,
-    p_source_object_path: null,
-    p_source_format: validated.value.profile.format,
-    p_profile: validated.value.profile,
-    p_sync_mode: validated.value.profile.mode,
-    p_schedule_minutes: validated.value.scheduleMinutes,
-    p_retry_delays_seconds: DEFAULT_RETRY_DELAYS_SECONDS,
-    p_enabled: current.enabled,
-    p_credential_ciphertext: credential.value.ciphertext,
-    p_replace_credential: credential.value.replace,
-  });
+  if (current.source_kind !== validated.value.sourceKind) {
+    return { error: "Source transport cannot be changed after creation. Archive this source and create one with the required transport." };
+  }
+  if (validated.value.sourceKind === "sftp" && credential.value.replace && !credential.value.ciphertext) {
+    return { error: "SFTP sources require a username and password." };
+  }
+  const { data, error } = validated.value.sourceKind === "sftp"
+    ? await service.rpc("update_inventory_sftp_feed_source", {
+      p_feed_source_id: sourceId,
+      p_tenant_id: authorized.tenantId,
+      p_name: validated.value.name,
+      p_sftp_host: validated.value.sftpHost,
+      p_sftp_port: validated.value.sftpPort,
+      p_sftp_remote_path: validated.value.sftpRemotePath,
+      p_sftp_host_key_fingerprint: validated.value.sftpHostKeyFingerprint,
+      p_source_format: validated.value.profile.format,
+      p_profile: validated.value.profile,
+      p_sync_mode: validated.value.profile.mode,
+      p_schedule_minutes: validated.value.scheduleMinutes,
+      p_retry_delays_seconds: DEFAULT_RETRY_DELAYS_SECONDS,
+      p_enabled: current.enabled,
+      p_credential_ciphertext: credential.value.ciphertext,
+      p_replace_credential: credential.value.replace,
+    })
+    : await service.rpc("update_inventory_feed_source", {
+      p_feed_source_id: sourceId,
+      p_tenant_id: authorized.tenantId,
+      p_name: validated.value.name,
+      p_source_kind: "https",
+      p_source_url: validated.value.endpointUrl,
+      p_source_object_path: null,
+      p_source_format: validated.value.profile.format,
+      p_profile: validated.value.profile,
+      p_sync_mode: validated.value.profile.mode,
+      p_schedule_minutes: validated.value.scheduleMinutes,
+      p_retry_delays_seconds: DEFAULT_RETRY_DELAYS_SECONDS,
+      p_enabled: current.enabled,
+      p_credential_ciphertext: credential.value.ciphertext,
+      p_replace_credential: credential.value.replace,
+    });
   if (error || data !== true) {
     if (/active managed feed run/i.test(error?.message ?? "")) {
       return { error: "Wait for the active feed run to finish before updating this source." };
@@ -135,7 +191,7 @@ export async function updateManagedFeedSource(
     action: "inventory_feed_source.updated",
     resourceType: "inventory_feed_source",
     resourceId: sourceId,
-    metadata: { format: validated.value.profile.format, mode: validated.value.profile.mode },
+    metadata: { transport: validated.value.sourceKind, format: validated.value.profile.format, mode: validated.value.profile.mode },
   }).catch(() => undefined);
   revalidateInventoryFeeds(slug);
   return { message: "Managed feed source updated." };
@@ -413,15 +469,41 @@ export async function removeInventoryExportDestination(
 function validateFeedInput(input: ManagedFeedSourceInput): Validation<ValidatedFeedInput> {
   const name = normalizeName(input.name);
   if (!name) return { ok: false, error: "Source name must be between 1 and 100 characters." };
-  const endpoint = validateManagedHttpsEndpoint(input.endpointUrl);
-  if (!endpoint.ok) return endpoint;
+  if (input.sourceKind !== "https" && input.sourceKind !== "sftp") {
+    return { ok: false, error: "Choose HTTPS or SFTP for this managed source." };
+  }
   if (!Number.isInteger(input.scheduleMinutes) || input.scheduleMinutes < 15 || input.scheduleMinutes > 10_080) {
     return { ok: false, error: "Source schedule must be between 15 minutes and 7 days." };
   }
   const profile = requireFeedProfile({ ...input.profile, mode: input.mode });
-  return profile.ok
-    ? { ok: true, value: { name, endpointUrl: endpoint.url, profile: profile.value, scheduleMinutes: input.scheduleMinutes } }
-    : profile;
+  if (!profile.ok) return profile;
+  if (input.sourceKind === "https") {
+    const endpoint = validateManagedHttpsEndpoint(input.endpointUrl ?? "");
+    return endpoint.ok
+      ? { ok: true, value: { name, sourceKind: "https", endpointUrl: endpoint.url, profile: profile.value, scheduleMinutes: input.scheduleMinutes } }
+      : endpoint;
+  }
+  const sftp = validateManagedSftpFeedConfig({
+    host: input.sftpHost,
+    port: input.sftpPort,
+    remotePath: input.sftpRemotePath,
+    hostKeyFingerprint: input.sftpHostKeyFingerprint,
+  });
+  return sftp.ok
+    ? {
+      ok: true,
+      value: {
+        name,
+        sourceKind: "sftp",
+        sftpHost: sftp.value.host,
+        sftpPort: sftp.value.port,
+        sftpRemotePath: sftp.value.remotePath,
+        sftpHostKeyFingerprint: sftp.value.hostKeyFingerprint,
+        profile: profile.value,
+        scheduleMinutes: input.scheduleMinutes,
+      },
+    }
+    : sftp;
 }
 
 function validateExportInput(input: InventoryExportDestinationInput): Validation<ValidatedExportInput> {
@@ -469,7 +551,10 @@ function requireExportProfile(value: Record<string, unknown>): Validation<Invent
   }
 }
 
-function credentialForMutation(auth: InventoryIntegrationAuthInput | undefined):
+function credentialForMutation(
+  auth: InventoryIntegrationAuthInput | undefined,
+  transport: "https" | "sftp" = "https",
+):
   | { ok: true; value: { ciphertext: string | null; replace: boolean } }
   | { ok: false; error: string } {
   if (!auth) return { ok: true, value: { ciphertext: null, replace: false } };
@@ -479,9 +564,16 @@ function credentialForMutation(auth: InventoryIntegrationAuthInput | undefined):
       ? { authType: "bearer", bearerToken: auth.token }
       : auth.kind === "basic"
         ? { authType: "basic", username: auth.username, password: auth.password }
-        : { authType: "header", headerName: auth.headerName, headerValue: auth.headerValue },
+        : auth.kind === "sftp_password"
+          ? { authType: "sftp_password", username: auth.username, password: auth.password }
+          : { authType: "header", headerName: auth.headerName, headerValue: auth.headerValue },
   );
   if (!parsed.ok || !parsed.value) return { ok: false, error: parsed.ok ? "Credential is required." : parsed.error };
+  if ((transport === "sftp") !== (parsed.value.kind === "sftp_password")) {
+    return { ok: false, error: transport === "sftp"
+      ? "SFTP sources require an SFTP username and password."
+      : "SFTP credentials may only be used with an SFTP source." };
+  }
   if (!inventoryIntegrationEncryptionConfigured()) {
     return { ok: false, error: "Credential encryption is not configured on this environment." };
   }

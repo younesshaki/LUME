@@ -539,9 +539,13 @@ export type Database = {
           id: string;
           tenant_id: string;
           name: string;
-          source_kind: "https" | "storage";
+          source_kind: "https" | "storage" | "sftp";
           source_url: string | null;
           source_object_path: string | null;
+          sftp_host: string | null;
+          sftp_port: number | null;
+          sftp_remote_path: string | null;
+          sftp_host_key_fingerprint: string | null;
           source_format: "csv" | "json" | "xml";
           profile: Record<string, unknown>;
           sync_mode: "hybrid" | "mirror";
@@ -582,7 +586,7 @@ export type Database = {
           | "updated_at"
         > & {
           id?: string;
-          source_kind?: "https" | "storage";
+          source_kind?: "https" | "storage" | "sftp";
           source_format?: "csv" | "json" | "xml";
           profile?: Record<string, unknown>;
           sync_mode?: "hybrid" | "mirror";
@@ -2201,7 +2205,7 @@ export type Database = {
         Args: {
           p_tenant_id: string;
           p_name: string;
-          p_source_kind: "https" | "storage";
+          p_source_kind: "https" | "storage" | "sftp";
           p_source_url: string | null;
           p_source_object_path: string | null;
           p_source_format: "csv" | "json" | "xml";
@@ -2219,7 +2223,7 @@ export type Database = {
           p_feed_source_id: string;
           p_tenant_id: string;
           p_name: string;
-          p_source_kind: "https" | "storage";
+          p_source_kind: "https" | "storage" | "sftp";
           p_source_url: string | null;
           p_source_object_path: string | null;
           p_source_format: "csv" | "json" | "xml";
@@ -2235,6 +2239,44 @@ export type Database = {
       };
       archive_inventory_feed_source: {
         Args: { p_feed_source_id: string; p_tenant_id: string };
+        Returns: boolean;
+      };
+      create_inventory_sftp_feed_source: {
+        Args: {
+          p_tenant_id: string;
+          p_name: string;
+          p_sftp_host: string;
+          p_sftp_port: number;
+          p_sftp_remote_path: string;
+          p_sftp_host_key_fingerprint: string;
+          p_source_format: "csv" | "json" | "xml";
+          p_profile: Record<string, unknown>;
+          p_sync_mode: "hybrid" | "mirror";
+          p_schedule_minutes: number | null;
+          p_retry_delays_seconds: number[];
+          p_enabled: boolean;
+          p_credential_ciphertext: string;
+        };
+        Returns: string;
+      };
+      update_inventory_sftp_feed_source: {
+        Args: {
+          p_feed_source_id: string;
+          p_tenant_id: string;
+          p_name: string;
+          p_sftp_host: string;
+          p_sftp_port: number;
+          p_sftp_remote_path: string;
+          p_sftp_host_key_fingerprint: string;
+          p_source_format: "csv" | "json" | "xml";
+          p_profile: Record<string, unknown>;
+          p_sync_mode: "hybrid" | "mirror";
+          p_schedule_minutes: number | null;
+          p_retry_delays_seconds: number[];
+          p_enabled: boolean;
+          p_credential_ciphertext?: string | null;
+          p_replace_credential?: boolean;
+        };
         Returns: boolean;
       };
       set_inventory_feed_source_enabled: {

@@ -30,6 +30,18 @@ describe("managed inventory queue primitives", () => {
     expect(claim).toContain("for update of run, destination skip locked");
   });
 
+  it("extends the existing inbound queue with SFTP snapshots and service-only RPCs", () => {
+    const migration = readFileSync(
+      resolve(process.cwd(), "supabase/migrations/078_managed_inventory_sftp_sources.sql"),
+      "utf8",
+    );
+    expect(migration).toContain("source_kind in ('https', 'storage', 'sftp')");
+    expect(migration).toContain("sftp_host_key_fingerprint");
+    expect(migration).toContain("'sftpHost', v_source.sftp_host");
+    expect(migration).toContain("revoke all on function public.create_inventory_sftp_feed_source");
+    expect(migration).toContain("to service_role");
+  });
+
   it("accepts only bounded integer retry schedules and calculates the claimed attempt delay", () => {
     expect(normalizeInventoryRetryDelays([60, 300])).toEqual([60, 300]);
     expect(normalizeInventoryRetryDelays([])).toBeNull();

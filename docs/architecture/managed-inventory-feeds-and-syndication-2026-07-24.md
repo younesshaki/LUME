@@ -2,8 +2,9 @@
 
 ## Status and scope
 
-This design is implemented on the `codex/inventory-infrastructure-adaptation`
-review branch. Migration `077_managed_inventory_feeds_and_exports.sql` is additive
+This design is implemented on the managed-inventory review branches. Migrations
+`077_managed_inventory_feeds_and_exports.sql` and
+`078_managed_inventory_sftp_sources.sql` are additive
 and **has not been applied to any environment**. Applying it creates only
 configuration, queue, and audit structures; it does not fetch a supplier feed,
 send an export, or mutate inventory by itself.
@@ -14,8 +15,8 @@ present before a managed source can write `feed_vin`, `feed_image_urls`, or
 
 Supported in this phase:
 
-- inbound HTTPS and tenant-owned storage source shapes in the schema/worker;
-- Admin configuration for HTTPS CSV, JSON, and XML sources;
+- inbound HTTPS, SFTP, and tenant-owned storage source shapes in the schema/worker;
+- Admin configuration for HTTPS/SFTP CSV, JSON, and XML sources;
 - hybrid and mirror field-update semantics with declarative mappings only;
 - outbound HTTPS `POST`/`PUT` delivery as CSV, JSON, or XML;
 - tenant-scoped schedules, retries, run history, health, and manual runs.
@@ -23,7 +24,7 @@ Supported in this phase:
 Explicitly deferred:
 
 - DealerSync or any named DMS adapter;
-- FTP/SFTP and other non-HTTPS transports;
+- plain FTP, FTPS, and other non-SFTP file transports;
 - marketplace-specific API adapters;
 - automatic removal, archival, or sold-status changes for listings absent from
   a supplier source;
@@ -75,9 +76,30 @@ using the service role.
 
 Credential tables are RLS deny-all. They hold only AES-256-GCM encrypted envelopes,
 never plaintext. The client only sees whether an opaque credential is configured.
-The workers decrypt immediately before a pinned HTTPS request. Set
+The workers decrypt immediately before a pinned HTTPS/SFTP request. Set
 `INVENTORY_INTEGRATION_ENCRYPTION_KEY` to a base64-encoded 32-byte key only in the
 server environment; public endpoints do not require it.
+
+### SFTP host-key trust
+
+SFTP is an SSH transport, not FTP over a different port. It is supported only
+with an Admin-supplied OpenSSH SHA-256 server-host-key fingerprint and a
+username/password credential. The fingerprint is configuration (not a secret);
+the username/password use the same AES-256-GCM envelope as HTTPS credentials.
+
+We intentionally chose **Admin-supplied fingerprint** rather than trust on
+first use (TOFU). TOFU would let an unattended worker silently pin an attacker
+if the first setup connection were intercepted. With a supplier-provided value
+obtained through a separate trusted channel, the worker can reject an impostor
+before it authenticates or reads inventory. `ssh2` accepts host keys by default
+when no verifier is configured, so LUME always supplies a raw-key verifier and
+hard-fails a mismatch. A legitimate host-key rotation requires an explicit
+Admin configuration update after verification with the supplier.
+
+The accepted format is the OpenSSH display form `SHA256:<base64-without-padding>`.
+SSH private-key authentication is deliberately deferred; this phase supports
+the supplier's username/password setup only. Plain FTP is never supported
+because it exposes credentials and feed contents in transit.
 
 Deleting an Admin source/destination archives it rather than deleting it. Historical
 runs remain visible; queued/retrying work is cancelled, and an active operation
@@ -100,7 +122,8 @@ from tenant-owned R2 images. Image-array mappings use comma normalization so no
 gallery URL is silently lost. A mirror update may clear optional data, but never a
 VIN or external stock identity.
 
-The worker uses the existing `resolveFeedSync()` semantics:
+The worker uses the existing `resolveFeedSync()` semantics regardless of
+whether bytes arrived through HTTPS, SFTP, or tenant-owned storage:
 
 1. match VIN first;
 2. otherwise match external stock ID;
@@ -191,10 +214,19 @@ Custom credentials may add bearer/basic authentication or one safe custom header
 Routing, framing, `Accept`, and `Content-Type` headers are controlled by LUME so a
 saved credential cannot alter the pinned destination or export payload semantics.
 
+SFTP applies the equivalent protections: its hostname is resolved once with
+the same public-address validation (private, loopback, link-local and
+DNS-rebinding targets are rejected); the TCP socket is opened to that exact
+validated address; host-key fingerprint verification runs during the SSH
+handshake; and the exact remote file is read under the same 25 MiB / 20-second
+limits as HTTPS. Remote paths must be absolute and cannot contain `.` or `..`
+segments. There is no directory traversal, glob, redirect, or accept-any-key
+fallback.
+
 ## Operating and validating after approval
 
-1. Apply migration 077 only to the explicitly approved environment.
-2. Confirm the migration ledger ends at 077 and the six config/run tables plus
+1. Apply migrations 077 then 078 only to the explicitly approved environment.
+2. Confirm the migration ledger ends at 078 and the six config/run tables plus
    tenant lease table exist with their RLS policies.
 3. Set `CRON_SECRET`; set `INVENTORY_INTEGRATION_ENCRYPTION_KEY` only if a source
    or destination needs authentication.
@@ -202,7 +234,10 @@ saved credential cannot alter the pinned destination or export payload semantics
    the run history and source health.
 5. Verify that a repeated unchanged source is skipped, a mapping edit forces a new
    execution, and a destination edit forces one new delivery.
-6. Validate a real Homenet CSV updates matching records in place and preserves
+6. For SFTP, obtain and enter the supplier's SHA-256 SSH host-key fingerprint
+   through a separate trusted channel, then verify a changed-key run fails
+   until an explicitly verified configuration update is made.
+7. Validate a real Homenet CSV updates matching records in place and preserves
    saved vehicles, leads, Customer 360 records, and managed R2 galleries.
 
 No migration was applied, no supplier endpoint was contacted, and no inventory data

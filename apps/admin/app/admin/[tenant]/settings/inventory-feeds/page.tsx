@@ -48,7 +48,7 @@ export default async function InventoryFeedsPage({ params }: PageProps) {
 
   const [sourcesResult, destinationsResult, feedRunsResult, exportRunsResult] = await Promise.all([
     supabase.from("inventory_feed_sources")
-      .select("id, name, source_kind, source_url, source_object_path, source_format, profile, sync_mode, enabled, schedule_minutes, last_attempt_at, last_succeeded_at, consecutive_failure_count, last_error, created_at")
+      .select("id, name, source_kind, source_url, source_object_path, sftp_host, sftp_port, sftp_remote_path, sftp_host_key_fingerprint, source_format, profile, sync_mode, enabled, schedule_minutes, last_attempt_at, last_succeeded_at, consecutive_failure_count, last_error, created_at")
       .eq("tenant_id", tenant.id)
       .is("archived_at", null)
       .order("created_at", { ascending: false }),
@@ -100,6 +100,10 @@ export default async function InventoryFeedsPage({ params }: PageProps) {
     sourceKind: row.source_kind,
     endpointUrl: row.source_url ?? "",
     sourceObjectPath: row.source_object_path,
+    sftpHost: row.sftp_host,
+    sftpPort: row.sftp_port,
+    sftpRemotePath: row.sftp_remote_path,
+    sftpHostKeyFingerprint: row.sftp_host_key_fingerprint,
     format: row.source_format,
     mappingProfile: row.profile,
     mode: row.sync_mode,
