@@ -10,6 +10,7 @@ export {
   FinanceCalculator,
   LeadCaptureForm,
   NewsletterSignup,
+  ServiceBooking,
   TestDriveBooking,
   TradeInForm,
 } from "./DealershipForms";

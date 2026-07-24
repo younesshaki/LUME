@@ -572,11 +572,37 @@ export const BLOCK_DESCRIPTORS = {
     ],
   }),
 
+  "service-booking": descriptor({
+    type: "service-booking",
+    displayName: "Service Booking",
+    description:
+      "Schedule a service appointment — service type, preferred date and time, vehicle, and contact details captured as a lead.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Service & Parts",
+      title: "Book your service appointment.",
+      body:
+        "Pick the work your vehicle needs and a preferred time. Our service team will confirm the appointment personally.",
+      buttonLabel: "Request appointment",
+      successMessage: "Your service request has been received. Our service team will confirm shortly.",
+    },
+    schema: basicSectionSchema({
+      buttonLabel: requiredShortText,
+      successMessage: requiredShortText,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "buttonLabel", label: "Submit button label", type: "text" },
+      { name: "successMessage", label: "Success message", type: "textarea" },
+    ],
+  }),
+
   "lead-capture-form": descriptor({
     type: "lead-capture-form",
     displayName: "Lead Capture Form",
-    description: "A general dealership enquiry form backed by the existing lead pipeline.",
-    category: "content",
+    description: "A general dealership enquiry form backed by the existing lead pipeline.",    category: "content",
     modes: ["experience", "standard"],
     palette: true,
     defaultProps: {
