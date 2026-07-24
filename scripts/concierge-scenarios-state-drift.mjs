@@ -7,6 +7,41 @@
  */
 export const scenarios = [
   {
+    name: "state drift repro 0: a prior BMW budget never silently narrows later make switches",
+    turns: [
+      { text: "show me BMW SUVs", storeResultCountAs: "unfiltered-bmw-suvs" },
+      "show me BMWs under 70k",
+      "do you have a 2026 Camry?",
+      "what about a Cadillac?",
+      "do you have a 20k budget worth of cars?",
+      "do you have a Camry?",
+      {
+        text: "show me BMW SUVs",
+        expectStoredResultCount: "unfiltered-bmw-suvs",
+        reject: "under $70,000",
+        expectAction: "filter_inventory",
+        expectActionFields: {
+          type: "filter_inventory",
+          make: "BMW",
+          bodyStyle: "SUV",
+        },
+        rejectActionFields: { type: "filter_inventory", priceMax: 70000 },
+      },
+    ],
+  },
+  {
+    name: "state drift repro 0b: show me always returns content and synchronizes the stored inventory",
+    turns: [
+      "show me the whole inventory",
+      "go back",
+      {
+        text: "show me",
+        expect: "inventory",
+        expectAction: "filter_inventory",
+      },
+    ],
+  },
+  {
     name: "state drift repro 1: repeated full reset always synchronizes the UI",
     turns: [
       "do you have a 2026 Camry?",
