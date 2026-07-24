@@ -18,6 +18,7 @@ import {
   ProductGrid,
   ReviewSummary,
   RichText,
+  ServiceBooking,
   ServicesList,
   ShowcaseGallery,
   SplitFeature,
@@ -55,6 +56,7 @@ export function registerBlocks(): void {
   registerBlockComponent("trade-in-form", TradeInForm);
   registerBlockComponent("finance-calculator", FinanceCalculator);
   registerBlockComponent("test-drive-booking", TestDriveBooking);
+  registerBlockComponent("service-booking", ServiceBooking);
   registerBlockComponent("lead-capture-form", LeadCaptureForm);
   registerBlockComponent("whatsapp-cta", WhatsAppCta);
   registerBlockComponent("cta-banner", CtaBanner);
