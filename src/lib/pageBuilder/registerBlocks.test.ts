@@ -9,7 +9,7 @@ describe("registerBlocks", () => {
     registerBlocks();
 
     const descriptors = listPaletteBlockDescriptors();
-    expect(descriptors).toHaveLength(32);
+    expect(descriptors).toHaveLength(33);
     expect(
       descriptors.filter((descriptor) => !isBlockRenderable(descriptor.type)),
     ).toEqual([]);

@@ -833,6 +833,55 @@ export const BLOCK_DESCRIPTORS = {
     ],
   }),
 
+  "vehicle-detail": descriptor({
+    type: "vehicle-detail",
+    displayName: "Vehicle Detail",
+    description:
+      "The full vehicle detail surface — gallery, price, actions, and specs — for the vehicle being viewed. Meant for the vehicle detail page.",
+    category: "data",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Marketplace Concept",
+      overviewTitle: "",
+      overviewText: "",
+      showGallery: true,
+      showSpecs: true,
+      showActions: true,
+    },
+    schema: z.object({
+      eyebrow: requiredShortText,
+      overviewTitle: optionalShortText,
+      overviewText: optionalBodyText,
+      showGallery: z.boolean().optional().default(true),
+      showSpecs: z.boolean().optional().default(true),
+      showActions: z.boolean().optional().default(true),
+    }),
+    fields: [
+      {
+        name: "eyebrow",
+        label: "Eyebrow",
+        type: "text",
+        helpText: "Small line above the vehicle title.",
+      },
+      {
+        name: "overviewTitle",
+        label: "Overview heading",
+        type: "text",
+        helpText: "Optional. Shown with the overview text below the specs.",
+      },
+      {
+        name: "overviewText",
+        label: "Overview text",
+        type: "textarea",
+        helpText: "Optional dealer-written overview (e.g. inspection or warranty notes that apply to every vehicle). The section stays hidden while empty.",
+      },
+      { name: "showGallery", label: "Show gallery", type: "boolean" },
+      { name: "showSpecs", label: "Show specs list", type: "boolean" },
+      { name: "showActions", label: "Show action buttons", type: "boolean" },
+    ],
+  }),
+
   testimonials: descriptor({
     type: "testimonials",
     displayName: "Testimonials",

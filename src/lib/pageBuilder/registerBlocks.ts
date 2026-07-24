@@ -27,6 +27,7 @@ import {
   Testimonials,
   TradeInForm,
   TrustStats,
+  VehicleDetail,
   VehicleSearchBand,
   VehicleSpecTable,
   VehicleInventory,
@@ -49,6 +50,7 @@ export function registerBlocks(): void {
   registerBlockComponent("rich-text", RichText);
   registerBlockComponent("product-grid", ProductGrid);
   registerBlockComponent("vehicle-inventory", VehicleInventory);
+  registerBlockComponent("vehicle-detail", VehicleDetail);
   registerBlockComponent("showcase-gallery", ShowcaseGallery);
   registerBlockComponent("trade-in-form", TradeInForm);
   registerBlockComponent("finance-calculator", FinanceCalculator);
