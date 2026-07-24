@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import {
   BodyTooLargeError,
   RemoteFetchError,
+  fetchPinnedRemote,
   fetchPinnedRemoteImage,
   imageContentType,
   ipv4MappedOctets,
@@ -36,6 +37,7 @@ describe("isPublicAddress — IPv4", () => {
 describe("isPublicAddress — IPv6", () => {
   it.each([
     ["::1", false], ["0:0:0:0:0:0:0:1", false],
+    ["::127.0.0.1", false], ["::10.0.0.1", false],
     ["::", false], ["0:0:0:0:0:0:0:0", false],
     ["fe80::1", false], ["fe80::dead:beef", false],
     ["fc00::1", false], ["fd12:3456::1", false],
@@ -255,6 +257,25 @@ describe("fetchPinnedRemoteImage (local server)", () => {
     const result = await fetchPinnedRemoteImage(target(), { maxBytes: 1024, timeoutMs: 5_000 });
     expect([...result.bytes]).toEqual([...notImage]);
     expect(imageContentType(result.bytes)).toBeNull();
+  });
+
+  it("supports a bounded pinned POST while keeping Host under transport control", async () => {
+    handler = (request, response) => {
+      expect(request.method).toBe("POST");
+      expect(request.headers.authorization).toBe("Bearer supplier-token");
+      expect(request.headers.host).toBe(`127.0.0.1:${port}`);
+      response.writeHead(201, { "Content-Type": "text/plain" });
+      response.end("accepted");
+    };
+    const result = await fetchPinnedRemote(target(), {
+      method: "POST",
+      body: new TextEncoder().encode("inventory"),
+      headers: { Authorization: "Bearer supplier-token", Host: "attacker.invalid" },
+      maxBytes: 1024,
+      timeoutMs: 5_000,
+    });
+    expect(result.statusCode).toBe(201);
+    expect(new TextDecoder().decode(result.bytes)).toBe("accepted");
   });
 });
 

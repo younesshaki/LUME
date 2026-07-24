@@ -102,6 +102,15 @@ export function ipv4MappedOctets(input: string): [number, number, number, number
   ];
 }
 
+/** IPv4-compatible IPv6 (`::127.0.0.1`), which routes to the embedded IPv4. */
+function ipv4CompatibleOctets(groups: readonly number[]): [number, number, number, number] | null {
+  if (!groups.slice(0, 6).every((group) => group === 0)) return null;
+  return [
+    (groups[6]! >> 8) & 0xff, groups[6]! & 0xff,
+    (groups[7]! >> 8) & 0xff, groups[7]! & 0xff,
+  ];
+}
+
 export function isPublicAddress(value: string): boolean {
   if (isIP(value) === 4) {
     const [a = 0, b = 0] = value.split(".").map(Number);
@@ -112,6 +121,10 @@ export function isPublicAddress(value: string): boolean {
   if (mapped) return isPublicIpv4Octets(mapped[0], mapped[1]);
   const groups = parseIpv6Groups(value);
   if (!groups) return false;
+  // IPv4-compatible forms are less common than mapped forms but have the
+  // same SSRF consequence (for example, ::127.0.0.1 is loopback).
+  const compatible = ipv4CompatibleOctets(groups);
+  if (compatible) return isPublicIpv4Octets(compatible[0], compatible[1]);
   if (groups.every((group) => group === 0)) return false; // :: unspecified
   if (groups[7] === 1 && groups.slice(0, 7).every((group) => group === 0)) return false; // ::1
   if ((groups[0]! & 0xffc0) === 0xfe80) return false; // fe80::/10 link-local
@@ -212,11 +225,20 @@ function addressesEqual(left: string, right: string): boolean {
 export type PinnedFetchOptions = {
   maxBytes: number;
   timeoutMs: number;
+  /** Bounded request methods used by managed feed pull/push workers. */
+  method?: "GET" | "POST" | "PUT";
+  /** Request bytes, never streamed from an unbounded caller. */
+  body?: Uint8Array;
+  /** Extra request headers for authenticated supplier feeds. Host is ignored. */
+  headers?: Record<string, string>;
+  /** Defaults to the image importer accept header. */
+  accept?: string;
 };
 
 export type PinnedFetchResult = {
   bytes: Uint8Array<ArrayBuffer>;
   statusCode: number;
+  headers: Record<string, string | string[] | undefined>;
 };
 
 /**
@@ -227,7 +249,7 @@ export type PinnedFetchResult = {
  * redirects and non-2xx are rejected, the connected socket address is
  * re-verified, and the body is read with a hard incremental cap.
  */
-export function fetchPinnedRemoteImage(
+export function fetchPinnedRemote(
   target: ValidatedRemoteTarget,
   options: PinnedFetchOptions,
 ): Promise<PinnedFetchResult> {
@@ -243,11 +265,16 @@ export function fetchPinnedRemoteImage(
       hostname: target.hostname,
       port: target.url.port || undefined,
       path: `${target.url.pathname}${target.url.search}`,
-      method: "GET",
+      method: options.method ?? "GET",
       // THE PIN: DNS never re-resolves — the socket can only connect to the
       // address we validated. Host/SNI/cert verification still use hostname.
       lookup: (_hostname, _options, callback) => callback(null, target.address, target.family),
-      headers: { Host: target.url.host, Accept: "image/*,*/*;q=0.8" },
+      headers: {
+        ...safeRequestHeaders(options.headers),
+        Host: target.url.host,
+        Accept: options.accept ?? "image/*,*/*;q=0.8",
+        ...(options.body ? { "Content-Length": String(options.body.byteLength) } : {}),
+      },
       timeout: options.timeoutMs,
     });
 
@@ -276,7 +303,7 @@ export function fetchPinnedRemoteImage(
         return;
       }
       readBodyBounded(response as unknown as AsyncIterable<Uint8Array>, options.maxBytes)
-        .then((bytes) => resolvePromise({ bytes, statusCode: status }))
+        .then((bytes) => resolvePromise({ bytes, statusCode: status, headers: response.headers }))
         .catch(fail);
     });
 
@@ -286,6 +313,32 @@ export function fetchPinnedRemoteImage(
         : new RemoteFetchError(error.message));
     });
 
+    if (options.body) request.write(options.body);
     request.end();
   });
+}
+
+/**
+ * Backwards-compatible image importer wrapper. Feed workers use
+ * `fetchPinnedRemote` directly so the exact same DNS-pinning, redirect, TLS,
+ * and bounded-stream guarantees protect supplier CSV/JSON/XML requests.
+ */
+export async function fetchPinnedRemoteImage(
+  target: ValidatedRemoteTarget,
+  options: PinnedFetchOptions,
+): Promise<Pick<PinnedFetchResult, "bytes" | "statusCode">> {
+  const result = await fetchPinnedRemote(target, options);
+  return { bytes: result.bytes, statusCode: result.statusCode };
+}
+
+function safeRequestHeaders(headers: Record<string, string> | undefined): Record<string, string> {
+  if (!headers) return {};
+  const safe: Record<string, string> = {};
+  for (const [name, value] of Object.entries(headers)) {
+    // Host must be supplied by the real hostname/SNI target. Other connection
+    // framing headers are not valid for our bounded GET-only transport.
+    if (/^(host|content-length|connection|transfer-encoding)$/i.test(name)) continue;
+    safe[name] = value;
+  }
+  return safe;
 }

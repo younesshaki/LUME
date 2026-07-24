@@ -26,6 +26,8 @@ export type Vehicle = {
   imageSrc: string;
   /** Managed vehicle_images primary image, preferred over legacy imagery. */
   primaryImageSrc?: string;
+  /** Ordered tenant-owned R2 gallery URLs, kept separate from supplier feeds. */
+  managedImageUrls?: string[];
   /** AI-generated description for the managed primary image. */
   primaryImageAlt?: string;
   sellerCity: string;
