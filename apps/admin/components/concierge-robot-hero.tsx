@@ -9,24 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SplineScene } from "@/components/ui/spline-scene";
 import { Spotlight } from "@/components/ui/spotlight";
-
-const SCENE_URL = "https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode";
-
-/**
- * Scene hierarchy is `Bot` → `Top part` (`Head`, `Head 2`, `Neck`, …) plus the
- * two arms (`Hand`, `Hand Instance`), `Body` and `Bottom`. Hiding everything
- * but the head saves no download — the `.splinecode` is one baked file — it
- * only cuts the per-frame draw work down to the part we actually show.
- */
-const NOT_THE_HEAD = new Set(["Body", "Bottom", "Hand", "Hand Instance"]);
-
-/**
- * Framing for the head alone, found by sweeping against this card's aspect.
- * Spline drives its own camera (and `setZoom` is a no-op in this scene), so
- * the framing is done by transforming the `Bot` root instead: scale up, then
- * drop it so the head lands in the middle of the card.
- */
-const HEAD_FRAMING = { scale: 3, y: -710 };
+import {
+  CONCIERGE_SCENE_URL,
+  frameHeadOnly,
+  HERO_FRAMING,
+} from "@/lib/conciergeRobot";
 
 /**
  * Dashboard hero: the concierge as a head that tracks the cursor.
@@ -78,19 +65,7 @@ export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
   }, []);
 
   const handleLoad = useCallback((app: Application) => {
-    // Both arms reuse the name `Hand`, so match across every object rather
-    // than `findObjectByName`, which only returns the first hit.
-    for (const object of app.getAllObjects()) {
-      if (NOT_THE_HEAD.has(object.name)) object.visible = false;
-    }
-
-    const bot = app.findObjectByName("Bot");
-    if (bot) {
-      bot.scale.x = HEAD_FRAMING.scale;
-      bot.scale.y = HEAD_FRAMING.scale;
-      bot.scale.z = HEAD_FRAMING.scale;
-      bot.position.y = HEAD_FRAMING.y;
-    }
+    frameHeadOnly(app, HERO_FRAMING);
   }, []);
 
   const showScene = nearViewport && environmentAllows;
@@ -125,7 +100,7 @@ export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
         <div className="relative hidden flex-1 md:block" aria-hidden="true">
           {showScene ? (
             <div className="absolute inset-0 overflow-hidden">
-              <SplineScene scene={SCENE_URL} className="size-full" onLoad={handleLoad} />
+              <SplineScene scene={CONCIERGE_SCENE_URL} className="size-full" onLoad={handleLoad} />
             </div>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

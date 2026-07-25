@@ -97,6 +97,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { ConciergeRobotCompanion } from "@/components/concierge-robot-companion";
 import { NavLoaderProvider, useNavLoader } from "@/components/navigation-loader";
 import {
   markAdminNotificationRead,
@@ -386,6 +387,7 @@ export function AdminShell({
         <div className="flex-1 p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
+    <ConciergeRobotCompanion />
     </TooltipProvider>
     </NavLoaderProvider>
   );
