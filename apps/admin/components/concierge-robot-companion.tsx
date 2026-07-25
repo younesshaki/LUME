@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import type { Application } from "@splinetool/runtime";
 
-import { useConciergeRobotDock } from "@/components/concierge-robot-dock";
+import { useConciergeRobot } from "@/components/concierge-robot-provider";
 import { SplineScene } from "@/components/ui/spline-scene";
 import {
   COMPANION_FRAMING,
@@ -56,7 +56,7 @@ type Anchor = { left: number; top: number; inSlot: boolean };
  */
 export function ConciergeRobotCompanion() {
   const pathname = usePathname();
-  const { slot, parked } = useConciergeRobotDock();
+  const { enabled, slot, parked } = useConciergeRobot();
   const dockRef = useRef<HTMLDivElement>(null);
   const disposeTrackingRef = useRef<(() => void) | null>(null);
 
@@ -67,7 +67,7 @@ export function ConciergeRobotCompanion() {
   const [showHint, setShowHint] = useState(false);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
 
-  const onRoute = isCompanionRoute(pathname);
+  const onRoute = enabled && isCompanionRoute(pathname);
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");

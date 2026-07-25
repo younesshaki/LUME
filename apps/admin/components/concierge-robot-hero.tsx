@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { Application } from "@splinetool/runtime";
 
+import { useConciergeRobot } from "@/components/concierge-robot-provider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SplineScene } from "@/components/ui/spline-scene";
@@ -26,6 +27,7 @@ import {
  * actually near the viewport.
  */
 export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
+  const { enabled } = useConciergeRobot();
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const disposeTrackingRef = useRef<(() => void) | null>(null);
@@ -68,7 +70,7 @@ export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
     return () => observer.disconnect();
   }, []);
 
-  const showScene = nearViewport && environmentAllows;
+  const showScene = enabled && nearViewport && environmentAllows;
 
   const handleLoad = useCallback((app: Application) => {
     frameHeadOnly(app, HERO_FRAMING);
