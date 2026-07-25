@@ -13,6 +13,7 @@ import {
   CONCIERGE_SCENE_URL,
   frameHeadOnly,
   HERO_FRAMING,
+  HERO_STAGE,
   trackPointer,
 } from "@/lib/conciergeRobot";
 
@@ -67,6 +68,8 @@ export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
     return () => observer.disconnect();
   }, []);
 
+  const showScene = nearViewport && environmentAllows;
+
   const handleLoad = useCallback((app: Application) => {
     frameHeadOnly(app, HERO_FRAMING);
     disposeTrackingRef.current?.();
@@ -74,8 +77,6 @@ export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
   }, []);
 
   useEffect(() => () => disposeTrackingRef.current?.(), []);
-
-  const showScene = nearViewport && environmentAllows;
 
   return (
     <Card
@@ -104,9 +105,13 @@ export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
         </div>
 
         {/* Decorative: the head conveys nothing the copy doesn't already say. */}
-        <div ref={stageRef} className="relative hidden flex-1 md:block" aria-hidden="true">
+        <div className="relative hidden flex-1 overflow-hidden md:block" aria-hidden="true">
           {showScene ? (
-            <div className="absolute inset-0 overflow-hidden">
+            <div
+              ref={stageRef}
+              className="absolute left-1/2 top-0 -translate-x-1/2"
+              style={{ width: HERO_STAGE.width, height: HERO_STAGE.height }}
+            >
               <SplineScene scene={CONCIERGE_SCENE_URL} className="size-full" onLoad={handleLoad} />
             </div>
           ) : (

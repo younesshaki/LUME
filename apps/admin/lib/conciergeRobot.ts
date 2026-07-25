@@ -13,8 +13,20 @@ const NOT_THE_HEAD = new Set(["Body", "Bottom", "Hand", "Hand Instance"]);
 
 export type HeadFraming = { scale: number; y: number };
 
-/** Wide hero card on the tenant overview (roughly 616×260). */
+/** Wide hero card on the tenant overview, at the reference width below. */
 export const HERO_FRAMING: HeadFraming = { scale: 3, y: -710 };
+
+/**
+ * Canvas size the hero framing is tuned against, in CSS pixels.
+ *
+ * Spline frames the subject relative to the canvas, so a fluid canvas moves
+ * the goalposts: with a fixed `scale` the head grew with the viewport until it
+ * burst out of the card on wide screens. Rather than model that relationship,
+ * the hero canvas is pinned to this size and centred in its (fluid) pane —
+ * the framing then cannot vary at all. The dock does the same thing by being
+ * a fixed 220×220, which is why it was never affected.
+ */
+export const HERO_STAGE = { width: 584, height: 260 };
 
 /** Small square dock (220×220) in the corner of every other admin page. */
 export const COMPANION_FRAMING: HeadFraming = { scale: 2.2, y: -430 };
@@ -34,13 +46,18 @@ export function frameHeadOnly(app: Application, framing: HeadFraming): void {
     if (NOT_THE_HEAD.has(object.name)) object.visible = false;
   }
 
+  applyFraming(app, framing);
+}
+
+/** Position/scale the head. */
+function applyFraming(app: Application, framing: HeadFraming): void {
   const bot = app.findObjectByName("Bot");
-  if (bot) {
-    bot.scale.x = framing.scale;
-    bot.scale.y = framing.scale;
-    bot.scale.z = framing.scale;
-    bot.position.y = framing.y;
-  }
+  if (!bot) return;
+
+  bot.scale.x = framing.scale;
+  bot.scale.y = framing.scale;
+  bot.scale.z = framing.scale;
+  bot.position.y = framing.y;
 }
 
 const clamp = (value: number, min: number, max: number) =>
