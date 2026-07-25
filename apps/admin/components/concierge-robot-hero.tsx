@@ -13,6 +13,7 @@ import {
   CONCIERGE_SCENE_URL,
   frameHeadOnly,
   HERO_FRAMING,
+  trackPointer,
 } from "@/lib/conciergeRobot";
 
 /**
@@ -25,6 +26,8 @@ import {
  */
 export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const disposeTrackingRef = useRef<(() => void) | null>(null);
   const [nearViewport, setNearViewport] = useState(false);
   const [environmentAllows, setEnvironmentAllows] = useState(false);
 
@@ -66,7 +69,11 @@ export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
 
   const handleLoad = useCallback((app: Application) => {
     frameHeadOnly(app, HERO_FRAMING);
+    disposeTrackingRef.current?.();
+    if (stageRef.current) disposeTrackingRef.current = trackPointer(app, stageRef.current);
   }, []);
+
+  useEffect(() => () => disposeTrackingRef.current?.(), []);
 
   const showScene = nearViewport && environmentAllows;
 
@@ -97,7 +104,7 @@ export function ConciergeRobotHero({ tenantSlug }: { tenantSlug: string }) {
         </div>
 
         {/* Decorative: the head conveys nothing the copy doesn't already say. */}
-        <div className="relative hidden flex-1 md:block" aria-hidden="true">
+        <div ref={stageRef} className="relative hidden flex-1 md:block" aria-hidden="true">
           {showScene ? (
             <div className="absolute inset-0 overflow-hidden">
               <SplineScene scene={CONCIERGE_SCENE_URL} className="size-full" onLoad={handleLoad} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import type { Application } from "@splinetool/runtime";
@@ -11,6 +11,7 @@ import {
   CONCIERGE_SCENE_URL,
   frameHeadOnly,
   isCompanionRoute,
+  trackPointer,
 } from "@/lib/conciergeRobot";
 
 const HINT_SEEN_KEY = "lume.concierge-robot.hint-seen";
@@ -29,13 +30,15 @@ const ON_SCREEN = { y: "0%", rotate: 0, opacity: 1 };
  *
  * It lives in the admin shell, so it survives route changes — a navigation
  * only replays the pop-in animation rather than reloading the scene. The
- * container is `pointer-events-none`: Spline listens for `pointermove` on
- * `window` as well as its canvas, so the head still tracks the cursor while
- * never intercepting a click. `h` ducks it out of frame anyway, and it gets
- * out of the way on its own while a dialog is open.
+ * container is `pointer-events-none`, and tracking is driven from a `window`
+ * listener, so the head follows the cursor anywhere on the page without ever
+ * intercepting a click. `h` ducks it out of frame anyway, and it gets out of
+ * the way on its own while a dialog is open.
  */
 export function ConciergeRobotCompanion() {
   const pathname = usePathname();
+  const dockRef = useRef<HTMLDivElement>(null);
+  const disposeTrackingRef = useRef<(() => void) | null>(null);
 
   const [entered, setEntered] = useState(false);
   const [environmentAllows, setEnvironmentAllows] = useState(false);
@@ -129,12 +132,17 @@ export function ConciergeRobotCompanion() {
 
   const handleLoad = useCallback((app: Application) => {
     frameHeadOnly(app, COMPANION_FRAMING);
+    disposeTrackingRef.current?.();
+    if (dockRef.current) disposeTrackingRef.current = trackPointer(app, dockRef.current);
   }, []);
+
+  useEffect(() => () => disposeTrackingRef.current?.(), []);
 
   return (
     <AnimatePresence>
       {onRoute && environmentAllows && (
         <motion.div
+          ref={dockRef}
           // Very high z-index by request. Safe because nothing here is
           // interactive — see `pointer-events-none` below.
           className="pointer-events-none fixed bottom-0 right-4 z-[120] hidden h-[220px] w-[220px] origin-bottom md:block"
