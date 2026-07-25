@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import type { Application } from "@splinetool/runtime";
 
+import { useConciergeRobotDock } from "@/components/concierge-robot-dock";
 import { SplineScene } from "@/components/ui/spline-scene";
 import {
   COMPANION_FRAMING,
@@ -21,8 +22,22 @@ const POP_IN = { type: "spring", stiffness: 240, damping: 17, mass: 0.9 } as con
 /** Leaving is a plain duck-out — no bounce on the way down. */
 const DUCK_OUT = { duration: 0.32, ease: [0.4, 0, 1, 1] } as const;
 
-const OFF_SCREEN = { y: "135%", rotate: 8, opacity: 0 };
-const ON_SCREEN = { y: "0%", rotate: 0, opacity: 1 };
+/** Arrival from the bottom-right corner: rises past the edge of the screen. */
+const OFF_CORNER = { y: "135%", rotate: 8, scale: 1, opacity: 0 };
+/** Arrival in the sidebar: a short rise, so it never covers the account footer. */
+const OFF_SLOT = { y: "40%", rotate: 0, scale: 0.92, opacity: 0 };
+const ON_SCREEN = { y: "0%", rotate: 0, scale: 1, opacity: 1 };
+
+/** Gliding between the sidebar and the corner. */
+const MOVE = { type: "spring", stiffness: 210, damping: 26, mass: 1 } as const;
+
+const ROBOT_SIZE = 220;
+const CORNER_INSET = 16;
+const SLOT_INSET = 8;
+/** Below this the sidebar gap is too cramped; fall back to the corner. */
+const MIN_SLOT_HEIGHT = 200;
+
+type Anchor = { left: number; top: number; inSlot: boolean };
 
 /**
  * The concierge head, docked bottom-right on every admin page except the
@@ -34,9 +49,14 @@ const ON_SCREEN = { y: "0%", rotate: 0, opacity: 1 };
  * listener, so the head follows the cursor anywhere on the page without ever
  * intercepting a click. `h` ducks it out of frame anyway, and it gets out of
  * the way on its own while a dialog is open.
+ *
+ * By default it parks in the sidebar's spare space, below the nav and above
+ * the account footer. Expanding a sidebar group claims that space, so the head
+ * glides back to the bottom-right corner until the group is collapsed again.
  */
 export function ConciergeRobotCompanion() {
   const pathname = usePathname();
+  const { slot, parked } = useConciergeRobotDock();
   const dockRef = useRef<HTMLDivElement>(null);
   const disposeTrackingRef = useRef<(() => void) | null>(null);
 
@@ -45,6 +65,7 @@ export function ConciergeRobotCompanion() {
   const [hiddenByUser, setHiddenByUser] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
 
   const onRoute = isCompanionRoute(pathname);
 
@@ -128,7 +149,52 @@ export function ConciergeRobotCompanion() {
     return () => window.clearTimeout(timer);
   }, [entered, hiddenByUser, dialogOpen]);
 
+  // Where the head should sit: the sidebar's spare space when it's free and
+  // big enough, otherwise the bottom-right corner.
+  const computeAnchor = useCallback((): Anchor => {
+    if (parked && slot) {
+      const rect = slot.getBoundingClientRect();
+      if (rect.height >= MIN_SLOT_HEIGHT && rect.width >= ROBOT_SIZE) {
+        return {
+          left: rect.right - ROBOT_SIZE - SLOT_INSET,
+          top: rect.bottom - ROBOT_SIZE,
+          inSlot: true,
+        };
+      }
+    }
+    return {
+      left: window.innerWidth - ROBOT_SIZE - CORNER_INSET,
+      top: window.innerHeight - ROBOT_SIZE,
+      inSlot: false,
+    };
+  }, [parked, slot]);
+
+  useEffect(() => {
+    if (!onRoute || !environmentAllows) return;
+
+    const update = () => setAnchor(computeAnchor());
+    update();
+
+    window.addEventListener("resize", update);
+    // Capture phase so scrolling the sidebar itself is picked up too.
+    window.addEventListener("scroll", update, true);
+
+    // The sidebar animates its width when collapsed, and the slot resizes as
+    // groups expand — both need to re-anchor as they go, not just at the end.
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    if (slot) observer?.observe(slot);
+    observer?.observe(document.body);
+
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      observer?.disconnect();
+    };
+  }, [computeAnchor, slot, onRoute, environmentAllows]);
+
   const visible = entered && !hiddenByUser && !dialogOpen;
+  const resting = anchor?.inSlot ? OFF_SLOT : OFF_CORNER;
 
   const handleLoad = useCallback((app: Application) => {
     frameHeadOnly(app, COMPANION_FRAMING);
@@ -140,44 +206,54 @@ export function ConciergeRobotCompanion() {
 
   return (
     <AnimatePresence>
-      {onRoute && environmentAllows && (
+      {onRoute && environmentAllows && anchor && (
+        // Outer element owns *where* the head is and glides between anchors;
+        // the inner one owns the arrival animation. Keeping them separate lets
+        // the head move house without interrupting its pop-in.
         <motion.div
           ref={dockRef}
           // Very high z-index by request. Safe because nothing here is
-          // interactive — see `pointer-events-none` below.
-          className="pointer-events-none fixed bottom-0 right-4 z-[120] hidden h-[220px] w-[220px] origin-bottom md:block"
-          initial={OFF_SCREEN}
-          animate={
-            visible
-              ? { ...ON_SCREEN, transition: POP_IN }
-              : { ...OFF_SCREEN, transition: DUCK_OUT }
-          }
-          exit={{ ...OFF_SCREEN, transition: DUCK_OUT }}
+          // interactive — see `pointer-events-none`.
+          className="pointer-events-none fixed z-[120] hidden md:block"
+          style={{ width: ROBOT_SIZE, height: ROBOT_SIZE }}
+          initial={{ left: anchor.left, top: anchor.top }}
+          animate={{ left: anchor.left, top: anchor.top, transition: MOVE }}
           aria-hidden="true"
         >
-          {/* Grounding glow, so the head doesn't look pasted onto the page. */}
-          <div className="absolute inset-x-4 bottom-0 h-16 rounded-[50%] bg-foreground/10 blur-2xl dark:bg-white/10" />
+          <motion.div
+            className="relative size-full origin-bottom"
+            initial={resting}
+            animate={
+              visible
+                ? { ...ON_SCREEN, transition: POP_IN }
+                : { ...resting, transition: DUCK_OUT }
+            }
+            exit={{ ...resting, transition: DUCK_OUT }}
+          >
+            {/* Grounding glow, so the head doesn't look pasted onto the page. */}
+            <div className="absolute inset-x-4 bottom-0 h-16 rounded-[50%] bg-foreground/10 blur-2xl dark:bg-white/10" />
 
-          <SplineScene
-            scene={CONCIERGE_SCENE_URL}
-            className="size-full"
-            onLoad={handleLoad}
-          />
+            <SplineScene
+              scene={CONCIERGE_SCENE_URL}
+              className="size-full"
+              onLoad={handleLoad}
+            />
 
-          <AnimatePresence>
-            {showHint && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 6 }}
-                className="absolute bottom-6 right-full mr-1 whitespace-nowrap rounded-full bg-foreground/90 px-2.5 py-1 text-xs font-medium text-background shadow-sm"
-              >
-                Press{" "}
-                <kbd className="rounded bg-background/25 px-1 font-sans">H</kbd> to
-                hide
-              </motion.div>
-            )}
-          </AnimatePresence>
+            <AnimatePresence>
+              {showHint && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  className="absolute bottom-6 right-full mr-1 whitespace-nowrap rounded-full bg-foreground/90 px-2.5 py-1 text-xs font-medium text-background shadow-sm"
+                >
+                  Press{" "}
+                  <kbd className="rounded bg-background/25 px-1 font-sans">H</kbd>{" "}
+                  to hide
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

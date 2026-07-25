@@ -98,6 +98,10 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { ConciergeRobotCompanion } from "@/components/concierge-robot-companion";
+import {
+  ConciergeRobotDockProvider,
+  ConciergeRobotSlot,
+} from "@/components/concierge-robot-dock";
 import { NavLoaderProvider, useNavLoader } from "@/components/navigation-loader";
 import {
   markAdminNotificationRead,
@@ -253,6 +257,9 @@ export function AdminShell({
   );
 
   return (
+    // The head parks in the sidebar's spare space; expanding a group claims
+    // that space, so it moves back to the corner until the group is closed.
+    <ConciergeRobotDockProvider parked={expandedSections.size === 0}>
     <NavLoaderProvider>
     {/* This shadcn sidebar version does not mount its own TooltipProvider;
         the collapsed-rail tooltips crash without one. */}
@@ -366,6 +373,7 @@ export function AdminShell({
               </SidebarGroupContent>
             </SidebarGroup>
           )}
+          <ConciergeRobotSlot />
         </SidebarContent>
         <SidebarFooter>
           <UserMenu
@@ -390,6 +398,7 @@ export function AdminShell({
     <ConciergeRobotCompanion />
     </TooltipProvider>
     </NavLoaderProvider>
+    </ConciergeRobotDockProvider>
   );
 }
 
