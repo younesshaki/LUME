@@ -21,6 +21,8 @@
     "@lume/email": "*",
     "@lume/rag": "*",
     "@lume/types": "*",
+    "@splinetool/react-spline": "^4.1.0",
+    "@splinetool/runtime": "^1.12.98",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.104.0",
     "@tabler/icons-react": "^3.44.0",

@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { evaluateLaunchReadiness } from "@/lib/launchReadiness";
 import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
 import type { OnboardingChecklistItem } from "@/lib/onboardingChecklist";
+import { ConciergeRobotHero } from "@/components/concierge-robot-hero";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,8 @@ export default async function TenantOverviewPage({ params }: PageProps) {
           </span>
         }
       />
+
+      <ConciergeRobotHero tenantSlug={slug} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
