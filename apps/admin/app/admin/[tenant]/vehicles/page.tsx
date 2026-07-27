@@ -255,6 +255,80 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         </nav>
       </div>
 
+      {/* Price/year/mileage can be set by the concierge as well as by hand, so
+          every active constraint must be visible AND removable here. Without
+          this the dashboard can be driven into a filtered state the UI has no
+          way to clear — href() carries these params onto every link and form
+          on the page, so they survive searching, sorting and paging. */}
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border p-3">
+        <form method="get" className="flex flex-wrap items-end gap-2" aria-label="Filter vehicles by price, year and mileage">
+          {q ? <input type="hidden" name="q" value={q} /> : null}
+          {status !== "active" ? <input type="hidden" name="status" value={status} /> : null}
+          {view !== "table" ? <input type="hidden" name="view" value={view} /> : null}
+          {imageFilter !== "all" ? <input type="hidden" name="images" value={imageFilter} /> : null}
+          {sort !== "year" ? <input type="hidden" name="sort" value={sort} /> : null}
+          {dir !== "desc" ? <input type="hidden" name="dir" value={dir} /> : null}
+          {([
+            ["minPrice", "Min price", minPrice],
+            ["maxPrice", "Max price", maxPrice],
+            ["minYear", "Min year", minYear],
+            ["maxYear", "Max year", maxYear],
+            ["maxMileage", "Max mileage", maxMileage],
+          ] as const).map(([name, label, value]) => (
+            <label key={name} className="grid gap-1 text-xs text-muted-foreground">
+              {label}
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                name={name}
+                defaultValue={value ?? ""}
+                className="h-9 w-28"
+              />
+            </label>
+          ))}
+          <Button type="submit" size="sm" variant="secondary">
+            Apply
+          </Button>
+        </form>
+
+        {constraintDescriptor ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {([
+              ["minPrice", minPrice === undefined ? null : `Over $${minPrice.toLocaleString()}`],
+              ["maxPrice", maxPrice === undefined ? null : `Under $${maxPrice.toLocaleString()}`],
+              ["minYear", minYear === undefined ? null : `From ${minYear}`],
+              ["maxYear", maxYear === undefined ? null : `Up to ${maxYear}`],
+              ["maxMileage", maxMileage === undefined ? null : `Under ${maxMileage.toLocaleString()} mi`],
+            ] as const).map(([name, label]) =>
+              label ? (
+                <Button key={name} variant="outline" size="sm" asChild>
+                  <Link href={href({ [name]: undefined, page: 1 })}>
+                    {label}
+                    <span aria-hidden="true">×</span>
+                    <span className="sr-only">Remove this filter</span>
+                  </Link>
+                </Button>
+              ) : null,
+            )}
+            <Button variant="ghost" size="sm" asChild>
+              <Link
+                href={href({
+                  minPrice: undefined,
+                  maxPrice: undefined,
+                  minYear: undefined,
+                  maxYear: undefined,
+                  maxMileage: undefined,
+                  page: 1,
+                })}
+              >
+                Clear filters
+              </Link>
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
       {view === "grid" ? (
         <nav className="flex flex-wrap items-center gap-2" aria-label="Filter vehicles by photo availability">
           <span className="text-sm text-muted-foreground">Photos</span>
