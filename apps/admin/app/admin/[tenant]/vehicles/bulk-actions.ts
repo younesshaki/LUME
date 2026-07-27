@@ -9,13 +9,17 @@ import {
   previewBulkVehiclePrices,
   type BulkVehicleRow,
 } from "@/lib/bulkVehicles";
+import type { VehicleStatus } from "@lume/types";
 import {
   VEHICLE_STATUSES,
   isVehicleStatusTransitionAllowed,
+  normalizeVehicleStatusFilter,
 } from "@/lib/vehicleStatus";
+import { normalizeVehicleImageFilter } from "@/lib/vehicleGrid";
 import {
   ARCHIVABLE_STATUSES,
   chunk,
+  filterRowsByImagePresence,
   READ_PAGE_SIZE,
   selectVehicleIdsWithoutImages,
   WRITE_CHUNK_SIZE,
@@ -143,6 +147,162 @@ export async function bulkDeleteVehicles(
   }
 }
 
+export type InventoryFilterInput = {
+  status?: string;
+  q?: string;
+  images?: string;
+};
+
+export type FilterScopeStatusResult = BulkVehicleActionResult & {
+  /** Rows the filter matched but whose status transition is not allowed. */
+  skipped?: number;
+};
+
+/**
+ * Set the status of every vehicle matching an inventory filter.
+ *
+ * The checkbox path is capped at MAX_BULK_VEHICLES and one page of 25, which
+ * cannot express "every vehicle in this view". This takes the filter itself
+ * and resolves it server-side, so the client never has to carry thousands of
+ * ids — and the filter is re-normalized here rather than trusted.
+ *
+ * Vehicles whose transition is not allowed (sold rows, mostly) are skipped and
+ * counted rather than failing the whole operation, which is the only workable
+ * behaviour at this scale.
+ */
+export async function bulkSetVehicleStatusForFilter(
+  slug: string,
+  filter: InventoryFilterInput,
+  rawStatus: string,
+): Promise<FilterScopeStatusResult> {
+  const status = VEHICLE_STATUSES.find((option) => option.value === rawStatus)?.value;
+  if (!status) return { error: "Choose a valid vehicle status." };
+
+  const auth = await authorizeTenantEditor(slug);
+  if ("error" in auth) return { error: auth.error };
+
+  try {
+    const rows = await loadVehiclesForFilter(auth.service, auth.tenantId, filter);
+    const eligible = rows.filter((row) =>
+      isVehicleStatusTransitionAllowed(row.status, Boolean(row.sold_at), status),
+    );
+    const skipped = rows.length - eligible.length;
+    if (eligible.length === 0) return { affected: 0, skipped };
+
+    let affected = 0;
+    for (const batch of chunk(eligible.map((row) => row.id), WRITE_CHUNK_SIZE)) {
+      const { data, error } = await auth.service
+        .from("vehicles")
+        .update({ status })
+        .eq("tenant_id", auth.tenantId)
+        .in("id", batch)
+        .select("id");
+      if (error) return { error: "Unable to update the matching vehicles." };
+      affected += data?.length ?? 0;
+    }
+
+    await auditWrite({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      action: "vehicle.bulk_status_by_filter",
+      resourceType: "vehicle",
+      metadata: { status, filter, affected, skipped },
+    }).catch(() => undefined);
+
+    revalidatePath(`/admin/${slug}/vehicles`);
+    return { affected, skipped };
+  } catch {
+    return { error: "Bulk vehicle updates are not configured." };
+  }
+}
+
+/** How many vehicles the given inventory filter matches right now. */
+export async function countVehiclesMatchingFilter(
+  slug: string,
+  filter: InventoryFilterInput,
+): Promise<{ error?: string; count?: number }> {
+  const auth = await authorizeTenantEditor(slug);
+  if ("error" in auth) return { error: auth.error };
+
+  try {
+    const rows = await loadVehiclesForFilter(auth.service, auth.tenantId, filter);
+    return { count: rows.length };
+  } catch {
+    return { error: "Unable to count the matching vehicles." };
+  }
+}
+
+type FilteredVehicleRow = VehicleImageSourceRow & {
+  status: VehicleStatus;
+  sold_at: string | null;
+};
+
+/**
+ * Resolve an inventory filter to rows, mirroring the inventory page's own
+ * query so the count the user is shown matches what gets changed.
+ *
+ * Status and search run in Postgres (identical operators to the page); the
+ * photo filter is applied in JS against a paged set of managed-image ids,
+ * exactly as the page does.
+ */
+async function loadVehiclesForFilter(
+  service: ReturnType<typeof createServiceClient>,
+  tenantId: string,
+  filter: InventoryFilterInput,
+): Promise<FilteredVehicleRow[]> {
+  const status = normalizeVehicleStatusFilter(filter.status);
+  const images = normalizeVehicleImageFilter(filter.images);
+  const q = (filter.q ?? "").trim();
+
+  const rows: FilteredVehicleRow[] = [];
+  for (let page = 0; ; page++) {
+    let query = service
+      .from("vehicles")
+      .select("id, status, sold_at, image_src, special_image_src")
+      .eq("tenant_id", tenantId);
+
+    if (status === "active") query = query.neq("status", "archived");
+    else if (status !== "all") query = query.eq("status", status);
+
+    if (q) {
+      const term = `%${q.replace(/[%_]/g, (match) => `\\${match}`)}%`;
+      query = query.or(`make.ilike.${term},model.ilike.${term},trim.ilike.${term}`);
+    }
+
+    const from = page * READ_PAGE_SIZE;
+    const { data, error } = await query
+      .order("id", { ascending: true })
+      .range(from, from + READ_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    rows.push(...((data ?? []) as FilteredVehicleRow[]));
+    if (!data || data.length < READ_PAGE_SIZE) break;
+  }
+
+  if (images === "all" || rows.length === 0) return rows;
+  return filterRowsByImagePresence(rows, await loadManagedVehicleIds(service, tenantId), images);
+}
+
+/** Every vehicle id in the tenant that has at least one managed R2 image. */
+async function loadManagedVehicleIds(
+  service: ReturnType<typeof createServiceClient>,
+  tenantId: string,
+): Promise<Set<string>> {
+  const managedVehicleIds = new Set<string>();
+  for (let page = 0; ; page++) {
+    const from = page * READ_PAGE_SIZE;
+    const { data, error } = await service
+      .from("vehicle_images")
+      .select("vehicle_id")
+      .eq("tenant_id", tenantId)
+      .order("vehicle_id", { ascending: true })
+      .range(from, from + READ_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    for (const image of data ?? []) managedVehicleIds.add(image.vehicle_id);
+    if (!data || data.length < READ_PAGE_SIZE) break;
+  }
+  return managedVehicleIds;
+}
+
 /**
  * How many vehicles bulk photo-archiving would touch right now.
  *
@@ -232,21 +392,10 @@ async function loadVehicleIdsWithoutImages(
   }
   if (candidates.length === 0) return [];
 
-  const managedVehicleIds = new Set<string>();
-  for (let page = 0; ; page++) {
-    const from = page * READ_PAGE_SIZE;
-    const { data, error } = await service
-      .from("vehicle_images")
-      .select("vehicle_id")
-      .eq("tenant_id", tenantId)
-      .order("vehicle_id", { ascending: true })
-      .range(from, from + READ_PAGE_SIZE - 1);
-    if (error) throw new Error(error.message);
-    for (const image of data ?? []) managedVehicleIds.add(image.vehicle_id);
-    if (!data || data.length < READ_PAGE_SIZE) break;
-  }
-
-  return selectVehicleIdsWithoutImages(candidates, managedVehicleIds);
+  return selectVehicleIdsWithoutImages(
+    candidates,
+    await loadManagedVehicleIds(service, tenantId),
+  );
 }
 
 async function authorizeTenantEditor(

@@ -367,6 +367,8 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
           sort={sort}
           direction={dir}
           sortHrefs={sortHrefs}
+          totalCount={totalCount}
+          filter={{ status, q, images: imageFilter }}
         />
       )}
 

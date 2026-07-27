@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   chunk,
+  filterRowsByImagePresence,
+  hasAnyImage,
   selectVehicleIdsWithoutImages,
   type VehicleImageSourceRow,
 } from "./vehiclesWithoutImages";
@@ -67,5 +69,44 @@ describe("chunk", () => {
 
   it("keeps everything in one batch when the size exceeds the list", () => {
     expect(chunk([1, 2], 10)).toEqual([[1, 2]]);
+  });
+});
+
+describe("hasAnyImage", () => {
+  it("counts each source independently", () => {
+    expect(hasAnyImage(row(), new Set())).toBe(false);
+    expect(hasAnyImage(row(), new Set(["v1"]))).toBe(true);
+    expect(hasAnyImage(row({ image_src: "a.jpg" }), new Set())).toBe(true);
+    expect(hasAnyImage(row({ special_image_src: "b.jpg" }), new Set())).toBe(true);
+  });
+});
+
+describe("filterRowsByImagePresence", () => {
+  const rows = [
+    row({ id: "bare" }),
+    row({ id: "legacy", image_src: "a.jpg" }),
+    row({ id: "managed" }),
+  ];
+  const managed = new Set(["managed"]);
+
+  it("passes everything through in 'all' mode", () => {
+    expect(filterRowsByImagePresence(rows, managed, "all").map((r) => r.id)).toEqual([
+      "bare",
+      "legacy",
+      "managed",
+    ]);
+  });
+
+  it("keeps only vehicles that show a photo in 'with' mode", () => {
+    expect(filterRowsByImagePresence(rows, managed, "with").map((r) => r.id)).toEqual([
+      "legacy",
+      "managed",
+    ]);
+  });
+
+  it("keeps only vehicles with no photo in 'without' mode", () => {
+    expect(filterRowsByImagePresence(rows, managed, "without").map((r) => r.id)).toEqual([
+      "bare",
+    ]);
   });
 });

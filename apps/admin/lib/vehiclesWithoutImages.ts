@@ -35,14 +35,33 @@ export function selectVehicleIdsWithoutImages(
   rows: readonly VehicleImageSourceRow[],
   managedVehicleIds: ReadonlySet<string>,
 ): string[] {
-  return rows
-    .filter(
-      (row) =>
-        !row.image_src?.trim() &&
-        !row.special_image_src?.trim() &&
-        !managedVehicleIds.has(row.id),
-    )
-    .map((row) => row.id);
+  return rows.filter((row) => !hasAnyImage(row, managedVehicleIds)).map((row) => row.id);
+}
+
+/**
+ * Whether a vehicle shows a photo anywhere: managed R2, special source, or a
+ * legacy feed URL. Mirrors the inventory grid's thumbnail hierarchy.
+ */
+export function hasAnyImage(
+  row: VehicleImageSourceRow,
+  managedVehicleIds: ReadonlySet<string>,
+): boolean {
+  return (
+    managedVehicleIds.has(row.id) ||
+    Boolean(row.special_image_src?.trim()) ||
+    Boolean(row.image_src?.trim())
+  );
+}
+
+/** Apply the inventory page's photo filter to already-loaded rows. */
+export function filterRowsByImagePresence<T extends VehicleImageSourceRow>(
+  rows: readonly T[],
+  managedVehicleIds: ReadonlySet<string>,
+  mode: "all" | "with" | "without",
+): T[] {
+  if (mode === "all") return [...rows];
+  const want = mode === "with";
+  return rows.filter((row) => hasAnyImage(row, managedVehicleIds) === want);
 }
 
 export function chunk<T>(items: readonly T[], size: number): T[][] {
