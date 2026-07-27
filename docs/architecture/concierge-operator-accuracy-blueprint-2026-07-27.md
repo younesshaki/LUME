@@ -451,6 +451,26 @@ use typed confirmation.
 **Exit gate:** a simulated command can be parsed, rejected/clarified, previewed
 and verified without any model or UI mutation.
 
+### Existing Admin action inventory — 2026-07-27 audit
+
+The dashboard already has many server actions. They are not automatically
+concierge capabilities: each needs its own resolver, preview, confirmation,
+receipt and fresh verification. This matrix records the current extraction
+decision.
+
+| Existing LUME action family | Existing authority | Concierge decision | Earliest safe form |
+| --- | --- | --- | --- |
+| Website design drafts/templates, page editor copilot | editor+; draft/apply workflow | Reuse existing draft services, never direct client action | Phase 2: propose a page/design draft, then existing Apply/Discard |
+| One named lead status | editor+; tenant-scoped lead update | Implemented in migration 080 | Exact before/after, standard confirmation, locked compare-and-swap |
+| One named managed feed run | owner/admin; existing durable queue | Implemented in migration 080 | Queue one existing enabled source, config-version precondition, verify run |
+| Lead assignment / member sales availability | owner/admin; audit-backed team actions | Candidate after command receipts are live | Resolve one lead and one enabled member; exact assignment preview |
+| One vehicle non-sensitive field | editor+; vehicle form/workflow | Candidate after lead assignment | Resolve one vehicle; field allowlist and exact before/after preview |
+| Bulk lead status / bulk vehicle price or status | editor+; selected-ID UI actions | Deferred | Explicit server-issued list, exact impact, typed confirmation, cancellation/retry policy |
+| Feed create/edit/pause/archive; exports | owner/admin; queue/config snapshot invariants | Deferred beyond named run | Separate capability per operation; external effects and credential changes need stricter review |
+| Concierge model selection, persona, targets | editor/owner/admin depending action | Read summary implemented; writes deferred | Owner/admin configuration change only after entitlement and provider checks are shared |
+| Domains, API keys, billing, integrations/webhooks | owner/admin; credentials/external/billing effects | Excluded from v1 | Navigate and explain only; no model-initiated mutation |
+| Delete tier/domain/feed/export, user/role changes | destructive/access effects | Excluded | Existing human UI only unless a later owner-only, typed-confirmation design passes review |
+
 ### Phase 1 — read, navigation and deterministic admin search
 
 Ship only read/navigation capabilities:
