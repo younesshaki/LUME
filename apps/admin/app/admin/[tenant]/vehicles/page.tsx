@@ -30,6 +30,11 @@ type PageProps = {
     status?: string;
     view?: string;
     images?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    minYear?: string;
+    maxYear?: string;
+    maxMileage?: string;
   }>;
 };
 
@@ -53,6 +58,11 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
   const status = normalizeVehicleStatusFilter(sp.status);
   const view: InventoryView = sp.view === "grid" ? "grid" : "table";
   const imageFilter = normalizeVehicleImageFilter(sp.images);
+  const minPrice = parseBoundedPositiveInt(sp.minPrice);
+  const maxPrice = parseBoundedPositiveInt(sp.maxPrice);
+  const minYear = parseBoundedPositiveInt(sp.minYear, 1886, 3000);
+  const maxYear = parseBoundedPositiveInt(sp.maxYear, 1886, 3000);
+  const maxMileage = parseBoundedPositiveInt(sp.maxMileage, 0, 2_000_000);
 
   const supabase = await createSupabaseServerClient();
 
@@ -78,6 +88,11 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
     const term = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     query = query.or(`make.ilike.${term},model.ilike.${term},trim.ilike.${term}`);
   }
+  if (minPrice !== undefined) query = query.gte("price", minPrice);
+  if (maxPrice !== undefined) query = query.lte("price", maxPrice);
+  if (minYear !== undefined) query = query.gte("year", minYear);
+  if (maxYear !== undefined) query = query.lte("year", maxYear);
+  if (maxMileage !== undefined) query = query.lte("mileage", maxMileage);
 
   // The main query stays paginated. Fetching just vehicle IDs from the
   // managed-image table lets the photo filter include the same sources the
@@ -140,10 +155,11 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
   const totalCount = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const statusDescriptor = status === "all" ? "" : `${vehicleStatusFilterLabel(status).toLowerCase()} `;
+  const constraintDescriptor = vehicleConstraintDescriptor({ minPrice, maxPrice, minYear, maxYear, maxMileage });
 
   const href = (overrides: Record<string, string | number | undefined>) => {
     const params = new URLSearchParams();
-    const merged = { q, sort, dir, page, status, view, images: imageFilter, ...overrides };
+    const merged = { q, sort, dir, page, status, view, images: imageFilter, minPrice, maxPrice, minYear, maxYear, maxMileage, ...overrides };
     if (merged.q) params.set("q", String(merged.q));
     if (merged.sort && merged.sort !== "year") params.set("sort", String(merged.sort));
     if (merged.dir && merged.dir !== "desc") params.set("dir", String(merged.dir));
@@ -151,6 +167,11 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
     if (merged.status && merged.status !== "active") params.set("status", String(merged.status));
     if (merged.view && merged.view !== "table") params.set("view", String(merged.view));
     if (merged.images && merged.images !== "all") params.set("images", String(merged.images));
+    if (merged.minPrice !== undefined) params.set("minPrice", String(merged.minPrice));
+    if (merged.maxPrice !== undefined) params.set("maxPrice", String(merged.maxPrice));
+    if (merged.minYear !== undefined) params.set("minYear", String(merged.minYear));
+    if (merged.maxYear !== undefined) params.set("maxYear", String(merged.maxYear));
+    if (merged.maxMileage !== undefined) params.set("maxMileage", String(merged.maxMileage));
     const qs = params.toString();
     return `/admin/${slug}/vehicles${qs ? `?${qs}` : ""}`;
   };
@@ -172,7 +193,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         description={
           error
             ? "Error loading vehicles"
-            : `${totalCount.toLocaleString()} ${statusDescriptor}vehicle${totalCount === 1 ? "" : "s"}${q ? ` matching “${q}”` : ""}`
+            : `${totalCount.toLocaleString()} ${statusDescriptor}vehicle${totalCount === 1 ? "" : "s"}${q ? ` matching “${q}”` : ""}${constraintDescriptor}`
         }
         actions={
           <>
@@ -278,6 +299,11 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
           {status !== "active" && <input type="hidden" name="status" value={status} />}
           {view !== "table" && <input type="hidden" name="view" value={view} />}
           {imageFilter !== "all" && <input type="hidden" name="images" value={imageFilter} />}
+          {minPrice !== undefined && <input type="hidden" name="minPrice" value={minPrice} />}
+          {maxPrice !== undefined && <input type="hidden" name="maxPrice" value={maxPrice} />}
+          {minYear !== undefined && <input type="hidden" name="minYear" value={minYear} />}
+          {maxYear !== undefined && <input type="hidden" name="maxYear" value={maxYear} />}
+          {maxMileage !== undefined && <input type="hidden" name="maxMileage" value={maxMileage} />}
         </form>
 
         {view === "grid" ? (
@@ -285,6 +311,11 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
             {q ? <input type="hidden" name="q" value={q} /> : null}
             {status !== "active" ? <input type="hidden" name="status" value={status} /> : null}
             {imageFilter !== "all" ? <input type="hidden" name="images" value={imageFilter} /> : null}
+            {minPrice !== undefined ? <input type="hidden" name="minPrice" value={minPrice} /> : null}
+            {maxPrice !== undefined ? <input type="hidden" name="maxPrice" value={maxPrice} /> : null}
+            {minYear !== undefined ? <input type="hidden" name="minYear" value={minYear} /> : null}
+            {maxYear !== undefined ? <input type="hidden" name="maxYear" value={maxYear} /> : null}
+            {maxMileage !== undefined ? <input type="hidden" name="maxMileage" value={maxMileage} /> : null}
             <input type="hidden" name="view" value="grid" />
             <label className="grid gap-1 text-xs text-muted-foreground">
               Sort by
@@ -395,4 +426,40 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
       )}
     </div>
   );
+}
+
+function parseBoundedPositiveInt(
+  value: string | undefined,
+  minimum = 0,
+  maximum = 10_000_000,
+): number | undefined {
+  if (!value || !/^\d{1,8}$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= minimum && parsed <= maximum
+    ? parsed
+    : undefined;
+}
+
+function vehicleConstraintDescriptor(filters: {
+  minPrice?: number;
+  maxPrice?: number;
+  minYear?: number;
+  maxYear?: number;
+  maxMileage?: number;
+}): string {
+  const parts: string[] = [];
+  if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+    parts.push(
+      filters.minPrice !== undefined && filters.maxPrice !== undefined
+        ? ` priced $${filters.minPrice.toLocaleString()}–$${filters.maxPrice.toLocaleString()}`
+        : filters.maxPrice !== undefined
+          ? ` under $${filters.maxPrice.toLocaleString()}`
+          : ` over $${filters.minPrice!.toLocaleString()}`,
+    );
+  }
+  if (filters.minYear !== undefined || filters.maxYear !== undefined) {
+    parts.push(filters.minYear === filters.maxYear ? ` from ${filters.minYear}` : " in the selected year range");
+  }
+  if (filters.maxMileage !== undefined) parts.push(` under ${filters.maxMileage.toLocaleString()} miles`);
+  return parts.length ? ` ·${parts.join(" ·")}` : "";
 }
