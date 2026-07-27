@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { VehiclePriceRange } from "./VehiclePriceRange";
 import { VehiclesTableClient, type InventoryView } from "./VehiclesTableClient";
 
 type PageProps = {
@@ -152,6 +153,32 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
     ]),
   );
 
+  // Slider bounds come from the tenant's own inventory, and deliberately ignore
+  // the active filters so the scale doesn't move as you drag it.
+  //
+  // Uses roughly the 95th percentile rather than the maximum: a single
+  // exotic/mispriced unit would otherwise stretch the track so far that the
+  // range real inventory sits in becomes undraggable.
+  const { count: pricedCount } = await supabase
+    .from("vehicles")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenant.id);
+  const percentileOffset = Math.floor((pricedCount ?? 0) * 0.05);
+  const { data: nearTop } = await supabase
+    .from("vehicles")
+    .select("price")
+    .eq("tenant_id", tenant.id)
+    .order("price", { ascending: false })
+    .range(percentileOffset, percentileOffset);
+  // Never clip a constraint already in the URL — the concierge may have set a
+  // range above the percentile, and the control must be able to represent it.
+  const priceCeiling = Math.max(
+    1000,
+    Math.ceil(((nearTop?.[0]?.price ?? 0) || 50_000) / 1000) * 1000,
+    maxPrice ?? 0,
+    minPrice ?? 0,
+  );
+
   const totalCount = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const statusDescriptor = status === "all" ? "" : `${vehicleStatusFilterLabel(status).toLowerCase()} `;
@@ -268,9 +295,8 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
           {imageFilter !== "all" ? <input type="hidden" name="images" value={imageFilter} /> : null}
           {sort !== "year" ? <input type="hidden" name="sort" value={sort} /> : null}
           {dir !== "desc" ? <input type="hidden" name="dir" value={dir} /> : null}
+          <VehiclePriceRange ceiling={priceCeiling} minPrice={minPrice} maxPrice={maxPrice} />
           {([
-            ["minPrice", "Min price", minPrice],
-            ["maxPrice", "Max price", maxPrice],
             ["minYear", "Min year", minYear],
             ["maxYear", "Max year", maxYear],
             ["maxMileage", "Max mileage", maxMileage],
