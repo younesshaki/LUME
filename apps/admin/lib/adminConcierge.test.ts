@@ -104,6 +104,17 @@ describe("admin concierge control plane", () => {
     expect(feeds && adminCapabilityHref("demo", feeds)).toBe("/admin/demo/settings/inventory-feeds");
   });
 
+  it("asks a targeted question rather than guessing an ambiguous settings destination", () => {
+    expect(compileDeterministicAdminIntent("open settings")).toEqual({
+      kind: "clarify",
+      question: "Which settings area should I open: team, domains, billing, API keys, integrations, inventory feeds, or system preferences?",
+    });
+    expect(compileDeterministicAdminIntent("take me to CRM")).toEqual({
+      kind: "clarify",
+      question: "Which CRM area should I open: leads, customers, or loyalty?",
+    });
+  });
+
   it("prefers a specific route phrase over overlapping generic aliases", () => {
     expect(findNavigationCapability("open inventory feeds")?.id).toBe("feeds.view");
     expect(compileDeterministicAdminIntent("open inventory feeds")).toEqual({ kind: "navigate", capabilityId: "feeds.view" });

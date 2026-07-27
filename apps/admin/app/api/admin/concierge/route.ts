@@ -180,6 +180,8 @@ export async function POST(request: Request): Promise<Response> {
         action: { type: "navigate", href, label: capability.title },
       });
     }
+    case "clarify":
+      return json({ source, reply: intent.question });
     case "describe_current_page": {
       const capability = capabilityFromAdminPath(parsed.request.currentPath, tenant.slug);
       if (!capability) {
@@ -712,6 +714,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
   switch (intent.kind) {
     case "navigate":
       return { kind: intent.kind, capabilityId: intent.capabilityId };
+    case "clarify":
+      return { kind: intent.kind };
     case "describe_current_page":
       return { kind: intent.kind };
     case "summarize_overview":

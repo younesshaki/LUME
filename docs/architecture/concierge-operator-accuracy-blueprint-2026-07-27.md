@@ -167,6 +167,11 @@ registry's declared minimum role before the route dispatches any plan. This is
 central policy enforcement, not a convention inside individual capabilities;
 model-planned and deterministic intents take the exact same gate.
 
+When a navigation request names a category rather than a specific registered
+surface (for example, “open settings”), deterministic code returns a bounded,
+server-authored clarifying question. It does not let a model silently choose a
+plausible settings page.
+
 Navigation aliases are matched as whole phrases and resolved by deterministic
 specificity. A named surface such as “inventory feeds” wins over the generic
 “inventory” surface; equal-strength matches stay ambiguous rather than sending

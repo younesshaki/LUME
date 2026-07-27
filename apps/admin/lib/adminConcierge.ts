@@ -83,6 +83,7 @@ function capability(
 
 export type AdminConciergeIntent =
   | { kind: "navigate"; capabilityId: string }
+  | { kind: "clarify"; question: string }
   | { kind: "describe_current_page" }
   | { kind: "summarize_overview" }
   | { kind: "search_vehicles"; query: string | null }
@@ -180,6 +181,8 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
   if (hasNavigationLanguage) {
     const capability = findNavigationCapability(normalized);
     if (capability) return { kind: "navigate", capabilityId: capability.id };
+    const question = navigationClarification(normalized);
+    if (question) return { kind: "clarify", question };
   }
   return { kind: "unsupported" };
 }
@@ -234,6 +237,16 @@ function containsWholePhrase(message: string, phrase: string): boolean {
   return new RegExp(`(?:^|\\s)${escaped}(?=$|\\s)`, "u").test(message);
 }
 
+function navigationClarification(normalizedMessage: string): string | null {
+  if (/\bsettings?\b/.test(normalizedMessage)) {
+    return "Which settings area should I open: team, domains, billing, API keys, integrations, inventory feeds, or system preferences?";
+  }
+  if (/\bcrm\b/.test(normalizedMessage)) {
+    return "Which CRM area should I open: leads, customers, or loyalty?";
+  }
+  return null;
+}
+
 /** Keep registry policy enforcement independent of route-specific wording. */
 export function isAdminRole(value: unknown): value is AdminRole {
   return value === "viewer" || value === "editor" || value === "admin" || value === "owner";
@@ -250,6 +263,7 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
       return capabilityById(intent.capabilityId)?.minRole ?? null;
     case "update_lead_status":
       return "editor";
+    case "clarify":
     case "describe_current_page":
     case "summarize_overview":
     case "search_vehicles":
