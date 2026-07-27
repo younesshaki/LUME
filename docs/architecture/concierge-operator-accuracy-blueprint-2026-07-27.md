@@ -172,6 +172,11 @@ specificity. A named surface such as “inventory feeds” wins over the generic
 “inventory” surface; equal-strength matches stay ambiguous rather than sending
 the operator to a plausible but wrong screen.
 
+The dashboard client may supply its current route solely as display context.
+Before reflecting it back (for example, “where am I?”), the server binds it to
+the authenticated tenant prefix and resolves it through the capability registry.
+External, cross-tenant, and unknown paths yield no claimed page context.
+
 Existing server actions should be refactored gradually so both the existing UI
 and the concierge call the same **domain services**. Do not have the concierge
 call a client-side server action directly. This removes divergent authorization

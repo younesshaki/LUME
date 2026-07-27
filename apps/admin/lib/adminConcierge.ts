@@ -83,6 +83,7 @@ function capability(
 
 export type AdminConciergeIntent =
   | { kind: "navigate"; capabilityId: string }
+  | { kind: "describe_current_page" }
   | { kind: "summarize_overview" }
   | { kind: "search_vehicles"; query: string | null }
   | { kind: "search_leads"; status: "new" | "contacted" | "qualified" | "won" | "lost" | null }
@@ -94,6 +95,7 @@ export type AdminConciergeIntent =
 
 export type AdminConciergeModelPlan =
   | { kind: "navigate"; capabilityId: string }
+  | { kind: "describe_current_page" }
   | { kind: "summarize_overview" }
   | { kind: "search_vehicles"; query: string | null }
   | { kind: "search_leads"; status: "new" | "contacted" | "qualified" | "won" | "lost" | null }
@@ -146,6 +148,10 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
   const leadStatusUpdate = extractLeadStatusUpdate(message);
   if (leadStatusUpdate) return { kind: "update_lead_status", ...leadStatusUpdate };
 
+  if (/\b(?:where am i|what (?:page|screen|section) am i on|what can i do here)\b/.test(normalized)) {
+    return { kind: "describe_current_page" };
+  }
+
   if (/\b(?:dashboard|overview)\b/.test(normalized) && /\b(?:summary|summarize|status|snapshot|how are things)\b/.test(normalized)) {
     return { kind: "summarize_overview" };
   }
@@ -180,6 +186,23 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
 
 export function capabilityById(id: string): AdminCapability | null {
   return ADMIN_CAPABILITIES.find((capability) => capability.id === id) ?? null;
+}
+
+/**
+ * The browser supplies its path as presentation context only. Convert it to a
+ * known, tenant-local capability before reflecting it in any assistant reply.
+ * Dynamic detail/editor routes deliberately map to their known parent surface.
+ */
+export function capabilityFromAdminPath(currentPath: string | undefined, tenantSlug: string): AdminCapability | null {
+  if (!currentPath) return null;
+  const prefix = `/admin/${encodeURIComponent(tenantSlug)}`;
+  if (currentPath !== prefix && !currentPath.startsWith(`${prefix}/`)) return null;
+  const relativePath = currentPath.slice(prefix.length) || "/";
+  const matches = ADMIN_CAPABILITIES
+    .filter((capability) => relativePath === capability.route ||
+      (capability.route !== "/" && relativePath.startsWith(`${capability.route}/`)))
+    .sort((a, b) => b.route.length - a.route.length);
+  return matches.length ? matches[0] : null;
 }
 
 /**
@@ -227,6 +250,7 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
       return capabilityById(intent.capabilityId)?.minRole ?? null;
     case "update_lead_status":
       return "editor";
+    case "describe_current_page":
     case "summarize_overview":
     case "search_vehicles":
     case "search_leads":
@@ -256,6 +280,8 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
           ? { kind: "navigate", capabilityId }
           : null;
       }
+      case "describe_current_page":
+        return { kind: "describe_current_page" };
       case "summarize_overview":
         return { kind: "summarize_overview" };
       case "search_vehicles":
@@ -306,6 +332,7 @@ export function buildAdminConciergeSystemPrompt(): string {
     "Return ONLY JSON with this exact shape: {\"intent\":{...}}.",
     "Allowed intents:",
     "- {\"kind\":\"navigate\",\"capabilityId\":\"<one catalog id>\"}",
+    "- {\"kind\":\"describe_current_page\"}",
     "- {\"kind\":\"summarize_overview\"}",
     "- {\"kind\":\"search_vehicles\",\"query\":\"<make/model/free-text search or null>\"}",
     "- {\"kind\":\"search_leads\",\"status\":\"new\"|\"contacted\"|\"qualified\"|\"won\"|\"lost\"|null}",

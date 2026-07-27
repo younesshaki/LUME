@@ -11,6 +11,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   adminCapabilityHref,
   adminIntentMinimumRole,
+  capabilityFromAdminPath,
   capabilityById,
   buildAdminConciergeSystemPrompt,
   compileDeterministicAdminIntent,
@@ -177,6 +178,19 @@ export async function POST(request: Request): Promise<Response> {
         source,
         reply: `Opening ${capability.title.toLocaleLowerCase()}.`,
         action: { type: "navigate", href, label: capability.title },
+      });
+    }
+    case "describe_current_page": {
+      const capability = capabilityFromAdminPath(parsed.request.currentPath, tenant.slug);
+      if (!capability) {
+        return json({
+          source,
+          reply: "I can’t verify the current dashboard surface from this tab. Tell me which area you want to work in, and I’ll navigate there safely.",
+        });
+      }
+      return json({
+        source,
+        reply: `You’re in ${capability.title.toLocaleLowerCase()}. I can help with the verified actions available for this area.`,
       });
     }
     case "summarize_overview":
@@ -698,6 +712,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
   switch (intent.kind) {
     case "navigate":
       return { kind: intent.kind, capabilityId: intent.capabilityId };
+    case "describe_current_page":
+      return { kind: intent.kind };
     case "summarize_overview":
       return { kind: intent.kind };
     case "search_vehicles":

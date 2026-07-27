@@ -5,6 +5,7 @@ import {
   adminIntentMinimumRole,
   adminCapabilityHref,
   capabilityById,
+  capabilityFromAdminPath,
   buildAdminConciergeSystemPrompt,
   compileDeterministicAdminIntent,
   findNavigationCapability,
@@ -35,6 +36,7 @@ describe("admin concierge control plane", () => {
     expect(hasAdminCapabilityRole("viewer", "viewer")).toBe(true);
     expect(hasAdminCapabilityRole("viewer", "editor")).toBe(false);
     expect(hasAdminCapabilityRole("admin", "editor")).toBe(true);
+    expect(adminIntentMinimumRole({ kind: "describe_current_page" })).toBe("viewer");
     expect(adminIntentMinimumRole({ kind: "update_lead_status", leadQuery: "jane@example.com", status: "qualified" })).toBe("editor");
     expect(adminIntentMinimumRole({ kind: "navigate", capabilityId: "analytics.view" })).toBe("viewer");
     expect(adminIntentMinimumRole({ kind: "navigate", capabilityId: "unknown" })).toBeNull();
@@ -57,6 +59,7 @@ describe("admin concierge control plane", () => {
   });
 
   it("grounds vehicle and lead searches to closed intent shapes", () => {
+    expect(compileDeterministicAdminIntent("where am I?")).toEqual({ kind: "describe_current_page" });
     expect(compileDeterministicAdminIntent("give me a dashboard summary")).toEqual({ kind: "summarize_overview" });
     expect(compileDeterministicAdminIntent("show me BMW vehicles")).toEqual({ kind: "search_vehicles", query: "BMW" });
     expect(compileDeterministicAdminIntent("list new leads")).toEqual({ kind: "search_leads", status: "new" });
@@ -66,6 +69,13 @@ describe("admin concierge control plane", () => {
       kind: "inspect_feed_runs",
       status: "failed",
     });
+  });
+
+  it("reflects only known paths belonging to the active tenant", () => {
+    expect(capabilityFromAdminPath("/admin/demo/vehicles/11111111-1111-4111-8111-111111111111", "demo")?.id).toBe("vehicles.search");
+    expect(capabilityFromAdminPath("/admin/demo/settings/inventory-feeds", "demo")?.id).toBe("feeds.view");
+    expect(capabilityFromAdminPath("/admin/other/vehicles", "demo")).toBeNull();
+    expect(capabilityFromAdminPath("https://attacker.test/admin/demo/vehicles", "demo")).toBeNull();
   });
 
   it("uses the shared trusted filter extractor for natural budget phrasing", () => {
@@ -135,6 +145,7 @@ describe("admin concierge control plane", () => {
       query: "inventory",
     });
     expect(parseAdminConciergeModelPlan('{"intent":{"kind":"summarize_overview"}}')).toEqual({ kind: "summarize_overview" });
+    expect(parseAdminConciergeModelPlan('{"intent":{"kind":"describe_current_page"}}')).toEqual({ kind: "describe_current_page" });
     expect(parseAdminConciergeModelPlan("not json")).toBeNull();
     expect(buildAdminConciergeSystemPrompt()).toContain("clarify");
   });
