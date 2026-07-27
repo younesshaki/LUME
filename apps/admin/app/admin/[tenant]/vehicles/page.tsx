@@ -18,7 +18,7 @@ import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { VehiclePriceRange } from "./VehiclePriceRange";
+import { VehicleRangeFilter } from "./VehicleRangeFilter";
 import { VehiclesTableClient, type InventoryView } from "./VehiclesTableClient";
 
 type PageProps = {
@@ -35,6 +35,7 @@ type PageProps = {
     maxPrice?: string;
     minYear?: string;
     maxYear?: string;
+    minMileage?: string;
     maxMileage?: string;
   }>;
 };
@@ -63,6 +64,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
   const maxPrice = parseBoundedPositiveInt(sp.maxPrice);
   const minYear = parseBoundedPositiveInt(sp.minYear, 1886, 3000);
   const maxYear = parseBoundedPositiveInt(sp.maxYear, 1886, 3000);
+  const minMileage = parseBoundedPositiveInt(sp.minMileage, 0, 2_000_000);
   const maxMileage = parseBoundedPositiveInt(sp.maxMileage, 0, 2_000_000);
 
   const supabase = await createSupabaseServerClient();
@@ -93,6 +95,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
   if (maxPrice !== undefined) query = query.lte("price", maxPrice);
   if (minYear !== undefined) query = query.gte("year", minYear);
   if (maxYear !== undefined) query = query.lte("year", maxYear);
+  if (minMileage !== undefined) query = query.gte("mileage", minMileage);
   if (maxMileage !== undefined) query = query.lte("mileage", maxMileage);
 
   // The main query stays paginated. Fetching just vehicle IDs from the
@@ -153,40 +156,60 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
     ]),
   );
 
-  // Slider bounds come from the tenant's own inventory, and deliberately ignore
-  // the active filters so the scale doesn't move as you drag it.
-  //
-  // Uses roughly the 95th percentile rather than the maximum: a single
-  // exotic/mispriced unit would otherwise stretch the track so far that the
-  // range real inventory sits in becomes undraggable.
-  const { count: pricedCount } = await supabase
-    .from("vehicles")
-    .select("id", { count: "exact", head: true })
-    .eq("tenant_id", tenant.id);
-  const percentileOffset = Math.floor((pricedCount ?? 0) * 0.05);
-  const { data: nearTop } = await supabase
-    .from("vehicles")
-    .select("price")
-    .eq("tenant_id", tenant.id)
-    .order("price", { ascending: false })
-    .range(percentileOffset, percentileOffset);
-  // Never clip a constraint already in the URL — the concierge may have set a
-  // range above the percentile, and the control must be able to represent it.
-  const priceCeiling = Math.max(
-    1000,
-    Math.ceil(((nearTop?.[0]?.price ?? 0) || 50_000) / 1000) * 1000,
-    maxPrice ?? 0,
-    minPrice ?? 0,
-  );
+  // Slider bounds track the tenant's real inventory, so they move as stock
+  // does. Deliberately computed WITHOUT the active filters, otherwise the
+  // scale would collapse around whatever is currently selected as you drag.
+  const inventoryBound = async (column: "price" | "year" | "mileage", ascending: boolean) => {
+    const { data } = await supabase
+      .from("vehicles")
+      .select(column)
+      .eq("tenant_id", tenant.id)
+      .not(column, "is", null)
+      .order(column, { ascending })
+      .limit(1);
+    const row = data?.[0] as Record<string, number | null> | undefined;
+    const value = row?.[column];
+    return typeof value === "number" ? value : undefined;
+  };
+
+  const [priceLow, priceHigh, yearLow, yearHigh, mileageLow, mileageHigh] = await Promise.all([
+    inventoryBound("price", true),
+    inventoryBound("price", false),
+    inventoryBound("year", true),
+    inventoryBound("year", false),
+    inventoryBound("mileage", true),
+    inventoryBound("mileage", false),
+  ]);
+
+  // An empty inventory has no bounds to read, and a constraint already in the
+  // URL must always be representable — the concierge may have set one outside
+  // the current stock's range.
+  const currentYear = new Date().getFullYear();
+  const range = (
+    low: number | undefined,
+    high: number | undefined,
+    fallbackLow: number,
+    fallbackHigh: number,
+    setMin: number | undefined,
+    setMax: number | undefined,
+  ) => {
+    const floor = Math.min(low ?? fallbackLow, setMin ?? Number.POSITIVE_INFINITY);
+    const ceiling = Math.max(high ?? fallbackHigh, setMax ?? Number.NEGATIVE_INFINITY);
+    return { floor: Math.max(0, Math.floor(floor)), ceiling: Math.ceil(ceiling) };
+  };
+
+  const priceRange = range(priceLow, priceHigh, 0, 50_000, minPrice, maxPrice);
+  const yearRange = range(yearLow, yearHigh, currentYear - 20, currentYear, minYear, maxYear);
+  const mileageRange = range(mileageLow, mileageHigh, 0, 100_000, minMileage, maxMileage);
 
   const totalCount = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const statusDescriptor = status === "all" ? "" : `${vehicleStatusFilterLabel(status).toLowerCase()} `;
-  const constraintDescriptor = vehicleConstraintDescriptor({ minPrice, maxPrice, minYear, maxYear, maxMileage });
+  const constraintDescriptor = vehicleConstraintDescriptor({ minPrice, maxPrice, minYear, maxYear, minMileage, maxMileage });
 
   const href = (overrides: Record<string, string | number | undefined>) => {
     const params = new URLSearchParams();
-    const merged = { q, sort, dir, page, status, view, images: imageFilter, minPrice, maxPrice, minYear, maxYear, maxMileage, ...overrides };
+    const merged = { q, sort, dir, page, status, view, images: imageFilter, minPrice, maxPrice, minYear, maxYear, minMileage, maxMileage, ...overrides };
     if (merged.q) params.set("q", String(merged.q));
     if (merged.sort && merged.sort !== "year") params.set("sort", String(merged.sort));
     if (merged.dir && merged.dir !== "desc") params.set("dir", String(merged.dir));
@@ -198,6 +221,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
     if (merged.maxPrice !== undefined) params.set("maxPrice", String(merged.maxPrice));
     if (merged.minYear !== undefined) params.set("minYear", String(merged.minYear));
     if (merged.maxYear !== undefined) params.set("maxYear", String(merged.maxYear));
+    if (merged.minMileage !== undefined) params.set("minMileage", String(merged.minMileage));
     if (merged.maxMileage !== undefined) params.set("maxMileage", String(merged.maxMileage));
     const qs = params.toString();
     return `/admin/${slug}/vehicles${qs ? `?${qs}` : ""}`;
@@ -295,24 +319,36 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
           {imageFilter !== "all" ? <input type="hidden" name="images" value={imageFilter} /> : null}
           {sort !== "year" ? <input type="hidden" name="sort" value={sort} /> : null}
           {dir !== "desc" ? <input type="hidden" name="dir" value={dir} /> : null}
-          <VehiclePriceRange ceiling={priceCeiling} minPrice={minPrice} maxPrice={maxPrice} />
-          {([
-            ["minYear", "Min year", minYear],
-            ["maxYear", "Max year", maxYear],
-            ["maxMileage", "Max mileage", maxMileage],
-          ] as const).map(([name, label, value]) => (
-            <label key={name} className="grid gap-1 text-xs text-muted-foreground">
-              {label}
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={0}
-                name={name}
-                defaultValue={value ?? ""}
-                className="h-9 w-28"
-              />
-            </label>
-          ))}
+          <VehicleRangeFilter
+            label="Price"
+            minName="minPrice"
+            maxName="maxPrice"
+            floor={priceRange.floor}
+            ceiling={priceRange.ceiling}
+            step={priceRange.ceiling - priceRange.floor > 100_000 ? 1000 : 500}
+            minValue={minPrice}
+            maxValue={maxPrice}
+          />
+          <VehicleRangeFilter
+            label="Year"
+            minName="minYear"
+            maxName="maxYear"
+            floor={yearRange.floor}
+            ceiling={yearRange.ceiling}
+            step={1}
+            minValue={minYear}
+            maxValue={maxYear}
+          />
+          <VehicleRangeFilter
+            label="Mileage"
+            minName="minMileage"
+            maxName="maxMileage"
+            floor={mileageRange.floor}
+            ceiling={mileageRange.ceiling}
+            step={mileageRange.ceiling - mileageRange.floor > 100_000 ? 1000 : 500}
+            minValue={minMileage}
+            maxValue={maxMileage}
+          />
           <Button type="submit" size="sm" variant="secondary">
             Apply
           </Button>
@@ -325,6 +361,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
               ["maxPrice", maxPrice === undefined ? null : `Under $${maxPrice.toLocaleString()}`],
               ["minYear", minYear === undefined ? null : `From ${minYear}`],
               ["maxYear", maxYear === undefined ? null : `Up to ${maxYear}`],
+              ["minMileage", minMileage === undefined ? null : `Over ${minMileage.toLocaleString()} mi`],
               ["maxMileage", maxMileage === undefined ? null : `Under ${maxMileage.toLocaleString()} mi`],
             ] as const).map(([name, label]) =>
               label ? (
@@ -344,6 +381,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
                   maxPrice: undefined,
                   minYear: undefined,
                   maxYear: undefined,
+                  minMileage: undefined,
                   maxMileage: undefined,
                   page: 1,
                 })}
@@ -403,6 +441,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
           {maxPrice !== undefined && <input type="hidden" name="maxPrice" value={maxPrice} />}
           {minYear !== undefined && <input type="hidden" name="minYear" value={minYear} />}
           {maxYear !== undefined && <input type="hidden" name="maxYear" value={maxYear} />}
+          {minMileage !== undefined && <input type="hidden" name="minMileage" value={minMileage} />}
           {maxMileage !== undefined && <input type="hidden" name="maxMileage" value={maxMileage} />}
         </form>
 
@@ -415,6 +454,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
             {maxPrice !== undefined ? <input type="hidden" name="maxPrice" value={maxPrice} /> : null}
             {minYear !== undefined ? <input type="hidden" name="minYear" value={minYear} /> : null}
             {maxYear !== undefined ? <input type="hidden" name="maxYear" value={maxYear} /> : null}
+            {minMileage !== undefined ? <input type="hidden" name="minMileage" value={minMileage} /> : null}
             {maxMileage !== undefined ? <input type="hidden" name="maxMileage" value={maxMileage} /> : null}
             <input type="hidden" name="view" value="grid" />
             <label className="grid gap-1 text-xs text-muted-foreground">
@@ -545,6 +585,7 @@ function vehicleConstraintDescriptor(filters: {
   maxPrice?: number;
   minYear?: number;
   maxYear?: number;
+  minMileage?: number;
   maxMileage?: number;
 }): string {
   const parts: string[] = [];
@@ -560,6 +601,12 @@ function vehicleConstraintDescriptor(filters: {
   if (filters.minYear !== undefined || filters.maxYear !== undefined) {
     parts.push(filters.minYear === filters.maxYear ? ` from ${filters.minYear}` : " in the selected year range");
   }
-  if (filters.maxMileage !== undefined) parts.push(` under ${filters.maxMileage.toLocaleString()} miles`);
+  if (filters.minMileage !== undefined && filters.maxMileage !== undefined) {
+    parts.push(` ${filters.minMileage.toLocaleString()}–${filters.maxMileage.toLocaleString()} miles`);
+  } else if (filters.maxMileage !== undefined) {
+    parts.push(` under ${filters.maxMileage.toLocaleString()} miles`);
+  } else if (filters.minMileage !== undefined) {
+    parts.push(` over ${filters.minMileage.toLocaleString()} miles`);
+  }
   return parts.length ? ` ·${parts.join(" ·")}` : "";
 }
