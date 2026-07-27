@@ -12,6 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+
+const TAKE_THE_WHEEL_KEY = "lume.admin-concierge.take-the-wheel";
 
 type ConciergeResult = {
   reply: string;
@@ -45,10 +48,30 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
   const [confirming, setConfirming] = React.useState(false);
   const [turns, setTurns] = React.useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
 
+  // "Take the wheel": follow a server-issued navigation action immediately
+  // instead of presenting it as a button to click.
+  //
+  // Deliberately scoped to navigation only. Reviewed commands (lead status,
+  // feed runs) still require explicit confirmation — auto-executing a write
+  // would break the capability policy the whole design rests on, and those
+  // are the operations a mistake actually costs something.
+  const [takeTheWheel, setTakeTheWheel] = React.useState(false);
+
+  // Starts off so the server render and first client render agree; the stored
+  // preference is applied once mounted.
+  React.useEffect(() => {
+    setTakeTheWheel(window.localStorage.getItem(TAKE_THE_WHEEL_KEY) === "true");
+  }, []);
+
+  function toggleTakeTheWheel(next: boolean) {
+    setTakeTheWheel(next);
+    window.localStorage.setItem(TAKE_THE_WHEEL_KEY, String(next));
+  }
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = message.trim();
-    await sendMessage(text);
+    await sendMessage(text, { autoNavigate: takeTheWheel });
   }
 
   function navigateToServerIssuedHref(href: string | undefined) {
@@ -173,6 +196,21 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
             <RotateCcw className="size-3" aria-hidden="true" />
             New
           </Button>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+          <label htmlFor="take-the-wheel" className="text-xs">
+            <span className="font-medium text-foreground">Take the wheel</span>
+            <span className="block text-muted-foreground">
+              Go straight to the page instead of offering a link. Changes still
+              need your approval.
+            </span>
+          </label>
+          <Switch
+            id="take-the-wheel"
+            checked={takeTheWheel}
+            onCheckedChange={toggleTakeTheWheel}
+          />
         </div>
 
         {turns.length ? (
