@@ -3,15 +3,5 @@
   "buildCommand": "node ../../scripts/verify-deployment-env.mjs && next build",
   "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs",
   "outputDirectory": ".next",
-  "framework": "nextjs",
-  "crons": [
-    {
-      "path": "/api/cron/inventory-feed-runs",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/inventory-export-runs",
-      "schedule": "*/5 * * * *"
-    }
-  ]
+  "framework": "nextjs"
 }
