@@ -20,7 +20,10 @@ export type ManagedImageRef = {
 
 export type VehicleThumbnailSource = Readonly<{
   special_image_src: string | null;
-  image_src: string;
+  // Both columns are nullable in the database. Vehicles imported without a
+  // photo arrive with nulls here, and an unguarded trim took the whole
+  // inventory page down with a server error.
+  image_src: string | null;
 }>;
 
 /** The inventory's server-side photo filter. */
@@ -37,7 +40,7 @@ export function vehicleHasImageSource(input: {
   return (
     input.hasManagedImage ||
     Boolean(input.vehicle.special_image_src?.trim()) ||
-    Boolean(input.vehicle.image_src.trim())
+    Boolean(input.vehicle.image_src?.trim())
   );
 }
 
@@ -62,7 +65,7 @@ export function resolveVehicleThumbnail(input: {
     if (url) return url;
   }
   if (input.vehicle.special_image_src?.trim()) return input.vehicle.special_image_src;
-  if (input.vehicle.image_src.trim()) return input.vehicle.image_src;
+  if (input.vehicle.image_src?.trim()) return input.vehicle.image_src;
   return null;
 }
 

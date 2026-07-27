@@ -13,6 +13,14 @@ import {
   VEHICLE_STATUSES,
   isVehicleStatusTransitionAllowed,
 } from "@/lib/vehicleStatus";
+import {
+  ARCHIVABLE_STATUSES,
+  chunk,
+  READ_PAGE_SIZE,
+  selectVehicleIdsWithoutImages,
+  WRITE_CHUNK_SIZE,
+  type VehicleImageSourceRow,
+} from "@/lib/vehiclesWithoutImages";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type BulkVehicleActionResult = {
@@ -132,6 +140,141 @@ export async function bulkDeleteVehicles(
     return { affected: data.length };
   } catch {
     return { error: "Bulk vehicle deletion is not configured." };
+  }
+}
+
+/**
+ * How many vehicles bulk photo-archiving would touch right now.
+ *
+ * Deliberately scoped to the whole tenant, not the current page or filters —
+ * the selection caps out at MAX_BULK_VEHICLES and one page, which is far too
+ * small for "every vehicle without a photo".
+ */
+export async function countVehiclesWithoutImages(
+  slug: string,
+): Promise<{ error?: string; count?: number }> {
+  const auth = await authorizeTenantEditor(slug);
+  if ("error" in auth) return { error: auth.error };
+
+  try {
+    const ids = await loadVehicleIdsWithoutImages(auth.service, auth.tenantId);
+    return { count: ids.length };
+  } catch {
+    return { error: "Unable to check which vehicles are missing photos." };
+  }
+}
+
+/** Archive every draft/live vehicle in the tenant that has no photo. */
+export async function archiveVehiclesWithoutImages(
+  slug: string,
+): Promise<BulkVehicleActionResult> {
+  const auth = await authorizeTenantEditor(slug);
+  if ("error" in auth) return { error: auth.error };
+
+  try {
+    const ids = await loadVehicleIdsWithoutImages(auth.service, auth.tenantId);
+    if (ids.length === 0) return { affected: 0 };
+
+    let affected = 0;
+    for (const batch of chunk(ids, WRITE_CHUNK_SIZE)) {
+      const { data, error } = await auth.service
+        .from("vehicles")
+        .update({ status: "archived" })
+        .eq("tenant_id", auth.tenantId)
+        // Re-assert the status guard at write time: a vehicle may have been
+        // sold between the read above and this update.
+        .in("status", ARCHIVABLE_STATUSES)
+        .in("id", batch)
+        .select("id");
+      if (error) return { error: "Unable to archive the vehicles without photos." };
+      affected += data?.length ?? 0;
+    }
+
+    await auditWrite({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      action: "vehicle.bulk_archive_without_images",
+      resourceType: "vehicle",
+      metadata: { affected, candidates: ids.length },
+    }).catch(() => undefined);
+
+    revalidatePath(`/admin/${slug}/vehicles`);
+    return { affected };
+  } catch {
+    return { error: "Bulk vehicle updates are not configured." };
+  }
+}
+
+/**
+ * Every draft/live vehicle id in the tenant with no photo from any source.
+ *
+ * Reads are paged because PostgREST caps a select at 1000 rows — this tenant
+ * already has more vehicles than that, so a single select would silently
+ * archive only part of the inventory.
+ */
+async function loadVehicleIdsWithoutImages(
+  service: ReturnType<typeof createServiceClient>,
+  tenantId: string,
+): Promise<string[]> {
+  const candidates: VehicleImageSourceRow[] = [];
+  for (let page = 0; ; page++) {
+    const from = page * READ_PAGE_SIZE;
+    const { data, error } = await service
+      .from("vehicles")
+      .select("id, image_src, special_image_src")
+      .eq("tenant_id", tenantId)
+      .in("status", ARCHIVABLE_STATUSES)
+      .order("id", { ascending: true })
+      .range(from, from + READ_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    candidates.push(...(data ?? []));
+    if (!data || data.length < READ_PAGE_SIZE) break;
+  }
+  if (candidates.length === 0) return [];
+
+  const managedVehicleIds = new Set<string>();
+  for (let page = 0; ; page++) {
+    const from = page * READ_PAGE_SIZE;
+    const { data, error } = await service
+      .from("vehicle_images")
+      .select("vehicle_id")
+      .eq("tenant_id", tenantId)
+      .order("vehicle_id", { ascending: true })
+      .range(from, from + READ_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    for (const image of data ?? []) managedVehicleIds.add(image.vehicle_id);
+    if (!data || data.length < READ_PAGE_SIZE) break;
+  }
+
+  return selectVehicleIdsWithoutImages(candidates, managedVehicleIds);
+}
+
+async function authorizeTenantEditor(
+  slug: string,
+): Promise<
+  | { tenantId: string; userId: string; service: ReturnType<typeof createServiceClient> }
+  | { error: string }
+> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const [tenantResult, userResult] = await Promise.all([
+      supabase.from("tenants").select("id").eq("slug", slug).maybeSingle(),
+      supabase.auth.getUser(),
+    ]);
+    const tenant = tenantResult.data;
+    const user = userResult.data.user;
+    if (!user) return { error: "Sign in to manage vehicles." };
+    if (!tenant) return { error: "Tenant not found." };
+
+    const { data: allowed, error: roleError } = await supabase.rpc("user_has_tenant_role", {
+      p_tenant_id: tenant.id,
+      p_roles: ["owner", "admin", "editor"],
+    });
+    if (roleError || !allowed) return { error: "Editor access is required." };
+
+    return { tenantId: tenant.id, userId: user.id, service: createServiceClient() };
+  } catch {
+    return { error: "Bulk vehicle operations are not configured." };
   }
 }
 
