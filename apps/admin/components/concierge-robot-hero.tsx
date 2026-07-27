@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * PARKED — not mounted anywhere in LUME.
+ *
+ * The 3D concierge head was cut deliberately: it is presentation, not
+ * product, and it costs ~1.9MB (Spline runtime + scene) for a decorative
+ * avatar. The files are kept — and still type-check and build — so it can be
+ * revived without archaeology. See docs/parked/concierge-robot.md.
+ */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
