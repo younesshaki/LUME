@@ -1,0 +1,53 @@
+# Drives the managed inventory feed/export queue workers.
+#
+# These ran as Vercel crons until 2026-07-27. The Hobby plan caps crons at
+# once per day, so declaring `*/5 * * * *` in apps/admin/vercel.json made the
+# admin project undeployable — it stopped shipping entirely for four days.
+# Scheduling from here keeps the five-minute cadence on Hobby.
+#
+# Move back into vercel.json if the account ever upgrades to Pro; Vercel crons
+# are more reliable than GitHub's scheduler, which queues under load and can
+# drift by several minutes or skip runs entirely. The workers are idempotent
+# (claims are leased, no-ops are suppressed), so a missed or doubled tick is
+# safe.
+name: Inventory workers
+
+on:
+  schedule:
+    # GitHub's minimum interval is 5 minutes. Best-effort, not guaranteed.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+# A slow run must never overlap itself into a pile-up.
+concurrency:
+  group: inventory-workers
+  cancel-in-progress: false
+
+jobs:
+  run:
+    # Never fires from forks of this public repo.
+    if: github.repository == 'younesshaki/LUME'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger inventory feed + export runs
+        env:
+          ADMIN_BASE_URL: ${{ secrets.ADMIN_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ADMIN_BASE_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::ADMIN_BASE_URL and CRON_SECRET repository secrets are required."
+            exit 1
+          fi
+
+          for endpoint in inventory-feed-runs inventory-export-runs; do
+            echo "→ ${endpoint}"
+            # --fail-with-body so a non-2xx still prints the server's reason.
+            curl --fail-with-body --silent --show-error \
+              --max-time 120 --retry 2 --retry-delay 5 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "${ADMIN_BASE_URL%/}/api/cron/${endpoint}"
+            echo
+          done
