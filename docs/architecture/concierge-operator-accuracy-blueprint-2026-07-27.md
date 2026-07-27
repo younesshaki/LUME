@@ -177,6 +177,11 @@ Before reflecting it back (for example, “where am I?”), the server binds it 
 the authenticated tenant prefix and resolves it through the capability registry.
 External, cross-tenant, and unknown paths yield no claimed page context.
 
+Result rows are also not direct client-built detail URLs. Selecting one sends a
+bounded ordinal through the same server-owned result-set resolver used for
+natural-language “open the second one”; the server verifies current tenancy and
+record existence before issuing any navigation action.
+
 Existing server actions should be refactored gradually so both the existing UI
 and the concierge call the same **domain services**. Do not have the concierge
 call a client-side server action directly. This removes divergent authorization

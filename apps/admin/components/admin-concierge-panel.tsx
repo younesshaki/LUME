@@ -47,6 +47,18 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = message.trim();
+    await sendMessage(text);
+  }
+
+  function navigateToServerIssuedHref(href: string | undefined) {
+    // Defense in depth: a route is issued by the server but never allow this
+    // presentation component to become an open redirect.
+    if (!href || !href.startsWith(`/admin/${encodeURIComponent(tenantSlug)}`)) return;
+    setOpen(false);
+    router.push(href);
+  }
+
+  async function sendMessage(text: string, options?: { autoNavigate?: boolean; displayText?: string }) {
     if (!text || pending) return;
     setPending(true);
     setError(null);
@@ -66,10 +78,11 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
       setResult(payload);
       setTurns((previous) => [
         ...previous,
-        { role: "user" as const, content: text },
+        { role: "user" as const, content: options?.displayText ?? text },
         { role: "assistant" as const, content: reply },
       ].slice(-10));
       setMessage("");
+      if (options?.autoNavigate) navigateToServerIssuedHref(payload.action?.href);
     } catch {
       setError("The dashboard concierge is temporarily unavailable.");
     } finally {
@@ -78,12 +91,19 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
   }
 
   function navigate() {
-    const href = result?.action?.href;
-    // Defense in depth: a route is issued by the server but never allow this
-    // presentation component to become an open redirect.
-    if (!href || !href.startsWith(`/admin/${encodeURIComponent(tenantSlug)}`)) return;
-    setOpen(false);
-    router.push(href);
+    navigateToServerIssuedHref(result?.action?.href);
+  }
+
+  function openVerifiedResult(index: number, label: string) {
+    const ordinal = ["first", "second", "third", "fourth", "fifth"][index];
+    if (!ordinal) return;
+    // Do not construct an ID or admin URL on the client. The command is
+    // resolved against the short-lived server-owned result set, then the
+    // server-issued navigation action is followed only after it verifies.
+    void sendMessage(`open the ${ordinal} one`, {
+      autoNavigate: true,
+      displayText: `Open ${label}`,
+    });
   }
 
   async function confirmCommand() {
@@ -187,9 +207,16 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
             <p className="text-sm leading-6">{result.reply}</p>
             {result.results?.length ? (
               <ul className="space-y-1.5 text-sm">
-                {result.results.map((vehicle) => (
+                {result.results.map((vehicle, index) => (
                   <li key={vehicle.id} className="flex justify-between gap-3 text-muted-foreground">
-                    <span className="truncate">{vehicle.label}</span>
+                    <button
+                      type="button"
+                      className="min-w-0 truncate text-left text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => openVerifiedResult(index, vehicle.label)}
+                      disabled={pending}
+                    >
+                      {vehicle.label}
+                    </button>
                     <span className="shrink-0">${vehicle.price.toLocaleString()} · {vehicle.status}</span>
                   </li>
                 ))}
@@ -208,9 +235,16 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
             ) : null}
             {result.candidates?.length ? (
               <ul className="space-y-1.5 text-sm text-muted-foreground">
-                {result.candidates.map((lead) => (
+                {result.candidates.map((lead, index) => (
                   <li key={lead.id} className="flex justify-between gap-3">
-                    <span className="truncate">{lead.label}</span>
+                    <button
+                      type="button"
+                      className="min-w-0 truncate text-left text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => openVerifiedResult(index, lead.label)}
+                      disabled={pending}
+                    >
+                      {lead.label}
+                    </button>
                     <span className="shrink-0 capitalize">{lead.status}</span>
                   </li>
                 ))}
