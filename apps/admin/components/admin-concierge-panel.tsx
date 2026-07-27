@@ -19,10 +19,11 @@ type ConciergeResult = {
   results?: Array<{ id: string; label: string; price: number; status: string }>;
   details?: Array<{ id: string; label: string; value: string; note?: string }>;
   candidates?: Array<{ id: string; label: string; status: string }>;
+  candidatesSelectable?: boolean;
   command?: {
     id: string;
     expiresAt: string;
-    capabilityId: "lead.status.update";
+    capabilityId: "lead.status.update" | "feed.run.enqueue";
     summary: string;
   };
 };
@@ -237,14 +238,16 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
               <ul className="space-y-1.5 text-sm text-muted-foreground">
                 {result.candidates.map((lead, index) => (
                   <li key={lead.id} className="flex justify-between gap-3">
-                    <button
-                      type="button"
-                      className="min-w-0 truncate text-left text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      onClick={() => openVerifiedResult(index, lead.label)}
-                      disabled={pending}
-                    >
-                      {lead.label}
-                    </button>
+                    {result.candidatesSelectable ? (
+                      <button
+                        type="button"
+                        className="min-w-0 truncate text-left text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => openVerifiedResult(index, lead.label)}
+                        disabled={pending}
+                      >
+                        {lead.label}
+                      </button>
+                    ) : <span className="min-w-0 truncate text-foreground">{lead.label}</span>}
                     <span className="shrink-0 capitalize">{lead.status}</span>
                   </li>
                 ))}

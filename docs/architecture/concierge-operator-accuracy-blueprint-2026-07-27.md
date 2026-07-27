@@ -186,6 +186,8 @@ Result rows are also not direct client-built detail URLs. Selecting one sends a
 bounded ordinal through the same server-owned result-set resolver used for
 natural-language “open the second one”; the server verifies current tenancy and
 record existence before issuing any navigation action.
+Clarification candidates are deliberately non-selectable: only a response that
+persisted a fresh verified result set may offer an item-level open action.
 
 Existing server actions should be refactored gradually so both the existing UI
 and the concierge call the same **domain services**. Do not have the concierge
@@ -369,7 +371,8 @@ control-plane slice:
   validates model plans against it.
 - `POST /api/admin/concierge` authenticates the caller, performs a tenant role
   check, re-resolves data with tenant-scoped reads, and returns only a
-  server-issued internal navigation action. It has no write path.
+  server-issued internal navigation action or reviewed-command preview. It has
+  no executable write path until migration 080 is explicitly applied.
 - The authenticated admin shell exposes an **Ask LUME** panel. It can navigate
   across every current dashboard area, run fresh vehicle/lead searches, and
   inspect recent managed-feed health from the tenant-scoped run ledger.
@@ -403,26 +406,30 @@ This is intentionally not marketed as a general autonomous operator yet. It is
 the safety substrate for it. No database migration or production data mutation
 was required for this milestone.
 
-### Progress — lead-status command (unapplied migration)
+### Progress — initial bounded commands (unapplied migration)
 
-The first confirmed write capability has been implemented but remains inactive
-until explicit approval to apply `080_admin_concierge_commands.sql` to a named
-environment. It supports only **one named lead** changing to `new`,
-`contacted`, `qualified`, or `won`:
+Two confirmed capabilities have been implemented but remain inactive until
+explicit approval to apply `080_admin_concierge_commands.sql` to a named
+environment:
 
-1. Resolve the named lead inside the tenant; ambiguity requires a more specific
+1. **One named lead status change** to `new`, `contacted`, `qualified`, or
+   `won`. Resolve the named lead inside the tenant; ambiguity requires a more specific
    name/email.
-2. Persist a five-minute reviewed command and render its exact before/after
+2. **One named managed-feed run**. Resolve only an enabled source by name and
+   preserve its reviewed configuration version; the command queues the existing
+   durable worker run and never performs a synchronous fetch/sync.
+3. Persist a five-minute reviewed command and render its exact before/after
    status.
-3. Require an explicit **Confirm change** click.
-4. Execute through one locked, service-only database transaction with a unique
+4. Require an explicit **Confirm change** click.
+5. Execute through one locked, service-only database transaction with a unique
    idempotency receipt.
-5. Re-read the lead through the authenticated tenant client before saying it
-   succeeded, record a lead activity, and append an audit event.
+6. Re-read the lead or queued run through the authenticated tenant client before
+   saying it succeeded, record the appropriate audit event, and for leads add a
+   lead activity.
 
-No deletes, loss reasons, credentials, billing, roles, domains, API keys, or
-bulk operations are included. Before migration 080 is applied, the API returns
-a clear migration-required response and performs no write.
+No deletes, loss reasons, credentials, billing, roles, domains, API keys, bulk
+operations, or arbitrary URLs are included. Before migration 080 is applied,
+the API returns a clear migration-required response and performs no write.
 
 ### Phase 0 — establish the control plane (first)
 

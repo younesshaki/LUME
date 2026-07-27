@@ -15,11 +15,13 @@ import {
 } from "./adminConcierge";
 
 describe("admin concierge control plane", () => {
-  it("keeps the launch registry read-only except for one confirmed lead-status capability", () => {
+  it("keeps the launch registry read-only except for two confirmed bounded capabilities", () => {
     expect(ADMIN_CAPABILITIES.every((capability) =>
-      capability.effect === "read" || capability.effect === "navigate" || capability.id === "lead.status.update",
+      capability.effect === "read" || capability.effect === "navigate" ||
+      capability.id === "lead.status.update" || capability.id === "feed.run.enqueue",
     )).toBe(true);
     expect(capabilityById("lead.status.update")?.confirmation).toBe("standard");
+    expect(capabilityById("feed.run.enqueue")?.confirmation).toBe("standard");
   });
 
   it("covers every tenant-facing sidebar surface with an explicit capability", () => {
@@ -97,6 +99,13 @@ describe("admin concierge control plane", () => {
     expect(compileDeterministicAdminIntent("mark lead Jane Doe as lost")).toEqual({ kind: "unsupported" });
   });
 
+  it("prepares only a named managed-feed run for review", () => {
+    expect(compileDeterministicAdminIntent("run inventory feed Nightly Homenet now")).toEqual({
+      kind: "enqueue_feed_run",
+      feedQuery: "Nightly Homenet",
+    });
+  });
+
   it("navigates only when one registry capability matches", () => {
     expect(compileDeterministicAdminIntent("take me to analytics")).toEqual({ kind: "navigate", capabilityId: "analytics.view" });
     expect(compileDeterministicAdminIntent("open the site pages")).toEqual({ kind: "search_pages", query: null });
@@ -146,6 +155,10 @@ describe("admin concierge control plane", () => {
     expect(parseAdminConciergeModelPlan('{"intent":{"kind":"inspect_feed_runs","status":"dead_letter"}}')).toEqual({
       kind: "inspect_feed_runs",
       status: "dead_letter",
+    });
+    expect(parseAdminConciergeModelPlan('{"intent":{"kind":"enqueue_feed_run","feedQuery":"Nightly Homenet"}}')).toEqual({
+      kind: "enqueue_feed_run",
+      feedQuery: "Nightly Homenet",
     });
     expect(parseAdminConciergeModelPlan('{"intent":{"kind":"search_customers","query":"Jane Doe"}}')).toEqual({
       kind: "search_customers",

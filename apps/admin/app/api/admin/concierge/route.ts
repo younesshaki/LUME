@@ -30,7 +30,7 @@ import {
 } from "@/lib/conciergeModels";
 import { checkChatRateLimit } from "@/lib/rateLimit";
 import { captureDebug, captureError } from "@/lib/observability";
-import { createLeadStatusCommand } from "@/lib/adminConciergeCommands.server";
+import { createFeedRunCommand, createLeadStatusCommand } from "@/lib/adminConciergeCommands.server";
 import {
   adminConversationMemoryKey,
   getConversationMemoryStore,
@@ -207,6 +207,8 @@ export async function POST(request: Request): Promise<Response> {
       return searchPages(supabase, tenant.id, tenant.slug, intent.query, source, memoryStore, memoryKey);
     case "inspect_feed_runs":
       return inspectFeedRuns(supabase, tenant.id, tenant.slug, intent.status, source, memoryStore, memoryKey);
+    case "enqueue_feed_run":
+      return prepareFeedRun(supabase, tenant.id, userData.user.id, intent.feedQuery, source);
     case "update_lead_status":
       return prepareLeadStatusUpdate(
         supabase,
@@ -400,6 +402,7 @@ async function searchLeads(
       href,
       label: "Open leads",
     },
+    candidatesSelectable: true,
     ...(examples.length ? { candidates: examples } : {}),
   });
 }
@@ -450,6 +453,7 @@ async function searchCustomers(
       ? `I found ${total.toLocaleString()} customer${total === 1 ? "" : "s"}${safeQuery ? ` matching “${safeQuery}”` : ""}.`
       : `No customers${safeQuery ? ` matching “${safeQuery}”` : ""} were found.`,
     action: { type: "navigate", href, label: "Open customers" },
+    candidatesSelectable: true,
     ...(customers.length ? { candidates: customers } : {}),
   });
 }
@@ -496,6 +500,7 @@ async function searchPages(
       ? `I found ${total.toLocaleString()} page${total === 1 ? "" : "s"}${safeQuery ? ` matching “${safeQuery}”` : ""}.`
       : `No pages${safeQuery ? ` matching “${safeQuery}”` : ""} were found.`,
     action: { type: "navigate", href, label: "Open pages" },
+    candidatesSelectable: true,
     ...(pages.length ? { candidates: pages } : {}),
   });
 }
@@ -702,6 +707,76 @@ async function prepareLeadStatusUpdate(
   });
 }
 
+async function prepareFeedRun(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  actorUserId: string,
+  feedQuery: string,
+  source: "deterministic" | "model",
+): Promise<Response> {
+  const { data: canRun, error: roleError } = await supabase.rpc("user_has_tenant_role", {
+    p_tenant_id: tenantId,
+    p_roles: ["owner", "admin"],
+  });
+  if (roleError || !canRun) {
+    return json({ source, reply: "Owner or admin access is required to prepare a managed feed run." }, 403);
+  }
+  const safeQuery = feedQuery.replace(/[^\p{L}\p{N}\s@.+-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!safeQuery) return unsupported();
+  const term = `%${safeQuery.replace(/[%_]/g, (character) => `\\${character}`)}%`;
+  const { data, error } = await supabase
+    .from("inventory_feed_sources")
+    .select("id, name, enabled, config_version")
+    .eq("tenant_id", tenantId)
+    .is("archived_at", null)
+    .ilike("name", term)
+    .order("created_at", { ascending: false })
+    .limit(3);
+  if (error) {
+    if (error.code === "42P01") {
+      return json({ source, reply: "Managed feeds are unavailable until migration 077 is applied." }, 503);
+    }
+    return json({ error: "Unable to resolve that managed feed right now." }, 502);
+  }
+  if (!data?.length) {
+    return json({ source, reply: `I couldn’t find a managed feed matching “${safeQuery}”, so I didn’t prepare a run.` });
+  }
+  if (data.length > 1) {
+    return json({
+      source,
+      reply: `I found ${data.length} managed feeds matching “${safeQuery}”. Please use a more specific name so I queue the right source.`,
+      candidates: data.map((feed) => ({ id: feed.id, label: feed.name, status: feed.enabled ? "enabled" : "paused" })),
+    });
+  }
+  const feed = data[0];
+  if (!feed.enabled) {
+    return json({ source, reply: `${feed.name} is paused, so I did not prepare a run. Enable it in Inventory feeds first.` });
+  }
+  const created = await createFeedRunCommand({
+    tenantId,
+    actorUserId,
+    feed: { id: feed.id, name: feed.name, configVersion: feed.config_version },
+  });
+  if (!created.ok) {
+    return json({
+      error: created.reason === "migration_required"
+        ? "Reviewed admin commands are not available until migration 080 is applied."
+        : "Unable to prepare the reviewed feed command.",
+    }, 503);
+  }
+  const command = created.command;
+  return json({
+    source,
+    reply: `I prepared a run for ${command.feed.name}. Review the exact operation below, then confirm it.`,
+    command: {
+      id: command.commandId,
+      expiresAt: command.expiresAt,
+      capabilityId: "feed.run.enqueue",
+      summary: `Queue one manual run of ${command.feed.name}.`,
+    },
+  });
+}
+
 function unsupported(): Response {
   return json({
     source: "deterministic",
@@ -730,6 +805,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
       return { kind: intent.kind, hasQuery: Boolean(intent.query) };
     case "inspect_feed_runs":
       return { kind: intent.kind, status: intent.status };
+    case "enqueue_feed_run":
+      return { kind: intent.kind, hasFeedQuery: Boolean(intent.feedQuery) };
     case "update_lead_status":
       return { kind: intent.kind, hasLeadQuery: Boolean(intent.leadQuery), status: intent.status };
     case "unsupported":

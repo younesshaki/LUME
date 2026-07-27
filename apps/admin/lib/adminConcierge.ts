@@ -58,6 +58,7 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("analytics.view", "Open analytics", "navigate", "viewer", "/analytics", ["analytics", "metrics", "performance"]),
   capability("feeds.view", "Open inventory feeds", "navigate", "viewer", "/settings/inventory-feeds", ["inventory feeds", "managed feeds", "feed", "feeds", "syndication", "export", "exports"]),
   capability("feeds.inspect", "Inspect inventory feed health", "read", "viewer", "/settings/inventory-feeds", ["failed feed", "feed health", "feed run", "feed runs", "sync failure"]),
+  capability("feed.run.enqueue", "Queue one managed feed run", "write", "admin", "/settings/inventory-feeds", ["run feed", "run inventory feed", "sync feed"], "standard"),
   capability("team.view", "Open team", "navigate", "viewer", "/team", ["team", "staff", "members"]),
   capability("concierge.view", "Open concierge configuration", "navigate", "viewer", "/persona", ["concierge", "bot", "persona", "ai configuration"]),
   capability("concierge.targets.view", "Open concierge targets", "navigate", "viewer", "/concierge-targets", ["concierge targets", "bot targets", "assistant targets", "targets"]),
@@ -91,6 +92,7 @@ export type AdminConciergeIntent =
   | { kind: "search_customers"; query: string | null }
   | { kind: "search_pages"; query: string | null }
   | { kind: "inspect_feed_runs"; status: "failed" | "dead_letter" | "partial" | null }
+  | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "unsupported" };
 
@@ -103,6 +105,7 @@ export type AdminConciergeModelPlan =
   | { kind: "search_customers"; query: string | null }
   | { kind: "search_pages"; query: string | null }
   | { kind: "inspect_feed_runs"; status: "failed" | "dead_letter" | "partial" | null }
+  | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "clarify" };
 
@@ -148,6 +151,9 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
 
   const leadStatusUpdate = extractLeadStatusUpdate(message);
   if (leadStatusUpdate) return { kind: "update_lead_status", ...leadStatusUpdate };
+
+  const feedRunEnqueue = extractFeedRunEnqueue(message);
+  if (feedRunEnqueue) return { kind: "enqueue_feed_run", ...feedRunEnqueue };
 
   if (/\b(?:where am i|what (?:page|screen|section) am i on|what can i do here)\b/.test(normalized)) {
     return { kind: "describe_current_page" };
@@ -263,6 +269,8 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
       return capabilityById(intent.capabilityId)?.minRole ?? null;
     case "update_lead_status":
       return "editor";
+    case "enqueue_feed_run":
+      return "admin";
     case "clarify":
     case "describe_current_page":
     case "summarize_overview":
@@ -319,6 +327,10 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
           ? { kind: "inspect_feed_runs", status }
           : null;
       }
+      case "enqueue_feed_run": {
+        const feedQuery = normalizeSearchText(parsed.intent.feedQuery);
+        return feedQuery ? { kind: "enqueue_feed_run", feedQuery } : null;
+      }
       case "update_lead_status": {
         const leadQuery = normalizeSearchText(parsed.intent.leadQuery);
         const status = parsed.intent.status;
@@ -342,7 +354,7 @@ export function buildAdminConciergeSystemPrompt(): string {
   ).join("\n");
   return [
     "You are LUME's authenticated dashboard concierge. Translate the user's request into exactly one allowed command intent.",
-    "You do not have access to tenant data and must not invent facts, records, URLs, IDs, or actions. You cannot execute writes, publish, delete, change roles, handle credentials, billing, domains, API keys, or integrations. You may only PROPOSE one lead-status update; LUME will resolve, preview, authorize and require confirmation separately.",
+    "You do not have access to tenant data and must not invent facts, records, URLs, IDs, or actions. You cannot execute writes, publish, delete, change roles, handle credentials, billing, domains, API keys, or integrations. You may only PROPOSE a one-lead status update or one named managed-feed run; LUME will resolve, preview, authorize and require confirmation separately.",
     "Return ONLY JSON with this exact shape: {\"intent\":{...}}.",
     "Allowed intents:",
     "- {\"kind\":\"navigate\",\"capabilityId\":\"<one catalog id>\"}",
@@ -353,6 +365,7 @@ export function buildAdminConciergeSystemPrompt(): string {
     "- {\"kind\":\"search_customers\",\"query\":\"<name/email fragment or null>\"}",
     "- {\"kind\":\"search_pages\",\"query\":\"<page title/slug fragment or null>\"}",
     "- {\"kind\":\"inspect_feed_runs\",\"status\":\"failed\"|\"dead_letter\"|\"partial\"|null}",
+    "- {\"kind\":\"enqueue_feed_run\",\"feedQuery\":\"<named managed inventory feed>\"}",
     "- {\"kind\":\"update_lead_status\",\"leadQuery\":\"<lead name or email fragment>\",\"status\":\"new\"|\"contacted\"|\"qualified\"|\"won\"}",
     "- {\"kind\":\"clarify\"} when the request is ambiguous, unsupported, or asks for a change.",
     "Catalog:",
@@ -439,6 +452,15 @@ function extractLeadStatusUpdate(
   const leadQuery = normalizeSearchText(match[1].replace(/^lead\s+/i, ""));
   const status = match[2].toLocaleLowerCase() as "new" | "contacted" | "qualified" | "won";
   return leadQuery ? { leadQuery, status } : null;
+}
+
+function extractFeedRunEnqueue(message: string): { feedQuery: string } | null {
+  const match = message.match(
+    /\b(?:run|sync|refresh|enqueue)\s+(?:the\s+)?(?:inventory\s+)?feed\s+(.+?)(?:\s+now)?\s*[.!?]?$/i,
+  );
+  if (!match) return null;
+  const feedQuery = normalizeSearchText(match[1]);
+  return feedQuery ? { feedQuery } : null;
 }
 
 function normalize(value: string): string {

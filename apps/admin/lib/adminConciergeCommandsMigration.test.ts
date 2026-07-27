@@ -36,4 +36,13 @@ describe("admin concierge command migration contract", () => {
     expect(migration).toContain("for update;");
     expect(migration).toContain("The operator no longer has edit access for this tenant.");
   });
+
+  it("reuses the durable inventory queue only after owner/admin confirmation and config-version grounding", () => {
+    expect(migration).toContain("'feed.run.enqueue'");
+    expect(migration).toContain("execute_admin_concierge_feed_run_command");
+    expect(migration).toContain("member.role in ('owner', 'admin')");
+    expect(migration).toContain("v_source.config_version <> v_config_version");
+    expect(migration).toContain("public.enqueue_inventory_feed_run(v_source.id, p_tenant_id, 'manual')");
+    expect(migration).toContain("'status', 'queued'");
+  });
 });

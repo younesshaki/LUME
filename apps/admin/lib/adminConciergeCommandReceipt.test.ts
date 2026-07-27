@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseLeadStatusCommandReceipt } from "./adminConciergeCommandReceipt";
+import { parseFeedRunCommandReceipt, parseLeadStatusCommandReceipt } from "./adminConciergeCommandReceipt";
 
 describe("admin concierge command receipts", () => {
   it("accepts only a complete verified lead-status receipt", () => {
@@ -48,6 +48,31 @@ describe("admin concierge command receipts", () => {
       ok: false,
       reason: "stale",
       error: "The lead changed after this command was reviewed. Refresh and prepare a new command.",
+    });
+  });
+});
+
+describe("admin concierge feed-run command receipts", () => {
+  it("accepts only a complete queue receipt", () => {
+    expect(parseFeedRunCommandReceipt({
+      status: "queued",
+      feedSourceId: "source-1",
+      feedName: "Nightly inventory",
+      runId: "run-1",
+    })).toEqual({
+      ok: true,
+      alreadyExecuted: false,
+      feedSourceId: "source-1",
+      feedName: "Nightly inventory",
+      runId: "run-1",
+    });
+  });
+
+  it("does not turn a malformed queue result into a success claim", () => {
+    expect(parseFeedRunCommandReceipt({ status: "queued", feedSourceId: "source-1" })).toEqual({
+      ok: false,
+      reason: "unavailable",
+      error: "Command could not be completed.",
     });
   });
 });
