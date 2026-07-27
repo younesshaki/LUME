@@ -32,6 +32,11 @@ export const ADMIN_CONCIERGE_EVAL_CASES: readonly AdminConciergeEvalCase[] = [
     expectedDeterministicIntent: { kind: "summarize_overview" },
   },
   {
+    id: "concierge-config-summary",
+    request: "what model is the concierge using?",
+    expectedDeterministicIntent: { kind: "summarize_concierge_config" },
+  },
+  {
     id: "nav-analytics",
     request: "Take me to analytics",
     expectedDeterministicIntent: { kind: "navigate", capabilityId: "analytics.view" },

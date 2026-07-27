@@ -195,6 +195,8 @@ export async function POST(request: Request): Promise<Response> {
         reply: `You’re in ${capability.title.toLocaleLowerCase()}. I can help with the verified actions available for this area.`,
       });
     }
+    case "summarize_concierge_config":
+      return summarizeConciergeConfig(supabase, tenant.id, tenant.slug, source);
     case "summarize_overview":
       return summarizeOverview(supabase, tenant.id, tenant.slug, source, memoryStore, memoryKey);
     case "search_vehicles":
@@ -356,6 +358,61 @@ async function summarizeOverview(
       { id: "active-vehicles", label: "Active inventory", value: activeVehicles.toLocaleString() },
       { id: "new-leads", label: "New leads", value: newLeads.toLocaleString() },
       { id: "active-pages", label: "Active pages", value: pages.toLocaleString() },
+    ],
+  });
+}
+
+async function summarizeConciergeConfig(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  tenantSlug: string,
+  source: "deterministic" | "model",
+): Promise<Response> {
+  // Never select persona/system-prompt text here. The operational summary is
+  // deliberately limited to non-sensitive runtime policy fields.
+  const [configResult, personaResult] = await Promise.all([
+    supabase
+      .from("tenant_bot_config")
+      .select("model, allowed_tools, max_iterations, updated_at")
+      .eq("tenant_id", tenantId)
+      .maybeSingle(),
+    supabase
+      .from("bot_personas")
+      .select("name, tone, updated_at")
+      .eq("tenant_id", tenantId)
+      .eq("is_active", true)
+      .maybeSingle(),
+  ]);
+  if (configResult.error || personaResult.error) {
+    const missing = configResult.error?.code === "42P01" || personaResult.error?.code === "42P01";
+    return json({
+      source,
+      reply: missing
+        ? "Concierge configuration is unavailable until its required migration is applied."
+        : "Unable to read concierge configuration right now.",
+      action: { type: "navigate", href: `/admin/${encodeURIComponent(tenantSlug)}/persona`, label: "Open bot configuration" },
+    }, missing ? 503 : 502);
+  }
+  const config = configResult.data;
+  const persona = personaResult.data;
+  const href = `/admin/${encodeURIComponent(tenantSlug)}/persona`;
+  if (!config) {
+    return json({
+      source,
+      reply: "No tenant-specific concierge runtime configuration is stored yet. The dashboard configuration page shows the active defaults and lets an authorized editor review them.",
+      action: { type: "navigate", href, label: "Open bot configuration" },
+    });
+  }
+  const personaSummary = persona ? `${persona.name} (${persona.tone} tone)` : "the default persona";
+  return json({
+    source,
+    reply: `The public concierge is using ${config.model} with ${config.allowed_tools.length} allowed tool${config.allowed_tools.length === 1 ? "" : "s"} and a ${config.max_iterations}-step limit. Its active persona is ${personaSummary}.`,
+    action: { type: "navigate", href, label: "Open bot configuration" },
+    details: [
+      { id: "model", label: "Model", value: config.model },
+      { id: "tools", label: "Allowed tools", value: config.allowed_tools.length.toLocaleString() },
+      { id: "iterations", label: "Maximum tool steps", value: config.max_iterations.toLocaleString() },
+      { id: "updated", label: "Runtime configuration updated", value: formatAdminTimestamp(config.updated_at) },
     ],
   });
 }
@@ -792,6 +849,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
     case "clarify":
       return { kind: intent.kind };
     case "describe_current_page":
+      return { kind: intent.kind };
+    case "summarize_concierge_config":
       return { kind: intent.kind };
     case "summarize_overview":
       return { kind: intent.kind };

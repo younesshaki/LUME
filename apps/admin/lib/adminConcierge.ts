@@ -86,6 +86,7 @@ export type AdminConciergeIntent =
   | { kind: "navigate"; capabilityId: string }
   | { kind: "clarify"; question: string }
   | { kind: "describe_current_page" }
+  | { kind: "summarize_concierge_config" }
   | { kind: "summarize_overview" }
   | { kind: "search_vehicles"; query: string | null }
   | { kind: "search_leads"; status: "new" | "contacted" | "qualified" | "won" | "lost" | null }
@@ -99,6 +100,7 @@ export type AdminConciergeIntent =
 export type AdminConciergeModelPlan =
   | { kind: "navigate"; capabilityId: string }
   | { kind: "describe_current_page" }
+  | { kind: "summarize_concierge_config" }
   | { kind: "summarize_overview" }
   | { kind: "search_vehicles"; query: string | null }
   | { kind: "search_leads"; status: "new" | "contacted" | "qualified" | "won" | "lost" | null }
@@ -164,6 +166,10 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
 
   if (/\b(?:where am i|what (?:page|screen|section) am i on|what can i do here)\b/.test(normalized)) {
     return { kind: "describe_current_page" };
+  }
+
+  if (/\b(?:what model|which model|concierge configuration|bot configuration|what (?:tools|can) (?:does )?(?:the )?(?:concierge|bot) (?:use|have))\b/.test(normalized)) {
+    return { kind: "summarize_concierge_config" };
   }
 
   if (/\b(?:dashboard|overview)\b/.test(normalized) && /\b(?:summary|summarize|status|snapshot|how are things)\b/.test(normalized)) {
@@ -280,6 +286,7 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
       return "admin";
     case "clarify":
     case "describe_current_page":
+    case "summarize_concierge_config":
     case "summarize_overview":
     case "search_vehicles":
     case "search_leads":
@@ -311,6 +318,8 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
       }
       case "describe_current_page":
         return { kind: "describe_current_page" };
+      case "summarize_concierge_config":
+        return { kind: "summarize_concierge_config" };
       case "summarize_overview":
         return { kind: "summarize_overview" };
       case "search_vehicles":
@@ -366,6 +375,7 @@ export function buildAdminConciergeSystemPrompt(): string {
     "Allowed intents:",
     "- {\"kind\":\"navigate\",\"capabilityId\":\"<one catalog id>\"}",
     "- {\"kind\":\"describe_current_page\"}",
+    "- {\"kind\":\"summarize_concierge_config\"}",
     "- {\"kind\":\"summarize_overview\"}",
     "- {\"kind\":\"search_vehicles\",\"query\":\"<make/model/free-text search or null>\"}",
     "- {\"kind\":\"search_leads\",\"status\":\"new\"|\"contacted\"|\"qualified\"|\"won\"|\"lost\"|null}",

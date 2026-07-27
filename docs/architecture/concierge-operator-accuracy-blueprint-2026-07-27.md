@@ -375,7 +375,10 @@ control-plane slice:
   no executable write path until migration 080 is explicitly applied.
 - The authenticated admin shell exposes an **Ask LUME** panel. It can navigate
   across every current dashboard area, run fresh vehicle/lead searches, and
-  inspect recent managed-feed health from the tenant-scoped run ledger.
+  inspect recent managed-feed health from the tenant-scoped run ledger. It can
+  also summarize the public concierge's safe runtime configuration (model,
+  tool count, iteration cap, timestamps and persona metadata) without reading
+  system prompts, prompt overrides or credentials.
 - Its browser session carries only a server-owned, 15-minute verified result
   set. “Show me” and “open the first/second one” resolve strictly against that
   exact ordered set after a fresh tenant-scoped existence check; they never

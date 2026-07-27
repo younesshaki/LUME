@@ -62,6 +62,7 @@ describe("admin concierge control plane", () => {
 
   it("grounds vehicle and lead searches to closed intent shapes", () => {
     expect(compileDeterministicAdminIntent("where am I?")).toEqual({ kind: "describe_current_page" });
+    expect(compileDeterministicAdminIntent("what model is the concierge using?")).toEqual({ kind: "summarize_concierge_config" });
     expect(compileDeterministicAdminIntent("give me a dashboard summary")).toEqual({ kind: "summarize_overview" });
     expect(compileDeterministicAdminIntent("show me BMW vehicles")).toEqual({ kind: "search_vehicles", query: "BMW" });
     expect(compileDeterministicAdminIntent("list new leads")).toEqual({ kind: "search_leads", status: "new" });
@@ -171,6 +172,7 @@ describe("admin concierge control plane", () => {
     });
     expect(parseAdminConciergeModelPlan('{"intent":{"kind":"summarize_overview"}}')).toEqual({ kind: "summarize_overview" });
     expect(parseAdminConciergeModelPlan('{"intent":{"kind":"describe_current_page"}}')).toEqual({ kind: "describe_current_page" });
+    expect(parseAdminConciergeModelPlan('{"intent":{"kind":"summarize_concierge_config"}}')).toEqual({ kind: "summarize_concierge_config" });
     expect(parseAdminConciergeModelPlan("not json")).toBeNull();
     expect(buildAdminConciergeSystemPrompt()).toContain("clarify");
   });
