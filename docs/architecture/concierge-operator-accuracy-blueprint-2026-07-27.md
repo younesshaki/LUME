@@ -430,6 +430,9 @@ environment:
 No deletes, loss reasons, credentials, billing, roles, domains, API keys, bulk
 operations, or arbitrary URLs are included. Before migration 080 is applied,
 the API returns a clear migration-required response and performs no write.
+Broad wording such as “run every feed” is refused rather than reinterpreted as
+a feed-health lookup; a future bulk capability must declare its exact scope and
+use typed confirmation.
 
 ### Phase 0 — establish the control plane (first)
 

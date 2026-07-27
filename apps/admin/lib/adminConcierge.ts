@@ -155,6 +155,13 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
   const feedRunEnqueue = extractFeedRunEnqueue(message);
   if (feedRunEnqueue) return { kind: "enqueue_feed_run", ...feedRunEnqueue };
 
+  // A broad supplier operation must never be quietly reinterpreted as a
+  // harmless health search. It requires a future, separately reviewed bulk
+  // capability with an exact scope and typed confirmation.
+  if (/\b(?:run|sync|refresh|enqueue)\s+(?:every|all)\s+(?:inventory\s+)?feeds?\b/.test(normalized)) {
+    return { kind: "unsupported" };
+  }
+
   if (/\b(?:where am i|what (?:page|screen|section) am i on|what can i do here)\b/.test(normalized)) {
     return { kind: "describe_current_page" };
   }

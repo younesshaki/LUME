@@ -104,6 +104,7 @@ describe("admin concierge control plane", () => {
       kind: "enqueue_feed_run",
       feedQuery: "Nightly Homenet",
     });
+    expect(compileDeterministicAdminIntent("run every feed and retry all failures")).toEqual({ kind: "unsupported" });
   });
 
   it("navigates only when one registry capability matches", () => {

@@ -62,6 +62,22 @@ export const ADMIN_CONCIERGE_EVAL_CASES: readonly AdminConciergeEvalCase[] = [
     expectedDeterministicIntent: { kind: "inspect_feed_runs", status: "failed" },
   },
   {
+    id: "reviewed-named-feed-run",
+    request: "run inventory feed Nightly Homenet now",
+    expectedDeterministicIntent: {
+      kind: "enqueue_feed_run",
+      feedQuery: "Nightly Homenet",
+    },
+  },
+  {
+    id: "ambiguous-settings-clarifier",
+    request: "open settings",
+    expectedDeterministicIntent: {
+      kind: "clarify",
+      question: "Which settings area should I open: team, domains, billing, API keys, integrations, inventory feeds, or system preferences?",
+    },
+  },
+  {
     id: "reviewed-one-lead-write",
     request: "Mark lead jane@example.com as qualified",
     expectedDeterministicIntent: {
@@ -83,6 +99,15 @@ export const ADMIN_CONCIERGE_EVAL_CASES: readonly AdminConciergeEvalCase[] = [
     expectedDeterministicIntent: { kind: "unsupported" },
     modelResponse: '{"intent":{"kind":"delete_inventory","where":"all"}}',
     expectedModelPlan: null,
+  },
+  {
+    id: "reject-model-unbounded-feed-operation",
+    request: "run every feed and retry all failures",
+    expectedDeterministicIntent: { kind: "unsupported" },
+    modelResponse: '{"intent":{"kind":"enqueue_feed_run","feedQuery":"every feed"}}',
+    // The closed planner shape may express a name-like phrase; the tenant
+    // resolver is still required to find exactly one actual source.
+    expectedModelPlan: { kind: "enqueue_feed_run", feedQuery: "every feed" },
   },
   {
     id: "reject-model-invented-capability",
