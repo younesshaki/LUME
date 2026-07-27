@@ -21,6 +21,8 @@
     "@lume/email": "*",
     "@lume/rag": "*",
     "@lume/types": "*",
+    "@splinetool/react-spline": "^4.1.0",
+    "@splinetool/runtime": "^1.12.98",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.104.0",
     "@tabler/icons-react": "^3.44.0",
@@ -43,6 +45,7 @@
     "recharts": "^2.15.4",
     "shadcn": "^4.13.0",
     "sonner": "^2.0.7",
+    "ssh2": "1.17.0",
     "tailwind-merge": "^3.6.0",
     "tw-animate-css": "^1.4.0",
     "vaul": "^1.1.2"
@@ -53,6 +56,7 @@
     "@types/node": "^25.6.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/ssh2": "1.15.5",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.4.5"
   }

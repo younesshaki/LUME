@@ -572,11 +572,37 @@ export const BLOCK_DESCRIPTORS = {
     ],
   }),
 
+  "service-booking": descriptor({
+    type: "service-booking",
+    displayName: "Service Booking",
+    description:
+      "Schedule a service appointment — service type, preferred date and time, vehicle, and contact details captured as a lead.",
+    category: "content",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Service & Parts",
+      title: "Book your service appointment.",
+      body:
+        "Pick the work your vehicle needs and a preferred time. Our service team will confirm the appointment personally.",
+      buttonLabel: "Request appointment",
+      successMessage: "Your service request has been received. Our service team will confirm shortly.",
+    },
+    schema: basicSectionSchema({
+      buttonLabel: requiredShortText,
+      successMessage: requiredShortText,
+    }),
+    fields: [
+      ...sectionFields(),
+      { name: "buttonLabel", label: "Submit button label", type: "text" },
+      { name: "successMessage", label: "Success message", type: "textarea" },
+    ],
+  }),
+
   "lead-capture-form": descriptor({
     type: "lead-capture-form",
     displayName: "Lead Capture Form",
-    description: "A general dealership enquiry form backed by the existing lead pipeline.",
-    category: "content",
+    description: "A general dealership enquiry form backed by the existing lead pipeline.",    category: "content",
     modes: ["experience", "standard"],
     palette: true,
     defaultProps: {
@@ -830,6 +856,55 @@ export const BLOCK_DESCRIPTORS = {
     fields: [
       ...sectionFields(),
       listField("items", "Specifications", "Specification", "Value"),
+    ],
+  }),
+
+  "vehicle-detail": descriptor({
+    type: "vehicle-detail",
+    displayName: "Vehicle Detail",
+    description:
+      "The full vehicle detail surface — gallery, price, actions, and specs — for the vehicle being viewed. Meant for the vehicle detail page.",
+    category: "data",
+    modes: ["experience", "standard"],
+    palette: true,
+    defaultProps: {
+      eyebrow: "Marketplace Concept",
+      overviewTitle: "",
+      overviewText: "",
+      showGallery: true,
+      showSpecs: true,
+      showActions: true,
+    },
+    schema: z.object({
+      eyebrow: requiredShortText,
+      overviewTitle: optionalShortText,
+      overviewText: optionalBodyText,
+      showGallery: z.boolean().optional().default(true),
+      showSpecs: z.boolean().optional().default(true),
+      showActions: z.boolean().optional().default(true),
+    }),
+    fields: [
+      {
+        name: "eyebrow",
+        label: "Eyebrow",
+        type: "text",
+        helpText: "Small line above the vehicle title.",
+      },
+      {
+        name: "overviewTitle",
+        label: "Overview heading",
+        type: "text",
+        helpText: "Optional. Shown with the overview text below the specs.",
+      },
+      {
+        name: "overviewText",
+        label: "Overview text",
+        type: "textarea",
+        helpText: "Optional dealer-written overview (e.g. inspection or warranty notes that apply to every vehicle). The section stays hidden while empty.",
+      },
+      { name: "showGallery", label: "Show gallery", type: "boolean" },
+      { name: "showSpecs", label: "Show specs list", type: "boolean" },
+      { name: "showActions", label: "Show action buttons", type: "boolean" },
     ],
   }),
 

@@ -41,9 +41,21 @@ Normal releases flow through `staging`; see
   - Red Bull experience preloader
   - admin denied state
 
-## Operations
+## Tenant launch certification
 
-- Confirm Vercel headers in `vercel.json` are active.
-- Confirm event logging appears in Supabase `story_events`.
-- Confirm admin dashboard shows the latest event health line.
-- Confirm local chat does not appear in production unless intentionally enabled.
+Before onboarding a real dealership (and again before flipping one from pilot
+to public), certify the tenant with the launch-readiness audit. It is
+read-only; the full check catalogue and remediation paths are in
+[`launch-readiness-runbook.md`](launch-readiness-runbook.md).
+
+```bash
+npm run audit:tenant-launch -- --tenant <slug> [--profile pilot|public] [--format human|json]
+```
+
+- Env is auto-loaded from `apps/admin/.env.local`, then root `.env.local`.
+- Exit codes: `0` ready · `1` readiness blockers · `2` configuration/runtime
+  error.
+- Recommended flow: run the CLI with `--profile pilot`, resolve every blocker
+  (the admin's "Launch readiness" section on `/admin/[tenant]/website` shows
+  the same checks with remediation links), re-run until exit `0` — then repeat
+  with `--profile public` before the tenant goes live on a public URL.

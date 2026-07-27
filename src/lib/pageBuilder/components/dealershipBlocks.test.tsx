@@ -9,6 +9,7 @@ import { registerBlocks } from "../registerBlocks";
 import {
   LeadCaptureForm,
   NewsletterSignup,
+  ServiceBooking,
   TestDriveBooking,
   TradeInForm,
 } from "./DealershipForms";
@@ -426,6 +427,39 @@ describe("dealership conversion forms", () => {
       source: "test-drive",
       message: expect.stringContaining("[Test-drive request]"),
     }));
+  });
+
+  it("submits service bookings with type, date, and vehicle in the lead message", async () => {
+    render(
+      <ServiceBooking
+        block={defaultBlock("service-booking")}
+        mode="standard"
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Service type"), {
+      target: { value: "Brakes" },
+    });
+    fireEvent.change(screen.getByLabelText("Vehicle"), {
+      target: { value: "2021 BMW X5" },
+    });
+    fireEvent.change(screen.getByLabelText("Preferred date"), {
+      target: { value: "2026-08-20" },
+    });
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "visitor@example.com" },
+    });
+    fireEvent.submit(screen.getByRole("button", { name: /request appointment/i }).closest("form")!);
+
+    await waitFor(() => expect(mocks.submitLead).toHaveBeenCalledOnce());
+    expect(mocks.submitLead).toHaveBeenCalledWith(expect.objectContaining({
+      email: "visitor@example.com",
+      source: "contact-form",
+      message: expect.stringContaining("[Service booking request]"),
+    }));
+    const message = mocks.submitLead.mock.calls[0]?.[0]?.message as string;
+    expect(message).toContain("Service type: Brakes");
+    expect(message).toContain("Vehicle: 2021 BMW X5");
+    expect(message).toContain("Preferred date: 2026-08-20");
   });
 
   it("submits general enquiries through the contact source", async () => {

@@ -26,4 +26,6 @@ export * from "./vercel";
 export * from "./domainVerification";
 export * from "./domainLimits";
 export * from "./imageDescriptions";
+export * from "./inventoryFeedQueue";
+export * from "./inventorySyndication";
 export type { Database } from "./schema";

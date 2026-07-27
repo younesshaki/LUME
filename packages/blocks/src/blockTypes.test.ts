@@ -18,6 +18,7 @@ const DEALERSHIP_BLOCK_TYPES = [
   "trade-in-form",
   "finance-calculator",
   "test-drive-booking",
+  "service-booking",
   "lead-capture-form",
   "whatsapp-cta",
   "cta-banner",
@@ -27,6 +28,7 @@ const DEALERSHIP_BLOCK_TYPES = [
   "new-arrivals",
   "vehicle-search-band",
   "vehicle-spec-table",
+  "vehicle-detail",
   "testimonials",
   "review-summary",
   "trust-stats",
@@ -43,12 +45,12 @@ const DEALERSHIP_BLOCK_TYPES = [
 ] as const;
 
 describe("block descriptors", () => {
-  it("exposes the original seven and exactly 25 dealership blocks in the palette", () => {
+  it("exposes the original seven and exactly 27 dealership blocks in the palette", () => {
     expect(listPaletteBlockDescriptors().map((descriptor) => descriptor.type)).toEqual([
       ...EXISTING_BLOCK_TYPES,
       ...DEALERSHIP_BLOCK_TYPES,
     ]);
-    expect(listPaletteBlockDescriptors()).toHaveLength(32);
+    expect(listPaletteBlockDescriptors()).toHaveLength(34);
   });
 
   it.each(DEALERSHIP_BLOCK_TYPES)(

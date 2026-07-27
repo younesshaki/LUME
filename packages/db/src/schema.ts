@@ -533,6 +533,330 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["csv_imports"]["Insert"]>;
         Relationships: [];
       };
+      /** Durable, non-destructive managed supplier source configuration (migration 077). */
+      inventory_feed_sources: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string;
+          source_kind: "https" | "storage" | "sftp";
+          source_url: string | null;
+          source_object_path: string | null;
+          sftp_host: string | null;
+          sftp_port: number | null;
+          sftp_remote_path: string | null;
+          sftp_host_key_fingerprint: string | null;
+          source_format: "csv" | "json" | "xml";
+          profile: Record<string, unknown>;
+          sync_mode: "hybrid" | "mirror";
+          enabled: boolean;
+          schedule_minutes: number | null;
+          retry_delays_seconds: number[];
+          next_scheduled_at: string | null;
+          last_enqueued_at: string | null;
+          last_attempt_at: string | null;
+          last_succeeded_at: string | null;
+          last_source_hash: string | null;
+          config_version: number;
+          consecutive_failure_count: number;
+          last_error: string | null;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["inventory_feed_sources"]["Row"],
+          | "id"
+          | "source_kind"
+          | "source_format"
+          | "profile"
+          | "sync_mode"
+          | "enabled"
+          | "retry_delays_seconds"
+          | "next_scheduled_at"
+          | "last_enqueued_at"
+          | "last_attempt_at"
+          | "last_succeeded_at"
+          | "last_source_hash"
+          | "config_version"
+          | "consecutive_failure_count"
+          | "last_error"
+          | "archived_at"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          source_kind?: "https" | "storage" | "sftp";
+          source_format?: "csv" | "json" | "xml";
+          profile?: Record<string, unknown>;
+          sync_mode?: "hybrid" | "mirror";
+          enabled?: boolean;
+          retry_delays_seconds?: number[];
+          next_scheduled_at?: string | null;
+          last_enqueued_at?: string | null;
+          last_attempt_at?: string | null;
+          last_succeeded_at?: string | null;
+          last_source_hash?: string | null;
+          config_version?: number;
+          consecutive_failure_count?: number;
+          last_error?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["inventory_feed_sources"]["Insert"]>;
+        Relationships: [];
+      };
+      inventory_feed_source_credentials: {
+        Row: {
+          feed_source_id: string;
+          tenant_id: string;
+          credential_ciphertext: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["inventory_feed_source_credentials"]["Row"],
+          "created_at" | "updated_at"
+        > & { created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["inventory_feed_source_credentials"]["Insert"]>;
+        Relationships: [];
+      };
+      inventory_feed_runs: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          feed_source_id: string;
+          run_trigger: "manual" | "scheduled";
+          source_snapshot: Record<string, unknown>;
+          status: "pending" | "processing" | "retrying" | "succeeded" | "partial" | "skipped" | "failed" | "dead_letter" | "cancelled";
+          attempt_count: number;
+          next_attempt_at: string;
+          claimed_at: string | null;
+          source_hash: string | null;
+          input_bytes: number | null;
+          total_rows: number;
+          processed_rows: number;
+          created_rows: number;
+          updated_rows: number;
+          skipped_rows: number;
+          conflict_rows: number;
+          failed_rows: number;
+          errors: Array<Record<string, unknown>>;
+          last_error: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["inventory_feed_runs"]["Row"],
+          | "id"
+          | "run_trigger"
+          | "source_snapshot"
+          | "status"
+          | "attempt_count"
+          | "next_attempt_at"
+          | "claimed_at"
+          | "source_hash"
+          | "input_bytes"
+          | "total_rows"
+          | "processed_rows"
+          | "created_rows"
+          | "updated_rows"
+          | "skipped_rows"
+          | "conflict_rows"
+          | "failed_rows"
+          | "errors"
+          | "last_error"
+          | "started_at"
+          | "completed_at"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          run_trigger?: "manual" | "scheduled";
+          source_snapshot?: Record<string, unknown>;
+          status?: "pending" | "processing" | "retrying" | "succeeded" | "partial" | "skipped" | "failed" | "dead_letter" | "cancelled";
+          attempt_count?: number;
+          next_attempt_at?: string;
+          claimed_at?: string | null;
+          source_hash?: string | null;
+          input_bytes?: number | null;
+          total_rows?: number;
+          processed_rows?: number;
+          created_rows?: number;
+          updated_rows?: number;
+          skipped_rows?: number;
+          conflict_rows?: number;
+          failed_rows?: number;
+          errors?: Array<Record<string, unknown>>;
+          last_error?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["inventory_feed_runs"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Per-tenant execution lease preventing concurrent supplier syncs. */
+      inventory_feed_tenant_leases: {
+        Row: {
+          tenant_id: string;
+          run_id: string;
+          claimed_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          tenant_id: string;
+          run_id: string;
+          claimed_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["inventory_feed_tenant_leases"]["Insert"]>;
+        Relationships: [];
+      };
+      inventory_export_destinations: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string;
+          endpoint_url: string;
+          http_method: "POST" | "PUT";
+          export_format: "csv" | "json" | "xml";
+          profile: Record<string, unknown>;
+          enabled: boolean;
+          schedule_minutes: number | null;
+          retry_delays_seconds: number[];
+          next_scheduled_at: string | null;
+          last_enqueued_at: string | null;
+          last_attempt_at: string | null;
+          last_succeeded_at: string | null;
+          last_noop_at: string | null;
+          last_payload_hash: string | null;
+          config_version: number;
+          consecutive_failure_count: number;
+          last_error: string | null;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["inventory_export_destinations"]["Row"],
+          | "id"
+          | "http_method"
+          | "export_format"
+          | "profile"
+          | "enabled"
+          | "retry_delays_seconds"
+          | "next_scheduled_at"
+          | "last_enqueued_at"
+          | "last_attempt_at"
+          | "last_succeeded_at"
+          | "last_noop_at"
+          | "last_payload_hash"
+          | "config_version"
+          | "consecutive_failure_count"
+          | "last_error"
+          | "archived_at"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          http_method?: "POST" | "PUT";
+          export_format?: "csv" | "json" | "xml";
+          profile?: Record<string, unknown>;
+          enabled?: boolean;
+          retry_delays_seconds?: number[];
+          next_scheduled_at?: string | null;
+          last_enqueued_at?: string | null;
+          last_attempt_at?: string | null;
+          last_succeeded_at?: string | null;
+          last_noop_at?: string | null;
+          last_payload_hash?: string | null;
+          config_version?: number;
+          consecutive_failure_count?: number;
+          last_error?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["inventory_export_destinations"]["Insert"]>;
+        Relationships: [];
+      };
+      inventory_export_destination_credentials: {
+        Row: {
+          export_destination_id: string;
+          tenant_id: string;
+          credential_ciphertext: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["inventory_export_destination_credentials"]["Row"],
+          "created_at" | "updated_at"
+        > & { created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["inventory_export_destination_credentials"]["Insert"]>;
+        Relationships: [];
+      };
+      inventory_export_runs: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          export_destination_id: string;
+          run_trigger: "manual" | "scheduled";
+          destination_snapshot: Record<string, unknown>;
+          status: "pending" | "delivering" | "retrying" | "succeeded" | "skipped" | "failed" | "dead_letter" | "cancelled";
+          attempt_count: number;
+          next_attempt_at: string;
+          claimed_at: string | null;
+          payload_hash: string | null;
+          record_count: number;
+          response_status: number | null;
+          last_error: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["inventory_export_runs"]["Row"],
+          | "id"
+          | "run_trigger"
+          | "destination_snapshot"
+          | "status"
+          | "attempt_count"
+          | "next_attempt_at"
+          | "claimed_at"
+          | "payload_hash"
+          | "record_count"
+          | "response_status"
+          | "last_error"
+          | "started_at"
+          | "completed_at"
+          | "created_at"
+          | "updated_at"
+        > & {
+          id?: string;
+          run_trigger?: "manual" | "scheduled";
+          destination_snapshot?: Record<string, unknown>;
+          status?: "pending" | "delivering" | "retrying" | "succeeded" | "skipped" | "failed" | "dead_letter" | "cancelled";
+          attempt_count?: number;
+          next_attempt_at?: string;
+          claimed_at?: string | null;
+          payload_hash?: string | null;
+          record_count?: number;
+          response_status?: number | null;
+          last_error?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["inventory_export_runs"]["Insert"]>;
+        Relationships: [];
+      };
       vehicles: {
         Row: {
           id: string;
@@ -1871,6 +2195,233 @@ export type Database = {
       fail_vehicle_image_description_job: {
         Args: {
           p_job_id: string;
+          p_attempt_count: number;
+          p_next_attempt_at: string | null;
+          p_error: string;
+        };
+        Returns: boolean;
+      };
+      create_inventory_feed_source: {
+        Args: {
+          p_tenant_id: string;
+          p_name: string;
+          p_source_kind: "https" | "storage" | "sftp";
+          p_source_url: string | null;
+          p_source_object_path: string | null;
+          p_source_format: "csv" | "json" | "xml";
+          p_profile: Record<string, unknown>;
+          p_sync_mode: "hybrid" | "mirror";
+          p_schedule_minutes: number | null;
+          p_retry_delays_seconds: number[];
+          p_enabled: boolean;
+          p_credential_ciphertext?: string | null;
+        };
+        Returns: string;
+      };
+      update_inventory_feed_source: {
+        Args: {
+          p_feed_source_id: string;
+          p_tenant_id: string;
+          p_name: string;
+          p_source_kind: "https" | "storage" | "sftp";
+          p_source_url: string | null;
+          p_source_object_path: string | null;
+          p_source_format: "csv" | "json" | "xml";
+          p_profile: Record<string, unknown>;
+          p_sync_mode: "hybrid" | "mirror";
+          p_schedule_minutes: number | null;
+          p_retry_delays_seconds: number[];
+          p_enabled: boolean;
+          p_credential_ciphertext?: string | null;
+          p_replace_credential?: boolean;
+        };
+        Returns: boolean;
+      };
+      archive_inventory_feed_source: {
+        Args: { p_feed_source_id: string; p_tenant_id: string };
+        Returns: boolean;
+      };
+      create_inventory_sftp_feed_source: {
+        Args: {
+          p_tenant_id: string;
+          p_name: string;
+          p_sftp_host: string;
+          p_sftp_port: number;
+          p_sftp_remote_path: string;
+          p_sftp_host_key_fingerprint: string;
+          p_source_format: "csv" | "json" | "xml";
+          p_profile: Record<string, unknown>;
+          p_sync_mode: "hybrid" | "mirror";
+          p_schedule_minutes: number | null;
+          p_retry_delays_seconds: number[];
+          p_enabled: boolean;
+          p_credential_ciphertext: string;
+        };
+        Returns: string;
+      };
+      update_inventory_sftp_feed_source: {
+        Args: {
+          p_feed_source_id: string;
+          p_tenant_id: string;
+          p_name: string;
+          p_sftp_host: string;
+          p_sftp_port: number;
+          p_sftp_remote_path: string;
+          p_sftp_host_key_fingerprint: string;
+          p_source_format: "csv" | "json" | "xml";
+          p_profile: Record<string, unknown>;
+          p_sync_mode: "hybrid" | "mirror";
+          p_schedule_minutes: number | null;
+          p_retry_delays_seconds: number[];
+          p_enabled: boolean;
+          p_credential_ciphertext?: string | null;
+          p_replace_credential?: boolean;
+        };
+        Returns: boolean;
+      };
+      set_inventory_feed_source_enabled: {
+        Args: { p_feed_source_id: string; p_tenant_id: string; p_enabled: boolean };
+        Returns: boolean;
+      };
+      enqueue_inventory_feed_run: {
+        Args: {
+          p_feed_source_id: string;
+          p_tenant_id: string;
+          p_run_trigger?: "manual" | "scheduled";
+        };
+        Returns: string | null;
+      };
+      enqueue_due_inventory_feed_runs: {
+        Args: { p_limit?: number };
+        Returns: { run_id: string }[];
+      };
+      claim_inventory_feed_runs: {
+        Args: { p_limit?: number };
+        Returns: {
+          id: string;
+          tenant_id: string;
+          feed_source_id: string;
+          run_trigger: "manual" | "scheduled";
+          source_snapshot: Record<string, unknown>;
+          attempt_count: number;
+          credential_ciphertext: string | null;
+          retry_delays_seconds: number[];
+          last_source_hash: string | null;
+          source_config_version: number;
+        }[];
+      };
+      heartbeat_inventory_feed_run: {
+        Args: { p_run_id: string; p_attempt_count: number };
+        Returns: boolean;
+      };
+      complete_inventory_feed_run: {
+        Args: {
+          p_run_id: string;
+          p_attempt_count: number;
+          p_status: "succeeded" | "partial" | "skipped";
+          p_source_hash: string | null;
+          p_input_bytes: number | null;
+          p_total_rows: number;
+          p_processed_rows: number;
+          p_created_rows: number;
+          p_updated_rows: number;
+          p_skipped_rows: number;
+          p_conflict_rows: number;
+          p_failed_rows: number;
+          p_errors?: Array<Record<string, unknown>>;
+        };
+        Returns: boolean;
+      };
+      fail_inventory_feed_run: {
+        Args: {
+          p_run_id: string;
+          p_attempt_count: number;
+          p_next_attempt_at: string | null;
+          p_error: string;
+        };
+        Returns: boolean;
+      };
+      create_inventory_export_destination: {
+        Args: {
+          p_tenant_id: string;
+          p_name: string;
+          p_endpoint_url: string;
+          p_http_method: "POST" | "PUT";
+          p_export_format: "csv" | "json" | "xml";
+          p_profile: Record<string, unknown>;
+          p_schedule_minutes: number | null;
+          p_retry_delays_seconds: number[];
+          p_enabled: boolean;
+          p_credential_ciphertext?: string | null;
+        };
+        Returns: string;
+      };
+      update_inventory_export_destination: {
+        Args: {
+          p_export_destination_id: string;
+          p_tenant_id: string;
+          p_name: string;
+          p_endpoint_url: string;
+          p_http_method: "POST" | "PUT";
+          p_export_format: "csv" | "json" | "xml";
+          p_profile: Record<string, unknown>;
+          p_schedule_minutes: number | null;
+          p_retry_delays_seconds: number[];
+          p_enabled: boolean;
+          p_credential_ciphertext?: string | null;
+          p_replace_credential?: boolean;
+        };
+        Returns: boolean;
+      };
+      archive_inventory_export_destination: {
+        Args: { p_export_destination_id: string; p_tenant_id: string };
+        Returns: boolean;
+      };
+      set_inventory_export_destination_enabled: {
+        Args: { p_export_destination_id: string; p_tenant_id: string; p_enabled: boolean };
+        Returns: boolean;
+      };
+      enqueue_inventory_export_run: {
+        Args: {
+          p_export_destination_id: string;
+          p_tenant_id: string;
+          p_run_trigger?: "manual" | "scheduled";
+        };
+        Returns: string | null;
+      };
+      enqueue_due_inventory_export_runs: {
+        Args: { p_limit?: number };
+        Returns: { run_id: string }[];
+      };
+      claim_inventory_export_runs: {
+        Args: { p_limit?: number };
+        Returns: {
+          id: string;
+          tenant_id: string;
+          export_destination_id: string;
+          run_trigger: "manual" | "scheduled";
+          destination_snapshot: Record<string, unknown>;
+          attempt_count: number;
+          credential_ciphertext: string | null;
+          retry_delays_seconds: number[];
+          last_payload_hash: string | null;
+          destination_config_version: number;
+        }[];
+      };
+      complete_inventory_export_run: {
+        Args: {
+          p_run_id: string;
+          p_attempt_count: number;
+          p_status: "succeeded" | "skipped";
+          p_payload_hash: string;
+          p_record_count: number;
+          p_response_status?: number | null;
+        };
+        Returns: boolean;
+      };
+      fail_inventory_export_run: {
+        Args: {
+          p_run_id: string;
           p_attempt_count: number;
           p_next_attempt_at: string | null;
           p_error: string;

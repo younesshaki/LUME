@@ -63,6 +63,23 @@ describe("vehicle query intent", () => {
     });
   });
 
+  it("does not turn comparison language into a model filter ('compare' -> 'Compass')", () => {
+    // Live-reproduced 2026-07-23: "compare the first two" answered
+    // "Nothing matches 2026 Compass" — the typo corrector rewrote the
+    // ordinary word "compare" into the catalog model "compass" before any
+    // model matching ran.
+    const vocabulary = { models: ["Compass", "Camry", "Cherokee"] };
+    expect(extractVehicleFilters("compare the first two", [], vocabulary)).toEqual({});
+    expect(extractVehicleFilters("compare the first and second", [], vocabulary)).toEqual({});
+    expect(
+      extractVehicleFilters("what is the difference between the first two", [], vocabulary),
+    ).toEqual({});
+    // An exactly named model still matches exactly.
+    expect(extractVehicleFilters("show me the compass", [], vocabulary)).toEqual({
+      model: "Compass",
+    });
+  });
+
   it("does not fuzzy-match the conjunction 'and' as AWD", () => {
     expect(
       extractVehicleFilters(

@@ -144,3 +144,37 @@ describe("groupManagedImagesByVehicle", () => {
     expect(grouped.get("v3")).toBeUndefined();
   });
 });
+
+describe("null image sources", () => {
+  // Both columns are nullable; vehicles imported without a photo arrive as
+  // null and used to crash the whole inventory page on `.trim()`.
+  it("resolves to null instead of throwing when both sources are null", () => {
+    expect(
+      resolveVehicleThumbnail({
+        managed: [],
+        vehicle: { special_image_src: null, image_src: null },
+        r2PublicBaseUrl: BASE_URL,
+      }),
+    ).toBeNull();
+  });
+
+  it("still prefers a managed image when the columns are null", () => {
+    const image = managed({ is_primary: true });
+    expect(
+      resolveVehicleThumbnail({
+        managed: [image],
+        vehicle: { special_image_src: null, image_src: null },
+        r2PublicBaseUrl: BASE_URL,
+      }),
+    ).toContain(image.r2_key);
+  });
+
+  it("reports no image source when both columns are null", () => {
+    expect(
+      vehicleHasImageSource({
+        hasManagedImage: false,
+        vehicle: { special_image_src: null, image_src: null },
+      }),
+    ).toBe(false);
+  });
+});

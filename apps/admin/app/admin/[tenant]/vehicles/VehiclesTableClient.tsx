@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import DeleteButton from "./DeleteButton";
 import { VehicleBulkToolbar } from "./VehicleBulkToolbar";
+import { FilterScopeBulkBar } from "./FilterScopeBulkBar";
+import type { InventoryFilterInput } from "./bulk-actions";
 
 type SortableColumn = "year" | "make" | "model" | "price" | "mileage";
 
@@ -51,6 +53,10 @@ type VehiclesTableClientProps = {
   sort: string;
   direction: "asc" | "desc";
   sortHrefs: Record<SortableColumn, string>;
+  /** Total rows matching the current filter, across every page. */
+  totalCount: number;
+  /** The filter itself, so bulk actions can act beyond this page. */
+  filter: InventoryFilterInput;
 };
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-US", {
@@ -78,6 +84,8 @@ export function VehiclesTableClient({
   sort,
   direction,
   sortHrefs,
+  totalCount,
+  filter,
 }: VehiclesTableClientProps) {
   // Selection is page-scoped and shared by both views: switching layout or
   // changing filters/pages prunes ids that are no longer on screen.
@@ -93,7 +101,18 @@ export function VehiclesTableClient({
     [selected, vehicles],
   );
   const allSelected = vehicles.length > 0 && selectedRows.length === vehicles.length;
-  const clearSelection = React.useCallback(() => setSelected(new Set()), []);
+  // "Select all N matching" is a mode, not a list of ids: past the page size
+  // the ids would exceed MAX_BULK_VEHICLES and any sane request payload.
+  const [filterScope, setFilterScope] = React.useState(false);
+  const clearSelection = React.useCallback(() => {
+    setSelected(new Set());
+    setFilterScope(false);
+  }, []);
+
+  // Leaving the page, or changing filters, drops the whole-filter mode too.
+  React.useEffect(() => {
+    setFilterScope(false);
+  }, [availableIds, totalCount]);
   const toggleOne = React.useCallback((vehicleId: string, checked: boolean) => {
     setSelected((current) => {
       const next = new Set(current);
@@ -105,12 +124,33 @@ export function VehiclesTableClient({
 
   return (
     <div className="space-y-3">
-      {selectedRows.length > 0 ? (
-        <VehicleBulkToolbar
+      {filterScope ? (
+        <FilterScopeBulkBar
           tenantSlug={tenantSlug}
-          selectedRows={selectedRows}
-          onCompleted={clearSelection}
+          filter={filter}
+          matchingCount={totalCount}
+          onClear={clearSelection}
         />
+      ) : selectedRows.length > 0 ? (
+        <>
+          <VehicleBulkToolbar
+            tenantSlug={tenantSlug}
+            selectedRows={selectedRows}
+            onCompleted={clearSelection}
+          />
+          {allSelected && totalCount > vehicles.length ? (
+            <p className="text-sm text-muted-foreground">
+              All {vehicles.length} on this page are selected.{" "}
+              <button
+                type="button"
+                onClick={() => setFilterScope(true)}
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Select all {totalCount.toLocaleString()} matching this filter
+              </button>
+            </p>
+          ) : null}
+        </>
       ) : null}
 
       {view === "grid" ? (
