@@ -8,6 +8,15 @@ _Update 2026-07-05: items 3 (partially), 4, 6 (partially) and 7 (persona row)
 are addressed by `scripts/create-tenant.ts` — see the runbook below. Items
 1, 2 (import UX), 5, 8, 9 remain open._
 
+_Update 2026-07-23: a launch-certification system now covers the "is this
+tenant ready for a real customer?" gap — a pure evaluator
+(`apps/admin/lib/launchReadiness.ts`, pilot/public profiles), a read-only
+tenant snapshot loader, a "Launch readiness" section on
+`/admin/[tenant]/website`, and a CLI (`npm run audit:tenant-launch -- --tenant
+<slug>`). Runbook: `docs/launch-readiness-runbook.md`. Items 1, 5, 8, 9 remain
+open; item 9's lifecycle transitions are now at least observable via the
+`account.tenant-active` check._
+
 ## The onboarding runbook (current)
 
 ```bash

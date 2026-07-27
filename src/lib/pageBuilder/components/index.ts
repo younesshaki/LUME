@@ -5,10 +5,12 @@ export { RichText } from "./RichText";
 export { ShowcaseGallery } from "./ShowcaseGallery";
 export { StatementList } from "./StatementList";
 export { VehicleInventory } from "./VehicleInventory";
+export { VehicleDetail } from "./VehicleDetail";
 export {
   FinanceCalculator,
   LeadCaptureForm,
   NewsletterSignup,
+  ServiceBooking,
   TestDriveBooking,
   TradeInForm,
 } from "./DealershipForms";

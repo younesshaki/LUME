@@ -11,21 +11,22 @@ around **getting inventory in** and **closing the loop back to the customer**.
 
 ---
 
-## 1. Automated inventory ingestion (feed sync) — strategic must-have
-**Problem.** Inventory today is CSV import + manual edits. Real dealerships keep
-inventory in a DMS or syndication feed (vAuto, HomeNet, DealerCenter, marketplace
-exports) that changes daily. Manual upkeep is a non-starter for real customers.
+## 1. Managed inventory ingestion + syndication — implementation awaiting rollout
+**Status (2026-07-24).** The review branch contains the additive, unapplied
+`077_managed_inventory_feeds_and_exports.sql` migration and Admin/worker code for
+tenant-scoped HTTPS CSV, JSON, and XML sources plus CSV, JSON, and XML outbound
+syndication. See `docs/architecture/managed-inventory-feeds-and-syndication-2026-07-24.md`.
 
-**What to build.** A scheduled connector that pulls a tenant's feed and reconciles
-it against `vehicles`: add new, update changed, retire sold, and route price
-changes into the existing `price_history`. Support at least one common feed format
-first (CSV/URL or a named provider), with a mapping/preview step.
+**What it does.** Scheduled sources add genuinely new stable-ID records and update
+matching VIN/stock records in place. They never delete/recreate inventory or retire
+units absent from a feed. Sold/archived identities are protected. Outbound
+destinations serialize only live inventory through constrained mapping profiles,
+with semantic no-op suppression.
 
-**Why it fits.** Everything else is polish on top of inventory. This decides
-whether a paying dealer can go live at all. Leverages: `vehicles`, `price_history`,
-`vehicle_images`/R2, existing CSV import as the manual fallback.
-
-**Priority:** must-have before real customer onboarding. Larger build.
+**Rollout remaining.** Review the branch, apply migration 077 to an explicitly
+approved environment, configure `CRON_SECRET` and any optional encrypted
+credential key, then validate a real supplier feed. Named DMS adapters such as
+DealerSync and FTP/SFTP remain deliberately out of scope.
 
 ---
 

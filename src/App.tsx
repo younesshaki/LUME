@@ -69,7 +69,7 @@ import {
   loadShowcasePage,
   loadShowcaseTitleCard,
   loadStoryHomePage,
-  loadVehicleDetailPage,
+  loadVehicleDetailPageRendererRoute,
   loadVehiclesPage,
   loadVehiclesPageRendererRoute,
   preloadVehiclesRoute,
@@ -88,7 +88,7 @@ const ContactPage = lazy(loadContactPage);
 const Experience = lazy(loadExperience);
 const ProductDetailPage = lazy(loadProductDetailPage);
 const ProductsPage = lazy(loadProductsPage);
-const VehicleDetailPage = lazy(loadVehicleDetailPage);
+const VehicleDetailPageRendererRoute = lazy(loadVehicleDetailPageRendererRoute);
 const VehiclesPage = lazy(loadVehiclesPage);
 const ShowcasePage = lazy(loadShowcasePage);
 const ShowcaseTitleCard = lazy(loadShowcaseTitleCard);
@@ -224,7 +224,7 @@ type VehicleDetailRouteProps = {
 function VehicleDetailRoute(props: VehicleDetailRouteProps) {
   const { vehicleId } = useParams();
 
-  return <VehicleDetailPage vehicleId={vehicleId ?? null} {...props} />;
+  return <VehicleDetailPageRendererRoute vehicleId={vehicleId ?? null} {...props} />;
 }
 
 type ShowcaseExperienceRouteProps = {

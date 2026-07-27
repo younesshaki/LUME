@@ -1,6 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
 import { after } from "next/server";
 import { enqueueVehicleImageDescription, validateUploadWithBytes } from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
@@ -9,6 +7,11 @@ import { readR2VehicleImageConfig } from "@/lib/r2Config";
 import { deleteR2Object } from "@/lib/r2Objects.server";
 import { presignR2Request } from "@/lib/r2Signing";
 import { checkRateLimit } from "@/lib/rateLimit";
+import {
+  fetchPinnedRemoteImage,
+  imageContentType,
+  resolvePublicRemoteTargets,
+} from "@/lib/remoteImageFetch";
 import {
   buildVehicleImageR2Key,
   MAX_VEHICLE_IMAGE_BYTES,
@@ -134,20 +137,15 @@ async function importOne(input: {
   tenantSlug: string;
   supabase: AuthorizedClient;
 }): Promise<ImportedImage> {
-  await assertPublicRemoteUrl(input.url);
-  const response = await fetch(input.url, {
-    cache: "no-store",
-    redirect: "error",
-    signal: AbortSignal.timeout(15_000),
+  // SD-001/002/003: resolve+validate once (public addresses only, mapped
+  // IPv6 included), then fetch pinned to the validated address with the body
+  // streamed under a hard cap — never re-resolving DNS at connect time,
+  // never trusting Content-Length, never following redirects.
+  const [target] = await resolvePublicRemoteTargets(input.url);
+  const { bytes } = await fetchPinnedRemoteImage(target, {
+    maxBytes: MAX_VEHICLE_IMAGE_BYTES,
+    timeoutMs: 15_000,
   });
-  if (!response.ok) throw new Error(`Feed image returned HTTP ${response.status}.`);
-  const length = Number(response.headers.get("content-length"));
-  if (Number.isFinite(length) && length > MAX_VEHICLE_IMAGE_BYTES) {
-    throw new Error("Feed image is larger than 10 MB.");
-  }
-
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength > MAX_VEHICLE_IMAGE_BYTES) throw new Error("Feed image is larger than 10 MB.");
   const contentType = imageContentType(bytes);
   if (!contentType) throw new Error("Feed image must be a JPEG, PNG, or WebP file.");
   const validated = validateUploadWithBytes(
@@ -208,44 +206,6 @@ async function importOne(input: {
     throw new Error(error?.message ?? "Unable to save imported image metadata.");
   }
   return data;
-}
-
-async function assertPublicRemoteUrl(value: string): Promise<void> {
-  const url = new URL(value);
-  const host = url.hostname.toLowerCase();
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
-    throw new Error("Feed image host is not publicly reachable.");
-  }
-  const addresses = await lookup(host, { all: true, verbatim: true });
-  if (addresses.length === 0 || addresses.some(({ address }) => !isPublicAddress(address))) {
-    throw new Error("Feed image host is not publicly reachable.");
-  }
-}
-
-function isPublicAddress(value: string): boolean {
-  if (isIP(value) === 4) {
-    const [a = 0, b = 0] = value.split(".").map(Number);
-    return a !== 0 && a !== 10 && a !== 127 && a < 224
-      && !(a === 100 && b >= 64 && b <= 127)
-      && !(a === 169 && b === 254)
-      && !(a === 172 && b >= 16 && b <= 31)
-      && !(a === 192 && b === 168)
-      && !(a === 198 && (b === 18 || b === 19));
-  }
-  const normalized = value.toLowerCase();
-  return normalized !== "::1" && !normalized.startsWith("fe80:")
-    && !normalized.startsWith("fc") && !normalized.startsWith("fd");
-}
-
-function imageContentType(bytes: Uint8Array): VehicleImageContentType | null {
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
-  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
-  if (bytes.length >= 12 && text(bytes, 0, 4) === "RIFF" && text(bytes, 8, 12) === "WEBP") return "image/webp";
-  return null;
-}
-
-function text(bytes: Uint8Array, start: number, end: number): string {
-  return String.fromCharCode(...bytes.slice(start, end));
 }
 
 async function readJson(request: Request): Promise<unknown> {

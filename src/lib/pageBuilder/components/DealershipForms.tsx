@@ -539,6 +539,142 @@ export function TestDriveBooking({ block }: BlockComponentProps) {
   );
 }
 
+export function ServiceBooking({ block }: BlockComponentProps) {
+  const [contact, setContact] = useState<ContactState>(EMPTY_CONTACT);
+  const [request, setRequest] = useState({
+    serviceType: "Scheduled maintenance",
+    vehicle: "",
+    date: "",
+    time: "Morning",
+    notes: "",
+  });
+  const lead = useLeadSubmission(stringProp(block, "successMessage"));
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void lead.send(
+      {
+        ...contact,
+        source: "contact-form",
+        message: [
+          "[Service booking request]",
+          `Service type: ${request.serviceType}`,
+          `Vehicle: ${request.vehicle}`,
+          `Preferred date: ${request.date}`,
+          `Preferred time: ${request.time}`,
+          request.notes ? `Notes: ${request.notes}` : "",
+        ].filter(Boolean).join("\n"),
+      },
+      () => {
+        setContact(EMPTY_CONTACT);
+        setRequest({
+          serviceType: "Scheduled maintenance",
+          vehicle: "",
+          date: "",
+          time: "Morning",
+          notes: "",
+        });
+      },
+    );
+  }
+
+  return (
+    <DealershipSection block={block} className="dealershipBlock--form">
+      <form
+        className="dealershipForm"
+        onSubmit={handleSubmit}
+        aria-busy={lead.submission.type === "submitting"}
+      >
+        <div className="dealershipForm__grid">
+          <label className="dealershipForm__field">
+            <span>Service type</span>
+            <select
+              name="serviceType"
+              value={request.serviceType}
+              onChange={(event) =>
+                setRequest((current) => ({ ...current, serviceType: event.target.value }))
+              }
+            >
+              <option>Scheduled maintenance</option>
+              <option>Oil &amp; filter change</option>
+              <option>Brakes</option>
+              <option>Tires &amp; alignment</option>
+              <option>Diagnostics</option>
+              <option>Body &amp; paint</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label className="dealershipForm__field">
+            <span>Vehicle</span>
+            <input
+              name="serviceVehicle"
+              required
+              placeholder="Year, make, and model"
+              value={request.vehicle}
+              onChange={(event) =>
+                setRequest((current) => ({ ...current, vehicle: event.target.value }))
+              }
+            />
+          </label>
+          <label className="dealershipForm__field">
+            <span>Preferred date</span>
+            <input
+              name="serviceDate"
+              type="date"
+              required
+              value={request.date}
+              onChange={(event) =>
+                setRequest((current) => ({ ...current, date: event.target.value }))
+              }
+            />
+          </label>
+          <label className="dealershipForm__field">
+            <span>Preferred time</span>
+            <select
+              name="serviceTime"
+              value={request.time}
+              onChange={(event) =>
+                setRequest((current) => ({ ...current, time: event.target.value }))
+              }
+            >
+              <option>Morning</option>
+              <option>Afternoon</option>
+              <option>Evening</option>
+            </select>
+          </label>
+        </div>
+        <ContactFields value={contact} onChange={setContact} />
+        <label className="dealershipForm__field">
+          <span>Anything the service team should know?</span>
+          <textarea
+            name="serviceNotes"
+            rows={4}
+            value={request.notes}
+            onChange={(event) =>
+              setRequest((current) => ({ ...current, notes: event.target.value }))
+            }
+          />
+        </label>
+        <FormVerification
+          resetKey={lead.turnstileResetKey}
+          onToken={lead.setTurnstileToken}
+        />
+        <FormFeedback submission={lead.submission} />
+        <button
+          className="dealershipForm__submit"
+          type="submit"
+          disabled={submitDisabled(lead.submission, lead.turnstileToken)}
+        >
+          {lead.submission.type === "submitting"
+            ? "Sending…"
+            : stringProp(block, "buttonLabel")}
+          <ArrowRight aria-hidden="true" />
+        </button>
+      </form>
+    </DealershipSection>
+  );
+}
+
 export function LeadCaptureForm({ block }: BlockComponentProps) {
   const [contact, setContact] = useState<ContactState>(EMPTY_CONTACT);
   const [message, setMessage] = useState("");

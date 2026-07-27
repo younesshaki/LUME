@@ -7,6 +7,7 @@ export const loadExperience = () => import("@/experience/Experience");
 export const loadProductDetailPage = () => import("@/experience/ui/ProductDetailPage");
 export const loadProductsPage = () => import("@/experience/ui/ProductsPage");
 export const loadVehicleDetailPage = () => import("@/experience/ui/VehicleDetailPage");
+export const loadVehicleDetailPageRendererRoute = () => import("@/lib/pageBuilder/VehicleDetailPageRendererRoute");
 export const loadVehiclesPage = () => import("@/experience/ui/VehiclesPage");
 export const loadVehiclesPageRendererRoute = () => import("@/lib/pageBuilder/VehiclesPageRendererRoute");
 export const loadShowcasePage = () => import("@/experience/ui/ShowcasePage");

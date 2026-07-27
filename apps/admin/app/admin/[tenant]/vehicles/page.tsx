@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ArchiveWithoutPhotosButton } from "./ArchiveWithoutPhotosButton";
 import { VehiclesTableClient, type InventoryView } from "./VehiclesTableClient";
 
 type PageProps = {
@@ -234,7 +235,9 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         </nav>
       </div>
 
-      {view === "grid" ? (
+      {/* Photo filter applies to both views: the table is where bulk photo
+          hygiene actually happens. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <nav className="flex flex-wrap items-center gap-2" aria-label="Filter vehicles by photo availability">
           <span className="text-sm text-muted-foreground">Photos</span>
           {([
@@ -257,7 +260,8 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
             </Button>
           ))}
         </nav>
-      ) : null}
+        <ArchiveWithoutPhotosButton tenantSlug={slug} />
+      </div>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <form method="get" className="relative w-full max-w-sm">
@@ -363,6 +367,8 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
           sort={sort}
           direction={dir}
           sortHrefs={sortHrefs}
+          totalCount={totalCount}
+          filter={{ status, q, images: imageFilter }}
         />
       )}
 
