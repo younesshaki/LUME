@@ -3,6 +3,7 @@ import type {
   BotPersonaCapabilities,
   BotPersonaTone,
 } from "@lume/types";
+import { DEFAULT_BOT_PERSONA_SYSTEM_PROMPT } from "@lume/types";
 
 export type BotPersonaRow = {
   id: string;
@@ -39,8 +40,9 @@ export const DEFAULT_BOT_PERSONA_CAPABILITIES: Required<BotPersonaCapabilities> 
   scheduleAppointment: false,
 };
 
-export const DEFAULT_SYSTEM_PROMPT =
-  "Represent this tenant with discretion. Keep responses accurate, tenant-specific, and action-oriented. Use the configured capabilities only when they directly help the visitor.";
+/** Re-exported so existing admin imports keep working; owned by @lume/types
+ *  because tenant provisioning (scripts/create-tenant.ts) needs it too. */
+export const DEFAULT_SYSTEM_PROMPT = DEFAULT_BOT_PERSONA_SYSTEM_PROMPT;
 
 export function defaultPersona(tenantId: string): BotPersona {
   const now = new Date(0).toISOString();
