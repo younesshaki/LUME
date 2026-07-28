@@ -62,7 +62,42 @@ export async function POST(request: Request, { params }: Props): Promise<Respons
   if (executed.capabilityId === "feed.run.enqueue") {
     return verifyFeedRunCommand(supabase, tenant.id, userData.user.id, commandId, executed.result, request);
   }
+  if (executed.capabilityId === "lead.assign") {
+    return verifyLeadAssignCommand(supabase, tenant.id, userData.user.id, commandId, executed.result, request);
+  }
   return verifyLeadStatusCommand(supabase, tenant.id, userData.user.id, commandId, executed.result, request);
+}
+
+/**
+ * Same contract as the status verifier: the RPC receipt is never trusted on
+ * its own. Re-read the lead through the authenticated tenant client and prove
+ * the stored assignee is the one the operator approved.
+ */
+async function verifyLeadAssignCommand(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  actorUserId: string,
+  commandId: string,
+  executed: Extract<Awaited<ReturnType<typeof executeAdminConciergeCommand>>, { capabilityId: "lead.assign" }>['result'] & { ok: true },
+  request: Request,
+): Promise<Response> {
+  const { data: lead, error: verifyError } = await supabase
+    .from("leads")
+    .select("id, assigned_to")
+    .eq("tenant_id", tenantId)
+    .eq("id", executed.leadId)
+    .maybeSingle();
+  if (verifyError || !lead || lead.assigned_to !== executed.assigneeUserId) {
+    return json({ error: "The assignment could not be verified after execution." }, 502);
+  }
+  void actorUserId;
+  void commandId;
+  void request;
+  return json({
+    reply: executed.alreadyExecuted
+      ? `That lead was already assigned to ${executed.assigneeLabel}.`
+      : `Assigned to ${executed.assigneeLabel}.`,
+  });
 }
 
 async function verifyLeadStatusCommand(

@@ -32,7 +32,12 @@ import {
 } from "@/lib/conciergeModels";
 import { checkChatRateLimit } from "@/lib/rateLimit";
 import { captureDebug, captureError } from "@/lib/observability";
-import { createFeedRunCommand, createLeadStatusCommand } from "@/lib/adminConciergeCommands.server";
+import {
+  createFeedRunCommand,
+  createLeadAssignCommand,
+  createLeadStatusCommand,
+  resolveTenantTeammateNames,
+} from "@/lib/adminConciergeCommands.server";
 import {
   adminConversationMemoryKey,
   getConversationMemoryStore,
@@ -219,6 +224,8 @@ export async function POST(request: Request): Promise<Response> {
       return inspectFeedRuns(supabase, tenant.id, tenant.slug, intent.status, source, memoryStore, memoryKey);
     case "enqueue_feed_run":
       return prepareFeedRun(supabase, tenant.id, userData.user.id, intent.feedQuery, source);
+    case "assign_lead":
+      return prepareLeadAssign(supabase, tenant.id, userData.user.id, intent.leadQuery, intent.assigneeQuery, source);
     case "update_lead_status":
       return prepareLeadStatusUpdate(
         supabase,
@@ -853,6 +860,117 @@ async function persistAdminResultSet(
   await memoryStore.append(memoryKey, { conversationState: state }).catch(() => undefined);
 }
 
+/**
+ * Prepare a reviewed lead assignment.
+ *
+ * Both the lead and the teammate are resolved deterministically against
+ * tenant-scoped reads, and BOTH must be unambiguous. An ambiguous teammate is
+ * the dangerous case — assigning a lead to the wrong salesperson moves
+ * commission — so more than one match asks rather than picking.
+ */
+async function prepareLeadAssign(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  actorUserId: string,
+  leadQuery: string,
+  assigneeQuery: string,
+  source: "deterministic" | "model",
+): Promise<Response> {
+  const { data: canWrite, error: roleError } = await supabase.rpc("user_has_tenant_role", {
+    p_tenant_id: tenantId,
+    p_roles: ["editor", "admin", "owner"],
+  });
+  if (roleError || !canWrite) {
+    return json({ source, reply: "Editor access is required to prepare a lead assignment." }, 403);
+  }
+
+  const clean = (value: string) =>
+    value.replace(/[^\p{L}\p{N}\s@.+-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  const safeLead = clean(leadQuery);
+  const safeAssignee = clean(assigneeQuery);
+  if (!safeLead || !safeAssignee) return unsupported();
+
+  const leadTerm = `%${safeLead.replace(/[%_]/g, (character) => `\\${character}`)}%`;
+  const { data: leads, error: leadError } = await supabase
+    .from("leads")
+    .select("id, first_name, last_name, email, status, assigned_to, created_at")
+    .eq("tenant_id", tenantId)
+    .or(`first_name.ilike.${leadTerm},last_name.ilike.${leadTerm},email.ilike.${leadTerm}`)
+    .order("created_at", { ascending: false })
+    .limit(3);
+  if (leadError) return json({ error: "Unable to resolve that lead right now." }, 502);
+  if (!leads?.length) {
+    return json({ source, reply: `I couldn’t find a lead matching “${safeLead}”, so I didn’t prepare anything.` });
+  }
+  if (leads.length > 1) {
+    return json({
+      source,
+      reply: `I found ${leads.length} leads matching “${safeLead}”. Please be more specific so I assign the right one.`,
+      candidates: leads.map((lead) => ({ id: lead.id, label: leadLabel(lead), status: lead.status })),
+    });
+  }
+  const lead = leads[0];
+
+  // Teammates are resolved from this tenant's membership only, then matched by
+  // username. The model never supplies a user id.
+  const { data: members, error: memberError } = await supabase
+    .from("tenant_members")
+    .select("user_id")
+    .eq("tenant_id", tenantId);
+  if (memberError) return json({ error: "Unable to read the team right now." }, 502);
+  const memberIds = (members ?? []).map((member) => member.user_id);
+  if (!memberIds.length) {
+    return json({ source, reply: "This tenant has no teammates to assign leads to yet." });
+  }
+
+  // profiles is RLS'd to the caller's own row, so teammates must be read
+  // through the service path — bounded to the member ids resolved above.
+  const profiles = await resolveTenantTeammateNames(memberIds);
+
+  const needle = safeAssignee.toLowerCase();
+  const candidates = profiles.filter((profile) => profile.username.toLowerCase().includes(needle));
+  if (!candidates.length) {
+    return json({ source, reply: `No teammate here matches “${safeAssignee}”, so I didn’t prepare an assignment.` });
+  }
+  if (candidates.length > 1) {
+    return json({
+      source,
+      reply: `“${safeAssignee}” matches ${candidates.length} teammates. Please name one exactly so I assign the right person.`,
+      candidates: candidates.map((profile) => ({ id: profile.id, label: profile.username, status: "member" })),
+    });
+  }
+  const assignee = candidates[0];
+
+  if (lead.assigned_to === assignee.id) {
+    return json({ source, reply: `${leadLabel(lead)} is already assigned to ${assignee.username}.` });
+  }
+
+  const created = await createLeadAssignCommand({
+    tenantId,
+    actorUserId,
+    lead: { id: lead.id, label: leadLabel(lead), currentAssignee: lead.assigned_to },
+    assignee: { userId: assignee.id, label: assignee.username },
+  });
+  if (!created.ok) {
+    return json({
+      error: created.reason === "migration_required"
+        ? "Reviewed admin commands are not available until migration 082 is applied."
+        : "Unable to prepare the reviewed command.",
+    }, 503);
+  }
+
+  return json({
+    source,
+    reply: `Ready to assign ${leadLabel(lead)} to ${assignee.username}. Confirm to apply it.`,
+    command: {
+      id: created.command.commandId,
+      expiresAt: created.command.expiresAt,
+      capabilityId: "lead.assign",
+      summary: `Assign ${leadLabel(lead)} to ${assignee.username}`,
+    },
+  });
+}
+
 async function prepareLeadStatusUpdate(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   tenantId: string,
@@ -1023,6 +1141,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
       return { kind: intent.kind, days: intent.days };
     case "inspect_launch_readiness":
       return { kind: intent.kind };
+    case "assign_lead":
+      return { kind: intent.kind, hasLead: Boolean(intent.leadQuery), hasAssignee: Boolean(intent.assigneeQuery) };
     case "search_vehicles":
       return { kind: intent.kind, hasQuery: Boolean(intent.query) };
     case "search_leads":

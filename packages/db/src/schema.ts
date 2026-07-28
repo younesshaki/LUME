@@ -27,6 +27,22 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["tenants"]["Insert"]>;
         Relationships: [];
       };
+      profiles: {
+        Row: {
+          id: string;
+          username: string;
+          created_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          id: string;
+          username: string;
+          created_at?: string;
+          last_seen_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Relationships: [];
+      };
       tenant_members: {
         Row: {
           tenant_id: string;
@@ -1130,7 +1146,7 @@ export type Database = {
           id: string;
           tenant_id: string;
           actor_user_id: string | null;
-          capability_id: "lead.status.update" | "feed.run.enqueue";
+          capability_id: "lead.status.update" | "feed.run.enqueue" | "lead.assign";
           intent: Record<string, unknown>;
           preview: Record<string, unknown>;
           status: "pending" | "executed" | "failed" | "expired" | "cancelled";
@@ -1933,6 +1949,10 @@ export type Database = {
         Returns: boolean;
       };
       execute_admin_concierge_lead_status_command: {
+        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Returns: Record<string, unknown>;
+      };
+      execute_admin_concierge_lead_assign_command: {
         Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
         Returns: Record<string, unknown>;
       };

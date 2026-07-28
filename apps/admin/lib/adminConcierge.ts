@@ -48,6 +48,7 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("vehicles.new", "Open the new-vehicle form", "navigate", "editor", "/vehicles/new", ["add vehicle", "add a vehicle", "new vehicle", "create vehicle", "add car", "add a car", "new car"]),
   capability("vehicles.import", "Open inventory import", "navigate", "editor", "/vehicles/import", ["import inventory", "import vehicles", "import csv", "upload inventory", "upload vehicles", "bulk import", "csv import"]),
   capability("leads.search", "Find leads", "read", "viewer", "/leads", ["lead", "leads", "inquiry", "inquiries"]),
+  capability("lead.assign", "Assign one lead to a teammate", "write", "editor", "/leads", ["assign lead", "reassign lead", "give this lead", "hand off lead"], "standard"),
   capability("lead.status.update", "Update one lead status", "write", "editor", "/leads", ["mark lead", "update lead"], "standard"),
   capability("customers.view", "Open customers", "navigate", "viewer", "/customers", ["customer", "customers", "customer 360"]),
   capability("customers.search", "Find customers", "read", "viewer", "/customers", ["find customer", "search customer", "look up customer"]),
@@ -102,6 +103,7 @@ export type AdminConciergeIntent =
   | { kind: "inspect_photo_gap" }
   | { kind: "inspect_aging_inventory"; days: number }
   | { kind: "inspect_launch_readiness" }
+  | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "unsupported" };
@@ -119,6 +121,7 @@ export type AdminConciergeModelPlan =
   | { kind: "inspect_photo_gap" }
   | { kind: "inspect_aging_inventory"; days: number }
   | { kind: "inspect_launch_readiness" }
+  | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "clarify" };
@@ -162,6 +165,9 @@ export function parseAdminConciergeRequest(body: unknown): ParsedAdminConciergeR
 export function compileDeterministicAdminIntent(message: string): AdminConciergeIntent {
   const normalized = normalize(message);
   const asksToFind = /\b(find|show|list|search|look up|open)\b/.test(normalized);
+
+  const leadAssign = extractLeadAssignment(message);
+  if (leadAssign) return { kind: "assign_lead", ...leadAssign };
 
   const leadStatusUpdate = extractLeadStatusUpdate(message);
   if (leadStatusUpdate) return { kind: "update_lead_status", ...leadStatusUpdate };
@@ -327,6 +333,8 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
     case "inspect_launch_readiness":
     case "unsupported":
       return "viewer";
+    case "assign_lead":
+      return "editor";
   }
 }
 
@@ -530,4 +538,23 @@ function agingThresholdFromMessage(normalized: string): number {
   if (!match) return 60;
   const days = Number(match[1]);
   return Number.isFinite(days) && days >= 1 && days <= 365 ? days : 60;
+}
+
+/**
+ * "assign <lead> to <teammate>" only. Both halves must be present and
+ * non-empty; a half-formed instruction falls through to the normal pipeline
+ * rather than being guessed at, because guessing here reassigns someone's
+ * commission.
+ */
+export function extractLeadAssignment(
+  message: string,
+): { leadQuery: string; assigneeQuery: string } | null {
+  const match = message.match(
+    /\b(?:assign|reassign|hand off|give)\s+(?:the\s+)?(?:lead\s+)?(.+?)\s+to\s+(.+?)\s*$/i,
+  );
+  if (!match) return null;
+  const leadQuery = match[1].replace(/\blead\b/gi, " ").replace(/\s+/g, " ").trim();
+  const assigneeQuery = match[2].replace(/\s+/g, " ").trim().replace(/[.!?]+$/, "");
+  if (leadQuery.length < 2 || assigneeQuery.length < 2) return null;
+  return { leadQuery, assigneeQuery };
 }

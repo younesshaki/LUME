@@ -8,6 +8,7 @@ import {
   capabilityFromAdminPath,
   buildAdminConciergeSystemPrompt,
   compileDeterministicAdminIntent,
+  extractLeadAssignment,
   findNavigationCapability,
   hasAdminCapabilityRole,
   parseAdminConciergeModelPlan,
@@ -15,13 +16,28 @@ import {
 } from "./adminConcierge";
 
 describe("admin concierge control plane", () => {
-  it("keeps the launch registry read-only except for two confirmed bounded capabilities", () => {
+  // The registry stays read-only apart from an explicit, enumerated set of
+  // bounded write capabilities. Adding a write must be a deliberate edit here,
+  // not something that slips in with a feature.
+  const CONFIRMED_WRITES = ["lead.status.update", "feed.run.enqueue", "lead.assign"];
+
+  it("keeps the launch registry read-only except for confirmed bounded capabilities", () => {
     expect(ADMIN_CAPABILITIES.every((capability) =>
       capability.effect === "read" || capability.effect === "navigate" ||
-      capability.id === "lead.status.update" || capability.id === "feed.run.enqueue",
+      CONFIRMED_WRITES.includes(capability.id),
     )).toBe(true);
-    expect(capabilityById("lead.status.update")?.confirmation).toBe("standard");
-    expect(capabilityById("feed.run.enqueue")?.confirmation).toBe("standard");
+  });
+
+  it("requires explicit confirmation on every write", () => {
+    for (const id of CONFIRMED_WRITES) {
+      expect(capabilityById(id)?.confirmation).toBe("standard");
+      expect(capabilityById(id)?.effect).toBe("write");
+    }
+  });
+
+  it("has no write capability outside the enumerated set", () => {
+    const writes = ADMIN_CAPABILITIES.filter((c) => c.effect === "write").map((c) => c.id).sort();
+    expect(writes).toEqual([...CONFIRMED_WRITES].sort());
   });
 
   it("covers every tenant-facing sidebar surface with an explicit capability", () => {
@@ -304,5 +320,45 @@ describe("launch readiness intent", () => {
   it("does not swallow unrelated requests", () => {
     expect(intent("show me BMW vehicles").kind).toBe("search_vehicles");
     expect(intent("add a vehicle").kind).toBe("navigate");
+  });
+});
+
+describe("lead assignment intent", () => {
+  const intent = (message: string) => compileDeterministicAdminIntent(message);
+
+  it("parses both halves of an assignment", () => {
+    expect(extractLeadAssignment("assign Jane Doe to marcus")).toEqual({
+      leadQuery: "Jane Doe",
+      assigneeQuery: "marcus",
+    });
+  });
+
+  it("accepts the natural phrasings", () => {
+    for (const phrase of [
+      "reassign the lead Jane Doe to marcus",
+      "hand off Jane Doe to marcus",
+      "give the lead Jane Doe to marcus",
+    ]) {
+      expect(intent(phrase).kind).toBe("assign_lead");
+    }
+  });
+
+  // Guessing here reassigns someone's commission, so a half-formed
+  // instruction must fall through rather than be completed.
+  it("refuses a half-formed instruction", () => {
+    expect(extractLeadAssignment("assign Jane Doe")).toBeNull();
+    expect(extractLeadAssignment("assign to marcus")).toBeNull();
+    expect(extractLeadAssignment("assign J to m")).toBeNull();
+  });
+
+  it("requires editor to even prepare one", () => {
+    expect(adminIntentMinimumRole({ kind: "assign_lead", leadQuery: "a", assigneeQuery: "b" })).toBe("editor");
+    expect(capabilityById("lead.assign")?.effect).toBe("write");
+    expect(capabilityById("lead.assign")?.confirmation).toBe("standard");
+  });
+
+  it("does not hijack unrelated requests", () => {
+    expect(intent("show me new leads").kind).toBe("search_leads");
+    expect(intent("mark Jane Doe as contacted").kind).toBe("update_lead_status");
   });
 });

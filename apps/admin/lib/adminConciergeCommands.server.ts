@@ -3,8 +3,10 @@ import "server-only";
 import { createServiceClient } from "@lume/db/server";
 import {
   parseFeedRunCommandReceipt,
+  parseLeadAssignCommandReceipt,
   parseLeadStatusCommandReceipt,
   type ExecutedFeedRunCommand,
+  type ExecutedLeadAssignCommand,
   type ExecutedLeadStatusCommand,
 } from "./adminConciergeCommandReceipt";
 
@@ -79,6 +81,71 @@ export async function executeLeadStatusCommand(input: {
   return error ? parseLeadStatusCommandReceipt(null) : parseLeadStatusCommandReceipt(data);
 }
 
+export type LeadAssignCommandPreview = {
+  commandId: string;
+  expiresAt: string;
+  lead: { id: string; label: string };
+  assignee: { userId: string; label: string };
+};
+
+export type CreateLeadAssignCommandResult =
+  | { ok: true; command: LeadAssignCommandPreview }
+  | { ok: false; reason: "migration_required" | "unavailable" };
+
+export async function createLeadAssignCommand(input: {
+  tenantId: string;
+  actorUserId: string;
+  lead: { id: string; label: string; currentAssignee: string | null };
+  assignee: { userId: string; label: string };
+}): Promise<CreateLeadAssignCommandResult> {
+  const expiresAt = new Date(Date.now() + COMMAND_TTL_MS).toISOString();
+  const preview = {
+    // currentAssignee is the compare-and-swap precondition the executor checks.
+    lead: { id: input.lead.id, label: input.lead.label, currentAssignee: input.lead.currentAssignee },
+    assignee: { userId: input.assignee.userId, label: input.assignee.label },
+  };
+  const { data, error } = await createServiceClient()
+    .from("admin_concierge_commands")
+    .insert({
+      tenant_id: input.tenantId,
+      actor_user_id: input.actorUserId,
+      capability_id: "lead.assign",
+      intent: { leadId: input.lead.id, assigneeUserId: input.assignee.userId },
+      preview,
+      expires_at: expiresAt,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    return { ok: false, reason: error?.code === "42P01" ? "migration_required" : "unavailable" };
+  }
+  return {
+    ok: true,
+    command: {
+      commandId: data.id,
+      expiresAt,
+      lead: { id: input.lead.id, label: input.lead.label },
+      assignee: preview.assignee,
+    },
+  };
+}
+
+export async function executeLeadAssignCommand(input: {
+  commandId: string;
+  tenantId: string;
+  actorUserId: string;
+}): Promise<ExecutedLeadAssignCommand> {
+  const { data, error } = await createServiceClient().rpc(
+    "execute_admin_concierge_lead_assign_command",
+    {
+      p_command_id: input.commandId,
+      p_tenant_id: input.tenantId,
+      p_actor_user_id: input.actorUserId,
+    },
+  );
+  return error ? parseLeadAssignCommandReceipt(null) : parseLeadAssignCommandReceipt(data);
+}
+
 export async function createFeedRunCommand(input: {
   tenantId: string;
   actorUserId: string;
@@ -120,10 +187,11 @@ export async function executeFeedRunCommand(input: {
   return error ? parseFeedRunCommandReceipt(null) : parseFeedRunCommandReceipt(data);
 }
 
-export type AdminConciergeCommandCapability = "lead.status.update" | "feed.run.enqueue";
+export type AdminConciergeCommandCapability = "lead.status.update" | "feed.run.enqueue" | "lead.assign";
 export type ExecutedAdminConciergeCommand =
   | { capabilityId: "lead.status.update"; result: ExecutedLeadStatusCommand }
   | { capabilityId: "feed.run.enqueue"; result: ExecutedFeedRunCommand }
+  | { capabilityId: "lead.assign"; result: ExecutedLeadAssignCommand }
   | { capabilityId: null; result: { ok: false; reason: "not_found" | "unavailable"; error: string } };
 
 /** Load only the command kind needed to select the independently secured executor. */
@@ -140,7 +208,9 @@ export async function getAdminConciergeCommandCapability(input: {
     .eq("actor_user_id", input.actorUserId)
     .maybeSingle();
   if (error || !data) return null;
-  return data.capability_id === "lead.status.update" || data.capability_id === "feed.run.enqueue"
+  return data.capability_id === "lead.status.update"
+    || data.capability_id === "feed.run.enqueue"
+    || data.capability_id === "lead.assign"
     ? data.capability_id
     : null;
 }
@@ -154,5 +224,29 @@ export async function executeAdminConciergeCommand(input: {
   if (input.capabilityId === "lead.status.update") {
     return { capabilityId: input.capabilityId, result: await executeLeadStatusCommand(input) };
   }
+  if (input.capabilityId === "lead.assign") {
+    return { capabilityId: input.capabilityId, result: await executeLeadAssignCommand(input) };
+  }
   return { capabilityId: input.capabilityId, result: await executeFeedRunCommand(input) };
+}
+
+/**
+ * Resolve teammate display names for an already-verified member list.
+ *
+ * profiles is RLS'd to `auth.uid() = id`, so the authenticated tenant client
+ * can only ever see the caller's own row — teammates are invisible to it. The
+ * service client is safe here because the caller has already reduced the ids
+ * to confirmed members of one tenant; this function never widens that set.
+ */
+export async function resolveTenantTeammateNames(
+  memberUserIds: readonly string[],
+): Promise<Array<{ id: string; username: string }>> {
+  if (memberUserIds.length === 0) return [];
+  const { data, error } = await createServiceClient()
+    .from("profiles")
+    .select("id, username")
+    .in("id", [...memberUserIds]);
+  if (error || !data) return [];
+  return data.flatMap((row) =>
+    typeof row.username === "string" && row.username ? [{ id: row.id, username: row.username }] : []);
 }
