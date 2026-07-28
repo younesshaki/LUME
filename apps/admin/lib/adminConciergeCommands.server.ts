@@ -4,9 +4,11 @@ import { createServiceClient } from "@lume/db/server";
 import {
   parseFeedRunCommandReceipt,
   parseLeadAssignCommandReceipt,
+  parseVehiclePriceCommandReceipt,
   parseLeadStatusCommandReceipt,
   type ExecutedFeedRunCommand,
   type ExecutedLeadAssignCommand,
+  type ExecutedVehiclePriceCommand,
   type ExecutedLeadStatusCommand,
 } from "./adminConciergeCommandReceipt";
 
@@ -146,6 +148,66 @@ export async function executeLeadAssignCommand(input: {
   return error ? parseLeadAssignCommandReceipt(null) : parseLeadAssignCommandReceipt(data);
 }
 
+export type VehiclePriceCommandPreview = {
+  commandId: string;
+  expiresAt: string;
+  vehicle: { id: string; label: string; currentPrice: number; nextPrice: number };
+};
+
+export type CreateVehiclePriceCommandResult =
+  | { ok: true; command: VehiclePriceCommandPreview }
+  | { ok: false; reason: "migration_required" | "unavailable" };
+
+export async function createVehiclePriceCommand(input: {
+  tenantId: string;
+  actorUserId: string;
+  vehicle: { id: string; label: string; currentPrice: number };
+  nextPrice: number;
+}): Promise<CreateVehiclePriceCommandResult> {
+  const expiresAt = new Date(Date.now() + COMMAND_TTL_MS).toISOString();
+  const preview = {
+    // currentPrice is the compare-and-swap precondition the executor checks.
+    vehicle: {
+      id: input.vehicle.id,
+      label: input.vehicle.label,
+      currentPrice: input.vehicle.currentPrice,
+      nextPrice: input.nextPrice,
+    },
+  };
+  const { data, error } = await createServiceClient()
+    .from("admin_concierge_commands")
+    .insert({
+      tenant_id: input.tenantId,
+      actor_user_id: input.actorUserId,
+      capability_id: "vehicle.price.update",
+      intent: { vehicleId: input.vehicle.id, price: input.nextPrice },
+      preview,
+      expires_at: expiresAt,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    return { ok: false, reason: error?.code === "42P01" ? "migration_required" : "unavailable" };
+  }
+  return { ok: true, command: { commandId: data.id, expiresAt, vehicle: preview.vehicle } };
+}
+
+export async function executeVehiclePriceCommand(input: {
+  commandId: string;
+  tenantId: string;
+  actorUserId: string;
+}): Promise<ExecutedVehiclePriceCommand> {
+  const { data, error } = await createServiceClient().rpc(
+    "execute_admin_concierge_vehicle_price_command",
+    {
+      p_command_id: input.commandId,
+      p_tenant_id: input.tenantId,
+      p_actor_user_id: input.actorUserId,
+    },
+  );
+  return error ? parseVehiclePriceCommandReceipt(null) : parseVehiclePriceCommandReceipt(data);
+}
+
 export async function createFeedRunCommand(input: {
   tenantId: string;
   actorUserId: string;
@@ -187,11 +249,12 @@ export async function executeFeedRunCommand(input: {
   return error ? parseFeedRunCommandReceipt(null) : parseFeedRunCommandReceipt(data);
 }
 
-export type AdminConciergeCommandCapability = "lead.status.update" | "feed.run.enqueue" | "lead.assign";
+export type AdminConciergeCommandCapability = "lead.status.update" | "feed.run.enqueue" | "lead.assign" | "vehicle.price.update";
 export type ExecutedAdminConciergeCommand =
   | { capabilityId: "lead.status.update"; result: ExecutedLeadStatusCommand }
   | { capabilityId: "feed.run.enqueue"; result: ExecutedFeedRunCommand }
   | { capabilityId: "lead.assign"; result: ExecutedLeadAssignCommand }
+  | { capabilityId: "vehicle.price.update"; result: ExecutedVehiclePriceCommand }
   | { capabilityId: null; result: { ok: false; reason: "not_found" | "unavailable"; error: string } };
 
 /** Load only the command kind needed to select the independently secured executor. */
@@ -211,6 +274,7 @@ export async function getAdminConciergeCommandCapability(input: {
   return data.capability_id === "lead.status.update"
     || data.capability_id === "feed.run.enqueue"
     || data.capability_id === "lead.assign"
+    || data.capability_id === "vehicle.price.update"
     ? data.capability_id
     : null;
 }
@@ -223,6 +287,9 @@ export async function executeAdminConciergeCommand(input: {
 }): Promise<ExecutedAdminConciergeCommand> {
   if (input.capabilityId === "lead.status.update") {
     return { capabilityId: input.capabilityId, result: await executeLeadStatusCommand(input) };
+  }
+  if (input.capabilityId === "vehicle.price.update") {
+    return { capabilityId: input.capabilityId, result: await executeVehiclePriceCommand(input) };
   }
   if (input.capabilityId === "lead.assign") {
     return { capabilityId: input.capabilityId, result: await executeLeadAssignCommand(input) };

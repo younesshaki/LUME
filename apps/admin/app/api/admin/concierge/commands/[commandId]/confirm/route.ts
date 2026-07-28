@@ -62,10 +62,39 @@ export async function POST(request: Request, { params }: Props): Promise<Respons
   if (executed.capabilityId === "feed.run.enqueue") {
     return verifyFeedRunCommand(supabase, tenant.id, userData.user.id, commandId, executed.result, request);
   }
+  if (executed.capabilityId === "vehicle.price.update") {
+    return verifyVehiclePriceCommand(supabase, tenant.id, executed.result);
+  }
   if (executed.capabilityId === "lead.assign") {
     return verifyLeadAssignCommand(supabase, tenant.id, userData.user.id, commandId, executed.result, request);
   }
   return verifyLeadStatusCommand(supabase, tenant.id, userData.user.id, commandId, executed.result, request);
+}
+
+/**
+ * Same contract as the other verifiers: prove the stored price is the one the
+ * operator approved before claiming success.
+ */
+async function verifyVehiclePriceCommand(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  executed: Extract<Awaited<ReturnType<typeof executeAdminConciergeCommand>>, { capabilityId: "vehicle.price.update" }>['result'] & { ok: true },
+): Promise<Response> {
+  const { data: vehicle, error } = await supabase
+    .from("vehicles")
+    .select("id, price")
+    .eq("tenant_id", tenantId)
+    .eq("id", executed.vehicleId)
+    .maybeSingle();
+  if (error || !vehicle || vehicle.price !== executed.nextPrice) {
+    return json({ error: "The price change could not be verified after execution." }, 502);
+  }
+  const money = (value: number) => `$${value.toLocaleString()}`;
+  return json({
+    reply: executed.alreadyExecuted
+      ? `${executed.label} was already repriced to ${money(executed.nextPrice)}.`
+      : `Repriced ${executed.label} from ${money(executed.previousPrice)} to ${money(executed.nextPrice)}.`,
+  });
 }
 
 /**

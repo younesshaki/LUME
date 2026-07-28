@@ -10,6 +10,10 @@ export type ExecutedLeadAssignCommand =
   | { ok: true; alreadyExecuted: boolean; leadId: string; assigneeUserId: string; assigneeLabel: string }
   | { ok: false; reason: "not_found" | "expired" | "stale" | "failed" | "unavailable"; error: string };
 
+export type ExecutedVehiclePriceCommand =
+  | { ok: true; alreadyExecuted: boolean; vehicleId: string; label: string; previousPrice: number; nextPrice: number }
+  | { ok: false; reason: "not_found" | "expired" | "stale" | "failed" | "unavailable"; error: string };
+
 /** Validate the opaque database receipt before it can reach an API response. */
 export function parseLeadStatusCommandReceipt(value: unknown): ExecutedLeadStatusCommand {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -90,6 +94,38 @@ export function parseLeadAssignCommandReceipt(value: unknown): ExecutedLeadAssig
       leadId,
       assigneeUserId,
       assigneeLabel,
+    };
+  }
+  const error = typeof record.error === "string" && record.error
+    ? record.error
+    : "The reviewed command could not be completed.";
+  if (status === "not_found") return { ok: false, reason: "not_found", error: "That reviewed command no longer exists." };
+  if (status === "expired") return { ok: false, reason: "expired", error };
+  if (status === "stale") return { ok: false, reason: "stale", error };
+  if (status === "failed") return { ok: false, reason: "failed", error };
+  return { ok: false, reason: "unavailable", error };
+}
+
+export function parseVehiclePriceCommandReceipt(value: unknown): ExecutedVehiclePriceCommand {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return { ok: false, reason: "unavailable", error: "Unable to execute the reviewed command." };
+  }
+  const record = value as Record<string, unknown>;
+  const status = typeof record.status === "string" ? record.status : "";
+  if (status === "executed") {
+    const vehicleId = typeof record.vehicleId === "string" ? record.vehicleId : "";
+    const nextPrice = typeof record.nextPrice === "number" ? record.nextPrice : null;
+    const previousPrice = typeof record.previousPrice === "number" ? record.previousPrice : null;
+    if (!vehicleId || nextPrice === null || previousPrice === null) {
+      return { ok: false, reason: "unavailable", error: "Unable to execute the reviewed command." };
+    }
+    return {
+      ok: true,
+      alreadyExecuted: record.alreadyExecuted === true,
+      vehicleId,
+      label: typeof record.label === "string" ? record.label : "the vehicle",
+      previousPrice,
+      nextPrice,
     };
   }
   const error = typeof record.error === "string" && record.error

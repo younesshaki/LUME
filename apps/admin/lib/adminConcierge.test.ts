@@ -9,6 +9,7 @@ import {
   buildAdminConciergeSystemPrompt,
   compileDeterministicAdminIntent,
   extractLeadAssignment,
+  extractVehiclePriceUpdate,
   findNavigationCapability,
   hasAdminCapabilityRole,
   parseAdminConciergeModelPlan,
@@ -19,7 +20,7 @@ describe("admin concierge control plane", () => {
   // The registry stays read-only apart from an explicit, enumerated set of
   // bounded write capabilities. Adding a write must be a deliberate edit here,
   // not something that slips in with a feature.
-  const CONFIRMED_WRITES = ["lead.status.update", "feed.run.enqueue", "lead.assign"];
+  const CONFIRMED_WRITES = ["lead.status.update", "feed.run.enqueue", "lead.assign", "vehicle.price.update"];
 
   it("keeps the launch registry read-only except for confirmed bounded capabilities", () => {
     expect(ADMIN_CAPABILITIES.every((capability) =>
@@ -360,5 +361,34 @@ describe("lead assignment intent", () => {
   it("does not hijack unrelated requests", () => {
     expect(intent("show me new leads").kind).toBe("search_leads");
     expect(intent("mark Jane Doe as contacted").kind).toBe("update_lead_status");
+  });
+});
+
+describe("vehicle reprice intent", () => {
+  const intent = (message: string) => compileDeterministicAdminIntent(message);
+
+  it("parses the phrasings a dealer uses", () => {
+    expect(extractVehiclePriceUpdate("reprice the CX-90 to 52000")).toEqual({ vehicleQuery: "CX-90", price: 52000 });
+    expect(extractVehiclePriceUpdate("set the price of the Gladiator to $44,500")).toEqual({ vehicleQuery: "Gladiator", price: 44500 });
+    expect(extractVehiclePriceUpdate("reprice the Durango at 39k")).toEqual({ vehicleQuery: "Durango", price: 39000 });
+    expect(intent("reprice the CX-90 to 52000").kind).toBe("update_vehicle_price");
+  });
+
+  // A missing or implausible amount must never be invented or clamped —
+  // mis-parsing would publish a real car at a wrong asking price.
+  it("refuses an instruction with no usable price", () => {
+    expect(extractVehiclePriceUpdate("reprice the Camry")).toBeNull();
+    expect(extractVehiclePriceUpdate("reprice the Camry to 12")).toBeNull();
+    expect(extractVehiclePriceUpdate("reprice the Camry to 900000000")).toBeNull();
+  });
+
+  it("requires editor and explicit confirmation", () => {
+    expect(adminIntentMinimumRole({ kind: "update_vehicle_price", vehicleQuery: "CX-90", price: 52000 })).toBe("editor");
+    expect(capabilityById("vehicle.price.update")?.confirmation).toBe("standard");
+  });
+
+  it("leaves ordinary inventory questions alone", () => {
+    expect(intent("show me BMW vehicles").kind).toBe("search_vehicles");
+    expect(intent("show me aging inventory").kind).toBe("inspect_aging_inventory");
   });
 });
