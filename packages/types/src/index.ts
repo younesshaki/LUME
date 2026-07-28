@@ -60,6 +60,10 @@ export type * from "./lead";
 export type * from "./tenantDomain";
 export type * from "./tenantInvite";
 export type * from "./botPersona";
+export {
+  DEFAULT_BOT_PERSONA_SYSTEM_PROMPT,
+  defaultBotPersonaName,
+} from "./botPersona";
 export type * from "./loyalty";
 export type * from "./plans";
 export {
