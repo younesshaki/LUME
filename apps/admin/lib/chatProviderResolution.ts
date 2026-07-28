@@ -28,6 +28,12 @@ export type ChatProviderEnvironment = Readonly<
   DEEPSEEK_API_URL?: string;
   MOONSHOT_API_KEY?: string;
   MOONSHOT_API_URL?: string;
+  /**
+   * Vercel AI Gateway key. It is server-only; no tenant or browser can select
+   * an arbitrary upstream URL or send this value to the client.
+   */
+  AI_GATEWAY_API_KEY?: string;
+  AI_GATEWAY_API_URL?: string;
 };
 
 export function providerAvailabilityFromEnvironment(
@@ -36,6 +42,7 @@ export function providerAvailabilityFromEnvironment(
   return {
     deepseek: Boolean(environment.DEEPSEEK_API_KEY?.trim()),
     moonshot: Boolean(environment.MOONSHOT_API_KEY?.trim()),
+    gateway: Boolean(environment.AI_GATEWAY_API_KEY?.trim()),
   };
 }
 
@@ -60,10 +67,11 @@ export function resolveChatProviderFromEnvironment(
       : fallbackProfile(availability);
   if (!effectiveProfile) return null;
 
-  const apiKey =
-    effectiveProfile.provider === "deepseek"
-      ? environment.DEEPSEEK_API_KEY?.trim()
-      : environment.MOONSHOT_API_KEY?.trim();
+  const apiKey = effectiveProfile.provider === "deepseek"
+    ? environment.DEEPSEEK_API_KEY?.trim()
+    : effectiveProfile.provider === "moonshot"
+      ? environment.MOONSHOT_API_KEY?.trim()
+      : environment.AI_GATEWAY_API_KEY?.trim();
   if (!apiKey) return null;
 
   return {
@@ -74,8 +82,11 @@ export function resolveChatProviderFromEnvironment(
       effectiveProfile.provider === "deepseek"
         ? environment.DEEPSEEK_API_URL?.trim() ||
           "https://api.deepseek.com/v1/chat/completions"
-        : environment.MOONSHOT_API_URL?.trim() ||
-          "https://api.moonshot.ai/v1/chat/completions",
+        : effectiveProfile.provider === "moonshot"
+          ? environment.MOONSHOT_API_URL?.trim() ||
+            "https://api.moonshot.ai/v1/chat/completions"
+          : environment.AI_GATEWAY_API_URL?.trim() ||
+            "https://ai-gateway.vercel.sh/v1/chat/completions",
     fellBack: effectiveProfile.id !== requestedModelId,
   };
 }
@@ -86,6 +97,8 @@ function fallbackProfile(
   const preferredIds: readonly ConciergeModelId[] = [
     DEFAULT_CONCIERGE_MODEL_ID,
     "kimi-k2.6",
+    "openai-gpt-5.4-mini",
+    "anthropic-claude-sonnet-4.6",
   ];
   for (const modelId of preferredIds) {
     const profile = getConciergeModelProfile(modelId);

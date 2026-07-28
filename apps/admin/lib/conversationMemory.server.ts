@@ -61,3 +61,19 @@ export function conversationMemoryKey(tenantId: string, visitorId: string): stri
   const digest = createHash("sha256").update(`${tenantId}\0${visitorId}`).digest("hex");
   return `lume:conversation:v1:${digest}`;
 }
+
+/**
+ * Admin state must never share a namespace with public visitor chat. The
+ * authenticated actor and a browser-generated session are both part of the
+ * opaque key, so two tabs/users cannot inherit each other's result set.
+ */
+export function adminConversationMemoryKey(
+  tenantId: string,
+  actorUserId: string,
+  sessionId: string,
+): string {
+  const digest = createHash("sha256")
+    .update(`${tenantId}\0${actorUserId}\0${sessionId}`)
+    .digest("hex");
+  return `lume:admin-conversation:v1:${digest}`;
+}

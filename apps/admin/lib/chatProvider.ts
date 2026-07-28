@@ -38,11 +38,19 @@ export function buildChatCompletionBody({
 }: ChatCompletionBodyInput): Record<string, unknown> {
   const profile = getConciergeModelProfile(modelId);
   return {
-    model: profile.id,
+    // Gateway model ids include the provider prefix (for example
+    // "anthropic/claude-sonnet-4.6"). Direct OpenAI-compatible providers
+    // retain their existing LUME model ids.
+    model: "gatewayModelId" in profile ? profile.gatewayModelId : profile.id,
     stream,
     messages,
     ...toolFields,
-    ...(profile.thinkingMode === "max"
+    // `thinking` is a vendor-specific switch accepted by LUME's direct
+    // DeepSeek/Moonshot adapters. AI Gateway normalizes providers itself and
+    // must not receive that opaque vendor field.
+    ...(profile.provider === "gateway"
+      ? {}
+      : profile.thinkingMode === "max"
       ? { reasoning_effort: "max" }
       : { thinking: { type: "disabled" } }),
   };

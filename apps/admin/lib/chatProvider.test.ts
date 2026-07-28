@@ -51,6 +51,20 @@ describe("chat provider compatibility", () => {
     expect(body).not.toHaveProperty("thinking");
   });
 
+  it.each([
+    ["openai-gpt-5.4-mini", "openai/gpt-5.4-mini"],
+    ["anthropic-claude-sonnet-4.6", "anthropic/claude-sonnet-4.6"],
+  ] as const)("uses the AI Gateway model id without direct-provider thinking fields for %s", (modelId, gatewayModelId) => {
+    const body = buildChatCompletionBody({
+      modelId,
+      stream: false,
+      messages: [{ role: "user", content: "Turn this into a closed plan" }],
+    });
+    expect(body).toMatchObject({ model: gatewayModelId, stream: false });
+    expect(body).not.toHaveProperty("thinking");
+    expect(body).not.toHaveProperty("reasoning_effort");
+  });
+
   it("accepts structured Kimi tool calls and preserves K3 reasoning for phase two", () => {
     const normalized = normalizeProviderAssistantMessage(
       getConciergeModelProfile("kimi-k3"),
