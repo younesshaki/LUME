@@ -65,10 +65,42 @@ export async function POST(request: Request, { params }: Props): Promise<Respons
   if (executed.capabilityId === "vehicle.price.update") {
     return verifyVehiclePriceCommand(supabase, tenant.id, executed.result);
   }
+  if (executed.capabilityId === "vehicle.status.update") {
+    return verifyVehicleStatusCommand(supabase, tenant.id, executed.result);
+  }
   if (executed.capabilityId === "lead.assign") {
     return verifyLeadAssignCommand(supabase, tenant.id, userData.user.id, commandId, executed.result, request);
   }
   return verifyLeadStatusCommand(supabase, tenant.id, userData.user.id, commandId, executed.result, request);
+}
+
+/**
+ * Same contract as the other verifiers: prove the stored status is the one the
+ * operator approved before claiming success. The RPC receipt is never trusted
+ * on its own — it is re-read through the authenticated tenant client, so RLS
+ * applies to the confirmation as well as the write.
+ */
+async function verifyVehicleStatusCommand(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  executed: Extract<Awaited<ReturnType<typeof executeAdminConciergeCommand>>, { capabilityId: "vehicle.status.update" }>['result'] & { ok: true },
+): Promise<Response> {
+  const { data: vehicle, error } = await supabase
+    .from("vehicles")
+    .select("id, status")
+    .eq("tenant_id", tenantId)
+    .eq("id", executed.vehicleId)
+    .maybeSingle();
+  if (error || !vehicle || vehicle.status !== executed.nextStatus) {
+    return json({ error: "The status change could not be verified after execution." }, 502);
+  }
+  const phrase: Record<string, string> = { draft: "a draft", live: "live on the site", archived: "archived" };
+  const next = phrase[executed.nextStatus] ?? executed.nextStatus;
+  return json({
+    reply: executed.alreadyExecuted
+      ? `${executed.label} was already ${next}.`
+      : `${executed.label} is now ${next} (was ${phrase[executed.previousStatus] ?? executed.previousStatus}).`,
+  });
 }
 
 /**
