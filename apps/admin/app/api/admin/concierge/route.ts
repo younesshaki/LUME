@@ -37,6 +37,7 @@ import {
   createLeadAssignCommand,
   createLeadStatusCommand,
   createVehiclePriceCommand,
+  createVehicleStatusCommand,
   resolveTenantTeammateNames,
 } from "@/lib/adminConciergeCommands.server";
 import {
@@ -227,6 +228,8 @@ export async function POST(request: Request): Promise<Response> {
       return prepareFeedRun(supabase, tenant.id, userData.user.id, intent.feedQuery, source);
     case "update_vehicle_price":
       return prepareVehiclePriceUpdate(supabase, tenant.id, userData.user.id, intent.vehicleQuery, intent.price, source);
+    case "update_vehicle_status":
+      return prepareVehicleStatusUpdate(supabase, tenant.id, userData.user.id, intent.vehicleQuery, intent.status, source);
     case "assign_lead":
       return prepareLeadAssign(supabase, tenant.id, userData.user.id, intent.leadQuery, intent.assigneeQuery, source);
     case "update_lead_status":
@@ -959,6 +962,100 @@ async function prepareVehiclePriceUpdate(
   });
 }
 
+const VEHICLE_STATUS_LABELS: Record<string, string> = {
+  draft: "a draft",
+  live: "live on the site",
+  archived: "archived",
+};
+
+/**
+ * Resolve one vehicle and stage a publish/unpublish/archive for review.
+ *
+ * Unlike the reprice handler this must NOT exclude archived vehicles from the
+ * search: unarchiving one requires finding it first. Ambiguity returns
+ * candidates rather than picking the first match, because taking the wrong
+ * car off the public site is a silent revenue loss.
+ */
+async function prepareVehicleStatusUpdate(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  actorUserId: string,
+  vehicleQuery: string,
+  nextStatus: "draft" | "live" | "archived",
+  source: "deterministic" | "model",
+): Promise<Response> {
+  const { data: canWrite, error: roleError } = await supabase.rpc("user_has_tenant_role", {
+    p_tenant_id: tenantId,
+    p_roles: ["editor", "admin", "owner"],
+  });
+  if (roleError || !canWrite) {
+    return json({ source, reply: "Editor access is required to change a vehicle's status." }, 403);
+  }
+
+  const safeQuery = vehicleQuery.replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!safeQuery) return unsupported();
+  const term = `%${safeQuery.replace(/[%_]/g, (character) => `\\${character}`)}%`;
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id, year, make, model, trim, price, status, sold_at, external_id")
+    .eq("tenant_id", tenantId)
+    .or(`make.ilike.${term},model.ilike.${term},trim.ilike.${term},external_id.ilike.${term}`)
+    .order("created_at", { ascending: false })
+    .limit(4);
+  if (error) return json({ error: "Unable to resolve that vehicle right now." }, 502);
+
+  const label = (vehicle: { year: number | null; make: string; model: string; trim: string | null }) =>
+    [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
+
+  if (!data?.length) {
+    return json({ source, reply: `I couldn’t find a vehicle matching “${safeQuery}”, so I didn’t prepare a change.` });
+  }
+  if (data.length > 1) {
+    return json({
+      source,
+      reply: `“${safeQuery}” matches ${data.length} vehicles. Please use the stock number or a more specific description so I change the right one.`,
+      candidates: data.map((vehicle) => ({
+        id: vehicle.id,
+        label: `${label(vehicle)} · ${vehicle.status}`,
+        status: vehicle.status,
+      })),
+    });
+  }
+
+  const vehicle = data[0];
+  if (vehicle.status === "sold" || vehicle.sold_at) {
+    return json({ source, reply: `${label(vehicle)} is sold, so I left its status alone. Change it from the vehicle page if that was a mistake.` });
+  }
+  if (vehicle.status === nextStatus) {
+    return json({ source, reply: `${label(vehicle)} is already ${VEHICLE_STATUS_LABELS[nextStatus]}.` });
+  }
+
+  const created = await createVehicleStatusCommand({
+    tenantId,
+    actorUserId,
+    vehicle: { id: vehicle.id, label: label(vehicle), currentStatus: vehicle.status },
+    nextStatus,
+  });
+  if (!created.ok) {
+    return json({
+      error: created.reason === "migration_required"
+        ? "Reviewed admin commands are not available until migration 086 is applied."
+        : "Unable to prepare the reviewed command.",
+    }, 503);
+  }
+
+  return json({
+    source,
+    reply: `Ready to make ${label(vehicle)} ${VEHICLE_STATUS_LABELS[nextStatus]} (currently ${VEHICLE_STATUS_LABELS[vehicle.status] ?? vehicle.status}). Confirm to apply it.`,
+    command: {
+      id: created.command.commandId,
+      expiresAt: created.command.expiresAt,
+      capabilityId: "vehicle.status.update",
+      summary: `Make ${label(vehicle)} ${VEHICLE_STATUS_LABELS[nextStatus]}`,
+    },
+  });
+}
+
 async function prepareLeadAssign(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   tenantId: string,
@@ -1236,6 +1333,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
       return { kind: intent.kind, hasLead: Boolean(intent.leadQuery), hasAssignee: Boolean(intent.assigneeQuery) };
     case "update_vehicle_price":
       return { kind: intent.kind, hasVehicle: Boolean(intent.vehicleQuery) };
+    case "update_vehicle_status":
+      return { kind: intent.kind, hasVehicle: Boolean(intent.vehicleQuery), status: intent.status };
     case "search_vehicles":
       return { kind: intent.kind, hasQuery: Boolean(intent.query) };
     case "search_leads":

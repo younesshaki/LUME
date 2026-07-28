@@ -5,10 +5,12 @@ import {
   parseFeedRunCommandReceipt,
   parseLeadAssignCommandReceipt,
   parseVehiclePriceCommandReceipt,
+  parseVehicleStatusCommandReceipt,
   parseLeadStatusCommandReceipt,
   type ExecutedFeedRunCommand,
   type ExecutedLeadAssignCommand,
   type ExecutedVehiclePriceCommand,
+  type ExecutedVehicleStatusCommand,
   type ExecutedLeadStatusCommand,
 } from "./adminConciergeCommandReceipt";
 
@@ -208,6 +210,66 @@ export async function executeVehiclePriceCommand(input: {
   return error ? parseVehiclePriceCommandReceipt(null) : parseVehiclePriceCommandReceipt(data);
 }
 
+export type VehicleStatusCommandPreview = {
+  commandId: string;
+  expiresAt: string;
+  vehicle: { id: string; label: string; currentStatus: string; nextStatus: string };
+};
+
+export type CreateVehicleStatusCommandResult =
+  | { ok: true; command: VehicleStatusCommandPreview }
+  | { ok: false; reason: "migration_required" | "unavailable" };
+
+export async function createVehicleStatusCommand(input: {
+  tenantId: string;
+  actorUserId: string;
+  vehicle: { id: string; label: string; currentStatus: string };
+  nextStatus: "draft" | "live" | "archived";
+}): Promise<CreateVehicleStatusCommandResult> {
+  const expiresAt = new Date(Date.now() + COMMAND_TTL_MS).toISOString();
+  const preview = {
+    // currentStatus is the compare-and-swap precondition the executor checks.
+    vehicle: {
+      id: input.vehicle.id,
+      label: input.vehicle.label,
+      currentStatus: input.vehicle.currentStatus,
+      nextStatus: input.nextStatus,
+    },
+  };
+  const { data, error } = await createServiceClient()
+    .from("admin_concierge_commands")
+    .insert({
+      tenant_id: input.tenantId,
+      actor_user_id: input.actorUserId,
+      capability_id: "vehicle.status.update",
+      intent: { vehicleId: input.vehicle.id, status: input.nextStatus },
+      preview,
+      expires_at: expiresAt,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    return { ok: false, reason: error?.code === "42P01" ? "migration_required" : "unavailable" };
+  }
+  return { ok: true, command: { commandId: data.id, expiresAt, vehicle: preview.vehicle } };
+}
+
+export async function executeVehicleStatusCommand(input: {
+  commandId: string;
+  tenantId: string;
+  actorUserId: string;
+}): Promise<ExecutedVehicleStatusCommand> {
+  const { data, error } = await createServiceClient().rpc(
+    "execute_admin_concierge_vehicle_status_command",
+    {
+      p_command_id: input.commandId,
+      p_tenant_id: input.tenantId,
+      p_actor_user_id: input.actorUserId,
+    },
+  );
+  return error ? parseVehicleStatusCommandReceipt(null) : parseVehicleStatusCommandReceipt(data);
+}
+
 export async function createFeedRunCommand(input: {
   tenantId: string;
   actorUserId: string;
@@ -249,12 +311,13 @@ export async function executeFeedRunCommand(input: {
   return error ? parseFeedRunCommandReceipt(null) : parseFeedRunCommandReceipt(data);
 }
 
-export type AdminConciergeCommandCapability = "lead.status.update" | "feed.run.enqueue" | "lead.assign" | "vehicle.price.update";
+export type AdminConciergeCommandCapability = "lead.status.update" | "feed.run.enqueue" | "lead.assign" | "vehicle.price.update" | "vehicle.status.update";
 export type ExecutedAdminConciergeCommand =
   | { capabilityId: "lead.status.update"; result: ExecutedLeadStatusCommand }
   | { capabilityId: "feed.run.enqueue"; result: ExecutedFeedRunCommand }
   | { capabilityId: "lead.assign"; result: ExecutedLeadAssignCommand }
   | { capabilityId: "vehicle.price.update"; result: ExecutedVehiclePriceCommand }
+  | { capabilityId: "vehicle.status.update"; result: ExecutedVehicleStatusCommand }
   | { capabilityId: null; result: { ok: false; reason: "not_found" | "unavailable"; error: string } };
 
 /** Load only the command kind needed to select the independently secured executor. */
@@ -275,6 +338,7 @@ export async function getAdminConciergeCommandCapability(input: {
     || data.capability_id === "feed.run.enqueue"
     || data.capability_id === "lead.assign"
     || data.capability_id === "vehicle.price.update"
+    || data.capability_id === "vehicle.status.update"
     ? data.capability_id
     : null;
 }
@@ -290,6 +354,9 @@ export async function executeAdminConciergeCommand(input: {
   }
   if (input.capabilityId === "vehicle.price.update") {
     return { capabilityId: input.capabilityId, result: await executeVehiclePriceCommand(input) };
+  }
+  if (input.capabilityId === "vehicle.status.update") {
+    return { capabilityId: input.capabilityId, result: await executeVehicleStatusCommand(input) };
   }
   if (input.capabilityId === "lead.assign") {
     return { capabilityId: input.capabilityId, result: await executeLeadAssignCommand(input) };
