@@ -68,6 +68,18 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
     window.localStorage.setItem(TAKE_THE_WHEEL_KEY, String(next));
   }
 
+  // Discoverability: the panel was reachable only by finding a header button.
+  // Cmd/Ctrl+J opens it from anywhere; ⌘K is already the command palette.
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "j" || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      setOpen((previous) => !previous);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = message.trim();
@@ -181,6 +193,9 @@ export function AdminConciergePanel({ tenantSlug }: { tenantSlug: string }) {
       >
         <Bot className="size-3.5" aria-hidden="true" />
         <span className="hidden md:inline">Ask LUME</span>
+        <kbd className="pointer-events-none hidden rounded border bg-muted px-1.5 font-mono text-[10px] lg:inline">
+          ⌘J
+        </kbd>
       </Button>
       <DialogContent className="sm:max-w-xl" aria-describedby="admin-concierge-description">
         <DialogHeader>

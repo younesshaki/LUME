@@ -251,3 +251,32 @@ describe("photo coverage intent", () => {
     expect(capabilityById("inventory.photo_gap")?.effect).toBe("read");
   });
 });
+
+describe("aging inventory intent", () => {
+  const intent = (message: string) => compileDeterministicAdminIntent(message);
+
+  it("recognises how dealers phrase it", () => {
+    for (const phrase of ["show me aging inventory", "what has been sitting too long", "stale inventory"]) {
+      expect(intent(phrase).kind).toBe("inspect_aging_inventory");
+    }
+  });
+
+  it("defaults to 60 days, the usual floor-plan pain point", () => {
+    const parsed = intent("aging inventory");
+    expect(parsed.kind === "inspect_aging_inventory" && parsed.days).toBe(60);
+  });
+
+  it("honours an explicit threshold", () => {
+    const parsed = intent("what has been sitting for 90 days");
+    expect(parsed.kind === "inspect_aging_inventory" && parsed.days).toBe(90);
+  });
+
+  it("ignores an implausible threshold rather than trusting it", () => {
+    const parsed = intent("aging inventory over 999 days");
+    expect(parsed.kind === "inspect_aging_inventory" && parsed.days).toBe(60);
+  });
+
+  it("does not hijack an ordinary inventory search", () => {
+    expect(intent("show me BMW vehicles").kind).toBe("search_vehicles");
+  });
+});

@@ -209,6 +209,8 @@ export async function POST(request: Request): Promise<Response> {
       return searchPages(supabase, tenant.id, tenant.slug, intent.query, source, memoryStore, memoryKey);
     case "inspect_photo_gap":
       return inspectPhotoGap(supabase, tenant.id, tenant.slug, source);
+    case "inspect_aging_inventory":
+      return inspectAgingInventory(supabase, tenant.id, tenant.slug, intent.days, source);
     case "inspect_feed_runs":
       return inspectFeedRuns(supabase, tenant.id, tenant.slug, intent.status, source, memoryStore, memoryKey);
     case "enqueue_feed_run":
@@ -641,6 +643,52 @@ async function inspectFeedRuns(
  * Reads are paged: PostgREST caps a select at 1000 rows, and a dealer book
  * larger than that would otherwise report a confidently wrong number.
  */
+/**
+ * Aging inventory — the metric that carries a direct financing cost.
+ *
+ * Measured from `created_at`, which is when the vehicle entered LUME, not when
+ * it physically landed on the lot. For feed-synced stock those differ, so the
+ * wording says "listed in LUME" rather than implying true lot age. Anything
+ * stronger would need a dealer-supplied acquisition date.
+ */
+async function inspectAgingInventory(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  tenantSlug: string,
+  days: number,
+  source: "deterministic" | "model",
+): Promise<Response> {
+  const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
+  const { data, count, error } = await supabase
+    .from("vehicles")
+    .select("id, year, make, model, trim, price, created_at", { count: "exact" })
+    .eq("tenant_id", tenantId)
+    .neq("status", "archived")
+    .is("sold_at", null)
+    .lte("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(5);
+  if (error) return json({ error: "Unable to read inventory age right now." }, 502);
+
+  const total = count ?? 0;
+  const href = `/admin/${encodeURIComponent(tenantSlug)}/vehicles`;
+  if (total === 0) {
+    return json({ source, reply: `Nothing unsold has been listed in LUME for ${days}+ days.` });
+  }
+
+  const ageInDays = (iso: string) => Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  return json({
+    source,
+    reply: `${total.toLocaleString()} unsold ${total === 1 ? "vehicle has" : "vehicles have"} been listed in LUME for ${days}+ days. The longest-listed are below — these are the ones carrying holding cost.`,
+    action: { type: "navigate", href, label: "Open inventory" },
+    details: (data ?? []).map((vehicle) => ({
+      id: vehicle.id,
+      label: [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" "),
+      value: `${ageInDays(vehicle.created_at)} days · $${(vehicle.price ?? 0).toLocaleString()}`,
+    })),
+  });
+}
+
 async function inspectPhotoGap(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   tenantId: string,
@@ -927,6 +975,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
       return { kind: intent.kind };
     case "inspect_photo_gap":
       return { kind: intent.kind };
+    case "inspect_aging_inventory":
+      return { kind: intent.kind, days: intent.days };
     case "search_vehicles":
       return { kind: intent.kind, hasQuery: Boolean(intent.query) };
     case "search_leads":
