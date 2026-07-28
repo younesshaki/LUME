@@ -173,6 +173,28 @@ async function main() {
     ...(args.forcePages ? { FORCE: "1" } : {}),
   });
 
+  // ── 3b. Lead notifications ─────────────────────────────────────────────────
+  // tenant_settings.lead_email_enabled defaults to false and nothing ever
+  // created the row, so every tenant in production captured leads silently —
+  // a dealer would never learn a shopper had converted. Notifying the owner is
+  // the only sane default for the product; a tenant can narrow it afterwards.
+  // Delivery falls back to the platform sender until they verify their own.
+  {
+    const { error: settingsErr } = await supabase
+      .from("tenant_settings")
+      .upsert(
+        {
+          tenant_id: tenant.id,
+          lead_email_enabled: true,
+          lead_email_roles: ["owner"],
+          lead_email_mode: "instant",
+        },
+        { onConflict: "tenant_id" },
+      );
+    if (settingsErr) fail(settingsErr.message);
+    console.log("  ✓ lead notifications enabled for owners");
+  }
+
   // ── 4b. Concierge routing targets ──────────────────────────────────────────
   // Without these the public concierge can describe a vehicle but has nowhere
   // to send the shopper: finance, trade-in, service and specials are all
