@@ -36,6 +36,7 @@ import {
   createFeedRunCommand,
   createLeadAssignCommand,
   createLeadStatusCommand,
+  createVehiclePriceCommand,
   resolveTenantTeammateNames,
 } from "@/lib/adminConciergeCommands.server";
 import {
@@ -224,6 +225,8 @@ export async function POST(request: Request): Promise<Response> {
       return inspectFeedRuns(supabase, tenant.id, tenant.slug, intent.status, source, memoryStore, memoryKey);
     case "enqueue_feed_run":
       return prepareFeedRun(supabase, tenant.id, userData.user.id, intent.feedQuery, source);
+    case "update_vehicle_price":
+      return prepareVehiclePriceUpdate(supabase, tenant.id, userData.user.id, intent.vehicleQuery, intent.price, source);
     case "assign_lead":
       return prepareLeadAssign(supabase, tenant.id, userData.user.id, intent.leadQuery, intent.assigneeQuery, source);
     case "update_lead_status":
@@ -868,6 +871,94 @@ async function persistAdminResultSet(
  * the dangerous case — assigning a lead to the wrong salesperson moves
  * commission — so more than one match asks rather than picking.
  */
+/**
+ * Prepare a reviewed reprice.
+ *
+ * The vehicle must resolve to exactly one row. Repricing the wrong car
+ * publishes a wrong asking price to the public site, so ambiguity returns
+ * candidates rather than picking the first match.
+ */
+async function prepareVehiclePriceUpdate(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  actorUserId: string,
+  vehicleQuery: string,
+  price: number,
+  source: "deterministic" | "model",
+): Promise<Response> {
+  const { data: canWrite, error: roleError } = await supabase.rpc("user_has_tenant_role", {
+    p_tenant_id: tenantId,
+    p_roles: ["editor", "admin", "owner"],
+  });
+  if (roleError || !canWrite) {
+    return json({ source, reply: "Editor access is required to prepare a price change." }, 403);
+  }
+
+  const safeQuery = vehicleQuery.replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!safeQuery) return unsupported();
+  const term = `%${safeQuery.replace(/[%_]/g, (character) => `\\${character}`)}%`;
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id, year, make, model, trim, price, status, sold_at, external_id")
+    .eq("tenant_id", tenantId)
+    .neq("status", "archived")
+    .or(`make.ilike.${term},model.ilike.${term},trim.ilike.${term},external_id.ilike.${term}`)
+    .order("created_at", { ascending: false })
+    .limit(4);
+  if (error) return json({ error: "Unable to resolve that vehicle right now." }, 502);
+
+  const label = (vehicle: { year: number | null; make: string; model: string; trim: string | null }) =>
+    [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
+
+  if (!data?.length) {
+    return json({ source, reply: `I couldn’t find a vehicle matching “${safeQuery}”, so I didn’t prepare a change.` });
+  }
+  if (data.length > 1) {
+    return json({
+      source,
+      reply: `“${safeQuery}” matches ${data.length} vehicles. Please use the stock number or a more specific description so I reprice the right one.`,
+      candidates: data.map((vehicle) => ({
+        id: vehicle.id,
+        label: `${label(vehicle)} · $${(vehicle.price ?? 0).toLocaleString()}`,
+        status: vehicle.status,
+      })),
+    });
+  }
+
+  const vehicle = data[0];
+  if (vehicle.sold_at) {
+    return json({ source, reply: `${label(vehicle)} is sold, and sold vehicle prices are frozen.` });
+  }
+  if (vehicle.price === price) {
+    return json({ source, reply: `${label(vehicle)} is already priced at $${price.toLocaleString()}.` });
+  }
+
+  const created = await createVehiclePriceCommand({
+    tenantId,
+    actorUserId,
+    vehicle: { id: vehicle.id, label: label(vehicle), currentPrice: vehicle.price ?? 0 },
+    nextPrice: price,
+  });
+  if (!created.ok) {
+    return json({
+      error: created.reason === "migration_required"
+        ? "Reviewed admin commands are not available until migration 083 is applied."
+        : "Unable to prepare the reviewed command.",
+    }, 503);
+  }
+
+  return json({
+    source,
+    reply: `Ready to reprice ${label(vehicle)} from $${(vehicle.price ?? 0).toLocaleString()} to $${price.toLocaleString()}. Confirm to apply it.`,
+    command: {
+      id: created.command.commandId,
+      expiresAt: created.command.expiresAt,
+      capabilityId: "vehicle.price.update",
+      summary: `Reprice ${label(vehicle)} to $${price.toLocaleString()}`,
+    },
+  });
+}
+
 async function prepareLeadAssign(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   tenantId: string,
@@ -1143,6 +1234,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
       return { kind: intent.kind };
     case "assign_lead":
       return { kind: intent.kind, hasLead: Boolean(intent.leadQuery), hasAssignee: Boolean(intent.assigneeQuery) };
+    case "update_vehicle_price":
+      return { kind: intent.kind, hasVehicle: Boolean(intent.vehicleQuery) };
     case "search_vehicles":
       return { kind: intent.kind, hasQuery: Boolean(intent.query) };
     case "search_leads":

@@ -48,6 +48,7 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("vehicles.new", "Open the new-vehicle form", "navigate", "editor", "/vehicles/new", ["add vehicle", "add a vehicle", "new vehicle", "create vehicle", "add car", "add a car", "new car"]),
   capability("vehicles.import", "Open inventory import", "navigate", "editor", "/vehicles/import", ["import inventory", "import vehicles", "import csv", "upload inventory", "upload vehicles", "bulk import", "csv import"]),
   capability("leads.search", "Find leads", "read", "viewer", "/leads", ["lead", "leads", "inquiry", "inquiries"]),
+  capability("vehicle.price.update", "Reprice one vehicle", "write", "editor", "/vehicles", ["reprice", "change the price", "set the price", "price this at"], "standard"),
   capability("lead.assign", "Assign one lead to a teammate", "write", "editor", "/leads", ["assign lead", "reassign lead", "give this lead", "hand off lead"], "standard"),
   capability("lead.status.update", "Update one lead status", "write", "editor", "/leads", ["mark lead", "update lead"], "standard"),
   capability("customers.view", "Open customers", "navigate", "viewer", "/customers", ["customer", "customers", "customer 360"]),
@@ -104,6 +105,7 @@ export type AdminConciergeIntent =
   | { kind: "inspect_aging_inventory"; days: number }
   | { kind: "inspect_launch_readiness" }
   | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
+  | { kind: "update_vehicle_price"; vehicleQuery: string; price: number }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "unsupported" };
@@ -122,6 +124,7 @@ export type AdminConciergeModelPlan =
   | { kind: "inspect_aging_inventory"; days: number }
   | { kind: "inspect_launch_readiness" }
   | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
+  | { kind: "update_vehicle_price"; vehicleQuery: string; price: number }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "clarify" };
@@ -165,6 +168,9 @@ export function parseAdminConciergeRequest(body: unknown): ParsedAdminConciergeR
 export function compileDeterministicAdminIntent(message: string): AdminConciergeIntent {
   const normalized = normalize(message);
   const asksToFind = /\b(find|show|list|search|look up|open)\b/.test(normalized);
+
+  const priceUpdate = extractVehiclePriceUpdate(message);
+  if (priceUpdate) return { kind: "update_vehicle_price", ...priceUpdate };
 
   const leadAssign = extractLeadAssignment(message);
   if (leadAssign) return { kind: "assign_lead", ...leadAssign };
@@ -334,6 +340,7 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
     case "unsupported":
       return "viewer";
     case "assign_lead":
+    case "update_vehicle_price":
       return "editor";
   }
 }
@@ -557,4 +564,28 @@ export function extractLeadAssignment(
   const assigneeQuery = match[2].replace(/\s+/g, " ").trim().replace(/[.!?]+$/, "");
   if (leadQuery.length < 2 || assigneeQuery.length < 2) return null;
   return { leadQuery, assigneeQuery };
+}
+
+/**
+ * "reprice <vehicle> to <amount>" / "set <vehicle> price to <amount>".
+ *
+ * Both the vehicle and a parseable amount must be present. Bare "reprice the
+ * Camry" has no target price and falls through rather than inventing one, and
+ * an amount outside a plausible vehicle range is rejected instead of clamped —
+ * mis-parsing "12" as $12 would publish a car for twelve dollars.
+ */
+export function extractVehiclePriceUpdate(
+  message: string,
+): { vehicleQuery: string; price: number } | null {
+  const match = message.match(
+    /\b(?:reprice|re-price|change the price of|set the price of|price)\s+(?:the\s+)?(.+?)\s+(?:to|at)\s+\$?\s*([\d,]+(?:\.\d+)?)\s*(k)?\b/i,
+  );
+  if (!match) return null;
+  const vehicleQuery = match[1].replace(/\s+/g, " ").trim();
+  const raw = Number(match[2].replace(/,/g, ""));
+  if (!Number.isFinite(raw) || vehicleQuery.length < 2) return null;
+  const price = Math.round(match[3] ? raw * 1000 : raw);
+  // Below this a parse is far likelier than a real asking price.
+  if (price < 100 || price > 100_000_000) return null;
+  return { vehicleQuery, price };
 }
