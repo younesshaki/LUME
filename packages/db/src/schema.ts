@@ -1146,7 +1146,7 @@ export type Database = {
           id: string;
           tenant_id: string;
           actor_user_id: string | null;
-          capability_id: "lead.status.update" | "feed.run.enqueue" | "lead.assign" | "vehicle.price.update";
+          capability_id: "lead.status.update" | "feed.run.enqueue" | "lead.assign" | "vehicle.price.update" | "vehicle.status.update";
           intent: Record<string, unknown>;
           preview: Record<string, unknown>;
           status: "pending" | "executed" | "failed" | "expired" | "cancelled";
@@ -1953,6 +1953,10 @@ export type Database = {
         Returns: Record<string, unknown>;
       };
       execute_admin_concierge_vehicle_price_command: {
+        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Returns: Record<string, unknown>;
+      };
+      execute_admin_concierge_vehicle_status_command: {
         Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
         Returns: Record<string, unknown>;
       };
