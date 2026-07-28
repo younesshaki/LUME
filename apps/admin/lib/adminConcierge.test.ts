@@ -10,6 +10,7 @@ import {
   compileDeterministicAdminIntent,
   extractLeadAssignment,
   extractVehiclePriceUpdate,
+  extractVehicleStatusUpdate,
   findNavigationCapability,
   hasAdminCapabilityRole,
   parseAdminConciergeModelPlan,
@@ -20,7 +21,7 @@ describe("admin concierge control plane", () => {
   // The registry stays read-only apart from an explicit, enumerated set of
   // bounded write capabilities. Adding a write must be a deliberate edit here,
   // not something that slips in with a feature.
-  const CONFIRMED_WRITES = ["lead.status.update", "feed.run.enqueue", "lead.assign", "vehicle.price.update"];
+  const CONFIRMED_WRITES = ["lead.status.update", "feed.run.enqueue", "lead.assign", "vehicle.price.update", "vehicle.status.update"];
 
   it("keeps the launch registry read-only except for confirmed bounded capabilities", () => {
     expect(ADMIN_CAPABILITIES.every((capability) =>
@@ -390,5 +391,56 @@ describe("vehicle reprice intent", () => {
   it("leaves ordinary inventory questions alone", () => {
     expect(intent("show me BMW vehicles").kind).toBe("search_vehicles");
     expect(intent("show me aging inventory").kind).toBe("inspect_aging_inventory");
+  });
+});
+
+describe("extractVehicleStatusUpdate", () => {
+  it("maps archive verbs to the archived status", () => {
+    expect(extractVehicleStatusUpdate("archive the 2019 Civic")).toEqual({
+      vehicleQuery: "2019 Civic",
+      status: "archived",
+    });
+    expect(extractVehicleStatusUpdate("delist the Tacoma")?.status).toBe("archived");
+    expect(extractVehicleStatusUpdate("take down the Model 3")?.status).toBe("archived");
+  });
+
+  it("maps publish verbs to live and unpublish to draft", () => {
+    expect(extractVehicleStatusUpdate("publish the Model 3")?.status).toBe("live");
+    expect(extractVehicleStatusUpdate("unarchive the F-150")?.status).toBe("live");
+    expect(extractVehicleStatusUpdate("unpublish the Civic")?.status).toBe("draft");
+  });
+
+  it("strips filler nouns and trailing punctuation from the query", () => {
+    expect(extractVehicleStatusUpdate("archive that Civic listing.")).toEqual({
+      vehicleQuery: "Civic",
+      status: "archived",
+    });
+  });
+
+  // "list" is a read verb elsewhere in the compiler. Matching it here would
+  // silently turn a read into a staged write, which is the worst possible
+  // failure for this capability.
+  it("never treats read verbs as a status change", () => {
+    expect(extractVehicleStatusUpdate("list my leads")).toBeNull();
+    expect(extractVehicleStatusUpdate("list all vehicles without photos")).toBeNull();
+    expect(extractVehicleStatusUpdate("show me aging inventory")).toBeNull();
+    expect(extractVehicleStatusUpdate("find the 2019 Civic")).toBeNull();
+  });
+
+  it("refuses a query too short to resolve one vehicle", () => {
+    expect(extractVehicleStatusUpdate("archive it")).not.toBeNull();
+    expect(extractVehicleStatusUpdate("archive a")).toBeNull();
+  });
+
+  // 'sold' carries revenue meaning and needs sold_at + sold_price, so it must
+  // never be reachable from one sentence.
+  it("cannot produce the sold status", () => {
+    for (const message of [
+      "mark the Civic as sold",
+      "sold the Model 3",
+      "set the Tacoma to sold",
+    ]) {
+      expect(extractVehicleStatusUpdate(message)?.status).not.toBe("sold");
+    }
   });
 });

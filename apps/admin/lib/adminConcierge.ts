@@ -49,6 +49,7 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("vehicles.import", "Open inventory import", "navigate", "editor", "/vehicles/import", ["import inventory", "import vehicles", "import csv", "upload inventory", "upload vehicles", "bulk import", "csv import"]),
   capability("leads.search", "Find leads", "read", "viewer", "/leads", ["lead", "leads", "inquiry", "inquiries"]),
   capability("vehicle.price.update", "Reprice one vehicle", "write", "editor", "/vehicles", ["reprice", "change the price", "set the price", "price this at"], "standard"),
+  capability("vehicle.status.update", "Publish, unpublish or archive one vehicle", "write", "editor", "/vehicles", ["archive", "unarchive", "publish", "unpublish", "delist", "take down"], "standard"),
   capability("lead.assign", "Assign one lead to a teammate", "write", "editor", "/leads", ["assign lead", "reassign lead", "give this lead", "hand off lead"], "standard"),
   capability("lead.status.update", "Update one lead status", "write", "editor", "/leads", ["mark lead", "update lead"], "standard"),
   capability("customers.view", "Open customers", "navigate", "viewer", "/customers", ["customer", "customers", "customer 360"]),
@@ -106,6 +107,7 @@ export type AdminConciergeIntent =
   | { kind: "inspect_launch_readiness" }
   | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
   | { kind: "update_vehicle_price"; vehicleQuery: string; price: number }
+  | { kind: "update_vehicle_status"; vehicleQuery: string; status: "draft" | "live" | "archived" }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "unsupported" };
@@ -125,6 +127,7 @@ export type AdminConciergeModelPlan =
   | { kind: "inspect_launch_readiness" }
   | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
   | { kind: "update_vehicle_price"; vehicleQuery: string; price: number }
+  | { kind: "update_vehicle_status"; vehicleQuery: string; status: "draft" | "live" | "archived" }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "clarify" };
@@ -171,6 +174,9 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
 
   const priceUpdate = extractVehiclePriceUpdate(message);
   if (priceUpdate) return { kind: "update_vehicle_price", ...priceUpdate };
+
+  const statusUpdate = extractVehicleStatusUpdate(message);
+  if (statusUpdate) return { kind: "update_vehicle_status", ...statusUpdate };
 
   const leadAssign = extractLeadAssignment(message);
   if (leadAssign) return { kind: "assign_lead", ...leadAssign };
@@ -341,6 +347,7 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
       return "viewer";
     case "assign_lead":
     case "update_vehicle_price":
+    case "update_vehicle_status":
       return "editor";
   }
 }
@@ -589,3 +596,50 @@ export function extractVehiclePriceUpdate(
   if (price < 100 || price > 100_000_000) return null;
   return { vehicleQuery, price };
 }
+
+/**
+ * "archive the 2019 Civic", "publish the Model 3", "unpublish that Tacoma".
+ *
+ * Only draft/live/archived are reachable. 'sold' is deliberately absent: the
+ * vehicles_status_check constraint requires sold_at and sold_price alongside
+ * it, so recording a sale carries revenue meaning and must not be inferred
+ * from one sentence. The executor in migration 086 re-checks this rather than
+ * trusting the parser.
+ */
+export function extractVehicleStatusUpdate(
+  message: string,
+): { vehicleQuery: string; status: "draft" | "live" | "archived" } | null {
+  // "list" is deliberately not a verb here — it is already a read verb
+  // ("list my leads"), and matching it would turn a read into a write
+  // proposal. "delist" is unambiguous and stays.
+  const match = message.match(
+    /\b(archive|unarchive|publish|unpublish|delist|take down|put back)\s+(?:the\s+|that\s+|this\s+)?(.+?)\s*$/i,
+  );
+  if (!match) return null;
+
+  const verb = match[1].toLowerCase();
+  const status = VEHICLE_STATUS_VERBS[verb];
+  if (!status) return null;
+
+  // Strip filler nouns first, then punctuation, then collapse — doing it in
+  // any other order leaves a stray space before the terminator ("Civic .")
+  // and the punctuation strip silently misses.
+  const vehicleQuery = match[2]
+    .replace(/\b(?:vehicle|unit|car|listing)\b/gi, " ")
+    .replace(/[.!?]+\s*$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  // Too short to resolve to one vehicle; the caller would have to guess.
+  if (vehicleQuery.length < 2) return null;
+  return { vehicleQuery, status };
+}
+
+const VEHICLE_STATUS_VERBS: Record<string, "draft" | "live" | "archived"> = {
+  archive: "archived",
+  delist: "archived",
+  "take down": "archived",
+  unarchive: "live",
+  publish: "live",
+  "put back": "live",
+  unpublish: "draft",
+};
