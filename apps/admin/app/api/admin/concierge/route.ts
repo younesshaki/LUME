@@ -216,6 +216,8 @@ export async function POST(request: Request): Promise<Response> {
       return searchCustomers(tenant.id, tenant.slug, intent.query, source, memoryStore, memoryKey);
     case "search_pages":
       return searchPages(supabase, tenant.id, tenant.slug, intent.query, source, memoryStore, memoryKey);
+    case "summarize_conversion":
+      return summarizeConversion(supabase, tenant.id, tenant.slug, intent.days, source);
     case "inspect_photo_gap":
       return inspectPhotoGap(supabase, tenant.id, tenant.slug, source);
     case "inspect_aging_inventory":
@@ -803,6 +805,80 @@ async function inspectPhotoGap(
   });
 }
 
+/**
+ * Summarize conversion performance from the existing tenant_conversion_report
+ * RPC.
+ *
+ * The RPC is SECURITY DEFINER but authorizes internally against
+ * tenant_ids_for_current_user(), so it is called with the authenticated tenant
+ * client — never the service client. A non-member gets the database's own
+ * refusal rather than a check we would have to keep in sync here.
+ */
+async function summarizeConversion(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  tenantSlug: string,
+  days: number,
+  source: "deterministic" | "model",
+): Promise<Response> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase.rpc("tenant_conversion_report", {
+    p_tenant_id: tenantId,
+    p_since: since,
+  });
+  if (error || !data || typeof data !== "object") {
+    return json({ error: "Unable to read conversion analytics right now." }, 502);
+  }
+
+  const report = data as Record<string, unknown>;
+  const funnel = Array.isArray(report.funnel) ? report.funnel : [];
+  const counts = new Map<string, number>();
+  for (const entry of funnel) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const row = entry as Record<string, unknown>;
+    const name = typeof row.event_name === "string" ? row.event_name : null;
+    const count = Number(row.event_count);
+    if (name && Number.isFinite(count)) counts.set(name, count);
+  }
+
+  const views = counts.get("vehicle_view") ?? 0;
+  const saves = counts.get("vehicle_saved") ?? 0;
+  const leads = counts.get("inquiry_submitted") ?? 0;
+  const href = `/admin/${encodeURIComponent(tenantSlug)}/analytics`;
+  const window = days === 1 ? "the last 24 hours" : `the last ${days} days`;
+
+  if (views === 0 && leads === 0) {
+    return json({
+      source,
+      reply: `No vehicle views or inquiries were recorded in ${window}. If the site is live, this usually means analytics events are not reaching LUME yet.`,
+      action: { type: "navigate", href, label: "Open analytics" },
+    });
+  }
+
+  // Guard the divide: leads without views is possible (a direct contact-form
+  // hit), and would otherwise render Infinity%.
+  const rate = views > 0 ? (leads / views) * 100 : null;
+  const median = Number(report.median_view_to_lead_seconds);
+  const parts = [
+    `In ${window}: ${views.toLocaleString()} vehicle views, ${saves.toLocaleString()} saves, ${leads.toLocaleString()} inquiries.`,
+  ];
+  if (rate !== null) {
+    parts.push(`That is a ${rate.toFixed(rate < 1 ? 2 : 1)}% view-to-inquiry rate.`);
+  }
+  if (Number.isFinite(median) && median > 0) {
+    const hours = median / 3600;
+    parts.push(hours >= 1
+      ? `Median time from first view to inquiry is ${hours.toFixed(1)} hours.`
+      : `Median time from first view to inquiry is ${Math.round(median / 60)} minutes.`);
+  }
+
+  return json({
+    source,
+    reply: parts.join(" "),
+    action: { type: "navigate", href, label: "Open analytics" },
+  });
+}
+
 async function resolveStoredPresentation(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   tenantId: string,
@@ -1325,6 +1401,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
       return { kind: intent.kind };
     case "inspect_photo_gap":
       return { kind: intent.kind };
+    case "summarize_conversion":
+      return { kind: intent.kind, days: intent.days };
     case "inspect_aging_inventory":
       return { kind: intent.kind, days: intent.days };
     case "inspect_launch_readiness":
