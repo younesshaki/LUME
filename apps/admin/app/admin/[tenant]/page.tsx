@@ -41,7 +41,7 @@ export default async function TenantOverviewPage({ params }: PageProps) {
     { count: pageCount },
     { count: publishedPageCount },
   ] = await Promise.all([
-    supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+    supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id).neq("status", "archived"),
     supabase.from("rag_chunks").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
     supabase.from("pages").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
@@ -56,7 +56,7 @@ export default async function TenantOverviewPage({ params }: PageProps) {
   ]);
 
   const stats = [
-    { label: "Vehicles", value: vehicleCount ?? 0, href: `/admin/${slug}/vehicles`, icon: Car },
+    { label: "Live vehicles", value: vehicleCount ?? 0, href: `/admin/${slug}/vehicles`, icon: Car },
     { label: "Leads", value: leadCount ?? 0, href: `/admin/${slug}/leads`, icon: Inbox },
     { label: "Pages", value: pageCount ?? 0, href: `/admin/${slug}/pages`, icon: FileText },
     { label: "Knowledge chunks", value: ragCount ?? 0, href: `/admin/${slug}/knowledge`, icon: BookOpen },
