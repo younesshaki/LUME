@@ -8,6 +8,8 @@
  * this path.
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { evaluateLaunchReadiness } from "@/lib/launchReadiness";
+import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
 import {
   adminCapabilityHref,
   adminIntentMinimumRole,
@@ -211,6 +213,8 @@ export async function POST(request: Request): Promise<Response> {
       return inspectPhotoGap(supabase, tenant.id, tenant.slug, source);
     case "inspect_aging_inventory":
       return inspectAgingInventory(supabase, tenant.id, tenant.slug, intent.days, source);
+    case "inspect_launch_readiness":
+      return inspectLaunchReadiness(supabase, tenant.slug, source);
     case "inspect_feed_runs":
       return inspectFeedRuns(supabase, tenant.id, tenant.slug, intent.status, source, memoryStore, memoryKey);
     case "enqueue_feed_run":
@@ -651,6 +655,46 @@ async function inspectFeedRuns(
  * wording says "listed in LUME" rather than implying true lot age. Anything
  * stronger would need a dealer-supplied acquisition date.
  */
+/**
+ * Launch readiness, straight from the existing engine.
+ *
+ * evaluateLaunchReadiness already encodes what "ready to sell" means; the
+ * concierge just had no way to read it. Reporting blockers first — with the
+ * remediation route each check already carries — turns "am I ready?" into a
+ * next action instead of a number.
+ */
+async function inspectLaunchReadiness(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantSlug: string,
+  source: "deterministic" | "model",
+): Promise<Response> {
+  const snapshot = await loadTenantLaunchSnapshot(supabase, tenantSlug);
+  if (!snapshot) return json({ error: "Unable to read launch readiness right now." }, 502);
+
+  const report = evaluateLaunchReadiness(snapshot, "pilot", new Date().toISOString());
+  const blockers = report.checks.filter((check) => check.status === "blocker");
+  const warnings = report.checks.filter((check) => check.status === "warning");
+  const attention = [...blockers, ...warnings].slice(0, 5);
+
+  const reply = report.ready
+    ? `You're ready to launch — all ${report.passedCount} checks pass.`
+    : `${report.blockerCount} ${report.blockerCount === 1 ? "blocker" : "blockers"} and ${report.warningCount} ${report.warningCount === 1 ? "warning" : "warnings"} left before launch. ${report.passedCount} checks already pass.`;
+
+  // Send them to the first blocker's own remediation route when there is one.
+  const firstFix = attention.find((check) => check.remediationHref)?.remediationHref;
+  return json({
+    source,
+    reply,
+    ...(firstFix ? { action: { type: "navigate", href: firstFix, label: "Fix the first item" } } : {}),
+    details: attention.map((check) => ({
+      id: check.id,
+      label: check.title,
+      value: check.status === "blocker" ? "Blocker" : "Warning",
+      note: check.explanation.slice(0, 240),
+    })),
+  });
+}
+
 async function inspectAgingInventory(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   tenantId: string,
@@ -977,6 +1021,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
       return { kind: intent.kind };
     case "inspect_aging_inventory":
       return { kind: intent.kind, days: intent.days };
+    case "inspect_launch_readiness":
+      return { kind: intent.kind };
     case "search_vehicles":
       return { kind: intent.kind, hasQuery: Boolean(intent.query) };
     case "search_leads":

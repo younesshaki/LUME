@@ -280,3 +280,29 @@ describe("aging inventory intent", () => {
     expect(intent("show me BMW vehicles").kind).toBe("search_vehicles");
   });
 });
+
+describe("launch readiness intent", () => {
+  const intent = (message: string) => compileDeterministicAdminIntent(message);
+
+  it("recognises the ways an owner asks if they can go live", () => {
+    for (const phrase of [
+      "am i ready to launch",
+      "launch readiness",
+      "what is left to set up",
+      "what's blocking",
+      "can i go live",
+    ]) {
+      expect(intent(phrase).kind).toBe("inspect_launch_readiness");
+    }
+  });
+
+  it("is readable by any member", () => {
+    expect(capabilityById("setup.readiness")?.minRole).toBe("viewer");
+    expect(capabilityById("setup.readiness")?.effect).toBe("read");
+  });
+
+  it("does not swallow unrelated requests", () => {
+    expect(intent("show me BMW vehicles").kind).toBe("search_vehicles");
+    expect(intent("add a vehicle").kind).toBe("navigate");
+  });
+});

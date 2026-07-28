@@ -42,6 +42,7 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("overview.view", "Open overview", "navigate", "viewer", "/", ["overview", "dashboard", "home"]),
   capability("overview.summary", "Summarize dashboard", "read", "viewer", "/", ["dashboard summary", "overview summary", "summarize dashboard"]),
   capability("vehicles.search", "Find vehicles", "read", "viewer", "/vehicles", ["vehicle", "vehicles", "inventory", "car", "cars"]),
+  capability("setup.readiness", "Report launch readiness", "read", "viewer", "/", ["ready to launch", "launch readiness", "am i ready", "what is left to set up", "setup checklist", "go live", "what's blocking"]),
   capability("inventory.aging", "Report aging inventory", "read", "viewer", "/vehicles", ["aging inventory", "aged inventory", "days on lot", "sitting too long", "stale inventory", "old inventory", "slow movers", "been listed"]),
   capability("inventory.photo_gap", "Report vehicles missing photos", "read", "viewer", "/vehicles", ["missing photos", "no photos", "without photos", "missing images", "without images", "photo gap", "need photos", "photo coverage"]),
   capability("vehicles.new", "Open the new-vehicle form", "navigate", "editor", "/vehicles/new", ["add vehicle", "add a vehicle", "new vehicle", "create vehicle", "add car", "add a car", "new car"]),
@@ -100,6 +101,7 @@ export type AdminConciergeIntent =
   | { kind: "inspect_feed_runs"; status: "failed" | "dead_letter" | "partial" | null }
   | { kind: "inspect_photo_gap" }
   | { kind: "inspect_aging_inventory"; days: number }
+  | { kind: "inspect_launch_readiness" }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "unsupported" };
@@ -116,6 +118,7 @@ export type AdminConciergeModelPlan =
   | { kind: "inspect_feed_runs"; status: "failed" | "dead_letter" | "partial" | null }
   | { kind: "inspect_photo_gap" }
   | { kind: "inspect_aging_inventory"; days: number }
+  | { kind: "inspect_launch_readiness" }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "clarify" };
@@ -192,6 +195,11 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
   // “Inventory feeds” is a named dashboard surface, not a vehicle query.
   // Keep the generic “inventory” synonym from stealing that navigation intent.
   const namesInventoryFeedSurface = /\b(?:inventory|managed)\s+feeds?\b/.test(normalized);
+  if (/\b(ready to launch|launch readiness|am i ready|go live|setup checklist)\b/.test(normalized)
+    || /\bwhat(?:'s| is)? (left|blocking|missing)\b/.test(normalized)) {
+    return { kind: "inspect_launch_readiness" };
+  }
+
   if (/\b(aging|aged|stale|slow movers?)\s*(inventory|stock|vehicles|cars)?\b/.test(normalized)
     || /\bdays on (the )?lot\b/.test(normalized)
     || /\bsitting (too long|for)\b/.test(normalized)
@@ -316,6 +324,7 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
     case "inspect_feed_runs":
     case "inspect_photo_gap":
     case "inspect_aging_inventory":
+    case "inspect_launch_readiness":
     case "unsupported":
       return "viewer";
   }
