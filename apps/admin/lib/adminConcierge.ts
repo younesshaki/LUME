@@ -42,6 +42,8 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("overview.view", "Open overview", "navigate", "viewer", "/", ["overview", "dashboard", "home"]),
   capability("overview.summary", "Summarize dashboard", "read", "viewer", "/", ["dashboard summary", "overview summary", "summarize dashboard"]),
   capability("vehicles.search", "Find vehicles", "read", "viewer", "/vehicles", ["vehicle", "vehicles", "inventory", "car", "cars"]),
+  capability("vehicles.new", "Open the new-vehicle form", "navigate", "editor", "/vehicles/new", ["add vehicle", "add a vehicle", "new vehicle", "create vehicle", "add car", "add a car", "new car"]),
+  capability("vehicles.import", "Open inventory import", "navigate", "editor", "/vehicles/import", ["import inventory", "import vehicles", "import csv", "upload inventory", "upload vehicles", "bulk import", "csv import"]),
   capability("leads.search", "Find leads", "read", "viewer", "/leads", ["lead", "leads", "inquiry", "inquiries"]),
   capability("lead.status.update", "Update one lead status", "write", "editor", "/leads", ["mark lead", "update lead"], "standard"),
   capability("customers.view", "Open customers", "navigate", "viewer", "/customers", ["customer", "customers", "customer 360"]),
@@ -50,6 +52,7 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("website.view", "Open website studio", "navigate", "viewer", "/website", ["website", "site", "site studio"]),
   capability("pages.view", "Open pages", "navigate", "viewer", "/pages", ["page", "pages", "page builder"]),
   capability("pages.search", "Find pages", "read", "viewer", "/pages", ["find page", "search page", "look up page"]),
+  capability("pages.new", "Open the new-page builder", "navigate", "editor", "/pages/new", ["add page", "new page", "create page", "build a page"]),
   capability("templates.view", "Open templates", "navigate", "viewer", "/templates", ["template", "templates"]),
   capability("design.view", "Open design", "navigate", "viewer", "/design", ["design", "theme", "colors"]),
   capability("navigation.view", "Open navigation", "navigate", "viewer", "/navigation", ["navigation", "header", "menu"]),
@@ -196,7 +199,7 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
     return { kind: "search_pages", query: pageQueryFromMessage(message) };
   }
 
-  const hasNavigationLanguage = /\b(open|go to|take me to|show me|view|manage)\b/.test(normalized);
+  const hasNavigationLanguage = /\b(open|go to|take me to|show me|view|manage|add|create|new|import|upload)\b/.test(normalized);
   if (hasNavigationLanguage) {
     const capability = findNavigationCapability(normalized);
     if (capability) return { kind: "navigate", capabilityId: capability.id };

@@ -177,3 +177,47 @@ describe("admin concierge control plane", () => {
     expect(buildAdminConciergeSystemPrompt()).toContain("clarify");
   });
 });
+
+describe("creation intents", () => {
+  const intent = (message: string) => compileDeterministicAdminIntent(message, undefined);
+
+  it("routes 'add a vehicle' to the new-vehicle form", () => {
+    expect(intent("add a vehicle")).toEqual({ kind: "navigate", capabilityId: "vehicles.new" });
+  });
+
+  it("routes phrasings a dealer actually uses", () => {
+    for (const phrase of ["new vehicle", "create vehicle", "add a car"]) {
+      expect(intent(phrase)).toEqual({ kind: "navigate", capabilityId: "vehicles.new" });
+    }
+  });
+
+  it("routes import wording to the importer, not the inventory list", () => {
+    for (const phrase of ["import inventory", "import csv", "upload vehicles"]) {
+      expect(intent(phrase)).toEqual({ kind: "navigate", capabilityId: "vehicles.import" });
+    }
+  });
+
+  it("routes 'new page' to the page builder", () => {
+    expect(intent("new page")).toEqual({ kind: "navigate", capabilityId: "pages.new" });
+  });
+
+  it("keeps creation capabilities behind editor", () => {
+    for (const id of ["vehicles.new", "vehicles.import", "pages.new"]) {
+      expect(capabilityById(id)?.minRole).toBe("editor");
+    }
+  });
+
+  // The verb gate now includes "new"/"add"; searches must still win, or
+  // "show me new leads" would open a form instead of listing leads.
+  it("does not let creation verbs hijack a search", () => {
+    expect(intent("show me new leads").kind).toBe("search_leads");
+    expect(intent("show me new vehicles").kind).toBe("search_vehicles");
+  });
+
+  // "open inventory" is claimed by the vehicle search branch, which runs
+  // first and lands on the same page with a verified result set. Asserted so
+  // the precedence is deliberate rather than accidental.
+  it("lets vehicle search claim plain inventory wording", () => {
+    expect(intent("open inventory").kind).toBe("search_vehicles");
+  });
+});
