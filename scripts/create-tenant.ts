@@ -24,6 +24,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import { targetsForAvailablePages } from "@lume/blocks";
 
 const SCRIPT_DIR = fileURLToPath(new URL(".", import.meta.url));
 
@@ -171,6 +172,67 @@ async function main() {
     SEED_TENANT_SLUG: tenant.slug,
     ...(args.forcePages ? { FORCE: "1" } : {}),
   });
+
+  // ── 3b. Lead notifications ─────────────────────────────────────────────────
+  // tenant_settings.lead_email_enabled defaults to false and nothing ever
+  // created the row, so every tenant in production captured leads silently —
+  // a dealer would never learn a shopper had converted. Notifying the owner is
+  // the only sane default for the product; a tenant can narrow it afterwards.
+  // Delivery falls back to the platform sender until they verify their own.
+  {
+    const { error: settingsErr } = await supabase
+      .from("tenant_settings")
+      .upsert(
+        {
+          tenant_id: tenant.id,
+          lead_email_enabled: true,
+          lead_email_roles: ["owner"],
+          lead_email_mode: "instant",
+        },
+        { onConflict: "tenant_id" },
+      );
+    if (settingsErr) fail(settingsErr.message);
+    console.log("  ✓ lead notifications enabled for owners");
+  }
+
+  // ── 4b. Concierge routing targets ──────────────────────────────────────────
+  // Without these the public concierge can describe a vehicle but has nowhere
+  // to send the shopper: finance, trade-in, service and specials are all
+  // unreachable. Every tenant in production shipped with an empty registry.
+  console.log("→ Seeding concierge routing targets");
+  {
+    const { data: pages, error: pagesErr } = await supabase
+      .from("pages")
+      .select("slug")
+      .eq("tenant_id", tenant.id)
+      .is("archived_at", null);
+    if (pagesErr) fail(pagesErr.message);
+    // A target for a page the tenant does not have is a 404 the concierge
+    // would confidently recommend.
+    const targets = targetsForAvailablePages((pages ?? []).map((page) => page.slug));
+    if (targets.length === 0) {
+      console.log("  ✓ no dealer pages present; no targets to seed");
+    } else {
+      const { error: targetErr } = await supabase
+        .from("concierge_targets")
+        .upsert(
+          targets.map((target) => ({
+            tenant_id: tenant.id,
+            key: target.key,
+            label: target.label,
+            kind: "route" as const,
+            destination: target.destination,
+            ai_description: target.aiDescription,
+            is_conversion: target.isConversion,
+            enabled: true,
+            sort_order: target.sortOrder,
+          })),
+          { onConflict: "tenant_id,key" },
+        );
+      if (targetErr) fail(targetErr.message);
+      console.log(`  ✓ ${targets.length} concierge targets seeded`);
+    }
+  }
 
   // ── 5. Sample data (opt-in) ────────────────────────────────────────────────
   if (args.withSampleData) {

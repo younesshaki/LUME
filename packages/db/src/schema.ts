@@ -27,6 +27,22 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["tenants"]["Insert"]>;
         Relationships: [];
       };
+      profiles: {
+        Row: {
+          id: string;
+          username: string;
+          created_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          id: string;
+          username: string;
+          created_at?: string;
+          last_seen_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Relationships: [];
+      };
       tenant_members: {
         Row: {
           tenant_id: string;
@@ -1125,6 +1141,42 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["audit_log"]["Insert"]>;
         Relationships: [];
       };
+      admin_concierge_commands: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          actor_user_id: string | null;
+          capability_id: "lead.status.update" | "feed.run.enqueue" | "lead.assign";
+          intent: Record<string, unknown>;
+          preview: Record<string, unknown>;
+          status: "pending" | "executed" | "failed" | "expired" | "cancelled";
+          idempotency_key: string;
+          result: Record<string, unknown> | null;
+          error: string | null;
+          expires_at: string;
+          confirmed_at: string | null;
+          executed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["admin_concierge_commands"]["Row"],
+          "id" | "idempotency_key" | "status" | "result" | "error" |
+          "confirmed_at" | "executed_at" | "created_at" | "updated_at"
+        > & {
+          id?: string;
+          idempotency_key?: string;
+          status?: "pending" | "executed" | "failed" | "expired" | "cancelled";
+          result?: Record<string, unknown> | null;
+          error?: string | null;
+          confirmed_at?: string | null;
+          executed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["admin_concierge_commands"]["Insert"]>;
+        Relationships: [];
+      };
       price_history: {
         Row: {
           id: string;
@@ -1895,6 +1947,18 @@ export type Database = {
       user_has_tenant_role: {
         Args: { p_tenant_id: string; p_roles: string[] };
         Returns: boolean;
+      };
+      execute_admin_concierge_lead_status_command: {
+        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Returns: Record<string, unknown>;
+      };
+      execute_admin_concierge_lead_assign_command: {
+        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Returns: Record<string, unknown>;
+      };
+      execute_admin_concierge_feed_run_command: {
+        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Returns: Record<string, unknown>;
       };
       match_rag_chunks_for_tenant: {
         Args: {
