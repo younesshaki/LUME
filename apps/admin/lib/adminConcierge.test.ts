@@ -11,6 +11,7 @@ import {
   extractLeadAssignment,
   extractVehiclePriceUpdate,
   extractVehicleStatusUpdate,
+  conversionWindowFromMessage,
   findNavigationCapability,
   hasAdminCapabilityRole,
   parseAdminConciergeModelPlan,
@@ -442,5 +443,48 @@ describe("extractVehicleStatusUpdate", () => {
     ]) {
       expect(extractVehicleStatusUpdate(message)?.status).not.toBe("sold");
     }
+  });
+});
+
+describe("conversionWindowFromMessage", () => {
+  it("defaults to 30 days", () => {
+    expect(conversionWindowFromMessage("how are we doing")).toBe(30);
+  });
+
+  it("reads explicit windows and normalizes units to days", () => {
+    expect(conversionWindowFromMessage("last 7 days")).toBe(7);
+    expect(conversionWindowFromMessage("past 2 weeks")).toBe(14);
+    expect(conversionWindowFromMessage("last 3 months")).toBe(90);
+    expect(conversionWindowFromMessage("last week")).toBe(7);
+    expect(conversionWindowFromMessage("last quarter")).toBe(90);
+  });
+
+  it("clamps absurd windows instead of trusting the number", () => {
+    expect(conversionWindowFromMessage("last 9999 days")).toBe(365);
+    expect(conversionWindowFromMessage("last 0 days")).toBe(30);
+  });
+});
+
+describe("conversion summary intent", () => {
+  it("compiles conversion questions to the summary intent", () => {
+    for (const message of [
+      "how are we doing",
+      "what is our conversion rate",
+      "show me the funnel",
+      "how many views did we get last week",
+    ]) {
+      expect(compileDeterministicAdminIntent(message).kind).toBe("summarize_conversion");
+    }
+  });
+
+  // The parser sits ahead of the generic find-fallbacks, so it must not
+  // swallow ordinary inventory or lead searches.
+  it("does not swallow unrelated searches", () => {
+    expect(compileDeterministicAdminIntent("find me a car").kind).toBe("search_vehicles");
+    expect(compileDeterministicAdminIntent("show me my new leads").kind).toBe("search_leads");
+  });
+
+  it("is a read, so it needs only viewer access", () => {
+    expect(adminIntentMinimumRole({ kind: "summarize_conversion", days: 30 })).toBe("viewer");
   });
 });

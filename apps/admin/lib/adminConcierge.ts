@@ -65,6 +65,7 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("branding.view", "Open brand assets", "navigate", "viewer", "/branding", ["branding", "brand", "logo"]),
   capability("assets.view", "Open assets", "navigate", "viewer", "/assets", ["assets", "media", "uploads"]),
   capability("analytics.view", "Open analytics", "navigate", "viewer", "/analytics", ["analytics", "metrics", "performance"]),
+  capability("analytics.summary", "Summarize conversion performance", "read", "viewer", "/analytics", ["how are we doing", "conversion", "conversion rate", "how did we do", "performance summary", "traffic", "how many views"]),
   capability("feeds.view", "Open inventory feeds", "navigate", "viewer", "/settings/inventory-feeds", ["inventory feeds", "managed feeds", "feed", "feeds", "syndication", "export", "exports"]),
   capability("feeds.inspect", "Inspect inventory feed health", "read", "viewer", "/settings/inventory-feeds", ["failed feed", "feed health", "feed run", "feed runs", "sync failure"]),
   capability("feed.run.enqueue", "Queue one managed feed run", "write", "admin", "/settings/inventory-feeds", ["run feed", "run inventory feed", "sync feed"], "standard"),
@@ -105,6 +106,7 @@ export type AdminConciergeIntent =
   | { kind: "inspect_photo_gap" }
   | { kind: "inspect_aging_inventory"; days: number }
   | { kind: "inspect_launch_readiness" }
+  | { kind: "summarize_conversion"; days: number }
   | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
   | { kind: "update_vehicle_price"; vehicleQuery: string; price: number }
   | { kind: "update_vehicle_status"; vehicleQuery: string; status: "draft" | "live" | "archived" }
@@ -125,6 +127,7 @@ export type AdminConciergeModelPlan =
   | { kind: "inspect_photo_gap" }
   | { kind: "inspect_aging_inventory"; days: number }
   | { kind: "inspect_launch_readiness" }
+  | { kind: "summarize_conversion"; days: number }
   | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
   | { kind: "update_vehicle_price"; vehicleQuery: string; price: number }
   | { kind: "update_vehicle_status"; vehicleQuery: string; status: "draft" | "live" | "archived" }
@@ -228,6 +231,15 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
   if (/\b(missing|without|no|need)\s+(photo|photos|image|images|picture|pictures)\b/.test(normalized)
     || /\bphoto (gap|coverage)\b/.test(normalized)) {
     return { kind: "inspect_photo_gap" };
+  }
+
+  // Placed ahead of the generic find-fallbacks: "how many views did we get"
+  // otherwise degrades into a vehicle search that answers a different question.
+  if (/\b(conversion|conversions|conversion rate|funnel)\b/.test(normalized)
+    || /\bhow (are|did) (we|things|business) (doing|do|going)\b/.test(normalized)
+    || /\bperformance summary\b/.test(normalized)
+    || /\bhow many (views|visitors|sessions)\b/.test(normalized)) {
+    return { kind: "summarize_conversion", days: conversionWindowFromMessage(normalized) };
   }
 
   if (asksToFind && !namesInventoryFeedSurface && /\b(vehicle|vehicles|inventory|car|cars)\b/.test(normalized)) {
@@ -343,6 +355,7 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
     case "inspect_photo_gap":
     case "inspect_aging_inventory":
     case "inspect_launch_readiness":
+    case "summarize_conversion":
     case "unsupported":
       return "viewer";
     case "assign_lead":
@@ -606,6 +619,28 @@ export function extractVehiclePriceUpdate(
  * from one sentence. The executor in migration 086 re-checks this rather than
  * trusting the parser.
  */
+/**
+ * Look-back window in days. Defaults to 30 — long enough that a small dealer
+ * has signal, short enough to still describe "now".
+ */
+export function conversionWindowFromMessage(normalized: string): number {
+  // Match generously and clamp below: a 4-digit window must be pulled back to
+  // the cap, not silently fall through to the 30-day default.
+  const explicit = normalized.match(/\b(?:last|past|previous)\s+(\d{1,6})\s*(day|days|week|weeks|month|months)\b/);
+  if (explicit) {
+    const amount = Number(explicit[1]);
+    if (Number.isFinite(amount) && amount > 0) {
+      const unit = explicit[2].startsWith("week") ? 7 : explicit[2].startsWith("month") ? 30 : 1;
+      return Math.min(365, Math.max(1, Math.round(amount * unit)));
+    }
+  }
+  if (/\b(?:last|past|previous)\s+week\b/.test(normalized)) return 7;
+  if (/\b(?:last|past|previous)\s+month\b/.test(normalized)) return 30;
+  if (/\b(?:last|past|previous)\s+quarter\b/.test(normalized)) return 90;
+  if (/\b(?:today|24 hours)\b/.test(normalized)) return 1;
+  return 30;
+}
+
 export function extractVehicleStatusUpdate(
   message: string,
 ): { vehicleQuery: string; status: "draft" | "live" | "archived" } | null {
