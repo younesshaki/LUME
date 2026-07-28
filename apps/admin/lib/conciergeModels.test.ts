@@ -17,6 +17,8 @@ describe("concierge model registry", () => {
       "kimi-k2.6",
       "deepseek-v4-pro",
       "kimi-k3",
+      "openai-gpt-5.4-mini",
+      "anthropic-claude-sonnet-4.6",
     ]);
     expect(
       new Set(CONCIERGE_MODEL_PROFILES.map((profile) => profile.id)).size,
@@ -46,6 +48,7 @@ describe("concierge model registry", () => {
       isProviderAvailable("kimi-k3", {
         deepseek: true,
         moonshot: false,
+        gateway: false,
       }),
     ).toBe(false);
   });
@@ -55,6 +58,8 @@ describe("concierge model registry", () => {
     expect(isPremiumConciergeModel("kimi-k2.6")).toBe(true);
     expect(isPremiumConciergeModel("deepseek-v4-pro")).toBe(true);
     expect(isPremiumConciergeModel("kimi-k3")).toBe(true);
+    expect(isPremiumConciergeModel("openai-gpt-5.4-mini")).toBe(true);
+    expect(isPremiumConciergeModel("anthropic-claude-sonnet-4.6")).toBe(true);
     // Unknown ids normalize to the base model — never premium by accident.
     expect(isPremiumConciergeModel("attacker/model")).toBe(false);
   });

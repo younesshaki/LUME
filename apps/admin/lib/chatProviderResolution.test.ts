@@ -14,6 +14,7 @@ describe("server-side concierge provider resolution", () => {
     expect(providerAvailabilityFromEnvironment(environment)).toEqual({
       deepseek: true,
       moonshot: true,
+      gateway: false,
     });
     expect(
       resolveChatProviderFromEnvironment("deepseek-v4-pro", environment),
@@ -27,6 +28,30 @@ describe("server-side concierge provider resolution", () => {
     ).toMatchObject({
       profile: { id: "kimi-k3", provider: "moonshot" },
       apiKey: "moonshot-test-key",
+      fellBack: false,
+    });
+  });
+
+  it("resolves selected GPT and Claude profiles only through the configured AI Gateway", () => {
+    const environment = { AI_GATEWAY_API_KEY: "gateway-test-key" };
+    expect(providerAvailabilityFromEnvironment(environment)).toEqual({
+      deepseek: false,
+      moonshot: false,
+      gateway: true,
+    });
+    expect(
+      resolveChatProviderFromEnvironment("openai-gpt-5.4-mini", environment),
+    ).toMatchObject({
+      profile: { id: "openai-gpt-5.4-mini", provider: "gateway", gatewayModelId: "openai/gpt-5.4-mini" },
+      apiKey: "gateway-test-key",
+      apiUrl: "https://ai-gateway.vercel.sh/v1/chat/completions",
+      fellBack: false,
+    });
+    expect(
+      resolveChatProviderFromEnvironment("anthropic-claude-sonnet-4.6", environment),
+    ).toMatchObject({
+      profile: { id: "anthropic-claude-sonnet-4.6", provider: "gateway", gatewayModelId: "anthropic/claude-sonnet-4.6" },
+      apiKey: "gateway-test-key",
       fellBack: false,
     });
   });
