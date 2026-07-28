@@ -25,6 +25,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { targetsForAvailablePages } from "@lume/blocks";
+import { DEFAULT_BOT_PERSONA_SYSTEM_PROMPT, defaultBotPersonaName } from "@lume/types";
 
 const SCRIPT_DIR = fileURLToPath(new URL(".", import.meta.url));
 
@@ -158,11 +159,20 @@ async function main() {
   if (existingPersona) {
     console.log("  ✓ active bot persona already present");
   } else {
+    // Seed name and prompt explicitly. Inserting only tenant_id falls back to
+    // the column defaults ('LUME Concierge' and ''), which ships the vendor
+    // brand on the tenant's own storefront and silently discards
+    // DEFAULT_BOT_PERSONA_SYSTEM_PROMPT — the code default only applies when
+    // no persona row exists at all, and provisioning always creates one.
     const { error: personaErr } = await supabase
       .from("bot_personas")
-      .insert({ tenant_id: tenant.id });
+      .insert({
+        tenant_id: tenant.id,
+        name: defaultBotPersonaName(tenant.name),
+        system_prompt: DEFAULT_BOT_PERSONA_SYSTEM_PROMPT,
+      });
     if (personaErr) fail(personaErr.message);
-    console.log("  ✓ default bot persona created");
+    console.log(`  ✓ default bot persona created (${defaultBotPersonaName(tenant.name)})`);
   }
 
   // ── 4. Pages ───────────────────────────────────────────────────────────────
