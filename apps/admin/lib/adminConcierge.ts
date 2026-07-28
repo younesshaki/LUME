@@ -42,6 +42,7 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("overview.view", "Open overview", "navigate", "viewer", "/", ["overview", "dashboard", "home"]),
   capability("overview.summary", "Summarize dashboard", "read", "viewer", "/", ["dashboard summary", "overview summary", "summarize dashboard"]),
   capability("vehicles.search", "Find vehicles", "read", "viewer", "/vehicles", ["vehicle", "vehicles", "inventory", "car", "cars"]),
+  capability("inventory.photo_gap", "Report vehicles missing photos", "read", "viewer", "/vehicles", ["missing photos", "no photos", "without photos", "missing images", "without images", "photo gap", "need photos", "photo coverage"]),
   capability("vehicles.new", "Open the new-vehicle form", "navigate", "editor", "/vehicles/new", ["add vehicle", "add a vehicle", "new vehicle", "create vehicle", "add car", "add a car", "new car"]),
   capability("vehicles.import", "Open inventory import", "navigate", "editor", "/vehicles/import", ["import inventory", "import vehicles", "import csv", "upload inventory", "upload vehicles", "bulk import", "csv import"]),
   capability("leads.search", "Find leads", "read", "viewer", "/leads", ["lead", "leads", "inquiry", "inquiries"]),
@@ -96,6 +97,7 @@ export type AdminConciergeIntent =
   | { kind: "search_customers"; query: string | null }
   | { kind: "search_pages"; query: string | null }
   | { kind: "inspect_feed_runs"; status: "failed" | "dead_letter" | "partial" | null }
+  | { kind: "inspect_photo_gap" }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "unsupported" };
@@ -110,6 +112,7 @@ export type AdminConciergeModelPlan =
   | { kind: "search_customers"; query: string | null }
   | { kind: "search_pages"; query: string | null }
   | { kind: "inspect_feed_runs"; status: "failed" | "dead_letter" | "partial" | null }
+  | { kind: "inspect_photo_gap" }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
   | { kind: "clarify" };
@@ -186,6 +189,11 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
   // “Inventory feeds” is a named dashboard surface, not a vehicle query.
   // Keep the generic “inventory” synonym from stealing that navigation intent.
   const namesInventoryFeedSurface = /\b(?:inventory|managed)\s+feeds?\b/.test(normalized);
+  if (/\b(missing|without|no|need)\s+(photo|photos|image|images|picture|pictures)\b/.test(normalized)
+    || /\bphoto (gap|coverage)\b/.test(normalized)) {
+    return { kind: "inspect_photo_gap" };
+  }
+
   if (asksToFind && !namesInventoryFeedSurface && /\b(vehicle|vehicles|inventory|car|cars)\b/.test(normalized)) {
     return { kind: "search_vehicles", query: vehicleQueryFromMessage(message) };
   }
@@ -296,6 +304,7 @@ export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole 
     case "search_customers":
     case "search_pages":
     case "inspect_feed_runs":
+    case "inspect_photo_gap":
     case "unsupported":
       return "viewer";
   }

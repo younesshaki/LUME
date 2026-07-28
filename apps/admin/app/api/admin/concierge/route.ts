@@ -207,6 +207,8 @@ export async function POST(request: Request): Promise<Response> {
       return searchCustomers(tenant.id, tenant.slug, intent.query, source, memoryStore, memoryKey);
     case "search_pages":
       return searchPages(supabase, tenant.id, tenant.slug, intent.query, source, memoryStore, memoryKey);
+    case "inspect_photo_gap":
+      return inspectPhotoGap(supabase, tenant.id, tenant.slug, source);
     case "inspect_feed_runs":
       return inspectFeedRuns(supabase, tenant.id, tenant.slug, intent.status, source, memoryStore, memoryKey);
     case "enqueue_feed_run":
@@ -627,6 +629,75 @@ async function inspectFeedRuns(
   });
 }
 
+/**
+ * Photo coverage across live inventory.
+ *
+ * A vehicle with no photo is effectively invisible to a shopper, so this is
+ * the one inventory metric that maps straight to lost leads. "Has a photo"
+ * matches the inventory grid exactly — managed R2 image, special source, or a
+ * legacy feed URL — so the number here always agrees with what the filtered
+ * list shows.
+ *
+ * Reads are paged: PostgREST caps a select at 1000 rows, and a dealer book
+ * larger than that would otherwise report a confidently wrong number.
+ */
+async function inspectPhotoGap(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  tenantId: string,
+  tenantSlug: string,
+  source: "deterministic" | "model",
+): Promise<Response> {
+  const PAGE = 1000;
+  const rows: Array<{ id: string; image_src: string | null; special_image_src: string | null }> = [];
+  for (let page = 0; ; page++) {
+    const from = page * PAGE;
+    const { data, error } = await supabase
+      .from("vehicles")
+      .select("id, image_src, special_image_src")
+      .eq("tenant_id", tenantId)
+      .neq("status", "archived")
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) return json({ error: "Unable to read inventory photo coverage right now." }, 502);
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+
+  const managed = new Set<string>();
+  for (let page = 0; ; page++) {
+    const from = page * PAGE;
+    const { data, error } = await supabase
+      .from("vehicle_images")
+      .select("vehicle_id")
+      .eq("tenant_id", tenantId)
+      .order("vehicle_id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) break; // Managed images are optional; legacy sources still count.
+    for (const image of data ?? []) managed.add(image.vehicle_id);
+    if (!data || data.length < PAGE) break;
+  }
+
+  const missing = rows.filter((row) =>
+    !managed.has(row.id) && !row.special_image_src?.trim() && !row.image_src?.trim());
+  const total = rows.length;
+  const share = total ? Math.round((missing.length / total) * 100) : 0;
+  const href = `/admin/${encodeURIComponent(tenantSlug)}/vehicles?images=without`;
+
+  if (total === 0) {
+    return json({ source, reply: "There are no live vehicles to check yet." });
+  }
+
+  return json({
+    source,
+    reply: missing.length === 0
+      ? `Every one of your ${total.toLocaleString()} live vehicles has at least one photo.`
+      : `${missing.length.toLocaleString()} of ${total.toLocaleString()} live vehicles have no photo (${share}%). Vehicles without a photo are effectively invisible to shoppers.`,
+    action: missing.length
+      ? { type: "navigate", href, label: `Review ${missing.length.toLocaleString()} without photos` }
+      : undefined,
+  });
+}
+
 async function resolveStoredPresentation(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   tenantId: string,
@@ -853,6 +924,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
     case "summarize_concierge_config":
       return { kind: intent.kind };
     case "summarize_overview":
+      return { kind: intent.kind };
+    case "inspect_photo_gap":
       return { kind: intent.kind };
     case "search_vehicles":
       return { kind: intent.kind, hasQuery: Boolean(intent.query) };

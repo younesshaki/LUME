@@ -179,7 +179,7 @@ describe("admin concierge control plane", () => {
 });
 
 describe("creation intents", () => {
-  const intent = (message: string) => compileDeterministicAdminIntent(message, undefined);
+  const intent = (message: string) => compileDeterministicAdminIntent(message);
 
   it("routes 'add a vehicle' to the new-vehicle form", () => {
     expect(intent("add a vehicle")).toEqual({ kind: "navigate", capabilityId: "vehicles.new" });
@@ -219,5 +219,35 @@ describe("creation intents", () => {
   // the precedence is deliberate rather than accidental.
   it("lets vehicle search claim plain inventory wording", () => {
     expect(intent("open inventory").kind).toBe("search_vehicles");
+  });
+});
+
+describe("photo coverage intent", () => {
+  const intent = (message: string) => compileDeterministicAdminIntent(message);
+
+  it("recognises the ways a dealer asks about photo gaps", () => {
+    for (const phrase of [
+      "how many vehicles are missing photos",
+      "which cars have no photos",
+      "show me vehicles without images",
+      "what is my photo coverage",
+    ]) {
+      expect(intent(phrase).kind).toBe("inspect_photo_gap");
+    }
+  });
+
+  // Must beat search_vehicles: the phrase contains "vehicles", and the
+  // inventory search branch runs first.
+  it("is not swallowed by the inventory search branch", () => {
+    expect(intent("vehicles without photos").kind).toBe("inspect_photo_gap");
+  });
+
+  it("leaves ordinary inventory searches alone", () => {
+    expect(intent("show me BMW vehicles").kind).toBe("search_vehicles");
+  });
+
+  it("is readable by any member", () => {
+    expect(capabilityById("inventory.photo_gap")?.minRole).toBe("viewer");
+    expect(capabilityById("inventory.photo_gap")?.effect).toBe("read");
   });
 });
