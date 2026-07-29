@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CONCIERGE_MODEL_PROFILES,
+  clampConciergeModelToCeiling,
   DEFAULT_CONCIERGE_MODEL_ID,
   conciergeModelIndex,
   getConciergeModelProfile,
@@ -62,5 +63,46 @@ describe("concierge model registry", () => {
     expect(isPremiumConciergeModel("anthropic-claude-sonnet-4.6")).toBe(true);
     // Unknown ids normalize to the base model — never premium by accident.
     expect(isPremiumConciergeModel("attacker/model")).toBe(false);
+  });
+});
+
+describe("clampConciergeModelToCeiling", () => {
+  // The regression this exists for: /api/editor/chat takes modelId from the
+  // request body, so an editor on an Ultra tenant could bill Pro from the
+  // browser regardless of the tenant's configured level. Pro usage spiked
+  // after 2026-07-24 with nothing in the config to explain it.
+  it("blocks a request above the tenant ceiling", () => {
+    expect(clampConciergeModelToCeiling("deepseek-v4-pro", "deepseek-v4-flash"))
+      .toBe("deepseek-v4-flash");
+    expect(clampConciergeModelToCeiling("anthropic-claude-sonnet-4.6", "deepseek-v4-flash"))
+      .toBe("deepseek-v4-flash");
+  });
+
+  it("allows moving down from the ceiling", () => {
+    expect(clampConciergeModelToCeiling("deepseek-v4-flash", "deepseek-v4-pro"))
+      .toBe("deepseek-v4-flash");
+  });
+
+  it("allows exactly the ceiling", () => {
+    expect(clampConciergeModelToCeiling("deepseek-v4-pro", "deepseek-v4-pro"))
+      .toBe("deepseek-v4-pro");
+  });
+
+  // An unset tenant_bot_config must not become an open ceiling.
+  it("treats an unset or unknown ceiling as the default, not unlimited", () => {
+    expect(clampConciergeModelToCeiling("deepseek-v4-pro", null)).toBe(DEFAULT_CONCIERGE_MODEL_ID);
+    expect(clampConciergeModelToCeiling("deepseek-v4-pro", "nonsense")).toBe(DEFAULT_CONCIERGE_MODEL_ID);
+    expect(clampConciergeModelToCeiling("deepseek-v4-pro", undefined)).toBe(DEFAULT_CONCIERGE_MODEL_ID);
+  });
+
+  it("normalizes legacy ids on both sides", () => {
+    // deepseek-chat is a legacy alias for flash, so it must not act as a
+    // higher ceiling than flash.
+    expect(clampConciergeModelToCeiling("deepseek-v4-pro", "deepseek-chat"))
+      .toBe("deepseek-v4-flash");
+  });
+
+  it("never returns a model outside the registry", () => {
+    expect(clampConciergeModelToCeiling("nonsense", "nonsense")).toBe(DEFAULT_CONCIERGE_MODEL_ID);
   });
 });
