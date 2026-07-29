@@ -124,6 +124,30 @@ export function getConciergeModelProfile(
   );
 }
 
+/**
+ * Clamp a requested model to the tenant's configured level.
+ *
+ * The page-editor panel sends its intelligence slider value in the request
+ * body, so without this an authenticated editor can drive spend at any level
+ * their plan permits, regardless of what the tenant is actually configured
+ * for. CONCIERGE_MODEL_PROFILES is ordered cheapest-to-most-expensive, so the
+ * clamp is a simple index ceiling: the slider may move *down* from the
+ * configured level but never above it.
+ *
+ * Plan entitlement is a separate, coarser gate and still applies — this is the
+ * per-tenant cost control, not the plan check.
+ */
+export function clampConciergeModelToCeiling(
+  requested: unknown,
+  ceiling: unknown,
+): ConciergeModelId {
+  const requestedId = normalizeConciergeModelId(requested);
+  const ceilingId = normalizeConciergeModelId(ceiling);
+  return conciergeModelIndex(requestedId) <= conciergeModelIndex(ceilingId)
+    ? requestedId
+    : ceilingId;
+}
+
 export function conciergeModelIndex(value: unknown): number {
   const modelId = normalizeConciergeModelId(value);
   const index = CONCIERGE_MODEL_PROFILES.findIndex(
