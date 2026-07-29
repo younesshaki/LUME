@@ -123,6 +123,7 @@ import {
   captureConciergeTranscript,
   captureDebug,
   captureError,
+  recordModelUsage,
 } from "@/lib/observability";
 import {
   compareOrdinalIndexesFromText,
@@ -968,6 +969,19 @@ export async function POST(request: Request): Promise<Response> {
       ? DEFAULT_CONCIERGE_MODEL_ID
       : botRuntimeConfig.modelId;
   const chatProvider = resolveChatProvider(planClampedModelId);
+  if (chatProvider) {
+    // Highest-volume model path in the product; without this, provider
+    // invoices cannot be attributed to a tenant.
+    recordModelUsage({
+      route: "api/chat",
+      tenantId: tenant.tenantId,
+      provider: chatProvider.profile.provider,
+      requestedModelId: botRuntimeConfig.modelId,
+      effectiveModelId: chatProvider.profile.id,
+      clamped: planClampedModelId !== botRuntimeConfig.modelId,
+      fellBack: chatProvider.fellBack,
+    });
+  }
   if (!chatProvider) {
     return json(
       { error: "AI provider is not configured" },

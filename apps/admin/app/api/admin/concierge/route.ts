@@ -26,12 +26,13 @@ import {
 import { requestEditorCopilotCompletion } from "@/lib/editorCopilotLlm";
 import {
   DEFAULT_CONCIERGE_MODEL_ID,
+  getConciergeModelProfile,
   isPremiumConciergeModel,
   normalizeConciergeModelId,
   type ConciergeModelId,
 } from "@/lib/conciergeModels";
 import { checkChatRateLimit } from "@/lib/rateLimit";
-import { captureDebug, captureError } from "@/lib/observability";
+import { captureDebug, captureError, recordModelUsage } from "@/lib/observability";
 import {
   createFeedRunCommand,
   createLeadAssignCommand,
@@ -161,6 +162,17 @@ export async function POST(request: Request): Promise<Response> {
     );
     intent = compiled.intent;
     modelMetadata = compiled.model;
+    // The admin planner only runs when deterministic parsing failed, so this
+    // is low volume — but it is still billable and must be attributable.
+    recordModelUsage({
+      route: "api/admin/concierge",
+      tenantId: tenant.id,
+      provider: getConciergeModelProfile(compiled.model.effectiveModelId ?? compiled.model.requestedModelId).provider,
+      requestedModelId: compiled.model.requestedModelId,
+      effectiveModelId: compiled.model.effectiveModelId ?? compiled.model.requestedModelId,
+      clamped: plannerModelId !== configuredModelId,
+      fellBack: compiled.model.fellBack === true,
+    });
     if (intent.kind !== "unsupported") source = "model";
   }
   captureDebug("api/admin-concierge", {
