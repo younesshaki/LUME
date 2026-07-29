@@ -219,3 +219,64 @@ function pruneSignatures(now: number): void {
     if (now - state.lastEmittedAt >= DEDUPE_WINDOW_MS) signatures.delete(key);
   }
 }
+
+export type ModelUsageRecord = {
+  level: "info";
+  scope: "model.usage";
+  /** Route that spent the tokens, e.g. "api/editor/chat". */
+  route: string;
+  tenantId: string;
+  provider: string;
+  /** What the caller asked for, before any clamp or provider fallback. */
+  requestedModelId: string;
+  /** What was actually sent upstream, and therefore what gets billed. */
+  effectiveModelId: string;
+  /** True when a tenant ceiling lowered the request. */
+  clamped: boolean;
+  /** True when the requested provider was unconfigured and resolution fell back. */
+  fellBack: boolean;
+  at: string;
+};
+
+/**
+ * Record which model a request actually billed.
+ *
+ * Without this, provider invoices cannot be attributed to a route or tenant.
+ * That is not hypothetical: a Pro-tier spend spike in July 2026 took a manual
+ * code audit to trace because nothing logged the effective model. Emitted as
+ * one JSON line so it is greppable in the platform log viewer
+ * (`scope":"model.usage"`).
+ *
+ * Contains no prompt, completion, or visitor data — only routing metadata.
+ * Like captureError, observability must never break the caller.
+ */
+export function recordModelUsage(input: {
+  route: string;
+  tenantId: string;
+  provider: string;
+  requestedModelId: string;
+  effectiveModelId: string;
+  clamped?: boolean;
+  fellBack?: boolean;
+  now?: () => number;
+}): ModelUsageRecord | null {
+  try {
+    const record: ModelUsageRecord = {
+      level: "info",
+      scope: "model.usage",
+      route: input.route,
+      tenantId: input.tenantId,
+      provider: input.provider,
+      requestedModelId: input.requestedModelId,
+      effectiveModelId: input.effectiveModelId,
+      clamped: input.clamped === true,
+      fellBack: input.fellBack === true,
+      at: new Date((input.now ?? Date.now)()).toISOString(),
+    };
+    console.info(JSON.stringify(record));
+    return record;
+  } catch {
+    return null;
+  }
+}
+

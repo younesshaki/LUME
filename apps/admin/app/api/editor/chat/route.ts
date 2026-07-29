@@ -32,9 +32,11 @@ import {
 import { requestEditorCopilotCompletion } from "@/lib/editorCopilotLlm";
 import {
   isPremiumConciergeModel,
+  clampConciergeModelToCeiling,
+  getConciergeModelProfile,
   normalizeConciergeModelId,
 } from "@/lib/conciergeModels";
-import { captureError } from "@/lib/observability";
+import { captureError, recordModelUsage } from "@/lib/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,6 +108,20 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  // Per-tenant cost ceiling. The plan gate above is coarse — every tenant on
+  // Ultra may use Pro — but the panel's slider still arrives in the request
+  // body, so without this an editor can bill above the level the tenant is
+  // actually configured for. The slider may move down from tenant_bot_config,
+  // never above it. Clamping rather than rejecting keeps the panel usable:
+  // a stale client still gets an answer, just at the configured level.
+  const { data: botConfigRow } = await supabase
+    .from("tenant_bot_config")
+    .select("model")
+    .eq("tenant_id", tenant.id)
+    .maybeSingle();
+  const tenantCeilingModelId = normalizeConciergeModelId(botConfigRow?.model);
+  const effectiveModelId = clampConciergeModelToCeiling(requestedModelId, tenantCeilingModelId);
+
   // ── Rate limit (own bucket; does not share the public visitors' one) ─────
   const rate = checkChatRateLimit(`editor:${clientIpFromRequest(request)}`);
   if (!rate.allowed) {
@@ -134,7 +150,7 @@ export async function POST(request: Request): Promise<Response> {
   });
   const completion = await requestEditorCopilotCompletion(
     [{ role: "system", content: systemPrompt }, ...messages],
-    requestedModelId,
+    effectiveModelId,
   );
   if (!completion.ok) {
     captureError("api/editor-chat/llm", new Error(`editor copilot LLM ${completion.status}`), {
@@ -142,6 +158,16 @@ export async function POST(request: Request): Promise<Response> {
     });
     return json({ error: "The editor concierge is temporarily unavailable." }, 502);
   }
+
+  recordModelUsage({
+    route: "api/editor/chat",
+    tenantId: tenant.id,
+    provider: getConciergeModelProfile(completion.modelId).provider,
+    requestedModelId,
+    effectiveModelId: completion.modelId,
+    clamped: effectiveModelId !== requestedModelId,
+    fellBack: completion.fellBack,
+  });
 
   const { reply, rawEdits } = parseCopilotOutput(completion.content);
   const { edits, dropped } = validateProposedEdits(rawEdits, draft);
