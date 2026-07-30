@@ -1,6 +1,9 @@
 import { useRef, useEffect } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { SITE_NAV_ITEMS, type SiteNavItem } from '../../siteNavigation';
+import { NavOverflowMenu } from '../NavOverflowMenu';
+import { splitNavForOverflow } from '../navOverflow';
+import { useNavOverflow } from '../useNavOverflow';
 import './GooeyNav.css';
 
 type GooeyDesktopNavProps = {
@@ -34,7 +37,15 @@ export function GooeyDesktopNav({
   const filterRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
-  const activeIndex = items.findIndex(item => item.screen === currentScreen);
+  // Collapse instead of overflowing the header track. The active item is
+  // always kept inline (see splitNavForOverflow) because the particle effect
+  // anchors to a rendered <li> — if the active tab collapsed into "More", the
+  // effect would have nothing to attach to and the indicator would vanish.
+  const { trackRef, probeRef, triggerRef, result } = useNavOverflow(items.length);
+  const { visible: visibleItems, overflow: overflowItems } =
+    splitNavForOverflow(items, result.visibleCount, currentScreen);
+
+  const activeIndex = visibleItems.findIndex(item => item.screen === currentScreen);
 
   const noise = (n = 1) => n / 2 - Math.random() * n;
 
@@ -138,13 +149,25 @@ export function GooeyDesktopNav({
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reposition when the item list itself changes
-  }, [activeIndex, items]);
+  }, [activeIndex, visibleItems]);
 
   return (
-    <div className="gooey-nav-container" ref={containerRef}>
+    <div ref={trackRef} className="gooey-nav-track">
+      {/* Measurement probe: real widths for every item, invisible and untabbable. */}
+      <div
+        ref={probeRef}
+        aria-hidden="true"
+        className="gooey-nav-probe"
+      >
+        {items.map((item) => (
+          <span key={item.screen}>{item.label}</span>
+        ))}
+      </div>
+
+      <div className="gooey-nav-container" ref={containerRef}>
       <nav aria-label="Main navigation">
         <ul ref={navRef}>
-          {items.map((item, index) => (
+          {visibleItems.map((item, index) => (
             <li
               key={item.screen}
               className={activeIndex === index ? 'active' : ''}
@@ -171,6 +194,17 @@ export function GooeyDesktopNav({
       </nav>
       <span className="effect filter" ref={filterRef} />
       <span className="effect text" ref={textRef} />
+      </div>
+
+      {result.hasOverflow && (
+        <NavOverflowMenu
+          items={overflowItems}
+          currentScreen={currentScreen}
+          onNavigate={onNavigate}
+          onIntent={onIntent}
+          triggerRef={triggerRef}
+        />
+      )}
     </div>
   );
 }

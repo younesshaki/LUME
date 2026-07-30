@@ -14,6 +14,7 @@ import {
 import { LayoutGrid, LayoutList, PanelsTopLeft } from "lucide-react";
 import type { Page } from "@lume/types";
 import Carousel, { type CarouselSlide } from "@/components/ui/carousel";
+import { VehicleLayoutPanel } from "./VehicleLayoutPanel";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -42,6 +43,12 @@ export default function PagesListClient({
 }: PagesListClientProps) {
   const router = useRouter();
   const [pages, setPages] = useState(initialPages);
+
+  // The vehicle-detail layout is surfaced by its own panel, not as a list row:
+  // it is a template applied to every /vehicles/:id rather than a destination,
+  // and mixing it in with ordinary pages is what kept it invisible.
+  const vehicleLayoutPage = pages.find((page) => page.slug === "vehicle") ?? null;
+  const listedPages = pages.filter((page) => page.slug !== "vehicle");
   const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
   const [view, setView] = useState<PagesView>("list");
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
@@ -179,7 +186,7 @@ export default function PagesListClient({
     </>
   );
 
-  const carouselSlides: CarouselSlide[] = pages.map((page) => ({
+  const carouselSlides: CarouselSlide[] = listedPages.map((page) => ({
     id: page.id,
     title: page.title || page.slug,
     description: `/${page.slug} · ${pageStatus(page)}${page.isReserved ? " · Reserved" : ""}`,
@@ -249,6 +256,13 @@ export default function PagesListClient({
         </div>
       )}
 
+      <VehicleLayoutPanel
+        tenantSlug={tenantSlug}
+        tenantId={tenantId}
+        existingPageId={vehicleLayoutPage?.id ?? null}
+        isPublished={Boolean(vehicleLayoutPage?.publishedRevisionId)}
+      />
+
       {view === "carousel" ? (
         carouselSlides.length === 0 ? (
           <div className="rounded-xl border px-4 py-12 text-center text-sm text-muted-foreground">
@@ -258,13 +272,13 @@ export default function PagesListClient({
           <Carousel slides={carouselSlides} />
         )
       ) : view === "bento" ? (
-        pages.length === 0 ? (
+        listedPages.length === 0 ? (
           <div className="rounded-xl border px-4 py-12 text-center text-sm text-muted-foreground">
             No pages found for this tenant.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 [grid-auto-flow:dense] sm:grid-cols-2 lg:grid-cols-3">
-            {pages.map((page, index) => {
+            {listedPages.map((page, index) => {
               const featured = index % BENTO_FEATURED_INTERVAL === BENTO_FEATURED_INTERVAL - 1;
               const previewSrc = pagePreviewSrc(tenantSlug, page.slug);
               return (
@@ -330,14 +344,14 @@ export default function PagesListClient({
             </tr>
           </thead>
           <tbody>
-            {pages.length === 0 && (
+            {listedPages.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                   No pages found for this tenant.
                 </td>
               </tr>
             )}
-            {pages.map((page, index) => (
+            {listedPages.map((page, index) => (
               <tr
                 key={page.id}
                 draggable

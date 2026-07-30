@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { validatePageBlocksDocument } from "./validation";
 import { DEFAULT_PAGES } from "./defaultPages";
+import { isNavigablePageSlug } from "@lume/types";
 import { DEALER_PAGE_TEMPLATES } from "./dealerPageTemplates";
 
 describe("dealer page templates", () => {
-  it("ships the 8 Tier-1 templates in the expected order", () => {
+  it("ships the Tier-1 templates plus the vehicle-detail layout, in order", () => {
     expect(DEALER_PAGE_TEMPLATES.map((page) => page.slug)).toEqual([
       "financing",
       "trade-in",
@@ -14,7 +15,18 @@ describe("dealer page templates", () => {
       "reviews",
       "faq",
       "privacy",
+      // Last on purpose: this one is a layout applied to every /vehicles/:id,
+      // not a page a visitor navigates to.
+      "vehicle",
     ]);
+  });
+
+  // The VDP layout is the only template that is not a destination. It must be
+  // excluded from navigation, or a dealer who customizes it gets a dead tab.
+  it("keeps the vehicle-detail layout out of navigation", () => {
+    const vdp = DEALER_PAGE_TEMPLATES.find((page) => page.slug === "vehicle");
+    expect(vdp).toBeDefined();
+    expect(isNavigablePageSlug(vdp!.slug)).toBe(false);
   });
 
   it("every template's block document validates against the live descriptors", () => {

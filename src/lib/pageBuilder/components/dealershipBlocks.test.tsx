@@ -11,8 +11,8 @@ import {
   NewsletterSignup,
   ServiceBooking,
   TestDriveBooking,
-  TradeInForm,
 } from "./DealershipForms";
+import { TradeInForm } from "./TradeInFormVariants";
 import { FaqAccordion } from "./DealershipTrust";
 
 const mocks = vi.hoisted(() => ({
@@ -401,6 +401,64 @@ describe("dealership conversion forms", () => {
     }));
     expect(await screen.findByText(/appraisal request is with our team/i))
       .toBeInTheDocument();
+  });
+
+  // Variants must be a layout choice only: same pipeline, same payload. If a
+  // variant could change what reaches the lead pipeline, it would be a second
+  // implementation to keep in sync — the exact thing variants exist to avoid.
+  it.each(["classic", "wizard", "spotlight"])(
+    "the %s trade-in variant submits an identical lead payload",
+    async (variant) => {
+      const block = defaultBlock("trade-in-form");
+      const scoped = { ...block, props: { ...block.props, variant } } as PageBlock;
+      render(<TradeInForm block={scoped} mode="standard" />);
+
+      fireEvent.change(screen.getByLabelText("Year"), { target: { value: "2020" } });
+      fireEvent.change(screen.getByLabelText("Make"), { target: { value: "BMW" } });
+      fireEvent.change(screen.getByLabelText("Model"), { target: { value: "X3" } });
+      fireEvent.change(screen.getByLabelText("Mileage"), { target: { value: "45000" } });
+      fireEvent.change(screen.getByLabelText("Email"), {
+        target: { value: "visitor@example.com" },
+      });
+
+      // The wizard keeps every step mounted, so the form can be submitted
+      // directly without walking the UI — which is also what guarantees typed
+      // values survive step navigation.
+      const form = screen.getByLabelText("Year").closest("form")!;
+      fireEvent.submit(form);
+
+      await waitFor(() => expect(mocks.submitLead).toHaveBeenCalledOnce());
+      expect(mocks.submitLead).toHaveBeenCalledWith(expect.objectContaining({
+        email: "visitor@example.com",
+        source: "contact-form",
+        message: expect.stringContaining("[Trade-in appraisal]"),
+      }));
+    },
+  );
+
+  // A page saved before variants existed, or after an id was renamed, must keep
+  // rendering rather than blanking out.
+  it("falls back to the classic trade-in layout for an unknown variant", () => {
+    const block = defaultBlock("trade-in-form");
+    const scoped = {
+      ...block,
+      props: { ...block.props, variant: "no-such-variant" },
+    } as PageBlock;
+    render(<TradeInForm block={scoped} mode="standard" />);
+    expect(screen.getByLabelText("Year")).toBeInTheDocument();
+    // Classic has no wizard progress list.
+    expect(screen.queryByLabelText("Progress")).not.toBeInTheDocument();
+  });
+
+  it("renders the wizard progress steps only for the wizard variant", () => {
+    const block = defaultBlock("trade-in-form");
+    render(
+      <TradeInForm
+        block={{ ...block, props: { ...block.props, variant: "wizard" } } as PageBlock}
+        mode="standard"
+      />,
+    );
+    expect(screen.getByLabelText("Progress")).toBeInTheDocument();
   });
 
   it("submits test-drive requests with the dedicated source", async () => {
