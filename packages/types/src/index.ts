@@ -16,7 +16,13 @@ export {
 } from "./conciergeTargets";
 export type * from "./page";
 export type * from "./tenantTheme";
-export { DEFAULT_TENANT_THEME } from "./tenantTheme";
+export {
+  DEFAULT_TENANT_THEME,
+  FOOTER_COLUMN_LIMITS,
+  HEADER_CTA_LIMITS,
+  clampFooterColumns,
+  resolveHeaderCtas,
+} from "./tenantTheme";
 export type * from "./siteDesign";
 export {
   SITE_DESIGN_SCHEMA_VERSION,

@@ -4,6 +4,7 @@ import { useNavigation } from "@/app-shell/NavigationProvider";
 import { preloadRouteModule } from "@/app-shell/routeModules";
 import { mediaUrl } from "@/config/cdn";
 import { loadHeaderConfig, type PublicHeaderConfig } from "@/lib/publicNav";
+import type { TenantHeaderVariant } from "@lume/types";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
 import { play } from "@/lib/sound";
 import { DesktopNav } from "../nav/DesktopNav";
@@ -23,6 +24,30 @@ const useGooeyNav = import.meta.env.VITE_ENABLE_GOOEY_NAV === 'true';
 const lumeLogoImage = mediaUrl("LUMElogo.png");
 
 /**
+ * Grid tracks per header variant. Every one is a three-track grid, so the
+ * overlap fix from Phase 1 holds for all of them — a variant changes the track
+ * *sizes*, never whether the nav participates in flow.
+ *
+ * - centred: nav takes the flexible middle track (the historical look).
+ * - left:    nav sits next to the logo, actions pushed right.
+ * - split:   nav and actions share the remaining space evenly.
+ * - minimal: nav collapses entirely to the "More" menu via a narrow track.
+ */
+const HEADER_TRACKS: Record<TenantHeaderVariant, string> = {
+  centred: "grid-cols-[auto_1fr_auto]",
+  left: "grid-cols-[auto_auto_1fr]",
+  split: "grid-cols-[auto_1fr_1fr]",
+  minimal: "grid-cols-[auto_minmax(0,4rem)_auto]",
+};
+
+const NAV_JUSTIFY: Record<TenantHeaderVariant, string> = {
+  centred: "justify-center",
+  left: "justify-start",
+  split: "justify-center",
+  minimal: "justify-end",
+};
+
+/**
  * Which nav item is active. Cinematic screens come from the route section;
  * custom published pages are matched from the /:pageSlug pathname.
  */
@@ -39,9 +64,16 @@ function deriveActiveNavKey(
 }
 
 function useHeaderConfig(): PublicHeaderConfig {
+  // Optimistic default matches the historical look, so the header does not
+  // reflow once the real config lands.
   const [config, setConfig] = useState<PublicHeaderConfig>({
     showCta: true,
     ctaLabel: "Request Invitation",
+    variant: "centred",
+    logoPlacement: "left",
+    sticky: true,
+    showVisitorTab: true,
+    ctas: [{ label: "Request Invitation", href: "/contact", style: "primary" }],
   });
   useEffect(() => {
     let cancelled = false;
@@ -90,8 +122,9 @@ export function SiteHeader() {
     // `overflow-hidden` is deliberately gone: it clipped the overlap instead of
     // preventing it, and it would now also clip the "More" dropdown.
     <header
-      className={`siteHeader fixed top-0 left-0 right-0 z-50
-        grid grid-cols-[auto_1fr_auto] items-center gap-4
+      data-header-variant={headerConfig.variant}
+      className={`siteHeader ${headerConfig.sticky ? "fixed" : "absolute"} top-0 left-0 right-0 z-50
+        grid items-center gap-4 ${HEADER_TRACKS[headerConfig.variant]}
         px-6 md:px-10 h-16 md:h-[72px]
         backdrop-blur-md border-b
         transition-colors duration-200 ${hasOverlayPressure ? "siteHeader--overlayPressure" : ""}`}
@@ -116,7 +149,7 @@ export function SiteHeader() {
 
       {/* Desktop nav — the flexible middle track. min-w-0 lets it shrink below
           its content width so the action cluster is never pushed off-screen. */}
-      <div className="min-w-0 flex justify-center">
+      <div className={`min-w-0 flex ${NAV_JUSTIFY[headerConfig.variant]}`}>
         {useGooeyNav
           ? <GooeyDesktopNav currentScreen={activeKey} onNavigate={onNavigate} onIntent={preloadRouteModule} items={items} />
           : <DesktopNav currentScreen={activeKey} onNavigate={onNavigate} onIntent={preloadRouteModule} items={items} />}
@@ -124,16 +157,17 @@ export function SiteHeader() {
 
       {/* Right slot */}
       <div className="flex items-center justify-end gap-3 md:gap-4">
-        <VisitorAccountButton />
+        {headerConfig.showVisitorTab && <VisitorAccountButton />}
         <ThemeToggle />
-        {headerConfig.showCta && (
+        {headerConfig.ctas.map((cta, index) => (
           <InvitationCTA
-            onClick={() => onNavigate("contact")}
+            key={`${cta.label}-${index}`}
+            onClick={() => onNavigate(cta.href.replace(/^\//, "") || "contact")}
             onIntent={() => preloadRouteModule("contact")}
-            label={headerConfig.ctaLabel}
+            label={cta.label}
             className="hidden md:inline-flex"
           />
-        )}
+        ))}
         <MobileNav
           currentScreen={activeKey}
           onNavigate={onNavigate}

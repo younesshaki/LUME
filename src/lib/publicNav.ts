@@ -4,7 +4,14 @@
  * tenant's theme.header config. Falls back to null on any failure so the
  * header can keep its hardcoded default nav.
  */
-import { DEFAULT_TENANT_THEME, selectHeaderNav, type NavPageEntry } from "@lume/types";
+import {
+  resolveHeaderCtas,
+  DEFAULT_TENANT_THEME,
+  selectHeaderNav,
+  type NavPageEntry,
+  type TenantHeaderCta,
+  type TenantHeaderVariant,
+} from "@lume/types";
 import { isSupabaseConfigured, supabase } from "./supabase";
 import { publicTenantSlug, resolveTenantId } from "./publicTenant";
 import { loadTenantTheme } from "./tenantTheme";
@@ -22,13 +29,32 @@ export function isScreenSlug(slug: string): boolean {
 }
 
 export type PublicHeaderConfig = {
+  /** Retained so existing consumers keep compiling; derived from `ctas`. */
   showCta: boolean;
   ctaLabel: string;
+  variant: TenantHeaderVariant;
+  logoPlacement: "left" | "centre";
+  sticky: boolean;
+  showVisitorTab: boolean;
+  ctas: TenantHeaderCta[];
 };
 
 const HEADER_DEFAULTS: PublicHeaderConfig = {
   showCta: DEFAULT_TENANT_THEME.header.showCta,
   ctaLabel: DEFAULT_TENANT_THEME.header.ctaLabel,
+  // `centred` is the historical arrangement, so an unconfigured tenant is
+  // untouched by the introduction of variants.
+  variant: "centred",
+  logoPlacement: "left",
+  sticky: true,
+  showVisitorTab: true,
+  ctas: [
+    {
+      label: DEFAULT_TENANT_THEME.header.ctaLabel,
+      href: "/contact",
+      style: "primary",
+    },
+  ],
 };
 
 const navCache = new Map<string, Promise<PublicNavEntry[] | null>>();
@@ -78,9 +104,18 @@ async function lookupPublishedNav(slug: string): Promise<PublicNavEntry[] | null
 export async function loadHeaderConfig(slug = publicTenantSlug): Promise<PublicHeaderConfig> {
   try {
     const theme = await loadTenantTheme(slug);
+    // resolveHeaderCtas owns the legacy bridge: when `ctas` is absent it
+    // synthesises one from showCta/ctaLabel, so a tenant that never opens the
+    // new UI renders identically.
+    const ctas = resolveHeaderCtas(theme.header, HEADER_DEFAULTS.ctaLabel);
     return {
-      showCta: theme.header?.showCta ?? HEADER_DEFAULTS.showCta,
-      ctaLabel: theme.header?.ctaLabel?.trim() || HEADER_DEFAULTS.ctaLabel,
+      showCta: ctas.length > 0,
+      ctaLabel: ctas[0]?.label ?? HEADER_DEFAULTS.ctaLabel,
+      variant: theme.header?.variant ?? HEADER_DEFAULTS.variant,
+      logoPlacement: theme.header?.logoPlacement ?? HEADER_DEFAULTS.logoPlacement,
+      sticky: theme.header?.sticky ?? HEADER_DEFAULTS.sticky,
+      showVisitorTab: theme.header?.showVisitorTab ?? HEADER_DEFAULTS.showVisitorTab,
+      ctas,
     };
   } catch {
     return HEADER_DEFAULTS;
