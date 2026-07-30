@@ -45,6 +45,7 @@ import type { BlockComponentProps } from "../registry";
 import { usePageBuilderRenderContext } from "../renderContext";
 import { booleanProp, stringProp } from "./props";
 import "@/experience/ui/VehiclesPage/VehiclesPage.css";
+import { MakeLogo } from "@/components/vehicles/MakeLogo";
 
 const PAGE_SIZE = 24;
 const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
@@ -211,6 +212,8 @@ function VehicleCard({
       <div className="vehiclesPage__cardBody">
         <p className="vehiclesPage__cardYear">{vehicle.year}</p>
         <h2 className="vehiclesPage__cardTitle">
+          {/* Decorative: the make is written immediately after it. */}
+          <MakeLogo make={vehicle.make} size={22} className="vehiclesPage__cardMark" />
           {vehicle.make} {vehicle.model}
         </h2>
         {vehicle.trim && (
