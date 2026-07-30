@@ -44,6 +44,7 @@ import { useVehiclesPageStateBridge } from "./VehiclesPage.state";
 import { vehiclePageSoundActions } from "./VehiclesPage.sounds";
 import { AdvancedFilters, MarketplaceToolbar } from "./VehicleFilters";
 import "./VehiclesPage.css";
+import { MakeLogo } from "@/components/vehicles/MakeLogo";
 
 const PAGE_SIZE = 24;
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
@@ -266,6 +267,9 @@ function VehicleCard({
       <div className="vehiclesPage__cardBody">
         <p className="vehiclesPage__cardYear">{vehicle.year}</p>
         <h2 className="vehiclesPage__cardTitle">
+          {/* Decorative: the make is written immediately after it. The logo
+              inherits the title's colour, so it flips with the theme. */}
+          <MakeLogo make={vehicle.make} size={22} className="vehiclesPage__cardMark" />
           {vehicle.make} {vehicle.model}
         </h2>
         {vehicle.trim && (

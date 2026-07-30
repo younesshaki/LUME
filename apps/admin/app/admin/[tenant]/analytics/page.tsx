@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MakeLogo } from "@/components/MakeLogo";
 import { notFound } from "next/navigation";
 import type { LeadStatus } from "@lume/types";
 import { countByValue, leadsPerDay, priceHistogram } from "@/lib/analytics";
@@ -151,7 +152,10 @@ export default async function AnalyticsPage({ params, searchParams }: PageProps)
     ? await supabase.from("vehicles").select("id, year, make, model").eq("tenant_id", tenant.id).in("id", reportVehicleIds)
     : { data: [], error: null };
   if (reportVehiclesError) throw new Error(`Unable to load conversion vehicles: ${reportVehiclesError.message}`);
-  const reportVehicleNames = new Map((reportVehicles ?? []).map((vehicle) => [vehicle.id, `${vehicle.year} ${vehicle.make} ${vehicle.model}`]));
+  const reportVehicleNames = new Map((reportVehicles ?? []).map((vehicle) => [
+    vehicle.id,
+    { label: `${vehicle.year} ${vehicle.make} ${vehicle.model}`, make: vehicle.make as string | null },
+  ]));
 
   const leadsByStatus = countLeadStatuses(
     ((leadsResult.data ?? []) as Array<{ status: LeadStatus }>).map((row) => row.status)
@@ -412,8 +416,33 @@ function formatCurrency(value: number): string {
   return CURRENCY_FORMATTER.format(value);
 }
 
-function ConversionVehiclePanel({ title, rows, vehicleNames, slug }: { title: string; rows: Array<{ vehicleId: string; viewCount: number; submittedLeadCount: number }>; vehicleNames: Map<string, string>; slug: string }) {
-  return <div className="rounded-xl border p-4"><h2 className="text-sm font-semibold">{title}</h2>{!rows.length ? <p className="mt-4 text-sm text-muted-foreground">No consented vehicle activity yet.</p> : <ul className="mt-3 space-y-3 text-sm">{rows.map((row) => <li key={row.vehicleId} className="flex items-center justify-between gap-3"><Link className="hover:underline" href={`/admin/${slug}/vehicles/${row.vehicleId}`}>{vehicleNames.get(row.vehicleId) ?? "Unavailable vehicle"}</Link><span className="shrink-0 text-muted-foreground">{row.viewCount} views · {row.submittedLeadCount} leads</span></li>)}</ul>}</div>;
+function ConversionVehiclePanel({ title, rows, vehicleNames, slug }: { title: string; rows: Array<{ vehicleId: string; viewCount: number; submittedLeadCount: number }>; vehicleNames: Map<string, { label: string; make: string | null }>; slug: string }) {
+  return (
+    <div className="rounded-xl border p-4">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      {!rows.length ? (
+        <p className="mt-4 text-sm text-muted-foreground">No consented vehicle activity yet.</p>
+      ) : (
+        <ul className="mt-3 space-y-3 text-sm">
+          {rows.map((row) => {
+            const vehicle = vehicleNames.get(row.vehicleId);
+            return (
+              <li key={row.vehicleId} className="flex items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2">
+                  {/* Decorative: the make is already in the label beside it. */}
+                  <MakeLogo make={vehicle?.make} size={18} className="text-muted-foreground" />
+                  <Link className="truncate hover:underline" href={`/admin/${slug}/vehicles/${row.vehicleId}`}>
+                    {vehicle?.label ?? "Unavailable vehicle"}
+                  </Link>
+                </span>
+                <span className="shrink-0 text-muted-foreground">{row.viewCount} views · {row.submittedLeadCount} leads</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function ConversionList({ title, empty, rows }: { title: string; empty: string; rows: Array<{ label: string; detail: string }> }) {
