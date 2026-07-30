@@ -55,7 +55,13 @@ export {
   LUXURY_LIGHT_COLORS,
 } from "./siteTemplates";
 export type * from "./headerNav";
-export { HEADER_NAV_LIMITS, clampMaxNavItems, selectHeaderNav } from "./headerNav";
+export {
+  HEADER_NAV_LIMITS,
+  NON_NAV_PAGE_SLUGS,
+  clampMaxNavItems,
+  isNavigablePageSlug,
+  selectHeaderNav,
+} from "./headerNav";
 export type * from "./lead";
 export type * from "./tenantDomain";
 export type * from "./tenantInvite";
