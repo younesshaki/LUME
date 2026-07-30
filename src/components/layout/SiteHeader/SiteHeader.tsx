@@ -119,14 +119,18 @@ export function SiteHeader() {
     // expanded in both directions and overlapped them. As a grid child the nav
     // is bounded by its siblings and can only ever collapse (see DesktopNav).
     //
-    // `overflow-hidden` is deliberately gone: it clipped the overlap instead of
-    // preventing it, and it would now also clip the "More" dropdown.
+    // `overflow-hidden` stays, but for a different reason than before. It is no
+    // longer load-bearing for the overlap — the grid tracks handle that — but
+    // the gooey nav's filter paints a solid black backdrop inset -75px around
+    // the active tab (needed for its blur+contrast threshold), and unclipped
+    // that slab spills below the header and covers the page on scroll. The
+    // "More" panel is portalled to <body> precisely so this clip can stay.
     <header
       data-header-variant={headerConfig.variant}
       className={`siteHeader ${headerConfig.sticky ? "fixed" : "absolute"} top-0 left-0 right-0 z-50
         grid items-center gap-4 ${HEADER_TRACKS[headerConfig.variant]}
         px-6 md:px-10 h-16 md:h-[72px]
-        backdrop-blur-md border-b
+        backdrop-blur-md border-b overflow-hidden
         transition-colors duration-200 ${hasOverlayPressure ? "siteHeader--overlayPressure" : ""}`}
     >
       {/* Logo */}
