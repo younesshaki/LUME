@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import type { SiteNavItem } from "../siteNavigation";
 
@@ -26,10 +27,26 @@ export function NavOverflowMenu({
   triggerRef,
 }: NavOverflowMenuProps) {
   const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const containsActive = items.some((item) => item.screen === currentScreen);
+
+  /**
+   * The panel is portalled to <body> and positioned from the trigger's rect.
+   *
+   * It cannot be a normal absolutely-positioned child: the header clips its
+   * overflow, and it must. The gooey nav's filter draws a solid black backdrop
+   * inset -75px around the active tab — required for its blur+contrast
+   * threshold — and without the clip that slab spills below the header and
+   * covers the page. So the header keeps `overflow-hidden` and this escapes it.
+   */
+  const positionPanel = useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setAnchor({ top: rect.bottom + 12, right: window.innerWidth - rect.right });
+  }, [triggerRef]);
 
   // Close on outside pointer or Escape, and return focus to the trigger so
   // keyboard users are not dropped at the top of the document.
@@ -51,6 +68,22 @@ export function NavOverflowMenu({
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open, triggerRef]);
+
+  // Position before paint so the panel never appears at the wrong place first.
+  useLayoutEffect(() => {
+    if (open) positionPanel();
+  }, [open, positionPanel]);
+
+  // The header is fixed, so the trigger moves with the viewport, not the page.
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("resize", positionPanel);
+    window.addEventListener("scroll", positionPanel, { passive: true });
+    return () => {
+      window.removeEventListener("resize", positionPanel);
+      window.removeEventListener("scroll", positionPanel);
+    };
+  }, [open, positionPanel]);
 
   // Move focus into the panel on open so the menu is operable from the keyboard.
   useEffect(() => {
@@ -82,16 +115,17 @@ export function NavOverflowMenu({
         />
       </button>
 
-      {open && (
+      {open && anchor && createPortal(
         <div
           ref={panelRef}
           id={menuId}
           role="group"
           aria-label="More navigation"
-          className="absolute right-0 top-full mt-3 min-w-[12rem] rounded-md border
+          style={{ position: "fixed", top: anchor.top, right: anchor.right }}
+          className="min-w-[12rem] rounded-md border
             border-[var(--theme-lume-line,rgba(255,255,255,.12))]
             bg-[var(--theme-lume-panel,rgba(12,12,12,.96))]
-            backdrop-blur-md shadow-xl py-1 z-50"
+            backdrop-blur-md shadow-xl py-1 z-[60]"
         >
           {items.map((item) => {
             const active = item.screen === currentScreen;
@@ -117,7 +151,8 @@ export function NavOverflowMenu({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
