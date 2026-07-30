@@ -25,13 +25,13 @@ describe("vehicle make logo manifest", () => {
   });
 
   it("only ships CC0 or public-domain artwork", () => {
-    // DODGE is the one asset whose upstream source was not recorded (supplied
-    // directly). Named here rather than loosening the rule, so it stays visible
-    // until the origin is confirmed.
+    // DODGE comes from IconScout, a commercial marketplace whose terms were not
+    // verifiable. Accepted while the product is in testing; see the note on the
+    // entry. Named here rather than loosening the rule, so it resurfaces.
     const UNCONFIRMED = new Set(["DODGE"]);
     for (const logo of VEHICLE_MAKE_LOGOS) {
       if (UNCONFIRMED.has(logo.make)) {
-        expect(logo.source, `${logo.make}`).toBe("owner-supplied");
+        expect(logo.source, `${logo.make}`).toBe("iconscout");
         continue;
       }
       expect(["CC0-1.0", "CC0", "Public domain"], `${logo.make}`).toContain(logo.license);
