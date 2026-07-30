@@ -73,8 +73,15 @@ describe("lookupMakeLogo", () => {
   });
 
   it("returns null rather than guessing for uncurated makes", () => {
-    // Genesis stays excluded pending confirmation it is the marque, not the band.
-    expect(lookupMakeLogo("GENESIS")).toBeNull();
+    // Excluded after rendering them: a search-by-name match is not proof of
+    // identity, and path data does not reveal illegibility.
+    //   GENESIS — Commons results are the band, not the marque.
+    //   GMC     — the file returned was the Greater Manchester Council.
+    //   BUICK   — renders as a black corner shape, not the tri-shield.
+    //   HUMMER, LINCOLN — render as detached letter fragments at icon size.
+    for (const make of ["GENESIS", "GMC", "BUICK", "HUMMER", "LINCOLN"]) {
+      expect(lookupMakeLogo(make), make).toBeNull();
+    }
     expect(lookupMakeLogo("NOT A REAL MAKE")).toBeNull();
     expect(lookupMakeLogo("")).toBeNull();
     expect(lookupMakeLogo(null)).toBeNull();
