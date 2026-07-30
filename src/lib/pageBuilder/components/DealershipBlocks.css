@@ -1252,3 +1252,11 @@
     transform: none;
   }
 }
+
+/* Marque mark inside featured / new-arrival card titles. Takes the title's
+   colour, so light and dark need no variant. */
+.dealershipVehicleCard__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+}
