@@ -28,7 +28,7 @@ export type VehicleMakeLogo = {
   viewBox: string;
   paths: readonly string[];
   fillRule: "nonzero" | "evenodd";
-  source: "simple-icons" | "wikimedia" | "owner-supplied";
+  source: "simple-icons" | "wikimedia" | "iconscout";
   sourceUrl: string;
   license: string;
   trademarkOwner: string;
@@ -44,9 +44,19 @@ export const VEHICLE_MAKE_LOGOS: readonly VehicleMakeLogo[] = [
     // path under evenodd, which turns the field into a hole and lets the badge
     // render in a single colour.
     //
-    // NOTE: supplied by the site owner; the upstream source was not recorded.
-    // Commons has only 7:1 wordmark versions of this mark, so this is the only
-    // usable shield we found. Replace sourceUrl once the origin is confirmed.
+    // LICENCE — REVISIT BEFORE COMMERCIAL LAUNCH.
+    // Source is IconScout, a commercial marketplace, not a CC0/public-domain
+    // set like every other entry here. Their free tier commonly requires
+    // attribution and can restrict redistribution inside a product sold to
+    // third parties — which is exactly what LUME does, since the asset ships to
+    // every paying tenant. The specific licence for this file was not verified
+    // (iconscout.com returns 403 to automated requests).
+    //
+    // Accepted deliberately by the site owner on 2026-07-30 on the grounds that
+    // the product is still in testing. That justification expires at launch, so
+    // this needs either a confirmed permissive licence, an attribution notice,
+    // or replacement with the monogram fallback before customers are billed.
+    // The licence test names DODGE as an exception so this cannot go quiet.
     make: "DODGE",
     slug: "dodge",
     viewBox: "2.4 79.6 33 33",
@@ -57,9 +67,9 @@ export const VEHICLE_MAKE_LOGOS: readonly VehicleMakeLogo[] = [
       "M17.67 88.707c.273-.273.512-.547.991-.547.205-.376.82-.82 1.196-.854.205-.341.957-.82 1.401-.786.171-.308 1.777-.376 2.119-.171.308-.171 1.605.103 1.742.513.444.103 1.333.82 1.777 1.879.17.307-.171.41-.342.205s-1.436-.786-2.153-.546-2.563 1.127-4.75 4.168c-.376.547-1.641.923-1.88-.239-.295-1.438-.58-3.075-.101-3.622 0 0-.479.547 0 0z",
     ],
     fillRule: "evenodd",
-    source: "owner-supplied",
-    sourceUrl: "https://commons.wikimedia.org/wiki/Category:Dodge",
-    license: "Public domain (unconfirmed for this file)",
+    source: "iconscout",
+    sourceUrl: "https://iconscout.com/icons/dodge",
+    license: "IconScout — terms unverified, see note above",
     trademarkOwner: "FCA US LLC (Stellantis)",
   },
   {
