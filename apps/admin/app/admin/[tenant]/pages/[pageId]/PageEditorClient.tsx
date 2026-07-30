@@ -20,6 +20,7 @@ import {
 import { applyProposedEdits, type ProposedEdit } from "@/lib/editorCopilot";
 import type { ConciergeProvider } from "@/lib/conciergeModels";
 import { ConciergePanel } from "./ConciergePanel";
+import { VariantCarousel } from "./VariantCarousel";
 import { LivePreviewPanel } from "./LivePreviewPanel";
 
 type EditorPage = {
@@ -227,6 +228,29 @@ export default function PageEditorClient({
       delete next[blockId];
       return next;
     });
+  }
+
+  /**
+   * Apply a variant. Same write path as any other prop, but variants have no
+   * BlockField (they are presented by the carousel, not a sidebar input), so
+   * they cannot go through updateSelectedProp.
+   */
+  function updateSelectedVariant(variantId: string) {
+    if (!selectedBlock) return;
+    setBlocks((current) =>
+      current.map((block) =>
+        block.id === selectedBlock.id
+          ? {
+              ...block,
+              props: {
+                ...(selectedDescriptor ? cloneProps(selectedDescriptor.defaultProps) : {}),
+                ...block.props,
+                variant: variantId,
+              },
+            }
+          : block,
+      ),
+    );
   }
 
   function updateSelectedProp(field: BlockField, value: unknown) {
@@ -583,6 +607,19 @@ export default function PageEditorClient({
           )}
           <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Properties</h2>
+          {selectedBlock && selectedDescriptor?.variants?.length ? (
+            <div className="mt-4">
+              <VariantCarousel
+                variants={selectedDescriptor.variants}
+                value={
+                  typeof selectedBlock.props.variant === "string"
+                    ? selectedBlock.props.variant
+                    : selectedDescriptor.variants[0].id
+                }
+                onChange={updateSelectedVariant}
+              />
+            </div>
+          ) : null}
           {!selectedBlock || !selectedDescriptor ? (
             <p className="mt-4 text-sm text-muted-foreground">Select a block to edit its props.</p>
           ) : selectedDescriptor.fields.length === 0 ? (

@@ -1,4 +1,5 @@
 import { registerBlockComponent } from "./registry";
+import { TradeInForm } from "./components/TradeInFormVariants";
 import {
   AnnouncementBar,
   CtaBanner,
@@ -26,7 +27,6 @@ import {
   TeamGrid,
   TestDriveBooking,
   Testimonials,
-  TradeInForm,
   TrustStats,
   VehicleDetail,
   VehicleSearchBand,
