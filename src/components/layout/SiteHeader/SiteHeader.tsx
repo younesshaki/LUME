@@ -81,10 +81,19 @@ export function SiteHeader() {
   };
 
   return (
+    // Three explicit tracks: logo | nav | actions. The nav used to be
+    // absolutely positioned and centre-translated, which took it out of flow —
+    // the logo and action cluster reserved no space for it, so additional tabs
+    // expanded in both directions and overlapped them. As a grid child the nav
+    // is bounded by its siblings and can only ever collapse (see DesktopNav).
+    //
+    // `overflow-hidden` is deliberately gone: it clipped the overlap instead of
+    // preventing it, and it would now also clip the "More" dropdown.
     <header
-      className={`siteHeader fixed top-0 left-0 right-0 z-50 flex items-center justify-between
+      className={`siteHeader fixed top-0 left-0 right-0 z-50
+        grid grid-cols-[auto_1fr_auto] items-center gap-4
         px-6 md:px-10 h-16 md:h-[72px]
-        backdrop-blur-md border-b overflow-hidden
+        backdrop-blur-md border-b
         transition-colors duration-200 ${hasOverlayPressure ? "siteHeader--overlayPressure" : ""}`}
     >
       {/* Logo */}
@@ -105,15 +114,16 @@ export function SiteHeader() {
         />
       </button>
 
-      {/* Desktop nav — centered */}
-      <div className="hidden md:flex absolute left-1/2 -translate-x-1/2">
+      {/* Desktop nav — the flexible middle track. min-w-0 lets it shrink below
+          its content width so the action cluster is never pushed off-screen. */}
+      <div className="min-w-0 flex justify-center">
         {useGooeyNav
           ? <GooeyDesktopNav currentScreen={activeKey} onNavigate={onNavigate} onIntent={preloadRouteModule} items={items} />
           : <DesktopNav currentScreen={activeKey} onNavigate={onNavigate} onIntent={preloadRouteModule} items={items} />}
       </div>
 
       {/* Right slot */}
-      <div className="flex items-center gap-3 md:gap-4">
+      <div className="flex items-center justify-end gap-3 md:gap-4">
         <VisitorAccountButton />
         <ThemeToggle />
         {headerConfig.showCta && (
