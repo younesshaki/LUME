@@ -126,6 +126,11 @@ import {
   recordModelUsage,
 } from "@/lib/observability";
 import {
+  type DeterministicAnswers,
+  hasDeterministicAnswer,
+  resolveDeterministicContent,
+} from "@/lib/chatDeterministicAnswer";
+import {
   compareOrdinalIndexesFromText,
   filterActionsByConversationStateWithDiagnostics,
   hasFullInventoryResetIntent,
@@ -848,22 +853,30 @@ export async function POST(request: Request): Promise<Response> {
     sessionId: visitorTurn?.sessionId ?? anonymousConversationId ?? undefined,
   });
 
-  if (
-    isImmediateSiteNavigation(deterministicActions) ||
-    statePresentationRequest ||
-    deterministicAvailabilityAnswer ||
-    deterministicInventoryAnswer ||
-    deterministicZeroResultAnswer ||
-    deterministicOrdinalUnavailableAnswer ||
-    deterministicOrdinalReferenceAnswer ||
-    deterministicSelectedVehicleAnswer ||
-    deterministicSelectedVehicleUnavailableAnswer ||
-    deterministicUnsupportedFactAnswer ||
-    deterministicMakeSwitchClarifier ||
-    deterministicCompareAnswer ||
-    deterministicCompareUnavailableAnswer ||
-    deterministicClarifier
-  ) {
+  // Precedence lives in lib/chatDeterministicAnswer.ts, where it is an ordered
+  // array with pairwise tests. The guard and the selection below read that one
+  // definition, so they cannot drift apart the way two hand-written
+  // expressions over the same twelve variables could.
+  const deterministicAnswers: DeterministicAnswers = {
+    clarifier: deterministicClarifier,
+    makeSwitchClarifier: deterministicMakeSwitchClarifier,
+    compare: deterministicCompareAnswer,
+    compareUnavailable: deterministicCompareUnavailableAnswer,
+    zeroResult: deterministicZeroResultAnswer,
+    ordinalUnavailable: deterministicOrdinalUnavailableAnswer,
+    ordinalReference: deterministicOrdinalReferenceAnswer,
+    selectedVehicle: deterministicSelectedVehicleAnswer,
+    selectedVehicleUnavailable: deterministicSelectedVehicleUnavailableAnswer,
+    unsupportedFact: deterministicUnsupportedFactAnswer,
+    availability: deterministicAvailabilityAnswer,
+    inventory: deterministicInventoryAnswer,
+  };
+  const deterministicGuardContext = {
+    immediateSiteNavigation: isImmediateSiteNavigation(deterministicActions),
+    statePresentationRequest,
+  };
+
+  if (hasDeterministicAnswer(deterministicAnswers, deterministicGuardContext)) {
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
         filterConversationActions(
@@ -883,23 +896,10 @@ export async function POST(request: Request): Promise<Response> {
       actionAttribution,
     );
     const actionAcknowledgement = actionOnlyAcknowledgement(actions);
-    const visibleContent =
-      deterministicClarifier ??
-      deterministicMakeSwitchClarifier ??
-      deterministicCompareAnswer ??
-      deterministicCompareUnavailableAnswer ??
-      deterministicZeroResultAnswer ??
-      deterministicOrdinalUnavailableAnswer ??
-      deterministicOrdinalReferenceAnswer ??
-      deterministicSelectedVehicleAnswer ??
-      deterministicSelectedVehicleUnavailableAnswer ??
-      deterministicUnsupportedFactAnswer ??
-      deterministicAvailabilityAnswer ??
-      deterministicInventoryAnswer ??
-      (actionAcknowledgement ||
-        (statePresentationRequest
-          ? "I have the current inventory results ready."
-          : ""));
+    const visibleContent = resolveDeterministicContent(deterministicAnswers, {
+      ...deterministicGuardContext,
+      actionAcknowledgement,
+    });
     captureDebug("api/chat/actions", {
       tenantId: tenant.tenantId,
       actionsEmitted: actionDebugSummary(actions),
