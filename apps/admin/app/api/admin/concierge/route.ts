@@ -32,6 +32,7 @@ import {
   type ConciergeModelId,
 } from "@/lib/conciergeModels";
 import { checkChatRateLimit } from "@/lib/rateLimit";
+import { collectManagedImageVehicleIds } from "@/lib/managedImageScan";
 import { captureDebug, captureError, recordModelUsage } from "@/lib/observability";
 import {
   createFeedRunCommand,
@@ -789,19 +790,26 @@ async function inspectPhotoGap(
     if (!data || data.length < PAGE) break;
   }
 
-  const managed = new Set<string>();
-  for (let page = 0; ; page++) {
-    const from = page * PAGE;
-    const { data, error } = await supabase
-      .from("vehicle_images")
-      .select("vehicle_id")
-      .eq("tenant_id", tenantId)
-      .order("vehicle_id", { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (error) break; // Managed images are optional; legacy sources still count.
-    for (const image of data ?? []) managed.add(image.vehicle_id);
-    if (!data || data.length < PAGE) break;
+  // Managed images are optional; legacy sources still count. That tolerance is
+  // for an *absent* table, not a *truncated* read — see managedImageScan.ts.
+  // Bailing on any error used to leave the set partially populated, and every
+  // vehicle whose row sat on an unread page was then counted as photoless.
+  const scan = await collectManagedImageVehicleIds(
+    async (from, to) => {
+      const { data, error } = await supabase
+        .from("vehicle_images")
+        .select("vehicle_id")
+        .eq("tenant_id", tenantId)
+        .order("vehicle_id", { ascending: true })
+        .range(from, to);
+      return { data, error };
+    },
+    PAGE,
+  );
+  if (!scan.ok) {
+    return json({ error: "Unable to read inventory photo coverage right now." }, 502);
   }
+  const managed = scan.vehicleIds;
 
   const missing = rows.filter((row) =>
     !managed.has(row.id) && !row.special_image_src?.trim() && !row.image_src?.trim());
