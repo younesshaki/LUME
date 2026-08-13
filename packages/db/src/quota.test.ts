@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   QUOTA_PLAN_CACHE_TTL_MS,
   checkQuota,
@@ -26,8 +26,27 @@ type ClientFixture = {
   rpc?: (name: string, args: Record<string, unknown>) => Promise<RpcResult>;
 };
 
+/**
+ * Inside the fixture's billing period (July 2026), so the suite does not rot.
+ *
+ * The fixtures hard-code current_period_end: 2026-08-01. Once real time passed
+ * that date, hasUnsafeFiniteQuotaPeriod() saw an expired period and every
+ * affected case fell to fail_open with a null limit — a green suite that went
+ * red on a calendar boundary, with no code change. The product behaviour is
+ * correct and deliberate: never turn partially provisioned billing metadata
+ * into a permanent lockout.
+ *
+ * Only Date is faked. Faking timers wholesale would stall the async paths
+ * under test.
+ */
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-07-15T00:00:00Z"));
   clearQuotaPlanCache();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("quota limit policy", () => {

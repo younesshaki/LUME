@@ -334,35 +334,64 @@ export function hasAdminCapabilityRole(actorRole: AdminRole, requiredRole: Admin
   return ADMIN_ROLE_RANK[actorRole] >= ADMIN_ROLE_RANK[requiredRole];
 }
 
+/**
+ * The capability each intent acts through.
+ *
+ * Every intent that does real work maps to exactly one registry entry, so the
+ * role gate is read from `ADMIN_CAPABILITIES` and nowhere else. These roles
+ * used to be written out a second time in `adminIntentMinimumRole`; they
+ * agreed, but only by hand. Raising `vehicle.price.update` to `admin` in the
+ * registry would have left the gate at `editor` and silently widened who could
+ * prepare a reprice — the exact drift the registry exists to prevent.
+ *
+ * Intents deliberately absent: `clarify`, `describe_current_page`,
+ * `summarize_concierge_config` and `unsupported`. Those read no tenant data
+ * and act on nothing, so they have no capability to point at.
+ */
+export const INTENT_CAPABILITY_ID: Partial<Record<AdminConciergeIntent["kind"], string>> = {
+  summarize_overview: "overview.summary",
+  search_vehicles: "vehicles.search",
+  search_leads: "leads.search",
+  search_customers: "customers.search",
+  search_pages: "pages.search",
+  inspect_feed_runs: "feeds.inspect",
+  inspect_photo_gap: "inventory.photo_gap",
+  inspect_aging_inventory: "inventory.aging",
+  inspect_launch_readiness: "setup.readiness",
+  summarize_conversion: "analytics.summary",
+  assign_lead: "lead.assign",
+  update_lead_status: "lead.status.update",
+  update_vehicle_price: "vehicle.price.update",
+  update_vehicle_status: "vehicle.status.update",
+  enqueue_feed_run: "feed.run.enqueue",
+};
+
+/**
+ * Intents that legitimately have no capability. Kept beside the map so the
+ * two together cover the union exhaustively — the test asserts that, because
+ * a `Partial` record cannot make it a compile error.
+ */
+export const CAPABILITY_FREE_INTENTS = [
+  "clarify",
+  "describe_current_page",
+  "summarize_concierge_config",
+  "unsupported",
+] as const satisfies ReadonlyArray<AdminConciergeIntent["kind"]>;
+
 /** Null means a plan names no currently registered capability and must fail closed. */
 export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole | null {
-  switch (intent.kind) {
-    case "navigate":
-      return capabilityById(intent.capabilityId)?.minRole ?? null;
-    case "update_lead_status":
-      return "editor";
-    case "enqueue_feed_run":
-      return "admin";
-    case "clarify":
-    case "describe_current_page":
-    case "summarize_concierge_config":
-    case "summarize_overview":
-    case "search_vehicles":
-    case "search_leads":
-    case "search_customers":
-    case "search_pages":
-    case "inspect_feed_runs":
-    case "inspect_photo_gap":
-    case "inspect_aging_inventory":
-    case "inspect_launch_readiness":
-    case "summarize_conversion":
-    case "unsupported":
-      return "viewer";
-    case "assign_lead":
-    case "update_vehicle_price":
-    case "update_vehicle_status":
-      return "editor";
-  }
+  // `navigate` carries its target on the intent; everything else resolves
+  // through the map above. Both paths end at the registry.
+  const capabilityId = intent.kind === "navigate"
+    ? intent.capabilityId
+    : INTENT_CAPABILITY_ID[intent.kind];
+  if (capabilityId) return capabilityById(capabilityId)?.minRole ?? null;
+
+  return (CAPABILITY_FREE_INTENTS as readonly string[]).includes(intent.kind)
+    ? "viewer"
+    // An intent was added to the union without a capability and without being
+    // declared capability-free. Fail closed rather than assume it is harmless.
+    : null;
 }
 
 /**
