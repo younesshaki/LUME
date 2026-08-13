@@ -130,6 +130,7 @@ import {
   hasDeterministicAnswer,
   resolveDeterministicContent,
 } from "@/lib/chatDeterministicAnswer";
+import { shouldGroundSelectedVehicle } from "@/lib/chatGroundingScope";
 import {
   compareOrdinalIndexesFromText,
   filterActionsByConversationStateWithDiagnostics,
@@ -450,6 +451,7 @@ export async function POST(request: Request): Promise<Response> {
     const selectedVehicleDetailRequest = isSelectedVehicleDetailRequest(
       lastUser.content,
     );
+    let selectedVehicleChunk: (typeof contextChunks)[number] | null = null;
     if (unsupportedVehicleFactRequest) {
       deterministicUnsupportedFactAnswer = unsupportedVehicleFactAnswer(
         lastUser.content,
@@ -466,14 +468,17 @@ export async function POST(request: Request): Promise<Response> {
           selectedVehicle,
         );
       }
-      contextChunks.unshift({
+      // Built here, injected below — the decision to inject needs the
+      // extracted filters, which are not known until the facet vocabulary has
+      // been read a few lines further down.
+      selectedVehicleChunk = {
         category:
           selectedVehicle.id === currentPageVehicleId
             ? "current-page"
             : "recent-selection",
         text: `${selectedVehicle.id === currentPageVehicleId ? "Current public page is" : "The visitor's most recently selected vehicle is"} the live vehicle ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}${selectedVehicle.trim ? ` ${selectedVehicle.trim}` : ""}. Exact vehicleId: ${selectedVehicle.id}. Price: $${selectedVehicle.price.toLocaleString()}. Mileage: ${selectedVehicle.mileage === null ? "not listed" : `${selectedVehicle.mileage.toLocaleString()} mi`}. Drivetrain: ${selectedVehicle.drivetrain || "not listed"}. Fuel: ${selectedVehicle.fuelType || "not listed"}. Location: ${selectedVehicle.sellerCity && selectedVehicle.sellerState ? `${selectedVehicle.sellerCity}, ${selectedVehicle.sellerState}` : "not listed"}.`,
         score: 2,
-      });
+      };
     } else if (selectedVehicleDetailRequest) {
       deterministicSelectedVehicleUnavailableAnswer =
         "I don’t have a selected vehicle to answer that about yet. Open a listing or tell me which result you mean, and I’ll check its verified details.";
@@ -502,6 +507,25 @@ export async function POST(request: Request): Promise<Response> {
             isPresentationRequest(lastUser.content)),
         ) ||
         hasScopeResetIntent(lastUser.content));
+    // Inject the open vehicle only when the turn is plausibly still about it.
+    // pagePath keeps pointing at a vehicle for the rest of the session, so
+    // without this the first and highest-scored chunk on "show me your SUVs"
+    // was a full description of the BMW the visitor happened to have open —
+    // and the GROUNDING RULE then faithfully kept the model on that BMW.
+    if (
+      selectedVehicleChunk &&
+      shouldGroundSelectedVehicle({
+        hasInventoryIntent,
+        extractedFilters,
+        activeFilters: conversationState.activeFilters,
+        isSelectedVehicleDetailRequest: selectedVehicleDetailRequest,
+        isOrdinalReference: isOrdinalVehicleReference(lastUser.content),
+        isSelectedVehicleAction: isSelectedVehicleActionRequest(lastUser.content),
+      })
+    ) {
+      contextChunks.unshift(selectedVehicleChunk);
+    }
+
     const stateTransition = transitionInventoryState(
       conversationState,
       lastUser.content,
