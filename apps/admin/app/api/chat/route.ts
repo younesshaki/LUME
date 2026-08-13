@@ -131,6 +131,7 @@ import {
   resolveDeterministicContent,
 } from "@/lib/chatDeterministicAnswer";
 import { shouldGroundSelectedVehicle } from "@/lib/chatGroundingScope";
+import { tenantLiveVehicleCount } from "@/lib/tenantInventoryCount";
 import {
   compareOrdinalIndexesFromText,
   filterActionsByConversationStateWithDiagnostics,
@@ -747,12 +748,31 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
 
+    // Without this the prompt omitted "Total vehicles in full inventory"
+    // entirely, so with a filter active the model could only see TOTAL
+    // MATCHING — and "how many cars do you have?" got answered as "how many
+    // match your filters". Cached per tenant; a failure leaves it undefined
+    // and the line is omitted exactly as before.
+    const totalInventory = await tenantLiveVehicleCount(
+      tenant.tenantId,
+      async (tenantId) => {
+        const { count, error } = await supabase
+          .from("vehicles")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .neq("status", "archived")
+          .is("sold_at", null);
+        return error ? undefined : (count ?? undefined);
+      },
+    );
+
     assembled = assembleSystemPrompt({
       basePrompt: personaBasePrompt(persona, tenantName),
       contextChunks,
       matchedVehicles,
       totalMatched,
       filters,
+      totalInventory,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "RAG failure";
@@ -1497,14 +1517,6 @@ function vehicleFilterVocabulary(value: unknown): {
     states: stringArray(record.states),
     cities: stringArray(record.cities),
   };
-}
-
-function priorVisitorQueries(messages: readonly MemoryMessage[]): string[] {
-  const queries = messages
-    .filter((message) => message.role === "user")
-    .map((message) => message.content);
-  queries.pop();
-  return queries;
 }
 
 function previousAssistantContentForLastUser(
