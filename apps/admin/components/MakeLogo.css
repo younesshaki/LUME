@@ -1,0 +1,24 @@
+/* Make logos inherit colour from context, so light and dark need no variants.
+   The monogram chip deliberately matches the logo's footprint: a row mixing
+   both must keep one rhythm, or the fallback reads as a broken image. */
+
+.makeLogo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+  vertical-align: middle;
+}
+
+.makeLogo--monogram {
+  border-radius: 0.35em;
+  border: 1px solid currentColor;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  /* The outline alone reads too heavy beside a solid silhouette; softening the
+     chip keeps the two at similar visual weight. */
+  opacity: 0.72;
+  font-family: inherit;
+}

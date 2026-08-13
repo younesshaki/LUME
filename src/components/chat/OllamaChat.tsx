@@ -20,6 +20,10 @@ import { chatSounds } from "./OllamaChat.sounds";
 import { useOllamaChatStateBridge } from "./OllamaChat.state";
 import { sanitizeStoredChatMessages } from "./OllamaChat.storage";
 import {
+  MAX_PERSISTED_MESSAGES,
+  buildOutboundMessages,
+} from "./OllamaChat.history";
+import {
   appendThinkingStep,
   snapshotThinkingSteps,
   type ThinkingSteps,
@@ -150,7 +154,13 @@ export function OllamaChat() {
   useEffect(() => {
     if (isSending || isRetrieving) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      // Bounded so a long session cannot grow the entry until it trips quota.
+      // Past that point the catch below swallowed every write and the visitor
+      // silently lost their history on refresh.
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(messages.slice(-MAX_PERSISTED_MESSAGES)),
+      );
     } catch {
       // quota exceeded or private mode
     }
@@ -196,10 +206,10 @@ export function OllamaChat() {
     if (!trimmedInput || isSending || isRetrieving) return;
 
     const userMessage = createMessage("user", trimmedInput);
-    const nextApiMessages: OllamaApiMessage[] = [
-      ...apiMessages,
-      { role: "user", content: trimmedInput },
-    ];
+    // Bounded, not unbounded: the route rejects more than 30 messages, so
+    // posting the whole conversation turned every send past exchange 16 into a
+    // 400 that never recovered. See OllamaChat.history.ts.
+    const nextApiMessages = buildOutboundMessages(apiMessages, trimmedInput);
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");

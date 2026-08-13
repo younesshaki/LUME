@@ -51,6 +51,16 @@ const SORTABLE: Record<string, string> = {
   mileage: "mileage",
 };
 
+/**
+ * Layout used when the URL carries no `view`. Photos are how dealers recognise
+ * their own stock, so the grid is the better first impression.
+ *
+ * Every param on this page is omitted from links and forms when it matches its
+ * default, which keeps URLs clean — so this constant is read in four places and
+ * flipping it is all that is needed to change the landing layout.
+ */
+const DEFAULT_INVENTORY_VIEW: InventoryView = "grid";
+
 export default async function VehiclesPage({ params, searchParams }: PageProps) {
   const { tenant: slug } = await params;
   const sp = await searchParams;
@@ -59,7 +69,8 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
   const dir = sp.dir === "asc" ? "asc" : "desc";
   const page = Math.max(1, parseInt(sp.page ?? "1") || 1);
   const status = normalizeVehicleStatusFilter(sp.status);
-  const view: InventoryView = sp.view === "grid" ? "grid" : "table";
+  const view: InventoryView =
+    sp.view === "table" || sp.view === "grid" ? sp.view : DEFAULT_INVENTORY_VIEW;
   const imageFilter = normalizeVehicleImageFilter(sp.images);
   const minPrice = parseBoundedPositiveInt(sp.minPrice);
   const maxPrice = parseBoundedPositiveInt(sp.maxPrice);
@@ -216,7 +227,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
     if (merged.dir && merged.dir !== "desc") params.set("dir", String(merged.dir));
     if (merged.page && Number(merged.page) > 1) params.set("page", String(merged.page));
     if (merged.status && merged.status !== "active") params.set("status", String(merged.status));
-    if (merged.view && merged.view !== "table") params.set("view", String(merged.view));
+    if (merged.view && merged.view !== DEFAULT_INVENTORY_VIEW) params.set("view", String(merged.view));
     if (merged.images && merged.images !== "all") params.set("images", String(merged.images));
     if (merged.minPrice !== undefined) params.set("minPrice", String(merged.minPrice));
     if (merged.maxPrice !== undefined) params.set("maxPrice", String(merged.maxPrice));
@@ -316,7 +327,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
         <form method="get" className="flex flex-wrap items-end gap-2" aria-label="Filter vehicles by price, year and mileage">
           {q ? <input type="hidden" name="q" value={q} /> : null}
           {status !== "active" ? <input type="hidden" name="status" value={status} /> : null}
-          {view !== "table" ? <input type="hidden" name="view" value={view} /> : null}
+          {view !== DEFAULT_INVENTORY_VIEW ? <input type="hidden" name="view" value={view} /> : null}
           {imageFilter !== "all" ? <input type="hidden" name="images" value={imageFilter} /> : null}
           {sort !== "year" ? <input type="hidden" name="sort" value={sort} /> : null}
           {dir !== "desc" ? <input type="hidden" name="dir" value={dir} /> : null}
@@ -439,7 +450,7 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
           {sort !== "year" && <input type="hidden" name="sort" value={sort} />}
           {dir !== "desc" && <input type="hidden" name="dir" value={dir} />}
           {status !== "active" && <input type="hidden" name="status" value={status} />}
-          {view !== "table" && <input type="hidden" name="view" value={view} />}
+          {view !== DEFAULT_INVENTORY_VIEW && <input type="hidden" name="view" value={view} />}
           {imageFilter !== "all" && <input type="hidden" name="images" value={imageFilter} />}
           {minPrice !== undefined && <input type="hidden" name="minPrice" value={minPrice} />}
           {maxPrice !== undefined && <input type="hidden" name="maxPrice" value={maxPrice} />}
@@ -460,7 +471,9 @@ export default async function VehiclesPage({ params, searchParams }: PageProps) 
             {maxYear !== undefined ? <input type="hidden" name="maxYear" value={maxYear} /> : null}
             {minMileage !== undefined ? <input type="hidden" name="minMileage" value={minMileage} /> : null}
             {maxMileage !== undefined ? <input type="hidden" name="maxMileage" value={maxMileage} /> : null}
-            <input type="hidden" name="view" value="grid" />
+            {/* Only carried when grid is not the default; otherwise sorting
+                would emit a redundant ?view=grid no other link produces. */}
+            {view !== DEFAULT_INVENTORY_VIEW ? <input type="hidden" name="view" value="grid" /> : null}
             <label className="grid gap-1 text-xs text-muted-foreground">
               Sort by
               <select

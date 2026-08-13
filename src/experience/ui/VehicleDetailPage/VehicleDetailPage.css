@@ -681,3 +681,15 @@
     padding-right: 0;
   }
 }
+
+/* Marque mark above the VDP heading. Sits inline with the eyebrow and takes its
+   colour, so light and dark need no separate asset. */
+.vehicleDetail__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.vehicleDetail__mark {
+  opacity: 0.9;
+}

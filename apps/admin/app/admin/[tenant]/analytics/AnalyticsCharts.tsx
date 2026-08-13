@@ -9,6 +9,7 @@
  * the axis labels and tooltips.
  */
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { lookupMakeLogo, makeMonogram } from "@lume/types/vehicleMakeLogos";
 import type { DayCount, NameCount, PriceBucket } from "@/lib/analytics";
 import {
   Card,
@@ -80,16 +81,74 @@ export function LeadsOverTimeChart({ data }: { data: DayCount[] }) {
   );
 }
 
+/**
+ * Y-axis tick that draws the marque logo beside its name.
+ *
+ * Rendered as SVG rather than reusing the HTML <MakeLogo> component, because a
+ * Recharts tick lives inside the chart's own <svg>. A nested <svg> with the
+ * mark's own viewBox does the scaling and keeps proportions intact.
+ *
+ * Colour is `currentColor` throughout, so the logo, the monogram fallback and
+ * the label all take the axis text colour — and therefore flip with the theme
+ * together instead of one of them stranding on a dark background.
+ */
+function MakeAxisTick(props: { x?: number; y?: number; payload?: { value?: string } }) {
+  const { x = 0, y = 0, payload } = props;
+  const make = payload?.value ?? "";
+  const logo = lookupMakeLogo(make);
+  const SIZE = 16;
+
+  return (
+    <g transform={`translate(${x},${y})`} className="fill-muted-foreground text-muted-foreground">
+      {logo ? (
+        <svg
+          x={-128}
+          y={-SIZE / 2}
+          width={SIZE}
+          height={SIZE}
+          viewBox={logo.viewBox}
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden="true"
+        >
+          {logo.paths.map((d, index) => (
+            <path key={index} d={d} fill="currentColor" fillRule={logo.fillRule} />
+          ))}
+        </svg>
+      ) : (
+        <text
+          x={-128 + SIZE / 2}
+          y={0}
+          dy="0.32em"
+          textAnchor="middle"
+          fontSize={9}
+          fontWeight={600}
+          fill="currentColor"
+          opacity={0.72}
+          aria-hidden="true"
+        >
+          {makeMonogram(make)}
+        </text>
+      )}
+      <text x={-104} y={0} dy="0.32em" textAnchor="start" fontSize={12} fill="currentColor">
+        {make}
+      </text>
+    </g>
+  );
+}
+
 function CategoryBarChart({
   title,
   description,
   data,
   emptyText,
+  showMakeLogos = false,
 }: {
   title: string;
   description: string;
   data: NameCount[];
   emptyText: string;
+  /** Only the make chart gets marque logos; body styles have none. */
+  showMakeLogos?: boolean;
 }) {
   return (
     <Card>
@@ -116,7 +175,8 @@ function CategoryBarChart({
                 type="category"
                 tickLine={false}
                 axisLine={false}
-                width={96}
+                width={showMakeLogos ? 132 : 96}
+                {...(showMakeLogos ? { tick: <MakeAxisTick /> } : {})}
               />
               <ChartTooltip cursor={{ fillOpacity: 0.35 }} content={<ChartTooltipContent hideLabel />} />
               <Bar
@@ -142,6 +202,7 @@ export function InventoryByMakeChart({ data }: { data: NameCount[] }) {
       description="Current vehicles grouped by make"
       data={data}
       emptyText="No vehicles in inventory yet."
+      showMakeLogos
     />
   );
 }

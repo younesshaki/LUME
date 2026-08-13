@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { SITE_NAV_ITEMS, type SiteScreen } from "../siteNavigation";
 import { preloadRouteModule } from "@/app-shell/routeModules";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
+import { clampFooterColumns } from "@lume/types";
 
 const SOCIAL_LINKS = [
   {
@@ -47,6 +48,23 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
   const tenantTheme = useTenantTheme();
   const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
 
+  // Until Phase 4 the footer had no configuration at all. Every default below
+  // reproduces the previous hardcoded layout, so a tenant with no `footer` key
+  // renders exactly as it did.
+  const footer = tenantTheme.footer;
+  const variant = footer?.variant ?? "stacked";
+  const showSocial = footer?.showSocial ?? true;
+  const columns = clampFooterColumns(footer?.columns);
+  const socialLinks = footer?.socialLinks?.length
+    ? footer.socialLinks.map((link) => ({ ...link, icon: null }))
+    : SOCIAL_LINKS;
+  const legalLinks = footer?.legalLinks?.length
+    ? footer.legalLinks
+    : [{ label: "Privacy", href: "/privacy" }, { label: "Legal", href: "/privacy" }];
+  // `minimal` drops the nav and address entirely; the legal bar always stays,
+  // because cookie preferences and copyright are not optional.
+  const isMinimal = variant === "minimal";
+
   return (
     <footer className="relative bg-[var(--theme-lume-background,#000)] text-[var(--theme-lume-ink,#fff8ec)] border-t border-[var(--theme-lume-line)] mt-auto">
       {/* Top gradient bleed */}
@@ -78,9 +96,23 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
           <Separator className="flex-1 bg-[var(--theme-lume-line)]" />
         </div>
 
-        {/* Nav + Social */}
+        {/* Nav + Social. `columns` lays the nav out in a grid; `stacked` keeps the
+            original single wrapped row; `minimal` omits it. */}
+        {!isMinimal && (
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-10">
-          <nav aria-label="Footer navigation" className="flex items-center gap-6 flex-wrap justify-center">
+          <nav
+            aria-label="Footer navigation"
+            className={
+              variant === "columns"
+                ? "grid gap-x-8 gap-y-3 text-center md:text-left"
+                : "flex items-center gap-6 flex-wrap justify-center"
+            }
+            style={
+              variant === "columns"
+                ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+                : undefined
+            }
+          >
             {SITE_NAV_ITEMS.map((item) => (
               <button
                 key={item.screen}
@@ -96,26 +128,33 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-5">
-            {SOCIAL_LINKS.map((social) => (
-              <a
-                key={social.label}
-                href={social.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={social.label}
-                className="text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-gold)] transition-colors duration-200"
-              >
-                {social.icon}
-              </a>
-            ))}
-          </div>
+          {showSocial && (
+            <div className="flex items-center gap-5">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.label}
+                  className="text-[11px] tracking-widest uppercase text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-gold)] transition-colors duration-200"
+                >
+                  {/* Configured links have no bundled icon, so they fall back to
+                      their label rather than rendering an empty anchor. */}
+                  {social.icon ?? social.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
+        )}
 
         {/* Address */}
-        <p className="text-center text-[11px] tracking-widest uppercase text-[var(--theme-lume-soft)] mb-10">
-          Monaco, Principauté de Monaco &nbsp;·&nbsp; Invitation by referral only
-        </p>
+        {!isMinimal && (
+          <p className="text-center text-[11px] tracking-widest uppercase text-[var(--theme-lume-soft)] mb-10">
+            Monaco, Principauté de Monaco &nbsp;·&nbsp; Invitation by referral only
+          </p>
+        )}
 
         {/* Legal bar */}
         <Separator className="bg-[var(--theme-lume-line)] mb-5" />
@@ -124,14 +163,15 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
             © {new Date().getFullYear()} LUME. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            {["Privacy", "Legal"].map((label) => (
-              <button
-                key={label}
+            {legalLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
                 className="text-[11px] text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-ink)] transition-colors duration-200
                   tracking-wide cursor-pointer"
               >
-                {label}
-              </button>
+                {link.label}
+              </a>
             ))}
             <button
               onClick={openCookiePreferences}

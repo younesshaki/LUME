@@ -230,3 +230,37 @@
     opacity: 0;
   }
 }
+
+/* Overflow track: the gooey nav now lives inside a bounded header column and
+   collapses its tail into a "More" menu rather than expanding over the logo
+   and action cluster. */
+.gooey-nav-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Laid out so item widths are measurable, but never visible or interactive.
+   Matches the real item typography so the measurement is honest. */
+.gooey-nav-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.gooey-nav-probe > span {
+  padding: 0.6em 1em;
+  font-size: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}

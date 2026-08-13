@@ -18,6 +18,7 @@ import { useConciergeTarget } from "@/lib/useConciergeTarget";
 import { botLeadFormSourceContext } from "@/lib/botActionConsumers";
 import VehicleGallery from "./VehicleGallery";
 import { vehicleDetailSoundActions } from "./VehicleDetailPage.sounds";
+import { MakeLogo } from "@/components/vehicles/MakeLogo";
 
 /**
  * The shared vehicle-detail surface: gallery, title/price, action row, specs,
@@ -464,7 +465,14 @@ export default function VehicleDetailContent({
         ) : null}
 
         <div className="vehicleDetail__panel">
-          <p className="vehicleDetail__eyebrow">{eyebrow}</p>
+          <p className="vehicleDetail__eyebrow">
+            {/* Larger here than in list views: the detail page has room, and at
+                32px the busier marks (Porsche crest, Land Rover oval) actually
+                resolve instead of turning to mush. Decorative — the make is in
+                the heading directly below. */}
+            <MakeLogo make={vehicle.make} size={32} className="vehicleDetail__mark" />
+            <span>{eyebrow}</span>
+          </p>
           <h1>{vehicle.year} {vehicle.make} {vehicle.model}</h1>
           {vehicle.trim && <p className="vehicleDetail__trim">{vehicle.trim}</p>}
           <p className="vehicleDetail__price">{formatVehiclePrice(vehicle.price)}</p>
