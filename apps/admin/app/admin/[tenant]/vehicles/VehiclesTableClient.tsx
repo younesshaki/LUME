@@ -19,6 +19,7 @@ import DeleteButton from "./DeleteButton";
 import { VehicleBulkToolbar } from "./VehicleBulkToolbar";
 import { FilterScopeBulkBar } from "./FilterScopeBulkBar";
 import type { InventoryFilterInput } from "./bulk-actions";
+import { MakeLogo } from "@/components/MakeLogo";
 
 type SortableColumn = "year" | "make" | "model" | "price" | "mileage";
 
@@ -244,7 +245,13 @@ export function VehiclesTableClient({
                       />
                     </TableCell>
                     <TableCell>{vehicle.year}</TableCell>
-                    <TableCell className="font-medium">{vehicle.make}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="flex items-center gap-2">
+                        {/* Decorative: the make name is right beside it. */}
+                        <MakeLogo make={vehicle.make} size={18} className="text-muted-foreground" />
+                        {vehicle.make}
+                      </span>
+                    </TableCell>
                     <TableCell>{vehicle.model}</TableCell>
                     <TableCell className="text-muted-foreground">{vehicle.trim || "—"}</TableCell>
                     <TableCell className="text-right font-mono text-sm">
@@ -408,7 +415,10 @@ function VehicleGridCard({
       <div className="space-y-2 p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{title}</p>
+            <p className="flex items-center gap-2 truncate text-sm font-semibold">
+              <MakeLogo make={vehicle.make} size={16} className="text-muted-foreground" />
+              <span className="truncate">{title}</span>
+            </p>
             <p className="truncate text-xs text-muted-foreground">
               {[vehicle.trim, vehicle.body_style].filter(Boolean).join(" · ") || "—"}
             </p>

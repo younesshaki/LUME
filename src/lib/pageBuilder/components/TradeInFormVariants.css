@@ -1,0 +1,152 @@
+/* Layout-only styles for the trade-in form variants. Field styling is shared
+   with every other dealership form (dealershipForm__*), so a variant never
+   forks the look of an input — only the arrangement around it. */
+
+/* ── wizard ──────────────────────────────────────────────────────────────── */
+
+.tradeInWizard__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0 0 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.tradeInWizard__step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--theme-lume-muted, rgba(255, 255, 255, 0.55));
+  transition: color 200ms ease;
+}
+
+.tradeInWizard__step.is-current,
+.tradeInWizard__step.is-done {
+  color: var(--theme-lume-ink, #fff);
+}
+
+.tradeInWizard__marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--theme-lume-line, rgba(255, 255, 255, 0.2));
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.tradeInWizard__step.is-current .tradeInWizard__marker {
+  border-color: var(--theme-lume-gold, #c9a84c);
+  color: var(--theme-lume-gold, #c9a84c);
+}
+
+.tradeInWizard__step.is-done .tradeInWizard__marker {
+  background: var(--theme-lume-gold, #c9a84c);
+  border-color: var(--theme-lume-gold, #c9a84c);
+  color: var(--theme-lume-background, #000);
+}
+
+.tradeInWizard__marker svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.tradeInWizard__review h4 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+}
+
+.tradeInWizard__review dl {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+}
+
+.tradeInWizard__review dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--theme-lume-line, rgba(255, 255, 255, 0.1));
+}
+
+.tradeInWizard__review dt {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--theme-lume-muted, rgba(255, 255, 255, 0.55));
+}
+
+.tradeInWizard__review dd {
+  margin: 0;
+  text-align: right;
+}
+
+.tradeInWizard__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tradeInWizard__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  padding: 0.5rem 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--theme-lume-muted, rgba(255, 255, 255, 0.6));
+  transition: color 200ms ease;
+}
+
+.tradeInWizard__back:hover {
+  color: var(--theme-lume-ink, #fff);
+}
+
+.tradeInWizard__back svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+/* ── spotlight ───────────────────────────────────────────────────────────── */
+
+.tradeInSpotlight__card {
+  position: relative;
+  border-radius: 0.9rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: var(--theme-lume-panel, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--theme-lume-line, rgba(255, 255, 255, 0.1));
+  overflow: hidden;
+}
+
+/* The shine is decoration: it must never intercept a click on a field. */
+.tradeInSpotlight__shine {
+  z-index: 0;
+}
+
+.tradeInSpotlight__form {
+  position: relative;
+  z-index: 1;
+}
+
+.tradeInSpotlight__columns {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+@media (min-width: 900px) {
+  .tradeInSpotlight__columns {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}

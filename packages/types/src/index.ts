@@ -16,7 +16,13 @@ export {
 } from "./conciergeTargets";
 export type * from "./page";
 export type * from "./tenantTheme";
-export { DEFAULT_TENANT_THEME } from "./tenantTheme";
+export {
+  DEFAULT_TENANT_THEME,
+  FOOTER_COLUMN_LIMITS,
+  HEADER_CTA_LIMITS,
+  clampFooterColumns,
+  resolveHeaderCtas,
+} from "./tenantTheme";
 export type * from "./siteDesign";
 export {
   SITE_DESIGN_SCHEMA_VERSION,
@@ -55,7 +61,13 @@ export {
   LUXURY_LIGHT_COLORS,
 } from "./siteTemplates";
 export type * from "./headerNav";
-export { HEADER_NAV_LIMITS, clampMaxNavItems, selectHeaderNav } from "./headerNav";
+export {
+  HEADER_NAV_LIMITS,
+  NON_NAV_PAGE_SLUGS,
+  clampMaxNavItems,
+  isNavigablePageSlug,
+  selectHeaderNav,
+} from "./headerNav";
 export type * from "./lead";
 export type * from "./tenantDomain";
 export type * from "./tenantInvite";

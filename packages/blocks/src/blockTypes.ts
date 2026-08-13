@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { variantSchema, type BlockVariant } from "./variants";
 
 export type BlockMode = "experience" | "standard";
 export type BlockCategory = "content" | "data" | "media";
@@ -43,6 +44,13 @@ export type BlockDescriptor<P extends Record<string, unknown> = Record<string, u
   schema: z.ZodType<P>;
   fields: BlockField[];
   palette?: boolean;
+  /**
+   * Alternate designs for this block. Declaration order is the picker's order,
+   * and the first entry is the fallback for an unknown stored value. A block
+   * declaring variants MUST also carry `variant` in its schema and defaults —
+   * blockTypes.test.ts asserts the two never drift.
+   */
+  variants?: readonly BlockVariant[];
   validate: (props: unknown) => BlockValidationResult;
 };
 
@@ -69,6 +77,29 @@ function descriptor<P extends Record<string, unknown>>(
 }
 
 const nullableString = z.string().optional().default("");
+
+/**
+ * Trade-in form designs. Order matters: the first is the fallback for an
+ * unknown stored value, and `classic` is the pre-variants look — so existing
+ * pages are untouched by the introduction of variants.
+ */
+const TRADE_IN_FORM_VARIANTS: readonly BlockVariant[] = [
+  {
+    id: "classic",
+    label: "Classic",
+    description: "Single column with the copy above the fields. The original layout.",
+  },
+  {
+    id: "wizard",
+    label: "Guided steps",
+    description: "Three short steps instead of one long form. Fewer fields on screen at once.",
+  },
+  {
+    id: "spotlight",
+    label: "Spotlight",
+    description: "Compact two-column card with an animated border. Suits mid-page placement.",
+  },
+];
 
 export const heroSchema = z.object({
   eyebrow: nullableString,
@@ -487,7 +518,11 @@ export const BLOCK_DESCRIPTORS = {
     category: "content",
     modes: ["experience", "standard"],
     palette: true,
+    // First block to carry variants. `classic` is first, so every document
+    // written before variants existed keeps rendering exactly as it did.
+    variants: TRADE_IN_FORM_VARIANTS,
     defaultProps: {
+      variant: "classic",
       eyebrow: "Your Current Vehicle",
       title: "Begin with a considered valuation.",
       body:
@@ -498,6 +533,7 @@ export const BLOCK_DESCRIPTORS = {
         "Estimates are subject to an in-person inspection, history review, and current market conditions.",
     },
     schema: basicSectionSchema({
+      variant: variantSchema(["classic", "wizard", "spotlight"]),
       buttonLabel: requiredShortText,
       successMessage: requiredShortText,
       disclaimer: optionalBodyText,

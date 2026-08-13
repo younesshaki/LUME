@@ -501,4 +501,76 @@ export const DEALER_PAGE_TEMPLATES: DefaultPageSeed[] = [
       ],
     },
   },
+  {
+    // The vehicle-detail LAYOUT, not a page a visitor navigates to. Publishing
+    // this changes how every /vehicles/:id renders; VehicleDetailPageRendererRoute
+    // looks up exactly this slug and falls back to the hardcoded VDP when it is
+    // absent or unpublished. NON_NAV_PAGE_SLUGS keeps it out of the header.
+    //
+    // Deliberately NOT reserved. Deleting it reverts every vehicle page to the
+    // built-in layout — a reversible, legitimate choice, so it needs clear
+    // labelling rather than a lock. `isReserved` is for the DEFAULT_PAGES
+    // system pages.
+    //
+    // Copy discipline matters more here than on any other template. Anything
+    // written into these blocks appears on EVERY vehicle, so the seeded text
+    // deliberately says nothing about a specific car.
+    slug: "vehicle",
+    title: "Vehicle detail layout",
+    navOrder: 99,
+    isReserved: false,
+    seoMeta: {
+      title: "Vehicle detail",
+      description:
+        "Per-vehicle detail layout. Title and description are generated from each vehicle.",
+    },
+    blocks: {
+      version: 1,
+      blocks: [
+        {
+          id: "vehicle-detail-main",
+          type: "vehicle-detail",
+          props: {
+            eyebrow: "The Collection",
+            overviewTitle: "Every vehicle, inspected before it is listed",
+            overviewText:
+              "Each example is mechanically inspected and history-checked before it reaches this page. Ask us for the full report on any vehicle — we will send it before you visit.",
+            showGallery: true,
+            showSpecs: true,
+            showActions: true,
+          },
+        },
+        {
+          id: "vehicle-detail-finance",
+          type: "finance-calculator",
+          props: {
+            eyebrow: "Finance",
+            title: "Estimate the monthly payment",
+            body:
+              "Adjust the deposit, term, and illustrative rate to see an indicative monthly figure before you get in touch.",
+            defaultPrice: 45000,
+            defaultDeposit: 5000,
+            defaultTermMonths: 60,
+            defaultAnnualRate: 6.9,
+            disclaimer:
+              "Illustrative estimate only. This is not an offer of credit. Final terms depend on lender approval, taxes, fees, and individual circumstances.",
+          },
+        },
+        {
+          id: "vehicle-detail-cta",
+          type: "cta-banner",
+          props: {
+            eyebrow: "Next Step",
+            title: "Reserve a viewing, or ask us anything",
+            body:
+              "Tell us which vehicle you are looking at and we will confirm availability, answer questions, and hold it for a viewing.",
+            primaryLabel: "Contact the team",
+            primaryHref: "/contact",
+            secondaryLabel: "Back to inventory",
+            secondaryHref: "/vehicles",
+          },
+        },
+      ],
+    },
+  },
 ];

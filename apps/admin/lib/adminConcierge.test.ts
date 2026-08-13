@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { extractVehicleFilters } from "@lume/rag";
 import {
   ADMIN_CAPABILITIES,
+  CAPABILITY_FREE_INTENTS,
+  INTENT_CAPABILITY_ID,
   adminIntentMinimumRole,
   adminCapabilityHref,
   capabilityById,
@@ -61,6 +65,48 @@ describe("admin concierge control plane", () => {
     expect(adminIntentMinimumRole({ kind: "update_lead_status", leadQuery: "jane@example.com", status: "qualified" })).toBe("editor");
     expect(adminIntentMinimumRole({ kind: "navigate", capabilityId: "analytics.view" })).toBe("viewer");
     expect(adminIntentMinimumRole({ kind: "navigate", capabilityId: "unknown" })).toBeNull();
+  });
+
+  it("reads every intent's role from the registry, so a rename cannot fail open", () => {
+    // The gate used to restate these roles by hand. If an id here stops
+    // resolving — a registry rename, a capability removed — this fails loudly
+    // instead of `adminIntentMinimumRole` quietly returning null for a write.
+    for (const [kind, capabilityId] of Object.entries(INTENT_CAPABILITY_ID)) {
+      expect(capabilityById(capabilityId!), `${kind} -> ${capabilityId}`).not.toBeNull();
+    }
+  });
+
+  it("covers the whole intent union between the map and the capability-free list", () => {
+    // A Partial record cannot make an unmapped intent a compile error, so the
+    // union is read from source and checked here. A new intent must declare a
+    // capability or be explicitly capability-free; neither is the default.
+    const source = readFileSync(resolve(process.cwd(), "apps/admin/lib/adminConcierge.ts"), "utf8");
+    const union = source.slice(
+      source.indexOf("export type AdminConciergeIntent"),
+      source.indexOf("export type AdminConciergeModelPlan"),
+    );
+    const kinds = [...union.matchAll(/\{ kind: "([a-z_]+)"/g)].map((match) => match[1]);
+    expect(kinds.length).toBeGreaterThan(15);
+
+    const declared = new Set<string>([
+      ...Object.keys(INTENT_CAPABILITY_ID),
+      ...CAPABILITY_FREE_INTENTS,
+      // `navigate` names its capability on the intent itself, so it resolves
+      // through the registry without needing a static entry.
+      "navigate",
+    ]);
+    expect(kinds.filter((kind) => !declared.has(kind))).toEqual([]);
+  });
+
+  it("tracks the registry rather than a hardcoded copy when a role is raised", () => {
+    // The drift the map exists to prevent: reprice is editor-level today, and
+    // the gate must report whatever the registry says, not a second opinion.
+    expect(capabilityById("vehicle.price.update")?.minRole).toBe("editor");
+    expect(adminIntentMinimumRole({ kind: "update_vehicle_price", vehicleQuery: "CX-90", price: 52000 }))
+      .toBe(capabilityById("vehicle.price.update")?.minRole);
+    expect(adminIntentMinimumRole({ kind: "enqueue_feed_run", feedQuery: "autotrader" }))
+      .toBe(capabilityById("feed.run.enqueue")?.minRole);
+    expect(adminIntentMinimumRole({ kind: "enqueue_feed_run", feedQuery: "autotrader" })).toBe("admin");
   });
 
   it("parses bounded, client-safe requests and drops untrusted path values", () => {

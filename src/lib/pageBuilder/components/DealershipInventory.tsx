@@ -23,6 +23,7 @@ import {
 } from "@/experience/vehicles/catalog";
 import type { BlockComponentProps } from "../registry";
 import { DealershipActionLink, DealershipSection } from "./DealershipSection";
+import { MakeLogo } from "@/components/vehicles/MakeLogo";
 import {
   labelBodyItemsProp,
   numberProp,
@@ -212,7 +213,10 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
         </div>
         <div className="vehicleCarousel__copy">
           <p>{vehicle.year}</p>
-          <h3>{vehicle.make} {vehicle.model}</h3>
+          <h3 className="dealershipVehicleCard__title">
+            <MakeLogo make={vehicle.make} size={18} />
+            {vehicle.make} {vehicle.model}
+          </h3>
           {vehicle.trim ? <span>{vehicle.trim}</span> : null}
           <strong>{formatVehiclePrice(vehicle.price)}</strong>
         </div>

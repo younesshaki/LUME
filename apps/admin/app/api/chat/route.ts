@@ -126,6 +126,13 @@ import {
   recordModelUsage,
 } from "@/lib/observability";
 import {
+  type DeterministicAnswers,
+  hasDeterministicAnswer,
+  resolveDeterministicContent,
+} from "@/lib/chatDeterministicAnswer";
+import { shouldGroundSelectedVehicle } from "@/lib/chatGroundingScope";
+import { tenantLiveVehicleCount } from "@/lib/tenantInventoryCount";
+import {
   compareOrdinalIndexesFromText,
   filterActionsByConversationStateWithDiagnostics,
   hasFullInventoryResetIntent,
@@ -445,6 +452,7 @@ export async function POST(request: Request): Promise<Response> {
     const selectedVehicleDetailRequest = isSelectedVehicleDetailRequest(
       lastUser.content,
     );
+    let selectedVehicleChunk: (typeof contextChunks)[number] | null = null;
     if (unsupportedVehicleFactRequest) {
       deterministicUnsupportedFactAnswer = unsupportedVehicleFactAnswer(
         lastUser.content,
@@ -461,14 +469,17 @@ export async function POST(request: Request): Promise<Response> {
           selectedVehicle,
         );
       }
-      contextChunks.unshift({
+      // Built here, injected below — the decision to inject needs the
+      // extracted filters, which are not known until the facet vocabulary has
+      // been read a few lines further down.
+      selectedVehicleChunk = {
         category:
           selectedVehicle.id === currentPageVehicleId
             ? "current-page"
             : "recent-selection",
         text: `${selectedVehicle.id === currentPageVehicleId ? "Current public page is" : "The visitor's most recently selected vehicle is"} the live vehicle ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}${selectedVehicle.trim ? ` ${selectedVehicle.trim}` : ""}. Exact vehicleId: ${selectedVehicle.id}. Price: $${selectedVehicle.price.toLocaleString()}. Mileage: ${selectedVehicle.mileage === null ? "not listed" : `${selectedVehicle.mileage.toLocaleString()} mi`}. Drivetrain: ${selectedVehicle.drivetrain || "not listed"}. Fuel: ${selectedVehicle.fuelType || "not listed"}. Location: ${selectedVehicle.sellerCity && selectedVehicle.sellerState ? `${selectedVehicle.sellerCity}, ${selectedVehicle.sellerState}` : "not listed"}.`,
         score: 2,
-      });
+      };
     } else if (selectedVehicleDetailRequest) {
       deterministicSelectedVehicleUnavailableAnswer =
         "I don’t have a selected vehicle to answer that about yet. Open a listing or tell me which result you mean, and I’ll check its verified details.";
@@ -497,6 +508,25 @@ export async function POST(request: Request): Promise<Response> {
             isPresentationRequest(lastUser.content)),
         ) ||
         hasScopeResetIntent(lastUser.content));
+    // Inject the open vehicle only when the turn is plausibly still about it.
+    // pagePath keeps pointing at a vehicle for the rest of the session, so
+    // without this the first and highest-scored chunk on "show me your SUVs"
+    // was a full description of the BMW the visitor happened to have open —
+    // and the GROUNDING RULE then faithfully kept the model on that BMW.
+    if (
+      selectedVehicleChunk &&
+      shouldGroundSelectedVehicle({
+        hasInventoryIntent,
+        extractedFilters,
+        activeFilters: conversationState.activeFilters,
+        isSelectedVehicleDetailRequest: selectedVehicleDetailRequest,
+        isOrdinalReference: isOrdinalVehicleReference(lastUser.content),
+        isSelectedVehicleAction: isSelectedVehicleActionRequest(lastUser.content),
+      })
+    ) {
+      contextChunks.unshift(selectedVehicleChunk);
+    }
+
     const stateTransition = transitionInventoryState(
       conversationState,
       lastUser.content,
@@ -718,12 +748,31 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
 
+    // Without this the prompt omitted "Total vehicles in full inventory"
+    // entirely, so with a filter active the model could only see TOTAL
+    // MATCHING — and "how many cars do you have?" got answered as "how many
+    // match your filters". Cached per tenant; a failure leaves it undefined
+    // and the line is omitted exactly as before.
+    const totalInventory = await tenantLiveVehicleCount(
+      tenant.tenantId,
+      async (tenantId) => {
+        const { count, error } = await supabase
+          .from("vehicles")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .neq("status", "archived")
+          .is("sold_at", null);
+        return error ? undefined : (count ?? undefined);
+      },
+    );
+
     assembled = assembleSystemPrompt({
       basePrompt: personaBasePrompt(persona, tenantName),
       contextChunks,
       matchedVehicles,
       totalMatched,
       filters,
+      totalInventory,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "RAG failure";
@@ -848,22 +897,30 @@ export async function POST(request: Request): Promise<Response> {
     sessionId: visitorTurn?.sessionId ?? anonymousConversationId ?? undefined,
   });
 
-  if (
-    isImmediateSiteNavigation(deterministicActions) ||
-    statePresentationRequest ||
-    deterministicAvailabilityAnswer ||
-    deterministicInventoryAnswer ||
-    deterministicZeroResultAnswer ||
-    deterministicOrdinalUnavailableAnswer ||
-    deterministicOrdinalReferenceAnswer ||
-    deterministicSelectedVehicleAnswer ||
-    deterministicSelectedVehicleUnavailableAnswer ||
-    deterministicUnsupportedFactAnswer ||
-    deterministicMakeSwitchClarifier ||
-    deterministicCompareAnswer ||
-    deterministicCompareUnavailableAnswer ||
-    deterministicClarifier
-  ) {
+  // Precedence lives in lib/chatDeterministicAnswer.ts, where it is an ordered
+  // array with pairwise tests. The guard and the selection below read that one
+  // definition, so they cannot drift apart the way two hand-written
+  // expressions over the same twelve variables could.
+  const deterministicAnswers: DeterministicAnswers = {
+    clarifier: deterministicClarifier,
+    makeSwitchClarifier: deterministicMakeSwitchClarifier,
+    compare: deterministicCompareAnswer,
+    compareUnavailable: deterministicCompareUnavailableAnswer,
+    zeroResult: deterministicZeroResultAnswer,
+    ordinalUnavailable: deterministicOrdinalUnavailableAnswer,
+    ordinalReference: deterministicOrdinalReferenceAnswer,
+    selectedVehicle: deterministicSelectedVehicleAnswer,
+    selectedVehicleUnavailable: deterministicSelectedVehicleUnavailableAnswer,
+    unsupportedFact: deterministicUnsupportedFactAnswer,
+    availability: deterministicAvailabilityAnswer,
+    inventory: deterministicInventoryAnswer,
+  };
+  const deterministicGuardContext = {
+    immediateSiteNavigation: isImmediateSiteNavigation(deterministicActions),
+    statePresentationRequest,
+  };
+
+  if (hasDeterministicAnswer(deterministicAnswers, deterministicGuardContext)) {
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
         filterConversationActions(
@@ -883,23 +940,10 @@ export async function POST(request: Request): Promise<Response> {
       actionAttribution,
     );
     const actionAcknowledgement = actionOnlyAcknowledgement(actions);
-    const visibleContent =
-      deterministicClarifier ??
-      deterministicMakeSwitchClarifier ??
-      deterministicCompareAnswer ??
-      deterministicCompareUnavailableAnswer ??
-      deterministicZeroResultAnswer ??
-      deterministicOrdinalUnavailableAnswer ??
-      deterministicOrdinalReferenceAnswer ??
-      deterministicSelectedVehicleAnswer ??
-      deterministicSelectedVehicleUnavailableAnswer ??
-      deterministicUnsupportedFactAnswer ??
-      deterministicAvailabilityAnswer ??
-      deterministicInventoryAnswer ??
-      (actionAcknowledgement ||
-        (statePresentationRequest
-          ? "I have the current inventory results ready."
-          : ""));
+    const visibleContent = resolveDeterministicContent(deterministicAnswers, {
+      ...deterministicGuardContext,
+      actionAcknowledgement,
+    });
     captureDebug("api/chat/actions", {
       tenantId: tenant.tenantId,
       actionsEmitted: actionDebugSummary(actions),
@@ -1473,14 +1517,6 @@ function vehicleFilterVocabulary(value: unknown): {
     states: stringArray(record.states),
     cities: stringArray(record.cities),
   };
-}
-
-function priorVisitorQueries(messages: readonly MemoryMessage[]): string[] {
-  const queries = messages
-    .filter((message) => message.role === "user")
-    .map((message) => message.content);
-  queries.pop();
-  return queries;
 }
 
 function previousAssistantContentForLastUser(

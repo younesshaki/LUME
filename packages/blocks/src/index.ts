@@ -9,3 +9,4 @@ export {
   targetsForAvailablePages,
   type DefaultConciergeTarget,
 } from "./defaultConciergeTargets";
+export * from "./variants";

@@ -23,21 +23,21 @@ type SubmissionState =
   | { type: "success"; message: string }
   | { type: "error"; message: string };
 
-type ContactState = {
+export type ContactState = {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
 };
 
-const EMPTY_CONTACT: ContactState = {
+export const EMPTY_CONTACT: ContactState = {
   firstName: "",
   lastName: "",
   email: "",
   phone: "",
 };
 
-function useLeadSubmission(successMessage: string) {
+export function useLeadSubmission(successMessage: string) {
   const inFlightRef = useRef(false);
   const [submission, setSubmission] = useState<SubmissionState>({
     type: "idle",
@@ -87,7 +87,7 @@ function useLeadSubmission(successMessage: string) {
   };
 }
 
-function ContactFields({
+export function ContactFields({
   value,
   onChange,
 }: {
@@ -146,7 +146,7 @@ function ContactFields({
   );
 }
 
-function FormFeedback({ submission }: { submission: SubmissionState }) {
+export function FormFeedback({ submission }: { submission: SubmissionState }) {
   if (!submission.message) return null;
   return (
     <p
@@ -159,7 +159,7 @@ function FormFeedback({ submission }: { submission: SubmissionState }) {
   );
 }
 
-function FormVerification({
+export function FormVerification({
   resetKey,
   onToken,
 }: {
@@ -177,158 +177,13 @@ function FormVerification({
   ) : null;
 }
 
-function submitDisabled(
+export function submitDisabled(
   submission: SubmissionState,
   turnstileToken: string | null,
 ): boolean {
   return (
     submission.type === "submitting" ||
     (Boolean(TURNSTILE_SITE_KEY) && !turnstileToken)
-  );
-}
-
-export function TradeInForm({ block }: BlockComponentProps) {
-  const [contact, setContact] = useState<ContactState>(EMPTY_CONTACT);
-  const [vehicle, setVehicle] = useState({
-    year: "",
-    make: "",
-    model: "",
-    mileage: "",
-    condition: "Excellent",
-  });
-  const successMessage = stringProp(block, "successMessage");
-  const lead = useLeadSubmission(successMessage);
-  const disclaimer = stringProp(block, "disclaimer");
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void lead.send(
-      {
-        ...contact,
-        source: "contact-form",
-        message: [
-          "[Trade-in appraisal]",
-          `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}`.trim(),
-          `Mileage: ${vehicle.mileage || "Not supplied"}`,
-          `Condition: ${vehicle.condition}`,
-        ].join("\n"),
-      },
-      () => {
-        setContact(EMPTY_CONTACT);
-        setVehicle({
-          year: "",
-          make: "",
-          model: "",
-          mileage: "",
-          condition: "Excellent",
-        });
-      },
-    );
-  }
-
-  return (
-    <DealershipSection block={block} className="dealershipBlock--form">
-      <form
-        className="dealershipForm"
-        onSubmit={handleSubmit}
-        aria-busy={lead.submission.type === "submitting"}
-      >
-        <fieldset disabled={lead.submission.type === "submitting"}>
-          <legend>Vehicle for appraisal</legend>
-          <div className="dealershipForm__grid dealershipForm__grid--vehicle">
-            <label className="dealershipForm__field">
-              <span>Year</span>
-              <input
-                name="tradeInYear"
-                type="number"
-                min={1900}
-                max={2100}
-                required
-                inputMode="numeric"
-                value={vehicle.year}
-                onChange={(event) =>
-                  setVehicle((current) => ({ ...current, year: event.target.value }))
-                }
-              />
-            </label>
-            <label className="dealershipForm__field">
-              <span>Make</span>
-              <input
-                name="tradeInMake"
-                required
-                value={vehicle.make}
-                onChange={(event) =>
-                  setVehicle((current) => ({ ...current, make: event.target.value }))
-                }
-              />
-            </label>
-            <label className="dealershipForm__field">
-              <span>Model</span>
-              <input
-                name="tradeInModel"
-                required
-                value={vehicle.model}
-                onChange={(event) =>
-                  setVehicle((current) => ({ ...current, model: event.target.value }))
-                }
-              />
-            </label>
-            <label className="dealershipForm__field">
-              <span>Mileage</span>
-              <input
-                name="tradeInMileage"
-                type="number"
-                min={0}
-                required
-                inputMode="numeric"
-                value={vehicle.mileage}
-                onChange={(event) =>
-                  setVehicle((current) => ({ ...current, mileage: event.target.value }))
-                }
-              />
-            </label>
-            <label className="dealershipForm__field">
-              <span>Condition</span>
-              <select
-                name="tradeInCondition"
-                value={vehicle.condition}
-                onChange={(event) =>
-                  setVehicle((current) => ({
-                    ...current,
-                    condition: event.target.value,
-                  }))
-                }
-              >
-                <option>Excellent</option>
-                <option>Very good</option>
-                <option>Good</option>
-                <option>Needs attention</option>
-              </select>
-            </label>
-          </div>
-        </fieldset>
-        <fieldset disabled={lead.submission.type === "submitting"}>
-          <legend>Your details</legend>
-          <ContactFields value={contact} onChange={setContact} />
-        </fieldset>
-        <FormVerification
-          resetKey={lead.turnstileResetKey}
-          onToken={lead.setTurnstileToken}
-        />
-        <FormFeedback submission={lead.submission} />
-        <button
-          className="dealershipForm__submit"
-          type="submit"
-          disabled={submitDisabled(lead.submission, lead.turnstileToken)}
-        >
-          {lead.submission.type === "submitting"
-            ? "Sending…"
-            : stringProp(block, "buttonLabel")}
-          <ArrowRight aria-hidden="true" />
-        </button>
-        {disclaimer ? <p className="dealershipForm__disclaimer">{disclaimer}</p> : null}
-      </form>
-    </DealershipSection>
   );
 }
 

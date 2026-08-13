@@ -32,6 +32,7 @@ import {
   type ConciergeModelId,
 } from "@/lib/conciergeModels";
 import { checkChatRateLimit } from "@/lib/rateLimit";
+import { collectManagedImageVehicleIds } from "@/lib/managedImageScan";
 import { captureDebug, captureError, recordModelUsage } from "@/lib/observability";
 import {
   createFeedRunCommand,
@@ -100,6 +101,20 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "Not authorized for this tenant." }, 403);
   }
 
+  // Rate limiting sits above every branch below, not just the model fallback.
+  // The deterministic path is not cheap: inspect_photo_gap and
+  // inspect_aging_inventory each page whole tables, and the stored-presentation
+  // early return issues its own query — so limiting only the model call left
+  // the most expensive requests unmetered. Authentication and authorization
+  // come first so an unauthorized caller can never consume a member's budget.
+  const rate = checkChatRateLimit(`admin:${userData.user.id}`);
+  if (!rate.allowed) {
+    return new Response(JSON.stringify({ error: "Too many concierge requests. Please retry shortly." }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": String(rate.retryAfterSeconds) },
+    });
+  }
+
   const memoryStore = getConversationMemoryStore();
   const memoryKey = parsed.request.sessionId
     ? adminConversationMemoryKey(tenant.id, userData.user.id, parsed.request.sessionId)
@@ -148,13 +163,6 @@ export async function POST(request: Request): Promise<Response> {
   // an executable action.
   if (intent.kind === "unsupported") {
     modelAttempted = true;
-    const rate = checkChatRateLimit(`admin:${userData.user.id}`);
-    if (!rate.allowed) {
-      return new Response(JSON.stringify({ error: "Too many concierge requests. Please retry shortly." }), {
-        status: 429,
-        headers: { "Content-Type": "application/json", "Retry-After": String(rate.retryAfterSeconds) },
-      });
-    }
     const compiled = await compileModelIntent(
       parsed.request.message,
       tenant.id,
@@ -782,19 +790,26 @@ async function inspectPhotoGap(
     if (!data || data.length < PAGE) break;
   }
 
-  const managed = new Set<string>();
-  for (let page = 0; ; page++) {
-    const from = page * PAGE;
-    const { data, error } = await supabase
-      .from("vehicle_images")
-      .select("vehicle_id")
-      .eq("tenant_id", tenantId)
-      .order("vehicle_id", { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (error) break; // Managed images are optional; legacy sources still count.
-    for (const image of data ?? []) managed.add(image.vehicle_id);
-    if (!data || data.length < PAGE) break;
+  // Managed images are optional; legacy sources still count. That tolerance is
+  // for an *absent* table, not a *truncated* read — see managedImageScan.ts.
+  // Bailing on any error used to leave the set partially populated, and every
+  // vehicle whose row sat on an unread page was then counted as photoless.
+  const scan = await collectManagedImageVehicleIds(
+    async (from, to) => {
+      const { data, error } = await supabase
+        .from("vehicle_images")
+        .select("vehicle_id")
+        .eq("tenant_id", tenantId)
+        .order("vehicle_id", { ascending: true })
+        .range(from, to);
+      return { data, error };
+    },
+    PAGE,
+  );
+  if (!scan.ok) {
+    return json({ error: "Unable to read inventory photo coverage right now." }, 502);
   }
+  const managed = scan.vehicleIds;
 
   const missing = rows.filter((row) =>
     !managed.has(row.id) && !row.special_image_src?.trim() && !row.image_src?.trim());
