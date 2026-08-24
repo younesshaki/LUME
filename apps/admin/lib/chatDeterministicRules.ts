@@ -185,13 +185,18 @@ export type InventoryOutcome = {
 /**
  * What to say — and what to filter the UI to — after querying inventory.
  *
- * Faithful to the inline version it replaces, including one known defect: on a
- * zero-result rollback the availability answer is still computed, and a
- * concurrent full-reset request still emits a filter action pointing at the
- * dead combination. That contradicts the rollback text the visitor is shown
- * ("I've kept your previous results in place"). It is preserved here so the
- * extraction is provably behaviour-preserving, pinned by a test, and fixed in
- * its own commit — see the zero-result tests in chatDeterministicRules.test.ts.
+ * A zero-result refinement rolls conversation state back to the filters that
+ * last returned something, and returns early. Nothing below it can run,
+ * because everything below it describes a search that has matches:
+ *
+ *  - the availability answer would be computed against an empty match set
+ *  - a concurrent full-reset would emit a filter action pointing the UI at the
+ *    dead combination, while the visitor reads "I've kept your previous
+ *    results in place"
+ *
+ * That contradiction was visible on screen: rollback text above, empty
+ * filtered inventory below. The early return is the fix — on a genuine
+ * zero-result rollback there is nothing meaningful to filter to.
  */
 export function resolveInventoryOutcome(input: {
   userText: string;
@@ -212,8 +217,16 @@ export function resolveInventoryOutcome(input: {
 
   const isZeroResultRollback = totalMatched === 0 && hasPriorResultSet;
 
-  // Computed unconditionally, exactly as before — including on the rollback
-  // path, where it can only ever describe the empty combination.
+  if (isZeroResultRollback) {
+    return {
+      zeroResult: zeroResultAnswer(filters),
+      availability: null,
+      inventory: null,
+      filterAction: null,
+      rollBackToPreviousFilters: true,
+    };
+  }
+
   const availability = availabilityAnswerFromGroundedInventory(
     userText,
     filters,
@@ -243,10 +256,10 @@ export function resolveInventoryOutcome(input: {
   }
 
   return {
-    zeroResult: isZeroResultRollback ? zeroResultAnswer(filters) : null,
+    zeroResult: null,
     availability,
     inventory,
     filterAction,
-    rollBackToPreviousFilters: isZeroResultRollback,
+    rollBackToPreviousFilters: false,
   };
 }

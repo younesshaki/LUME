@@ -143,7 +143,7 @@ describe("resolveReferenceOutcome", () => {
       activeFilters: { make: "BMW" },
     });
     expect(outcome.kind).toBe("unavailable");
-    expect(outcome.answer).toContain("no longer satisfies");
+    expect(outcome.kind === "unavailable" && outcome.answer).toContain("no longer satisfies");
   });
 
   it("refuses when the id could not be fetched at all", () => {
@@ -161,7 +161,9 @@ describe("resolveReferenceOutcome", () => {
       hasOrdinalOrSelectionPhrase: true,
     });
     expect(outcome.kind).toBe("unavailable");
-    expect(outcome.answer).toContain("don’t have a current result list");
+    expect(outcome.kind === "unavailable" && outcome.answer).toContain(
+      "don’t have a current result list",
+    );
   });
 });
 
@@ -232,13 +234,23 @@ describe("resolveInventoryOutcome", () => {
     { drivetrain: "AWD", fuelType: "Gas", priceMin: 10_000, priceMax: 90_000 },
   ];
 
-  it("matches the original inline logic across every combination", () => {
+  it("matches the original inline logic on every non-rollback turn", () => {
+    // The zero-result rollback path is deliberately excluded: that is the one
+    // place 3.1b's successor commit changed behaviour on purpose (1.8), and it
+    // has its own explicit tests below. Everywhere else — which is the great
+    // majority of turns — the extraction must be indistinguishable from the
+    // inline logic it replaced.
     let compared = 0;
+    let skippedRollback = 0;
     for (const userText of TEXTS) {
       for (const filters of FILTER_SETS) {
         for (const totalMatched of [0, 1, 5, 200]) {
           for (const hasPriorResultSet of [true, false]) {
             for (const fullInventoryResetRequested of [true, false]) {
+              if (totalMatched === 0 && hasPriorResultSet) {
+                skippedRollback++;
+                continue;
+              }
               const matchedVehicles =
                 totalMatched === 0
                   ? []
@@ -265,8 +277,43 @@ describe("resolveInventoryOutcome", () => {
         }
       }
     }
-    // 9 texts x 6 filter sets x 4 counts x 2 x 2
-    expect(compared).toBe(864);
+    // 9 texts x 6 filter sets x 4 counts x 2 x 2 = 864, less the 108 rollbacks.
+    expect(compared).toBe(756);
+    expect(skippedRollback).toBe(108);
+  });
+
+  it("differs from the original ONLY on the rollback path", () => {
+    // Pins the blast radius of the 1.8 fix. If a later change makes the two
+    // diverge anywhere else, this fails rather than the divergence passing
+    // unnoticed under the exclusion above.
+    let divergent = 0;
+    for (const userText of TEXTS) {
+      for (const filters of FILTER_SETS) {
+        for (const fullInventoryResetRequested of [true, false]) {
+          const args = {
+            userText,
+            filters,
+            matchedVehicles: [] as Vehicle[],
+            totalMatched: 0,
+            hasPriorResultSet: true,
+            fullInventoryResetRequested,
+          };
+          const next = resolveInventoryOutcome(args as never);
+          const prev = originalInventoryLogic(args);
+          const differs =
+            next.availability !== prev.availability ||
+            next.inventory !== prev.inventory ||
+            JSON.stringify(next.filterAction) !== JSON.stringify(prev.filterAction);
+          if (differs) divergent++;
+          // The rollback decision and its text are unchanged either way.
+          expect(next.zeroResult).toEqual(prev.zeroResult);
+          expect(next.rollBackToPreviousFilters).toEqual(prev.rollBack);
+        }
+      }
+    }
+    // Every reset-on-empty turn diverges (that is the fix); the rest may or
+    // may not, depending on whether the old code would have said anything.
+    expect(divergent).toBeGreaterThan(0);
   });
 
   it("rolls back and names the dead constraints on a zero-result refinement", () => {
@@ -298,11 +345,11 @@ describe("resolveInventoryOutcome", () => {
     expect(outcome.zeroResult).toBeNull();
   });
 
-  it("PINNED DEFECT (1.8): a zero-result reset still emits the dead filter action", () => {
-    // The visitor is told "I've kept your previous results in place" while the
-    // UI is filtered to the combination that matched nothing. Preserved here so
-    // the extraction is provably behaviour-preserving; fixed in its own commit,
-    // at which point this expectation flips to toBeNull().
+  it("emits no filter action when a reset lands on zero results (1.8)", () => {
+    // The visitor used to be told "I've kept your previous results in place"
+    // while the UI filtered to the combination that matched nothing — a
+    // contradiction visible on screen. Nothing meaningful exists to filter to
+    // on a rollback, so no action is emitted.
     const outcome = resolveInventoryOutcome({
       userText: "clear all filters",
       filters: { make: "BMW", priceMax: 1 },
@@ -312,6 +359,23 @@ describe("resolveInventoryOutcome", () => {
       fullInventoryResetRequested: true,
     });
     expect(outcome.zeroResult).not.toBeNull();
-    expect(outcome.filterAction).not.toBeNull();
+    expect(outcome.filterAction).toBeNull();
+    expect(outcome.inventory).toBeNull();
+    expect(outcome.rollBackToPreviousFilters).toBe(true);
+  });
+
+  it("says nothing about availability on a rollback turn", () => {
+    // The availability answer can only describe the empty combination, and it
+    // outranks nothing useful — the zero-result text is the honest answer.
+    const outcome = resolveInventoryOutcome({
+      userText: "do you have any BMWs",
+      filters: { make: "BMW", priceMax: 1 },
+      matchedVehicles: [],
+      totalMatched: 0,
+      hasPriorResultSet: true,
+      fullInventoryResetRequested: false,
+    });
+    expect(outcome.availability).toBeNull();
+    expect(outcome.zeroResult).toContain("kept your previous results");
   });
 });
