@@ -1,9 +1,9 @@
 # LUME Concierge: Scalable Core and RAG Execution Plan
 
-Date: 2026-09-12  
-Status: proposed implementation plan; review before execution  
-Audience: product owner and Claude, as reviewer and subsequent implementing agent  
-Scope: public website concierge and authenticated dashboard concierge
+- **Date:** 2026-09-12
+- **Status:** Phases 1-2 implemented (see below); Phases 3-6 not started
+- **Audience:** product owner and Claude, as reviewer and subsequent implementing agent
+- **Scope:** public website concierge and authenticated dashboard concierge
 
 ## 1. Executive decision
 
@@ -96,6 +96,29 @@ Recorded so the next agent does not re-derive them:
    intentionally rolls filters back and retains the prior result set to prevent
    the 2026-07-22 compounding bug. The attempted-zero separation was
    implemented *on top of* that rollback, not instead of it.
+
+### Follow-up — lifecycle wiring (same branch)
+
+The first pass added the mechanisms; this one puts them on the live path.
+
+- **CAS is now used, not merely available.** The route reads `stateVersion` at
+  turn start and commits against it through one writer shared by all three
+  response paths. A lost race is recorded as `api/chat/memory-conflict` and the
+  turn's write is dropped, so the newer turn's state stands. Previously the
+  guard existed but nothing passed `expectedStateVersion`, so a late turn could
+  still overwrite a newer one.
+- **Reference actions are blocked while the shared store is degraded.** An
+  ordinal, a selection, a positional comparison and a stored-result "show me"
+  all resolve against a list this process believes it showed; during an outage
+  another instance may have served that turn. All four now refuse and explain,
+  and the reference ids are cleared so the refusal is not contradicted by a
+  navigation action built from them. Stateless questions still work. This only
+  fires when a CONFIGURED shared store fails — a deployment without one never
+  promised cross-instance continuity and is unaffected.
+- **Multi-call usage is labelled.** The tool path makes two upstream calls and
+  only the first reports tokens. The record now carries `usage.coversCalls`
+  and `usage.partial`, reports the source as `provider_partial`, and marks any
+  derived cost `priced_partial` so it cannot be summed as a complete bill.
 
 ### Verification performed
 

@@ -23,6 +23,8 @@ describe("concierge turn telemetry: usage and cost honesty", () => {
       inputTokens: null,
       outputTokens: null,
       source: "unknown",
+      coversCalls: null,
+      partial: false,
     });
   });
 
@@ -80,6 +82,77 @@ describe("concierge turn telemetry: usage and cost honesty", () => {
     });
     expect(record.cost.usd).toBeNull();
     expect(record.cost.source).toBe("unpriced");
+  });
+
+  it("marks counts that cover only some of a turn's calls as partial", () => {
+    // The tool path: phase 1 reports usage, phase 2 streams without it. A
+    // two-call turn reporting one call's tokens is an undercount, and a spend
+    // report that cannot see that will be wrong in the same direction forever.
+    const record = buildConciergeTurnRecord({
+      ...base,
+      route: "tool",
+      model: {
+        provider: "deepseek",
+        requestedModelId: "a",
+        effectiveModelId: "a",
+        calls: 2,
+      },
+      usage: { inputTokens: 700, outputTokens: 65, coversCalls: 1 },
+    });
+    expect(record.usage.source).toBe("provider_partial");
+    expect(record.usage.partial).toBe(true);
+    expect(record.usage.coversCalls).toBe(1);
+    expect(record.model?.calls).toBe(2);
+  });
+
+  it("does not mark a single-call turn partial", () => {
+    const record = buildConciergeTurnRecord({
+      ...base,
+      route: "model",
+      model: {
+        provider: "deepseek",
+        requestedModelId: "a",
+        effectiveModelId: "a",
+        calls: 1,
+      },
+      usage: { inputTokens: 700, outputTokens: 65, coversCalls: 1 },
+    });
+    expect(record.usage.source).toBe("provider");
+    expect(record.usage.partial).toBe(false);
+  });
+
+  it("labels a partial cost so it cannot be summed as a complete bill", () => {
+    const record = buildConciergeTurnRecord({
+      ...base,
+      route: "tool",
+      model: {
+        provider: "deepseek",
+        requestedModelId: "a",
+        effectiveModelId: "a",
+        calls: 2,
+      },
+      usage: { inputTokens: 1000, outputTokens: 1000, coversCalls: 1 },
+      price: { inputPer1k: 1, outputPer1k: 1, tableVersion: "test-v1" },
+    });
+    // The figure is real spend, just not all of it.
+    expect(record.cost.usd).toBeCloseTo(2, 10);
+    expect(record.cost.source).toBe("priced_partial");
+  });
+
+  it("keeps an explicit estimate labelled as an estimate even when partial", () => {
+    const record = buildConciergeTurnRecord({
+      ...base,
+      route: "tool",
+      model: {
+        provider: "deepseek",
+        requestedModelId: "a",
+        effectiveModelId: "a",
+        calls: 2,
+      },
+      usage: { inputTokens: 10, outputTokens: 10, coversCalls: 1, source: "estimated" },
+    });
+    expect(record.usage.source).toBe("estimated");
+    expect(record.usage.partial).toBe(true);
   });
 
   it("records no model block for a turn the model never saw", () => {

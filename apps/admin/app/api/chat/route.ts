@@ -40,6 +40,7 @@ import {
   resolveTenantPlan,
 } from "@lume/db";
 import {
+  ConversationMemoryConflictError,
   conversationMemoryToolPrompt,
   mergeRememberedMessages,
   parseToolCalls,
@@ -319,6 +320,45 @@ export async function POST(request: Request): Promise<Response> {
         return null;
       })
     : null;
+  // The version this turn read. Committing against it makes a late turn lose
+  // to the newer one that already landed, instead of overwriting it.
+  const expectedStateVersion = remembered?.stateVersion ?? 0;
+  // Only true when a CONFIGURED shared store has failed. A deployment with no
+  // shared store at all is not degraded — it never promised cross-instance
+  // continuity in the first place.
+  const memoryDegraded = isConversationMemoryDegraded();
+  /**
+   * One writer for every response path.
+   *
+   * A conflict is the expected outcome when two turns of one conversation
+   * race: the newer turn's state stands and this turn's write is dropped
+   * rather than clobbering it. That costs this turn's transcript entry, which
+   * is the cheaper loss.
+   */
+  const persistTurnMemory = async (
+    update: Parameters<typeof memoryStore.append>[1],
+  ): Promise<void> => {
+    if (!memoryKey) return;
+    try {
+      await memoryStore.append(memoryKey, {
+        ...update,
+        requestId,
+        expectedStateVersion,
+      });
+    } catch (error: unknown) {
+      if (error instanceof ConversationMemoryConflictError) {
+        captureDebug("api/chat/memory-conflict", {
+          tenantId: tenant.tenantId,
+          expectedStateVersion,
+          actualStateVersion: error.actualStateVersion,
+        });
+        return;
+      }
+      captureError("api/chat/memory-write", error, {
+        tenantId: tenant.tenantId,
+      });
+    }
+  };
   let conversationState: ConversationInventoryState =
     normalizeConversationInventoryState(remembered?.conversationState);
   const conversationStateBefore = conversationState;
@@ -518,7 +558,9 @@ export async function POST(request: Request): Promise<Response> {
         activeFilters: conversationState.activeFilters,
         isSelectedVehicleDetailRequest: selectedVehicleDetailRequest,
         isOrdinalReference: isOrdinalVehicleReference(lastUser.content),
-        isSelectedVehicleAction: isSelectedVehicleActionRequest(lastUser.content),
+        isSelectedVehicleAction: isSelectedVehicleActionRequest(
+          lastUser.content,
+        ),
       })
     ) {
       groundSelectedVehicleChunk = true;
@@ -577,6 +619,7 @@ export async function POST(request: Request): Promise<Response> {
         orderedIds,
         fetched,
         activeFilters: conversationState.activeFilters,
+        memoryDegraded,
       });
       if (outcome.kind === "compared") {
         deterministicCompareAnswer = outcome.answer;
@@ -586,7 +629,13 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
 
-    if (stateTransition.useStoredResultSet) {
+    if (stateTransition.useStoredResultSet && memoryDegraded) {
+      // "show me" re-presents a stored list. During an outage this process
+      // cannot know the list is this visitor's, so it must not be shown.
+      statePresentationRequest = false;
+      deterministicOrdinalUnavailableAnswer =
+        "I’ve lost the thread of which results I showed you, so I can’t bring that list back. Tell me what you’d like to see and I’ll search again.";
+    } else if (stateTransition.useStoredResultSet) {
       filters = conversationState.activeFilters;
       groundedInventoryFilters = filters;
       for (const id of conversationState.resultSet?.orderedIds ?? [])
@@ -604,7 +653,11 @@ export async function POST(request: Request): Promise<Response> {
       userText: lastUser.content,
       referencedVehicleId: stateReferencedVehicleId,
       fetched: stateReferencedVehicleId
-        ? await getTenantVehicle(supabase, tenant.tenantId, stateReferencedVehicleId)
+        ? await getTenantVehicle(
+            supabase,
+            tenant.tenantId,
+            stateReferencedVehicleId,
+          )
         : null,
       activeFilters: conversationState.activeFilters,
       resultSet: conversationState.resultSet,
@@ -612,15 +665,26 @@ export async function POST(request: Request): Promise<Response> {
         isOrdinalVehicleReference(lastUser.content) ||
         isSelectedVehicleActionRequest(lastUser.content),
       attemptedZeroResult: conversationState.attemptedZeroResult,
+      memoryDegraded,
     });
     if (referenceOutcome.kind === "resolved") {
       const selected = referenceOutcome.vehicle;
       selectedVehicleId = selected.id;
       groundedVehicleIds.add(selected.id);
       groundedVehicles = [selected];
-      conversationState = selectConversationVehicle(conversationState, selected.id);
+      conversationState = selectConversationVehicle(
+        conversationState,
+        selected.id,
+      );
       deterministicOrdinalReferenceAnswer = referenceOutcome.answer;
     } else if (referenceOutcome.kind === "unavailable") {
+      if (memoryDegraded) {
+        // The refusal above only covers the prose. stateActions below builds a
+        // navigate-target straight from these ids, so clearing them is what
+        // actually stops a stale position becoming a navigation.
+        stateOrdinalVehicleId = null;
+        stateSelectedVehicleId = null;
+      }
       if (stateReferencedVehicleId) {
         // The id resolved but no longer satisfies the filters: forget it, so a
         // later navigation cannot act on a vehicle the visitor filtered away.
@@ -679,9 +743,9 @@ export async function POST(request: Request): Promise<Response> {
         deterministicInventoryAction = inventoryOutcome.filterAction;
       }
     }
-
   } catch (err) {
-    const message = err instanceof Error ? err.message : "state resolution failure";
+    const message =
+      err instanceof Error ? err.message : "state resolution failure";
     captureError("api/chat/state-build", err, {
       tenantId: tenant.tenantId,
       detail: message,
@@ -750,7 +814,7 @@ export async function POST(request: Request): Promise<Response> {
       for (const dropped of decision.dropped) {
         droppedActionTypes.push(
           typeof (dropped as { type?: unknown }).type === "string"
-            ? ((dropped as { type: string }).type)
+            ? (dropped as { type: string }).type
             : "unknown",
         );
       }
@@ -918,20 +982,13 @@ export async function POST(request: Request): Promise<Response> {
           });
         }
         if (memoryKey && visibleContent) {
-          await memoryStore
-            .append(memoryKey, {
-              requestId,
-              messages: [
-                lastUser,
-                { role: "assistant", content: visibleContent },
-              ],
-              conversationState,
-            })
-            .catch((error: unknown) => {
-              captureError("api/chat/memory-write", error, {
-                tenantId: tenant.tenantId,
-              });
-            });
+          await persistTurnMemory({
+            messages: [
+              lastUser,
+              { role: "assistant", content: visibleContent },
+            ],
+            conversationState,
+          });
         }
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
@@ -948,7 +1005,10 @@ export async function POST(request: Request): Promise<Response> {
       clarification: Boolean(
         deterministicClarifier || deterministicMakeSwitchClarifier,
       ),
-      query: { status: inventoryQueryStatus(), totalCount: totalMatched ?? null },
+      query: {
+        status: inventoryQueryStatus(),
+        totalCount: totalMatched ?? null,
+      },
       actions: {
         emitted: actions.map((action) => action.type),
         dropped: droppedActionTypes,
@@ -1239,8 +1299,10 @@ export async function POST(request: Request): Promise<Response> {
         calls: input.calls,
       },
       // Phase 2 streams without stream_options.include_usage, so only the
-      // phase-1 block is ever present. Absent => "unknown", never 0.
-      usage: providerUsage ?? undefined,
+      // phase-1 block is ever present. Absent => "unknown", never 0; present
+      // on a two-call turn => "provider_partial", because reporting one call's
+      // tokens as the turn's total is an undercount of real spend.
+      usage: providerUsage ? { ...providerUsage, coversCalls: 1 } : undefined,
       timingsMs: {
         state: stateResolvedAtMs - turnStartedAtMs,
         context: contextLoadedAtMs - stateResolvedAtMs,
@@ -1319,20 +1381,13 @@ export async function POST(request: Request): Promise<Response> {
           });
         }
         if (memoryKey && visibleContent) {
-          await memoryStore
-            .append(memoryKey, {
-              requestId,
-              messages: [
-                lastUser,
-                { role: "assistant", content: visibleContent },
-              ],
-              conversationState,
-            })
-            .catch((error: unknown) => {
-              captureError("api/chat/memory-write", error, {
-                tenantId: tenant.tenantId,
-              });
-            });
+          await persistTurnMemory({
+            messages: [
+              lastUser,
+              { role: "assistant", content: visibleContent },
+            ],
+            conversationState,
+          });
         }
         controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
         controller.close();
@@ -1599,24 +1654,17 @@ export async function POST(request: Request): Promise<Response> {
           });
         }
         if (streamCompletionObserved && memoryKey && assistantContent.trim()) {
-          await memoryStore
-            .append(memoryKey, {
-              requestId,
-              messages: [
-                lastUser,
-                { role: "assistant", content: assistantContent },
-              ],
-              conversationState,
-              toolResults: turn.steps.map((step) => ({
-                name: step.call.name,
-                result: step.result,
-              })),
-            })
-            .catch((error: unknown) => {
-              captureError("api/chat/memory-write", error, {
-                tenantId: tenant.tenantId,
-              });
-            });
+          await persistTurnMemory({
+            messages: [
+              lastUser,
+              { role: "assistant", content: assistantContent },
+            ],
+            conversationState,
+            toolResults: turn.steps.map((step) => ({
+              name: step.call.name,
+              result: step.result,
+            })),
+          });
         }
         if (streamCompletionObserved) {
           captureConciergeTranscript({

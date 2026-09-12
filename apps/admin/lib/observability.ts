@@ -295,8 +295,17 @@ export function recordModelUsage(input: {
  * field for a message, a prompt, a completion, model reasoning, or a lead.
  * ────────────────────────────────────────────────────────────────────────── */
 
-/** Where token counts came from. "unknown" is never silently turned into 0. */
-export type ConciergeUsageSource = "provider" | "estimated" | "unknown";
+/**
+ * Where token counts came from. "unknown" is never silently turned into 0, and
+ * "provider_partial" marks counts that cover only some of the turn's upstream
+ * calls — a two-call turn reporting one call's tokens is an undercount, and
+ * saying so is the difference between a usable spend figure and a wrong one.
+ */
+export type ConciergeUsageSource =
+  | "provider"
+  | "provider_partial"
+  | "estimated"
+  | "unknown";
 
 export type ConciergeTurnRoute = "deterministic" | "model" | "tool" | "error";
 
@@ -340,6 +349,11 @@ export type ConciergeTurnInput = {
     inputTokens?: number | null;
     outputTokens?: number | null;
     source?: ConciergeUsageSource;
+    /**
+     * How many of this turn's upstream calls the counts actually cover.
+     * Defaults to the turn's call count. Lower means partial.
+     */
+    coversCalls?: number | null;
   } | null;
   /**
    * Per-1k-token rates for the effective model. Deliberately not defaulted:
@@ -387,10 +401,15 @@ export type ConciergeTurnRecord = {
     inputTokens: number | null;
     outputTokens: number | null;
     source: ConciergeUsageSource;
+    /** Calls the counts cover, against `model.calls`. Null when unknown. */
+    coversCalls: number | null;
+    /** True when the turn made more calls than the counts account for. */
+    partial: boolean;
   };
   cost: {
     usd: number | null;
-    source: "priced" | "unpriced";
+    /** "priced_partial" means real money is missing from this figure. */
+    source: "priced" | "priced_partial" | "unpriced";
     priceTableVersion: string | null;
   };
   timingsMs: {
@@ -416,16 +435,26 @@ export function buildConciergeTurnRecord(
 ): ConciergeTurnRecord {
   const inputTokens = finiteOrNull(input.usage?.inputTokens);
   const outputTokens = finiteOrNull(input.usage?.outputTokens);
+  const hasCounts = inputTokens !== null || outputTokens !== null;
+  const modelCalls = finiteOrNull(input.model?.calls) ?? 0;
+  // Counts default to covering every call; a caller that knows better (the
+  // tool path, whose streamed second call reports no usage) says so.
+  const coversCalls = hasCounts
+    ? (finiteOrNull(input.usage?.coversCalls) ?? modelCalls)
+    : null;
+  const partial =
+    hasCounts && coversCalls !== null && modelCalls > 0 && coversCalls < modelCalls;
+
   // A caller that supplies no counts gets "unknown" — never a zero that would
   // read as "this turn was free" in a spend report.
-  const usageSource: ConciergeUsageSource =
-    inputTokens === null && outputTokens === null
-      ? "unknown"
+  const usageSource: ConciergeUsageSource = !hasCounts
+    ? "unknown"
+    : partial && (input.usage?.source ?? "provider") === "provider"
+      ? "provider_partial"
       : (input.usage?.source ?? "provider");
 
   const price = input.price ?? null;
-  const priceable =
-    price !== null && (inputTokens !== null || outputTokens !== null);
+  const priceable = price !== null && hasCounts;
   const usd = priceable
     ? ((inputTokens ?? 0) / 1000) * price.inputPer1k +
       ((outputTokens ?? 0) / 1000) * price.outputPer1k
@@ -466,10 +495,18 @@ export function buildConciergeTurnRecord(
           calls: finiteOrNull(input.model.calls) ?? 0,
         }
       : null,
-    usage: { inputTokens, outputTokens, source: usageSource },
+    usage: {
+      inputTokens,
+      outputTokens,
+      source: usageSource,
+      coversCalls,
+      partial,
+    },
     cost: {
       usd,
-      source: usd === null ? "unpriced" : "priced",
+      // A partial figure is real spend, but not the whole bill. Labelling it
+      // stops it being summed as if it were.
+      source: usd === null ? "unpriced" : partial ? "priced_partial" : "priced",
       priceTableVersion: price?.tableVersion ?? null,
     },
     timingsMs: {

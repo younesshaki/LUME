@@ -8,7 +8,10 @@ import {
   setConversationResultSet,
   transitionInventoryState,
 } from "./chatConversationState";
-import { resolveReferenceOutcome } from "./chatDeterministicRules";
+import {
+  resolveCompareOutcome,
+  resolveReferenceOutcome,
+} from "./chatDeterministicRules";
 
 const vehicle = (over: Partial<Vehicle> = {}): Vehicle =>
   ({
@@ -243,5 +246,86 @@ describe("conversation state: pending clarification", () => {
       pendingClarification: { kind: "something-else", askedAtTurn: 4 },
     });
     expect(restored.pendingClarification).toBeNull();
+  });
+});
+
+describe("degraded shared memory: references are refused, not guessed", () => {
+  const resultSet = {
+    orderedIds: ["v1", "v2"],
+    totalCount: 2,
+    filtersApplied: { make: "BMW" },
+    createdAtTurn: 1,
+  };
+
+  it("refuses an ordinal that would otherwise resolve cleanly", () => {
+    // The list this process remembers may belong to a turn another instance
+    // served. Opening position 2 of a list the visitor never saw is exactly
+    // the confidently-wrong navigation the architecture forbids.
+    const outcome = resolveReferenceOutcome({
+      userText: "open the second one",
+      referencedVehicleId: "v2",
+      fetched: vehicle({ id: "v2" }),
+      activeFilters: { make: "BMW" },
+      resultSet,
+      hasOrdinalOrSelectionPhrase: true,
+      memoryDegraded: true,
+    });
+    expect(outcome.kind).toBe("unavailable");
+    expect(outcome.kind === "unavailable" && outcome.answer).toContain(
+      "lost the thread",
+    );
+  });
+
+  it("refuses a reference phrase even with nothing stored to resolve against", () => {
+    const outcome = resolveReferenceOutcome({
+      userText: "open the second one",
+      referencedVehicleId: null,
+      fetched: null,
+      activeFilters: {},
+      resultSet: null,
+      hasOrdinalOrSelectionPhrase: true,
+      memoryDegraded: true,
+    });
+    expect(outcome.kind).toBe("unavailable");
+  });
+
+  it("refuses a positional comparison for the same reason", () => {
+    const outcome = resolveCompareOutcome({
+      compareIndexes: [0, 1],
+      orderedIds: resultSet.orderedIds,
+      fetched: [vehicle({ id: "v1" }), vehicle({ id: "v2" })],
+      activeFilters: { make: "BMW" },
+      memoryDegraded: true,
+    });
+    expect(outcome.kind).toBe("unavailable");
+  });
+
+  it("leaves a healthy shared store completely unaffected", () => {
+    // The guard must not fire on the ordinary path, including the common
+    // deployment that has no shared store configured at all.
+    const outcome = resolveReferenceOutcome({
+      userText: "open the second one",
+      referencedVehicleId: "v2",
+      fetched: vehicle({ id: "v2" }),
+      activeFilters: { make: "BMW" },
+      resultSet,
+      hasOrdinalOrSelectionPhrase: true,
+      memoryDegraded: false,
+    });
+    expect(outcome.kind).toBe("resolved");
+  });
+
+  it("does not block a turn that makes no reference at all", () => {
+    // Safe stateless requests keep working during an outage.
+    const outcome = resolveReferenceOutcome({
+      userText: "do you have any BMWs?",
+      referencedVehicleId: null,
+      fetched: null,
+      activeFilters: {},
+      resultSet: null,
+      hasOrdinalOrSelectionPhrase: false,
+      memoryDegraded: true,
+    });
+    expect(outcome.kind).toBe("none");
   });
 });

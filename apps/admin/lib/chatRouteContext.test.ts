@@ -117,6 +117,88 @@ describe("public chat route: turn telemetry", () => {
   });
 });
 
+describe("public chat route: memory lifecycle wiring", () => {
+  it("reads the state version at turn start and commits against it", () => {
+    // Without this the CAS guard exists but nothing uses it, and a late turn
+    // still overwrites the newer one that already landed.
+    expect(route).toContain("remembered?.stateVersion ?? 0");
+    expect(at("expectedStateVersion")).toBeGreaterThan(-1);
+  });
+
+  it("routes every persisted turn through one versioned writer", () => {
+    // Three response paths write memory. Three hand-rolled appends drift;
+    // one helper cannot.
+    const writes = route.split("persistTurnMemory({").length - 1;
+    expect(writes).toBe(3);
+    // The one append in the file carries both the turn id and the version.
+    const appends = route.split("memoryStore.append(").length - 1;
+    expect(appends).toBe(1);
+    const append = at("memoryStore.append(");
+    const body = route.slice(append, append + 200);
+    expect(body).toContain("...update");
+    expect(body).toContain("requestId");
+    expect(body).toContain("expectedStateVersion");
+  });
+
+  it("treats a lost race as expected rather than as an error", () => {
+    // A conflict is a healthy store refusing a stale write, not an incident.
+    const guard = at("error instanceof ConversationMemoryConflictError");
+    // The conflict branch only, up to its early return.
+    const branch = route.slice(guard, route.indexOf("return;", guard));
+    expect(branch).toContain("memory-conflict");
+    expect(branch).not.toContain("captureError");
+  });
+
+  it("stamps the turn id so a replayed request cannot double-append", () => {
+    const append = at("memoryStore.append(");
+    expect(route.slice(append, append + 200)).toContain("requestId");
+  });
+});
+
+describe("public chat route: degraded shared memory", () => {
+  it("derives the degraded flag from the configured store, not from a guess", () => {
+    expect(route).toContain("const memoryDegraded = isConversationMemoryDegraded()");
+  });
+
+  it("passes it to both reference resolvers", () => {
+    // Ordinals and positional comparisons both resolve against a stored list.
+    const reference = route.indexOf("resolveReferenceOutcome({");
+    const compare = route.indexOf("resolveCompareOutcome({");
+    expect(route.slice(reference, reference + 700)).toContain("memoryDegraded");
+    expect(route.slice(compare, compare + 500)).toContain("memoryDegraded");
+  });
+
+  it("clears the reference ids, so a refusal is not contradicted by an action", () => {
+    // stateActions builds a navigate-target straight from these ids. Refusing
+    // in prose while still emitting the navigation would be the worst of both.
+    const guard = at("if (memoryDegraded) {");
+    const window = route.slice(guard, guard + 500);
+    expect(window).toContain("stateOrdinalVehicleId = null");
+    expect(window).toContain("stateSelectedVehicleId = null");
+  });
+
+  it("does not re-present a stored result set during an outage", () => {
+    expect(route).toContain("stateTransition.useStoredResultSet && memoryDegraded");
+  });
+
+  it("reports the degraded state on every turn record", () => {
+    const records = route.split("memoryDegraded: isConversationMemoryDegraded()").length - 1;
+    expect(records).toBe(2);
+  });
+});
+
+describe("public chat route: multi-call usage honesty", () => {
+  it("declares that phase-1 counts cover only one of the tool path's two calls", () => {
+    // The tool path makes two upstream calls; only the first reports usage.
+    expect(route).toContain("coversCalls: 1");
+    expect(route).toContain('recordModelTurn({ route: "tool", emitted: emittedActions, calls: 2 })');
+  });
+
+  it("still reports the prose path as a single call", () => {
+    expect(route).toContain('recordModelTurn({ route: "model", emitted: actions, calls: 1 })');
+  });
+});
+
 describe("deterministicSourceCategories", () => {
   it("claims vehicle provenance when a fresh query grounded the answer", () => {
     expect(

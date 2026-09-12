@@ -61,8 +61,18 @@ export function resolveCompareOutcome(input: {
   orderedIds: readonly string[];
   fetched: readonly (Vehicle | null)[];
   activeFilters: VehicleFilters;
+  /** Same reasoning as resolveReferenceOutcome: positions are unsafe. */
+  memoryDegraded?: boolean;
 }): CompareOutcome {
   const { compareIndexes, orderedIds, fetched, activeFilters } = input;
+
+  if (input.memoryDegraded) {
+    return {
+      kind: "unavailable",
+      answer:
+        "I’ve lost the thread of which results I showed you, so I can’t compare them by position right now. Tell me which two vehicles you mean and I’ll look them up.",
+    };
+  }
 
   if (orderedIds.length === 0) {
     return {
@@ -132,8 +142,26 @@ export function resolveReferenceOutcome(input: {
    * exactly the ones the visitor's latest ask excluded.
    */
   attemptedZeroResult?: ConversationInventoryState["attemptedZeroResult"];
+  /**
+   * True when the configured shared conversation store has failed and this
+   * process is answering from per-instance memory.
+   */
+  memoryDegraded?: boolean;
 }): ReferenceOutcome {
   const { userText, referencedVehicleId, fetched, activeFilters, resultSet } = input;
+
+  // A reference resolves against a list this process believes it showed. When
+  // the shared store is down that belief is unfounded: another instance served
+  // the turn that built the list, so "the second one" may point at a position
+  // in a list this visitor never saw. Refuse rather than open a plausible
+  // wrong vehicle — the one failure mode this whole module exists to prevent.
+  if (input.memoryDegraded && (referencedVehicleId || input.hasOrdinalOrSelectionPhrase)) {
+    return {
+      kind: "unavailable",
+      answer:
+        "I’ve lost the thread of which results I showed you, so I can’t safely open one by position right now. Tell me what you’re looking for and I’ll run the search again.",
+    };
+  }
 
   if (referencedVehicleId) {
     const attemptedZero = input.attemptedZeroResult ?? null;
