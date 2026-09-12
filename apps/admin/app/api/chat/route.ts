@@ -611,6 +611,7 @@ export async function POST(request: Request): Promise<Response> {
       hasOrdinalOrSelectionPhrase:
         isOrdinalVehicleReference(lastUser.content) ||
         isSelectedVehicleActionRequest(lastUser.content),
+      attemptedZeroResult: conversationState.attemptedZeroResult,
     });
     if (referenceOutcome.kind === "resolved") {
       const selected = referenceOutcome.vehicle;

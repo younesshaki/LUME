@@ -11,6 +11,7 @@ import {
 import {
   availabilityAnswerFromGroundedInventory,
   compareVehiclesAnswer,
+  describeFilters,
   inventoryFilterAction,
   inventoryRecommendationAnswer,
   inventoryResultAnswer,
@@ -124,10 +125,32 @@ export function resolveReferenceOutcome(input: {
   activeFilters: VehicleFilters;
   resultSet: ConversationInventoryState["resultSet"];
   hasOrdinalOrSelectionPhrase: boolean;
+  /**
+   * Set when the visitor's most recent inventory request matched nothing. The
+   * filters rolled back so the conversation is not trapped, which means
+   * activeFilters describe the PREVIOUS search — and those vehicles are
+   * exactly the ones the visitor's latest ask excluded.
+   */
+  attemptedZeroResult?: ConversationInventoryState["attemptedZeroResult"];
 }): ReferenceOutcome {
   const { userText, referencedVehicleId, fetched, activeFilters, resultSet } = input;
 
   if (referencedVehicleId) {
+    const attemptedZero = input.attemptedZeroResult ?? null;
+    if (
+      fetched &&
+      attemptedZero &&
+      !vehicleSatisfiesActiveFilters(fetched, attemptedZero.filters)
+    ) {
+      // "under $20k" matched nothing -> "open the second one" must not open a
+      // $60k car from the search before it. The previous list is still on
+      // screen, so this is the difference between a helpful recovery and
+      // acting against the constraint the visitor just stated.
+      return {
+        kind: "unavailable",
+        answer: `That result doesn’t meet ${describeFilters(attemptedZero.filters)}, which is what you last asked for — and nothing in stock does. Would you like to relax that, or open one of the earlier results instead?`,
+      };
+    }
     if (fetched && vehicleSatisfiesActiveFilters(fetched, activeFilters)) {
       const isActionRequest =
         isOrdinalVehicleActionRequest(userText) || isSelectedVehicleActionRequest(userText);

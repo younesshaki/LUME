@@ -262,10 +262,14 @@ export function inventoryFilterAction(
   };
 }
 
-/** Keep a refinement honest without silently widening to all inventory. */
-export function zeroResultAnswer(
-  filters: VehicleFilters,
-): string {
+/**
+ * Name every active facet in plain language.
+ *
+ * Shared by the zero-result answer and the attempted-zero reference guard so
+ * the visitor is told the same constraint in the same words whichever path
+ * refuses — two hand-written descriptions of the same filters drift.
+ */
+export function describeFilters(filters: VehicleFilters): string {
   // Every active facet must appear, so a refinement that eliminated the last
   // match is named. Omitting e.g. drivetrain made "no BMW SUV under $70k" read
   // as if none exist, when one does and is only excluded by the AWD filter.
@@ -299,9 +303,12 @@ export function zeroResultAnswer(
     priceConstraintLabel(filters),
     locationLabel,
   ].filter((value): value is string => Boolean(value));
-  const description =
-    constraints.length > 0 ? constraints.join(" ") : "that refinement";
-  return `Nothing matches ${description} right now. I’ve kept your previous results in place rather than widening the search—would you like to relax a constraint?`;
+  return constraints.length > 0 ? constraints.join(" ") : "that refinement";
+}
+
+/** Keep a refinement honest without silently widening to all inventory. */
+export function zeroResultAnswer(filters: VehicleFilters): string {
+  return `Nothing matches ${describeFilters(filters)} right now. I’ve kept your previous results in place rather than widening the search—would you like to relax a constraint?`;
 }
 
 function priceConstraintLabel(
