@@ -383,6 +383,53 @@ being fact-checked against real data before it's shown to a visitor.
 
 ---
 
+## Update — 2026-09-12: core hardening (Phases 1-2)
+
+Branch `feat/concierge-core-hardening`. Fixture/unit evidence only; no live
+scenario run (see the execution plan's status section for why).
+
+**What changed for the visitor**
+
+- *A zero-result refinement can no longer open what it excluded.* Item 7 above
+  fixed the trap where a failed refinement compounded forever, by rolling
+  filters back to the last combination that matched. That rollback is
+  unchanged — but it also meant nothing recorded what the visitor had just
+  asked for, so after "under $20k" matched nothing, "open the second one"
+  would cheerfully open a $62k car from the previous search. The attempted
+  zero is now recorded separately from the results retained for recovery, and
+  an ordinal resolving to a vehicle that fails it is refused with the same
+  wording the zero-result answer uses. A result that *does* satisfy the failed
+  constraint still opens.
+- Nothing else about zero-result presentation changed. The larger "previous
+  results / restore previous search" UX from the plan's §4.3 is still open.
+
+**What changed underneath**
+
+- *Deterministic turns no longer pay for the model's context.* Every turn used
+  to read the whole document corpus, the loyalty context, visitor preferences,
+  image descriptions and the inventory count before knowing if it needed them.
+  An ordinal, a "show me", a reset and a compare all return without calling the
+  model, so those five reads now happen after that early return. The facet RPC
+  stays on every turn: it is the tenant vocabulary that fix 15 (BMW → Camry)
+  depends on.
+- *Every turn emits one telemetry line* (`"scope":"concierge.turn"`) with
+  route, rule codes, query outcome, action types, model metadata, stage
+  timings and token usage. Absent usage is reported as `unknown`, never 0, and
+  cost stays `unpriced` until someone supplies an approved rate table. It is
+  not behind `LUME_CHAT_DEBUG`, which is safe only because the record has no
+  field capable of holding a message, prompt, completion or lead.
+- *Conversation memory is versioned and race-guarded.* Concurrent turns used to
+  lose one another's writes; a replayed request appended the visitor's message
+  twice; a shared-store outage silently demoted the conversation to
+  per-instance memory while still claiming continuity. All three are addressed,
+  and state written by a newer deployment is now discarded rather than
+  reinterpreted.
+
+**Still open from Part 3**: item C (invented-sounding claims in free-form model
+answers) is untouched — it needs answer-level verification, not recognition
+work. The Part 4 decision below is likewise still open; contextual
+interpretation for the public surface is Phase 3 and was not started.
+
 ## Part 4 — The decision on the table
 
 You pushed back on the whole approach tonight, correctly: **a fixed list of
