@@ -92,6 +92,35 @@ function capability(
   return { id, title, effect, minRole, confirmation, route, aliases };
 }
 
+/**
+ * Why the concierge is asking, from a closed set.
+ *
+ * The model picks a reason, never the words. Letting it author the question
+ * would be free text on a surface that must not emit model prose, and a
+ * "which lead did you mean?" written by a model is one step from a question
+ * that names a record the actor may not be allowed to see.
+ */
+export type AdminClarifyReason =
+  | "ambiguous_surface"
+  | "ambiguous_record"
+  | "missing_target"
+  | "missing_value"
+  | "unsupported_scope";
+
+/** Server-authored text for each reason. No tenant data can appear here. */
+export const ADMIN_CLARIFY_QUESTIONS: Record<AdminClarifyReason, string> = {
+  ambiguous_surface:
+    "Which area do you mean? Tell me the dashboard section — for example inventory, leads, pages, or inventory feeds — and I’ll take you there.",
+  ambiguous_record:
+    "More than one record could match that. Give me a more specific name, email, or stock number and I’ll find the exact one.",
+  missing_target:
+    "Tell me which record you mean and I’ll look it up — a name, email, or stock number works.",
+  missing_value:
+    "I need the new value before I can prepare that change. What should it be set to?",
+  unsupported_scope:
+    "I can’t do that in one step. Narrow it to a single record, or tell me the area you want and I’ll take you to the screen that can.",
+};
+
 export type AdminConciergeIntent =
   | { kind: "navigate"; capabilityId: string }
   | { kind: "clarify"; question: string }
@@ -133,7 +162,7 @@ export type AdminConciergeModelPlan =
   | { kind: "update_vehicle_status"; vehicleQuery: string; status: "draft" | "live" | "archived" }
   | { kind: "enqueue_feed_run"; feedQuery: string }
   | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
-  | { kind: "clarify" };
+  | { kind: "clarify"; reason: AdminClarifyReason };
 
 export type AdminConciergeRequest = {
   tenantSlug: string;
@@ -450,8 +479,12 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
           ? { kind: "update_lead_status", leadQuery, status }
           : null;
       }
-      case "clarify":
-        return { kind: "clarify" };
+      case "clarify": {
+        const reason = parsed.intent.reason;
+        // An unrecognised reason is not a clarification: it is malformed
+        // output, and malformed output must not become a response.
+        return isAdminClarifyReason(reason) ? { kind: "clarify", reason } : null;
+      }
       default:
         return null;
     }
@@ -460,7 +493,64 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
   }
 }
 
-export function buildAdminConciergeSystemPrompt(): string {
+export function isAdminClarifyReason(value: unknown): value is AdminClarifyReason {
+  return (
+    typeof value === "string" &&
+    Object.prototype.hasOwnProperty.call(ADMIN_CLARIFY_QUESTIONS, value)
+  );
+}
+
+/**
+ * Turn a model clarification into a server-authored question.
+ *
+ * This is the whole typed-clarification path: the model narrows "what is
+ * missing" to one of five cases, and LUME supplies the wording.
+ */
+export function adminClarifyIntent(reason: AdminClarifyReason): AdminConciergeIntent {
+  return { kind: "clarify", question: ADMIN_CLARIFY_QUESTIONS[reason] };
+}
+
+/**
+ * Non-sensitive description of what the actor is currently looking at.
+ *
+ * The planner previously received the message alone, so "open the second one"
+ * or "the failed ones" had no referent and could only become unsupported.
+ * This carries shape, never content: how many results, of what kind, and which
+ * dashboard surface — no names, ids, emails, prices or record values, because
+ * the planner has no business seeing tenant data to pick an intent.
+ */
+export type AdminPlannerContext = {
+  currentSurface?: string | null;
+  resultSet?: { kind: string; size: number } | null;
+  hasSelection?: boolean;
+};
+
+export function buildAdminPlannerContextPrompt(
+  context: AdminPlannerContext,
+): string {
+  const lines: string[] = [];
+  if (context.currentSurface) {
+    lines.push(`The user is currently on the ${context.currentSurface} screen.`);
+  }
+  if (context.resultSet && context.resultSet.size > 0) {
+    lines.push(
+      `A previous search is still on screen: ${context.resultSet.size} ${context.resultSet.kind} result(s). Ordinal references such as "the second one" refer to that list.`,
+    );
+  }
+  if (context.hasSelection) {
+    lines.push("The user has one record selected from that list.");
+  }
+  if (lines.length === 0) return "";
+  return [
+    "",
+    "Current session context (shape only — you have no access to the records themselves):",
+    ...lines.map((line) => `- ${line}`),
+  ].join("\n");
+}
+
+export function buildAdminConciergeSystemPrompt(
+  context: AdminPlannerContext = {},
+): string {
   const catalog = ADMIN_CAPABILITIES.map((capability) =>
     `- ${capability.id}: ${capability.title} (${capability.effect}; aliases: ${capability.aliases.join(", ")})`,
   ).join("\n");
@@ -480,9 +570,10 @@ export function buildAdminConciergeSystemPrompt(): string {
     "- {\"kind\":\"inspect_feed_runs\",\"status\":\"failed\"|\"dead_letter\"|\"partial\"|null}",
     "- {\"kind\":\"enqueue_feed_run\",\"feedQuery\":\"<named managed inventory feed>\"}",
     "- {\"kind\":\"update_lead_status\",\"leadQuery\":\"<lead name or email fragment>\",\"status\":\"new\"|\"contacted\"|\"qualified\"|\"won\"}",
-    "- {\"kind\":\"clarify\"} when the request is ambiguous, unsupported, or asks for a change.",
+    "- {\"kind\":\"clarify\",\"reason\":\"ambiguous_surface\"|\"ambiguous_record\"|\"missing_target\"|\"missing_value\"|\"unsupported_scope\"} when the request is ambiguous or cannot be done in one step. Choose the reason only; LUME writes the question.",
     "Catalog:",
     catalog,
+    buildAdminPlannerContextPrompt(context),
   ].join("\n");
 }
 

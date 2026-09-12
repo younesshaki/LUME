@@ -13,7 +13,9 @@ import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
 import {
   adminCapabilityHref,
   adminIntentMinimumRole,
+  adminClarifyIntent,
   capabilityFromAdminPath,
+  type AdminPlannerContext,
   capabilityById,
   buildAdminConciergeSystemPrompt,
   compileDeterministicAdminIntent,
@@ -167,6 +169,17 @@ export async function POST(request: Request): Promise<Response> {
       parsed.request.message,
       tenant.id,
       plannerModelId,
+      {
+        currentSurface:
+          capabilityFromAdminPath(parsed.request.currentPath, tenant.slug)?.title ?? null,
+        resultSet: adminState.lastResultSet
+          ? {
+              kind: adminState.lastResultSet.kind,
+              size: adminState.lastResultSet.orderedIds.length,
+            }
+          : null,
+        hasSelection: adminState.selected !== null,
+      },
     );
     intent = compiled.intent;
     modelMetadata = compiled.model;
@@ -272,13 +285,16 @@ async function compileModelIntent(
   message: string,
   tenantId: string,
   modelId: ConciergeModelId,
+  plannerContext: AdminPlannerContext,
 ): Promise<{
   intent: ReturnType<typeof compileDeterministicAdminIntent>;
   model: { requestedModelId: ConciergeModelId; effectiveModelId?: ConciergeModelId; fellBack?: boolean };
 }> {
   const completion = await requestEditorCopilotCompletion(
     [
-      { role: "system", content: buildAdminConciergeSystemPrompt() },
+      // Shape-only session context: how many results are on screen and which
+      // surface the actor is on. No record content reaches the planner.
+      { role: "system", content: buildAdminConciergeSystemPrompt(plannerContext) },
       { role: "user", content: message },
     ],
     modelId,
@@ -291,10 +307,16 @@ async function compileModelIntent(
     return { intent: { kind: "unsupported" }, model: { requestedModelId: modelId } };
   }
   const plan = parseAdminConciergeModelPlan(completion.content);
-  // `clarify` is intentionally rendered as the same safe fallback in this
-  // initial UI. Future phases will add a typed clarifier state to the panel.
+  // A clarification is now a real outcome rather than a dead end: the model
+  // chooses one of five reason codes and LUME supplies the wording, so no
+  // model prose and no tenant record can reach the panel this way.
+  const intent = !plan
+    ? ({ kind: "unsupported" } as const)
+    : plan.kind === "clarify"
+      ? adminClarifyIntent(plan.reason)
+      : plan;
   return {
-    intent: plan && plan.kind !== "clarify" ? plan : { kind: "unsupported" },
+    intent,
     model: {
       requestedModelId: modelId,
       effectiveModelId: completion.modelId,
