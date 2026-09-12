@@ -280,3 +280,210 @@ export function recordModelUsage(input: {
   }
 }
 
+
+/* ────────────────────────────────────────────────────────────────────────── *
+ * Per-turn concierge telemetry
+ *
+ * One structured line per concierge turn, on the same console-JSON pipeline as
+ * captureError/recordModelUsage — greppable as `"scope":"concierge.turn"`.
+ *
+ * Unlike captureConciergeTranscript this is NOT gated behind LUME_CHAT_DEBUG:
+ * routine production metrics (how many turns avoid the model, how long a turn
+ * takes, what a turn actually billed) must not require switching on raw
+ * transcript capture. That is only safe because the record is structurally
+ * incapable of carrying visitor content — see ConciergeTurnInput: there is no
+ * field for a message, a prompt, a completion, model reasoning, or a lead.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** Where token counts came from. "unknown" is never silently turned into 0. */
+export type ConciergeUsageSource = "provider" | "estimated" | "unknown";
+
+export type ConciergeTurnRoute = "deterministic" | "model" | "tool" | "error";
+
+/** Outcome of this turn's tenant-scoped inventory query, if one ran. */
+export type ConciergeQueryStatus =
+  | "not_run"
+  | "success"
+  | "empty"
+  | "unavailable";
+
+export type ConciergeTurnInput = {
+  surface: "public" | "admin";
+  /** Correlates this line with the action/state debug lines for the same turn. */
+  requestId: string;
+  tenantId: string;
+  /** Opaque memory namespace id. Never an identity or authorization token. */
+  conversationId?: string | null;
+  turn?: number | null;
+  route: ConciergeTurnRoute;
+  /** Deterministic rule codes that fired (from the state transition). */
+  ruleCodes?: readonly string[];
+  /** True when the turn ended by asking the visitor a bounded question. */
+  clarification?: boolean;
+  query?: { status: ConciergeQueryStatus; totalCount?: number | null };
+  /** Action *types* only — never params, which carry record ids. */
+  actions?: { emitted?: readonly string[]; dropped?: readonly string[] };
+  model?: {
+    provider: string;
+    requestedModelId: string;
+    effectiveModelId: string;
+    clamped?: boolean;
+    fellBack?: boolean;
+    /** Upstream calls made this turn (phase 1 + optional phase 2). */
+    calls?: number;
+  } | null;
+  /**
+   * Provider-reported token usage. Omit entirely when the upstream response
+   * carried none — the record then says "unknown", never zero.
+   */
+  usage?: {
+    inputTokens?: number | null;
+    outputTokens?: number | null;
+    source?: ConciergeUsageSource;
+  } | null;
+  /**
+   * Per-1k-token rates for the effective model. Deliberately not defaulted:
+   * LUME has no owner-approved price table yet, and inventing rates would
+   * produce confident, wrong spend figures. Absent rates => cost "unpriced".
+   */
+  price?: { inputPer1k: number; outputPer1k: number; tableVersion: string } | null;
+  timingsMs?: {
+    state?: number | null;
+    context?: number | null;
+    model?: number | null;
+    total?: number | null;
+  };
+  now?: () => number;
+};
+
+export type ConciergeTurnRecord = {
+  level: "info";
+  scope: "concierge.turn";
+  surface: "public" | "admin";
+  requestId: string;
+  tenantId: string;
+  conversationId: string | null;
+  turn: number | null;
+  route: ConciergeTurnRoute;
+  ruleCodes: string[];
+  clarification: boolean;
+  query: { status: ConciergeQueryStatus; totalCount: number | null };
+  actions: { emitted: string[]; dropped: string[] };
+  model: {
+    provider: string;
+    requestedModelId: string;
+    effectiveModelId: string;
+    clamped: boolean;
+    fellBack: boolean;
+    calls: number;
+  } | null;
+  usage: {
+    inputTokens: number | null;
+    outputTokens: number | null;
+    source: ConciergeUsageSource;
+  };
+  cost: {
+    usd: number | null;
+    source: "priced" | "unpriced";
+    priceTableVersion: string | null;
+  };
+  timingsMs: {
+    state: number | null;
+    context: number | null;
+    model: number | null;
+    total: number | null;
+  };
+  at: string;
+};
+
+const MAX_RULE_CODES = 20;
+const MAX_ACTION_TYPES = 20;
+
+function finiteOrNull(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** Pure record builder, exported so the redaction contract is testable. */
+export function buildConciergeTurnRecord(
+  input: ConciergeTurnInput,
+): ConciergeTurnRecord {
+  const inputTokens = finiteOrNull(input.usage?.inputTokens);
+  const outputTokens = finiteOrNull(input.usage?.outputTokens);
+  // A caller that supplies no counts gets "unknown" — never a zero that would
+  // read as "this turn was free" in a spend report.
+  const usageSource: ConciergeUsageSource =
+    inputTokens === null && outputTokens === null
+      ? "unknown"
+      : (input.usage?.source ?? "provider");
+
+  const price = input.price ?? null;
+  const priceable =
+    price !== null && (inputTokens !== null || outputTokens !== null);
+  const usd = priceable
+    ? ((inputTokens ?? 0) / 1000) * price.inputPer1k +
+      ((outputTokens ?? 0) / 1000) * price.outputPer1k
+    : null;
+
+  return {
+    level: "info",
+    scope: "concierge.turn",
+    surface: input.surface,
+    requestId: input.requestId,
+    tenantId: input.tenantId,
+    conversationId: input.conversationId ?? null,
+    turn: finiteOrNull(input.turn),
+    route: input.route,
+    ruleCodes: [...(input.ruleCodes ?? [])]
+      .slice(0, MAX_RULE_CODES)
+      .map((code) => String(code).slice(0, 60)),
+    clarification: input.clarification === true,
+    query: {
+      status: input.query?.status ?? "not_run",
+      totalCount: finiteOrNull(input.query?.totalCount),
+    },
+    actions: {
+      emitted: [...(input.actions?.emitted ?? [])]
+        .slice(0, MAX_ACTION_TYPES)
+        .map((type) => String(type).slice(0, 60)),
+      dropped: [...(input.actions?.dropped ?? [])]
+        .slice(0, MAX_ACTION_TYPES)
+        .map((type) => String(type).slice(0, 60)),
+    },
+    model: input.model
+      ? {
+          provider: input.model.provider,
+          requestedModelId: input.model.requestedModelId,
+          effectiveModelId: input.model.effectiveModelId,
+          clamped: input.model.clamped === true,
+          fellBack: input.model.fellBack === true,
+          calls: finiteOrNull(input.model.calls) ?? 0,
+        }
+      : null,
+    usage: { inputTokens, outputTokens, source: usageSource },
+    cost: {
+      usd,
+      source: usd === null ? "unpriced" : "priced",
+      priceTableVersion: price?.tableVersion ?? null,
+    },
+    timingsMs: {
+      state: finiteOrNull(input.timingsMs?.state),
+      context: finiteOrNull(input.timingsMs?.context),
+      model: finiteOrNull(input.timingsMs?.model),
+      total: finiteOrNull(input.timingsMs?.total),
+    },
+    at: new Date((input.now ?? Date.now)()).toISOString(),
+  };
+}
+
+/** Emit one turn record. Like every capture here, it never throws. */
+export function recordConciergeTurn(
+  input: ConciergeTurnInput,
+): ConciergeTurnRecord | null {
+  try {
+    const record = buildConciergeTurnRecord(input);
+    console.info(JSON.stringify(record));
+    return record;
+  } catch {
+    return null;
+  }
+}

@@ -128,6 +128,7 @@ import {
   captureConciergeTranscript,
   captureDebug,
   captureError,
+  recordConciergeTurn,
   recordModelUsage,
 } from "@/lib/observability";
 import {
@@ -182,6 +183,10 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // One id per turn, correlating this request's telemetry line with its
+  // action/state debug lines. Not an identity or authorization token.
+  const requestId = crypto.randomUUID();
+  const turnStartedAtMs = Date.now();
   if (!isAllowedOrigin(request)) {
     return json({ error: "Forbidden origin" }, 403);
   }
@@ -687,6 +692,8 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  const stateResolvedAtMs = Date.now();
+
   const stateActions: BotAction[] = [
     ...((stateOrdinalVehicleId &&
       isOrdinalVehicleActionRequest(lastUser.content)) ||
@@ -724,6 +731,9 @@ export async function POST(request: Request): Promise<Response> {
       ]
     : [];
   const hasDeterministicActions = deterministicActions.length > 0;
+  // Action *types* only. Params carry vehicle ids, which belong in the
+  // debug-gated line below, not in always-on telemetry.
+  const droppedActionTypes: string[] = [];
   const filterConversationActions = (
     actions: readonly BotAction[],
   ): BotAction[] => {
@@ -735,6 +745,13 @@ export async function POST(request: Request): Promise<Response> {
         : [],
     );
     if (decision.dropped.length > 0) {
+      for (const dropped of decision.dropped) {
+        droppedActionTypes.push(
+          typeof (dropped as { type?: unknown }).type === "string"
+            ? ((dropped as { type: string }).type)
+            : "unknown",
+        );
+      }
       captureDebug("api/chat/actions", {
         tenantId: tenant.tenantId,
         actionsDropped: decision.dropped,
@@ -742,6 +759,12 @@ export async function POST(request: Request): Promise<Response> {
     }
     return decision.allowed;
   };
+  const inventoryQueryStatus = (): "not_run" | "success" | "empty" =>
+    matchedVehicles === undefined
+      ? "not_run"
+      : (totalMatched ?? matchedVehicles.length) === 0
+        ? "empty"
+        : "success";
   // One stable id per turn's log lines (transcript + conversation-state +
   // actions debug) so independent anonymous sessions can be distinguished
   // during state-isolation investigations.
@@ -911,6 +934,31 @@ export async function POST(request: Request): Promise<Response> {
         controller.close();
       },
     });
+    recordConciergeTurn({
+      surface: "public",
+      requestId,
+      tenantId: tenant.tenantId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      route: "deterministic",
+      ruleCodes: stateRules,
+      clarification: Boolean(
+        deterministicClarifier || deterministicMakeSwitchClarifier,
+      ),
+      query: { status: inventoryQueryStatus(), totalCount: totalMatched ?? null },
+      actions: {
+        emitted: actions.map((action) => action.type),
+        dropped: droppedActionTypes,
+      },
+      // No model was called, so there is nothing to bill and nothing to
+      // report as usage. This is the metric the whole deterministic-first
+      // design exists to move.
+      model: null,
+      timingsMs: {
+        state: stateResolvedAtMs - turnStartedAtMs,
+        total: Date.now() - turnStartedAtMs,
+      },
+    });
     return new Response(stream, { headers: sseHeaders });
   }
 
@@ -1064,6 +1112,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  const contextLoadedAtMs = Date.now();
   const sseHeaders = buildSseHeaders(assembled.sourceCategories);
   const metaEvent = buildMetaEvent(assembled.sourceCategories);
 
@@ -1076,6 +1125,7 @@ export async function POST(request: Request): Promise<Response> {
   // parseToolCalls expects the non-streamed message.tool_calls shape; if the
   // model answers in prose we re-emit its content as SSE below, so the client
   // contract is identical either way.
+  const modelStartedAtMs = Date.now();
   const phase1 = await fetch(chatProvider.apiUrl, {
     method: "POST",
     headers: {
@@ -1113,10 +1163,20 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   let phase1Message: ProviderAssistantMessage;
+  let providerUsage: {
+    inputTokens: number | null;
+    outputTokens: number | null;
+  } | null = null;
   try {
     const parsed = (await phase1.json()) as ProviderCompletion;
     const message = parsed.choices?.[0]?.message;
     if (!message) throw new Error("no choices in completion");
+    providerUsage = parsed.usage
+      ? {
+          inputTokens: parsed.usage.prompt_tokens ?? null,
+          outputTokens: parsed.usage.completion_tokens ?? null,
+        }
+      : null;
     phase1Message = normalizeProviderAssistantMessage(
       chatProvider.profile,
       message,
@@ -1135,6 +1195,56 @@ export async function POST(request: Request): Promise<Response> {
       quotaHeaders,
     );
   }
+
+  const modelCompletedAtMs = Date.now();
+  /**
+   * Both model paths report through here so their fields cannot drift.
+   *
+   * `total` is server time until the response begins streaming, not until the
+   * last token: the handler returns a ReadableStream, so full-completion
+   * duration is not observable at this point. Reporting it as total would
+   * understate latency without saying so.
+   */
+  const recordModelTurn = (input: {
+    route: "model" | "tool";
+    emitted: readonly BotAction[];
+    calls: number;
+  }): void => {
+    recordConciergeTurn({
+      surface: "public",
+      requestId,
+      tenantId: tenant.tenantId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      route: input.route,
+      ruleCodes: stateRules,
+      query: {
+        status: inventoryQueryStatus(),
+        totalCount: totalMatched ?? null,
+      },
+      actions: {
+        emitted: input.emitted.map((action) => action.type),
+        dropped: droppedActionTypes,
+      },
+      model: {
+        provider: chatProvider.profile.provider,
+        requestedModelId: botRuntimeConfig.modelId,
+        effectiveModelId: chatProvider.profile.id,
+        clamped: planClampedModelId !== botRuntimeConfig.modelId,
+        fellBack: chatProvider.fellBack,
+        calls: input.calls,
+      },
+      // Phase 2 streams without stream_options.include_usage, so only the
+      // phase-1 block is ever present. Absent => "unknown", never 0.
+      usage: providerUsage ?? undefined,
+      timingsMs: {
+        state: stateResolvedAtMs - turnStartedAtMs,
+        context: contextLoadedAtMs - stateResolvedAtMs,
+        model: modelCompletedAtMs - modelStartedAtMs,
+        total: Date.now() - turnStartedAtMs,
+      },
+    });
+  };
 
   // ── No tools requested: re-emit the prose as SSE ──────────────────────────
   if (phase1Message.toolCalls.length === 0) {
@@ -1222,6 +1332,7 @@ export async function POST(request: Request): Promise<Response> {
         controller.close();
       },
     });
+    recordModelTurn({ route: "model", emitted: actions, calls: 1 });
     return new Response(stream, { headers: sseHeaders });
   }
 
@@ -1515,6 +1626,10 @@ export async function POST(request: Request): Promise<Response> {
             })),
           });
         }
+        // Emitted here rather than beside the return: emittedActions is
+        // built inside the stream, and a turn's action list is only final
+        // once the follow-up stream has finished.
+        recordModelTurn({ route: "tool", emitted: emittedActions, calls: 2 });
         reader.releaseLock();
         controller.close();
       }
@@ -1621,4 +1736,13 @@ type ProviderMessage = {
 
 type ProviderCompletion = {
   choices?: Array<{ message?: ProviderMessage }>;
+  /**
+   * OpenAI-compatible usage block. Absent on some providers and on the
+   * streamed phase-2 call (which would need stream_options.include_usage),
+   * in which case telemetry reports "unknown" rather than zero.
+   */
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
 };

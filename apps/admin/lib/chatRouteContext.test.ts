@@ -75,6 +75,48 @@ describe("public chat route: model-only context is deferred", () => {
   });
 });
 
+describe("public chat route: turn telemetry", () => {
+  it("records a turn on every response path", () => {
+    // Deterministic, prose-model and tool-model each end in their own
+    // Response; a path without a record is a silent hole in the metrics.
+    const deterministic = route.indexOf('route: "deterministic"');
+    const prose = route.indexOf('recordModelTurn({ route: "model"');
+    const tool = route.indexOf('recordModelTurn({ route: "tool"');
+    expect(deterministic).toBeGreaterThan(-1);
+    expect(prose).toBeGreaterThan(-1);
+    expect(tool).toBeGreaterThan(-1);
+  });
+
+  it("does not gate turn telemetry behind the transcript debug flag", () => {
+    // captureConciergeTranscript and captureDebug are opt-in because they
+    // carry raw visitor text. Routine metrics must not require switching that
+    // on, so recordConciergeTurn's body must contain no flag check.
+    const observability = readFileSync(
+      resolve(process.cwd(), "apps/admin/lib/observability.ts"),
+      "utf8",
+    );
+    const recorderStart = observability.indexOf(
+      "export function recordConciergeTurn(",
+    );
+    expect(recorderStart).toBeGreaterThan(-1);
+    const recorderBody = observability.slice(recorderStart);
+    expect(recorderBody).not.toContain("LUME_CHAT_DEBUG");
+
+    // ...while the transcript capture must keep its gate.
+    const transcriptStart = observability.indexOf(
+      "export function captureConciergeTranscript(",
+    );
+    const transcriptBody = observability.slice(transcriptStart, recorderStart);
+    expect(transcriptBody).toContain("LUME_CHAT_DEBUG");
+  });
+
+  it("reports the deterministic path as having called no model", () => {
+    const index = at('route: "deterministic"');
+    const window = route.slice(index, index + 900);
+    expect(window).toContain("model: null");
+  });
+});
+
 describe("deterministicSourceCategories", () => {
   it("claims vehicle provenance when a fresh query grounded the answer", () => {
     expect(
