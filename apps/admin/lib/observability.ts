@@ -325,6 +325,12 @@ export type ConciergeTurnInput = {
   conversationId?: string | null;
   turn?: number | null;
   route: ConciergeTurnRoute;
+  /**
+   * True when the turn id came from the browser rather than a server
+   * fallback. A boolean, not the id's provenance detail: it answers "is this
+   * deployment's retry-dedupe actually reachable" without adding any content.
+   */
+  clientRequestId?: boolean;
   /** Deterministic rule codes that fired (from the state transition). */
   ruleCodes?: readonly string[];
   /** True when the turn ended by asking the visitor a bounded question. */
@@ -385,6 +391,7 @@ export type ConciergeTurnRecord = {
   conversationId: string | null;
   turn: number | null;
   route: ConciergeTurnRoute;
+  clientRequestId: boolean;
   ruleCodes: string[];
   clarification: boolean;
   query: { status: ConciergeQueryStatus; totalCount: number | null };
@@ -469,6 +476,7 @@ export function buildConciergeTurnRecord(
     conversationId: input.conversationId ?? null,
     turn: finiteOrNull(input.turn),
     route: input.route,
+    clientRequestId: input.clientRequestId === true,
     ruleCodes: [...(input.ruleCodes ?? [])]
       .slice(0, MAX_RULE_CODES)
       .map((code) => String(code).slice(0, 60)),

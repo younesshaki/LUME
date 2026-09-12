@@ -30,13 +30,22 @@ type ChatMetaEvent = {
   sourceCategories: string[];
   botName?: string;
   sessionId?: string;
+  requestId?: string;
   capabilities?: { actions?: boolean };
 };
 type ChatActionEvent = { type: "action"; action: BotAction };
 type ChatErrorEvent = { type: "error"; message: string };
 
 export type ChatStreamYield =
-  | { kind: "meta"; sourceCategories: string[]; botName?: string; sessionId?: string; capabilities?: { actions: boolean } }
+  | {
+      kind: "meta";
+      sourceCategories: string[];
+      botName?: string;
+      sessionId?: string;
+      /** Turn this stream belongs to, for correlation with the caller's id. */
+      requestId?: string;
+      capabilities?: { actions: boolean };
+    }
   | { kind: "delta"; text: string }
   | { kind: "action"; action: BotAction }
   | { kind: "thinking"; text: string };
@@ -56,6 +65,13 @@ export async function* streamChat(
   signal?: AbortSignal,
   sessionId?: string,
   startNewSession = false,
+  /**
+   * Opaque turn id, generated once per turn by the caller and reused verbatim
+   * when retrying that same turn. The server treats a repeat as a duplicate
+   * delivery rather than a second turn. Omitting it keeps the previous
+   * behaviour: the server generates its own.
+   */
+  requestId?: string,
 ): AsyncGenerator<ChatStreamYield, void, unknown> {
   const sanitized = messages
     .filter((m) => m.role === "user" || m.role === "assistant")
@@ -75,6 +91,7 @@ export async function* streamChat(
         : {}),
       ...(sessionId ? { sessionId } : {}),
       ...(startNewSession ? { startNewSession: true } : {}),
+      ...(requestId ? { requestId } : {}),
     }),
     credentials: "include",
     signal,
@@ -124,6 +141,9 @@ export async function* streamChat(
               : {}),
             ...(typeof parsed.sessionId === "string" && parsed.sessionId.trim()
               ? { sessionId: parsed.sessionId.trim() }
+              : {}),
+            ...(typeof parsed.requestId === "string" && parsed.requestId.trim()
+              ? { requestId: parsed.requestId.trim() }
               : {}),
             ...(isRecord(parsed.capabilities) &&
               typeof parsed.capabilities.actions === "boolean"

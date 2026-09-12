@@ -245,3 +245,78 @@ describe("conversation memory: snapshot hygiene is unchanged", () => {
     expect(Date.parse(snapshot!.expiresAt)).toBeGreaterThan(NOW);
   });
 });
+
+describe("conversation memory: retry-safe idempotency end to end", () => {
+  it("treats a redelivered turn as one turn, not two", async () => {
+    // The retry case the client id exists for: the same turn delivered twice
+    // (network retry, proxy replay) must not appear as the visitor asking
+    // twice, which would also re-run the state transition.
+    const store = new InMemoryConversationMemoryStore(() => NOW);
+    const turn: ConversationMemoryUpdate = {
+      requestId: "client-turn-1",
+      messages: [
+        { role: "user", content: "any BMWs under 40k?" },
+        { role: "assistant", content: "Two." },
+      ],
+      conversationState: { activeFilters: { make: "BMW", priceMax: 40_000 } },
+    };
+
+    await store.append("k", turn);
+    await store.append("k", turn);
+    const snapshot = await store.get("k");
+
+    expect(snapshot?.messages).toHaveLength(2);
+    expect(snapshot?.stateVersion).toBe(1);
+    expect(snapshot?.conversationState).toEqual({
+      activeFilters: { make: "BMW", priceMax: 40_000 },
+    });
+  });
+
+  it("does not collapse two genuinely identical messages into one", () => {
+    // "same text" is not "same turn". A visitor who repeats themselves is
+    // having a second turn and must be recorded as such.
+    const first = appendConversationMemory(
+      null,
+      { requestId: "turn-1", messages: [{ role: "user", content: "show me" }] },
+      NOW,
+    );
+    const second = appendConversationMemory(
+      first,
+      { requestId: "turn-2", messages: [{ role: "user", content: "show me" }] },
+      NOW,
+    );
+    expect(second.messages).toHaveLength(2);
+    expect(second.stateVersion).toBe(2);
+  });
+
+  it("falls back to append-always when no turn id is supplied", () => {
+    // Older or non-browser callers keep their previous behaviour rather than
+    // being silently deduplicated on message content.
+    const first = appendConversationMemory(
+      null,
+      { messages: [{ role: "user", content: "hi" }] },
+      NOW,
+    );
+    const second = appendConversationMemory(
+      first,
+      { messages: [{ role: "user", content: "hi" }] },
+      NOW,
+    );
+    expect(second.messages).toHaveLength(2);
+  });
+
+  it("keeps a redelivered turn from advancing state under CAS too", async () => {
+    // Same guarantee on the pinned-version path: the retry is a no-op, so it
+    // must not be reported as a conflict either.
+    const store = new InMemoryConversationMemoryStore(() => NOW);
+    const turn: ConversationMemoryUpdate = {
+      requestId: "client-turn-9",
+      expectedStateVersion: 0,
+      messages: [{ role: "user", content: "hello" }],
+    };
+    await store.append("k", turn);
+    const replayed = await store.append("k", turn);
+    expect(replayed.stateVersion).toBe(1);
+    expect(replayed.messages).toHaveLength(1);
+  });
+});

@@ -144,7 +144,7 @@ describe("public chat route: memory lifecycle wiring", () => {
     // A conflict is a healthy store refusing a stale write, not an incident.
     const guard = at("error instanceof ConversationMemoryConflictError");
     // The conflict branch only, up to its early return.
-    const branch = route.slice(guard, route.indexOf("return;", guard));
+    const branch = route.slice(guard, route.indexOf('return "conflict";', guard));
     expect(branch).toContain("memory-conflict");
     expect(branch).not.toContain("captureError");
   });
@@ -152,6 +152,72 @@ describe("public chat route: memory lifecycle wiring", () => {
   it("stamps the turn id so a replayed request cannot double-append", () => {
     const append = at("memoryStore.append(");
     expect(route.slice(append, append + 200)).toContain("requestId");
+  });
+});
+
+describe("public chat route: client-supplied turn id", () => {
+  it("adopts a valid client id instead of always generating its own", () => {
+    // A server-generated id changes on every retry, so it can never identify
+    // a duplicate delivery. Retry dedupe only works with the browser's id.
+    expect(route).toContain("normalizeClientRequestId(body.requestId)");
+    expect(route).toContain("clientRequestId ?? crypto.randomUUID()");
+  });
+
+  it("validates the shape rather than trusting the body", () => {
+    const validator = at("function normalizeClientRequestId(");
+    const body = route.slice(validator, validator + 400);
+    expect(body).toContain("UUID_PATTERN.test");
+  });
+
+  it("echoes the turn id in meta so the browser can correlate its stream", () => {
+    const meta = at("const buildMetaEvent =");
+    expect(route.slice(meta, meta + 700)).toContain("requestId");
+  });
+
+  it("records only whether an id was client-supplied, never the id's origin detail", () => {
+    const records = route.split("clientRequestId: clientRequestId !== null").length - 1;
+    expect(records).toBe(2);
+  });
+
+  it("keeps one UUID shape check for both the turn id and the session id", () => {
+    // Two hand-written UUID regexes drift; the session id check was inlined
+    // before this and is now the same constant.
+    const patterns = route.split("UUID_PATTERN").length - 1;
+    expect(patterns).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("public chat route: deterministic turns commit before they act", () => {
+  it("persists before emitting actions on the deterministic path", () => {
+    // This path knows its whole answer up front, so it can close the
+    // stale-action race at the source rather than relying on the browser.
+    const start = at("const persisted = visibleContent");
+    const firstAction = route.indexOf('sseEvent({ type: "action", action })', start);
+    expect(firstAction).toBeGreaterThan(start);
+  });
+
+  it("withholds the actions of a turn that lost the race", () => {
+    const guard = at("const supersededByNewerTurn = persisted === \"conflict\"");
+    const window = route.slice(guard, guard + 500);
+    expect(window).toContain("if (!supersededByNewerTurn)");
+  });
+
+  it("still sends meta and the visible text when superseded", () => {
+    // Only site mutation is withheld; a silent turn would be worse UI than a
+    // turn whose answer simply does not move the page.
+    const guard = at("const supersededByNewerTurn");
+    const window = route.slice(guard, guard + 900);
+    const meta = window.indexOf("controller.enqueue(encoder.encode(metaEvent))");
+    const gate = window.indexOf("if (!supersededByNewerTurn)");
+    expect(meta).toBeGreaterThan(-1);
+    expect(meta).toBeLessThan(gate);
+    expect(window).toContain("if (visibleContent)");
+  });
+
+  it("does not write memory twice on the deterministic path", () => {
+    const deterministicReturnIndex = at(DETERMINISTIC_RETURN);
+    const before = route.slice(0, deterministicReturnIndex);
+    expect(before.split("persistTurnMemory({").length - 1).toBe(1);
   });
 });
 

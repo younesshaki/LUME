@@ -10,6 +10,10 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { streamChat, type DeepseekMessage } from "@/lib/deepseekService";
+import {
+  createChatTurnSequencer,
+  newChatRequestId,
+} from "@/lib/chatTurnSequencer";
 import { publicTenantSlug } from "@/lib/publicTenant";
 import { botActionBus } from "@/lib/botActionBus";
 import { EncryptedText } from "@/components/ui/encrypted-text";
@@ -123,6 +127,10 @@ export function OllamaChat() {
     }
   });
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Decides which turn may still mutate the site. A superseded or aborted
+  // stream can keep yielding valid-looking actions long after the visitor has
+  // moved on; only the turn this holds is allowed through to the action bus.
+  const turnSequencerRef = useRef(createChatTurnSequencer());
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
 
@@ -147,7 +155,14 @@ export function OllamaChat() {
 
   // cleanup on unmount
   useEffect(() => {
-    return () => abortControllerRef.current?.abort();
+    const sequencer = turnSequencerRef.current;
+    return () => {
+      abortControllerRef.current?.abort();
+      // Aborting the fetch does not stop an in-flight generator from yielding
+      // a buffered action, so the turn loses its authority here too.
+      const active = sequencer.activeTurnId;
+      if (active) sequencer.abandon(active);
+    };
   }, []);
 
   // persist chat (skip during active stream to avoid partial messages)
@@ -177,6 +192,8 @@ export function OllamaChat() {
   const resetChat = () => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    const abandoned = turnSequencerRef.current.activeTurnId;
+    if (abandoned) turnSequencerRef.current.abandon(abandoned);
     streamingMessageIdRef.current = null;
     setMessages([welcomeMessage]);
     setInput("");
@@ -219,6 +236,10 @@ export function OllamaChat() {
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
+    // Generated before the request so a retry of this exact turn can reuse it
+    // and be deduplicated server-side instead of appending a second turn.
+    const turnRequestId = newChatRequestId();
+    turnSequencerRef.current.begin(turnRequestId);
 
     // The server handles RAG retrieval and prompt assembly. We show
     // `isRetrieving` until the first chunk arrives (meta or content).
@@ -242,6 +263,7 @@ export function OllamaChat() {
         abortController.signal,
         sessionId ?? undefined,
         startNewSession,
+        turnRequestId,
       )) {
         if (event.kind === "meta") {
           sourceCategories = event.sourceCategories;
@@ -276,6 +298,12 @@ export function OllamaChat() {
           continue;
         }
         if (event.kind === "action") {
+          // Only the current turn may touch the page. A superseded or aborted
+          // stream's actions are valid answers to a question that is no longer
+          // on screen, and applying one would navigate, refilter or open a
+          // form the visitor never asked for. The text of a stale turn is left
+          // alone; it is only site mutation that has to be withheld.
+          if (!turnSequencerRef.current.isAuthoritative(turnRequestId)) continue;
           // Hand the action to the bus; subscribed UI (router, inventory,
           // highlight overlay, lead form) reacts. Chat stays decoupled.
           botActionBus.publish(event.action);

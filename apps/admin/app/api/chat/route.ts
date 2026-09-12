@@ -185,9 +185,6 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  // One id per turn, correlating this request's telemetry line with its
-  // action/state debug lines. Not an identity or authorization token.
-  const requestId = crypto.randomUUID();
   const turnStartedAtMs = Date.now();
   if (!isAllowedOrigin(request)) {
     return json({ error: "Forbidden origin" }, 403);
@@ -212,6 +209,14 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return json({ error: "Invalid JSON" }, 400, request);
   }
+
+  // One id per turn. The browser generates it so a retried delivery of the
+  // SAME turn carries the SAME id and is recognised as a duplicate rather than
+  // appended twice; a server-generated id could never do that. It is opaque
+  // and namespaced by the conversation key, so it grants nothing on its own —
+  // and a malformed or missing one simply falls back.
+  const clientRequestId = normalizeClientRequestId(body.requestId);
+  const requestId = clientRequestId ?? crypto.randomUUID();
 
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return json({ error: "messages must be a non-empty array" }, 400, request);
@@ -337,14 +342,15 @@ export async function POST(request: Request): Promise<Response> {
    */
   const persistTurnMemory = async (
     update: Parameters<typeof memoryStore.append>[1],
-  ): Promise<void> => {
-    if (!memoryKey) return;
+  ): Promise<"committed" | "conflict" | "skipped" | "failed"> => {
+    if (!memoryKey) return "skipped";
     try {
       await memoryStore.append(memoryKey, {
         ...update,
         requestId,
         expectedStateVersion,
       });
+      return "committed";
     } catch (error: unknown) {
       if (error instanceof ConversationMemoryConflictError) {
         captureDebug("api/chat/memory-conflict", {
@@ -352,11 +358,12 @@ export async function POST(request: Request): Promise<Response> {
           expectedStateVersion,
           actualStateVersion: error.actualStateVersion,
         });
-        return;
+        return "conflict";
       }
       captureError("api/chat/memory-write", error, {
         tenantId: tenant.tenantId,
       });
+      return "failed";
     }
   };
   let conversationState: ConversationInventoryState =
@@ -889,6 +896,9 @@ export async function POST(request: Request): Promise<Response> {
       // server-side plan gate above, never this hint.
       capabilities: { actions: chatActionsEnabled },
       sessionId: visitorTurn?.sessionId ?? anonymousConversationId ?? undefined,
+      // Lets the browser tie this stream to the turn it started, so a
+      // superseded stream's actions can be recognised and dropped.
+      requestId,
     });
 
   // Precedence lives in lib/chatDeterministicAnswer.ts, where it is an ordered
@@ -960,11 +970,30 @@ export async function POST(request: Request): Promise<Response> {
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        // This path knows its whole answer before it streams anything, so it
+        // can commit first and close the stale-action race at the source: if
+        // a newer turn already owns the conversation, this turn's actions are
+        // never emitted at all. The model paths cannot do this — their prose
+        // arrives token by token, and buffering it to commit first would
+        // delay the visitor's first word by the whole generation.
+        const persisted = visibleContent
+          ? await persistTurnMemory({
+              messages: [
+                lastUser,
+                { role: "assistant", content: visibleContent },
+              ],
+              conversationState,
+            })
+          : "skipped";
+        const supersededByNewerTurn = persisted === "conflict";
+
         controller.enqueue(encoder.encode(metaEvent));
-        for (const action of actions) {
-          controller.enqueue(
-            encoder.encode(sseEvent({ type: "action", action })),
-          );
+        if (!supersededByNewerTurn) {
+          for (const action of actions) {
+            controller.enqueue(
+              encoder.encode(sseEvent({ type: "action", action })),
+            );
+          }
         }
         if (visibleContent) {
           controller.enqueue(
@@ -981,15 +1010,6 @@ export async function POST(request: Request): Promise<Response> {
             assistantContent: visibleContent,
           });
         }
-        if (memoryKey && visibleContent) {
-          await persistTurnMemory({
-            messages: [
-              lastUser,
-              { role: "assistant", content: visibleContent },
-            ],
-            conversationState,
-          });
-        }
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -1001,6 +1021,7 @@ export async function POST(request: Request): Promise<Response> {
       conversationId: transcriptSessionId,
       turn: conversationState.turn,
       route: "deterministic",
+      clientRequestId: clientRequestId !== null,
       ruleCodes: stateRules,
       clarification: Boolean(
         deterministicClarifier || deterministicMakeSwitchClarifier,
@@ -1281,6 +1302,7 @@ export async function POST(request: Request): Promise<Response> {
       conversationId: transcriptSessionId,
       turn: conversationState.turn,
       route: input.route,
+      clientRequestId: clientRequestId !== null,
       ruleCodes: stateRules,
       query: {
         status: inventoryQueryStatus(),
@@ -1721,17 +1743,27 @@ function previousAssistantContentForLastUser(
   return null;
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Accept a client turn id only in the exact opaque shape we expect.
+ *
+ * Anything else is ignored rather than rejected: a malformed id is a client
+ * bug, not an attack surface, and failing the whole turn over it would be
+ * worse than falling back to a server id.
+ */
+function normalizeClientRequestId(value: unknown): string | null {
+  return typeof value === "string" && UUID_PATTERN.test(value.trim())
+    ? value.trim().toLowerCase()
+    : null;
+}
+
 function resolveAnonymousConversationId(
   requested: string | undefined,
   startNewSession: boolean,
 ): string {
-  if (
-    !startNewSession &&
-    requested &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      requested,
-    )
-  ) {
+  if (!startNewSession && requested && UUID_PATTERN.test(requested)) {
     return requested;
   }
   return crypto.randomUUID();
