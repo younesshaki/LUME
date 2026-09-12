@@ -123,6 +123,7 @@ import {
 import {
   conversationMemoryKey,
   getConversationMemoryStore,
+  isConversationMemoryDegraded,
 } from "@/lib/conversationMemory.server";
 import {
   captureConciergeTranscript,
@@ -918,6 +919,7 @@ export async function POST(request: Request): Promise<Response> {
         if (memoryKey && visibleContent) {
           await memoryStore
             .append(memoryKey, {
+              requestId,
               messages: [
                 lastUser,
                 { role: "assistant", content: visibleContent },
@@ -958,6 +960,7 @@ export async function POST(request: Request): Promise<Response> {
         state: stateResolvedAtMs - turnStartedAtMs,
         total: Date.now() - turnStartedAtMs,
       },
+      memoryDegraded: isConversationMemoryDegraded(),
     });
     return new Response(stream, { headers: sseHeaders });
   }
@@ -1243,6 +1246,7 @@ export async function POST(request: Request): Promise<Response> {
         model: modelCompletedAtMs - modelStartedAtMs,
         total: Date.now() - turnStartedAtMs,
       },
+      memoryDegraded: isConversationMemoryDegraded(),
     });
   };
 
@@ -1316,6 +1320,7 @@ export async function POST(request: Request): Promise<Response> {
         if (memoryKey && visibleContent) {
           await memoryStore
             .append(memoryKey, {
+              requestId,
               messages: [
                 lastUser,
                 { role: "assistant", content: visibleContent },
@@ -1595,6 +1600,7 @@ export async function POST(request: Request): Promise<Response> {
         if (streamCompletionObserved && memoryKey && assistantContent.trim()) {
           await memoryStore
             .append(memoryKey, {
+              requestId,
               messages: [
                 lastUser,
                 { role: "assistant", content: assistantContent },

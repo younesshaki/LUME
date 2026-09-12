@@ -353,6 +353,12 @@ export type ConciergeTurnInput = {
     model?: number | null;
     total?: number | null;
   };
+  /**
+   * True when this turn was served from per-instance memory because the
+   * shared conversation store failed. Continuity is not guaranteed in that
+   * mode, so a run of these explains otherwise-baffling transcripts.
+   */
+  memoryDegraded?: boolean;
   now?: () => number;
 };
 
@@ -393,6 +399,7 @@ export type ConciergeTurnRecord = {
     model: number | null;
     total: number | null;
   };
+  memoryDegraded: boolean;
   at: string;
 };
 
@@ -471,6 +478,7 @@ export function buildConciergeTurnRecord(
       model: finiteOrNull(input.timingsMs?.model),
       total: finiteOrNull(input.timingsMs?.total),
     },
+    memoryDegraded: input.memoryDegraded === true,
     at: new Date((input.now ?? Date.now)()).toISOString(),
   };
 }
