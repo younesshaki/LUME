@@ -25,7 +25,12 @@
  * any source reach the client — on top of the tenant tool allowlist and
  * persona capabilities. See lib/chatEntitlements.ts.
  */
-import type { BotAction, ChatRequest, Vehicle } from "@lume/types";
+import type {
+  BotAction,
+  ChatRequest,
+  RetrievedChunk,
+  Vehicle,
+} from "@lume/types";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
 import {
   getTenantVehicle,
@@ -132,6 +137,7 @@ import {
 } from "@/lib/chatDeterministicAnswer";
 import { shouldGroundSelectedVehicle } from "@/lib/chatGroundingScope";
 import {
+  deterministicSourceCategories,
   inventoryFilterAction,
   selectedVehicleDetailAnswer,
   unsupportedVehicleFactAnswer,
@@ -371,7 +377,6 @@ export async function POST(request: Request): Promise<Response> {
       rememberedHistoryVehicleId ??
       historyVehicleId);
 
-  let assembled;
   const groundedVehicleIds = new Set<string>();
   let groundedVehicles: Vehicle[] = [];
   let groundedInventoryFilters: ReturnType<
@@ -403,30 +408,21 @@ export async function POST(request: Request): Promise<Response> {
   let visitorPreferenceContext: Awaited<
     ReturnType<typeof loadVisitorPreferenceContext>
   > = null;
+  // Deferred model-prompt inputs. Computed on the deterministic pass (they
+  // depend on state that only exists there) but consumed only if this turn
+  // actually reaches the model.
+  let selectedVehicleChunk: RetrievedChunk | null = null;
+  let groundSelectedVehicleChunk = false;
   try {
-    // Load the bounded tenant vocabulary for every turn. A visitor can ask
-    // for a model without naming its make ("show me 911s"), which cannot be
-    // recognized reliably without knowing this tenant's actual catalog.
-    const [
-      chunkResult,
-      loadedLoyaltyContext,
-      loadedPreferenceContext,
-      selectedVehicleResult,
-      facetResult,
-    ] = await Promise.all([
-      supabase
-        .from("rag_chunks")
-        .select("text, category")
-        .eq("tenant_id", tenant.tenantId),
-      visitor
-        ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
-        : Promise.resolve(null),
-      visitor
-        ? loadVisitorPreferenceContext(supabase, {
-            tenantId: tenant.tenantId,
-            visitorId: visitor.id,
-          })
-        : Promise.resolve(null),
+    // Only the reads a deterministic rule can actually need happen here. The
+    // document corpus, loyalty context and visitor preferences feed the model
+    // system prompt and nothing else (see loadModelPromptContext below), so
+    // fetching them for an ordinal, a "show me", or a reset was pure waste on
+    // the highest-frequency turns. They are loaded lazily on the model path.
+    //
+    // The facet RPC stays unconditional: it is the bounded tenant vocabulary
+    // that filter extraction needs to recognize a make/model this turn.
+    const [selectedVehicleResult, facetResult] = await Promise.all([
       selectedVehicleCandidate
         ? getTenantVehicle(supabase, tenant.tenantId, selectedVehicleCandidate)
         : Promise.resolve(null),
@@ -442,24 +438,12 @@ export async function POST(request: Request): Promise<Response> {
         p_state: null,
       }),
     ]);
-    chatLoyaltyContext = loadedLoyaltyContext;
-    visitorPreferenceContext = loadedPreferenceContext;
-    const { data: chunkRows, error: chunkErr } = chunkResult;
-    if (chunkErr)
-      throw new Error(`rag_chunks query failed: ${chunkErr.message}`);
-
-    const contextChunks = retrieveByKeywords(
-      chunkRows ?? [],
-      lastUser.content,
-      7,
-    );
     const unsupportedVehicleFactRequest = isUnsupportedVehicleFactRequest(
       lastUser.content,
     );
     const selectedVehicleDetailRequest = isSelectedVehicleDetailRequest(
       lastUser.content,
     );
-    let selectedVehicleChunk: (typeof contextChunks)[number] | null = null;
     if (unsupportedVehicleFactRequest) {
       deterministicUnsupportedFactAnswer = unsupportedVehicleFactAnswer(
         lastUser.content,
@@ -531,7 +515,7 @@ export async function POST(request: Request): Promise<Response> {
         isSelectedVehicleAction: isSelectedVehicleActionRequest(lastUser.content),
       })
     ) {
-      contextChunks.unshift(selectedVehicleChunk);
+      groundSelectedVehicleChunk = true;
     }
 
     const stateTransition = transitionInventoryState(
@@ -687,61 +671,11 @@ export async function POST(request: Request): Promise<Response> {
       if (inventoryOutcome.filterAction) {
         deterministicInventoryAction = inventoryOutcome.filterAction;
       }
-      const matchedIds = matchedVehicles
-        .slice(0, 20)
-        .map((vehicle) => vehicle.id);
-      if (matchedIds.length > 0) {
-        const { data: imageDescriptions } = await supabase
-          .from("vehicle_images")
-          .select("vehicle_id, ai_description")
-          .eq("tenant_id", tenant.tenantId)
-          .eq("is_primary", true)
-          .eq("ai_description_status", "completed")
-          .in("vehicle_id", matchedIds);
-        for (const image of imageDescriptions ?? []) {
-          if (!image.ai_description) continue;
-          const vehicle = matchedVehicles.find(
-            (candidate) => candidate.id === image.vehicle_id,
-          );
-          if (vehicle)
-            contextChunks.push({
-              category: "vehicle-image",
-              text: `Primary image for ${vehicle.year} ${vehicle.make} ${vehicle.model}: ${image.ai_description}`,
-              score: 1,
-            });
-        }
-      }
     }
 
-    // Without this the prompt omitted "Total vehicles in full inventory"
-    // entirely, so with a filter active the model could only see TOTAL
-    // MATCHING — and "how many cars do you have?" got answered as "how many
-    // match your filters". Cached per tenant; a failure leaves it undefined
-    // and the line is omitted exactly as before.
-    const totalInventory = await tenantLiveVehicleCount(
-      tenant.tenantId,
-      async (tenantId) => {
-        const { count, error } = await supabase
-          .from("vehicles")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", tenantId)
-          .neq("status", "archived")
-          .is("sold_at", null);
-        return error ? undefined : (count ?? undefined);
-      },
-    );
-
-    assembled = assembleSystemPrompt({
-      basePrompt: personaBasePrompt(persona, tenantName),
-      contextChunks,
-      matchedVehicles,
-      totalMatched,
-      filters,
-      totalInventory,
-    });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "RAG failure";
-    captureError("api/chat/context-build", err, {
+    const message = err instanceof Error ? err.message : "state resolution failure";
+    captureError("api/chat/state-build", err, {
       tenantId: tenant.tenantId,
       detail: message,
     });
@@ -844,23 +778,29 @@ export async function POST(request: Request): Promise<Response> {
     rules: stateRules,
   });
   const cors = corsHeadersFor(request);
-  const sseHeaders = new Headers({
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-    "X-Source-Categories": assembled.sourceCategories.join(","),
-    ...quotaHeaders,
-    ...cors,
-  });
-  const metaEvent = sseEvent({
-    type: "meta",
-    sourceCategories: assembled.sourceCategories,
-    botName: persona.name,
-    // Capability level for client display only — enforcement is the
-    // server-side plan gate above, never this hint.
-    capabilities: { actions: chatActionsEnabled },
-    sessionId: visitorTurn?.sessionId ?? anonymousConversationId ?? undefined,
-  });
+  // Source categories describe what actually grounded THIS answer, so they
+  // are built per path. A deterministic answer is rendered from verified
+  // inventory rows and never from the document corpus — which is exactly why
+  // the corpus is no longer fetched for those turns.
+  const buildSseHeaders = (sourceCategories: readonly string[]) =>
+    new Headers({
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Source-Categories": sourceCategories.join(","),
+      ...quotaHeaders,
+      ...cors,
+    });
+  const buildMetaEvent = (sourceCategories: readonly string[]) =>
+    sseEvent({
+      type: "meta",
+      sourceCategories,
+      botName: persona.name,
+      // Capability level for client display only — enforcement is the
+      // server-side plan gate above, never this hint.
+      capabilities: { actions: chatActionsEnabled },
+      sessionId: visitorTurn?.sessionId ?? anonymousConversationId ?? undefined,
+    });
 
   // Precedence lives in lib/chatDeterministicAnswer.ts, where it is an ordered
   // array with pairwise tests. The guard and the selection below read that one
@@ -886,6 +826,12 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   if (hasDeterministicAnswer(deterministicAnswers, deterministicGuardContext)) {
+    const sourceCategories = deterministicSourceCategories({
+      queriedInventory: matchedVehicles !== undefined,
+      groundedVehicleCount: groundedVehicleIds.size,
+    });
+    const sseHeaders = buildSseHeaders(sourceCategories);
+    const metaEvent = buildMetaEvent(sourceCategories);
     const actions = prepareBotActionsForClient(
       filterGroundedVehicleActions(
         filterConversationActions(
@@ -1010,6 +956,116 @@ export async function POST(request: Request): Promise<Response> {
       },
     );
   }
+
+  // ── Deferred model-prompt context ────────────────────────────────────────
+  // Everything loaded here feeds the system prompt and nothing else, so it is
+  // fetched only once a turn is known to need the model. An ordinal, a
+  // "show me", a reset, a compare or a selected-vehicle detail answer returns
+  // above and never pays for the corpus, the loyalty read, the preference
+  // read, image descriptions or the inventory count.
+  let assembled: ReturnType<typeof assembleSystemPrompt>;
+  try {
+    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext] =
+      await Promise.all([
+        supabase
+          .from("rag_chunks")
+          .select("text, category")
+          .eq("tenant_id", tenant.tenantId),
+        visitor
+          ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
+          : Promise.resolve(null),
+        visitor
+          ? loadVisitorPreferenceContext(supabase, {
+              tenantId: tenant.tenantId,
+              visitorId: visitor.id,
+            })
+          : Promise.resolve(null),
+      ]);
+    chatLoyaltyContext = loadedLoyaltyContext;
+    visitorPreferenceContext = loadedPreferenceContext;
+    if (chunkResult.error)
+      throw new Error(`rag_chunks query failed: ${chunkResult.error.message}`);
+
+    const contextChunks = retrieveByKeywords(
+      chunkResult.data ?? [],
+      lastUser.content,
+      7,
+    );
+    // Same ordering as before the split: retrieved chunks, the open vehicle
+    // in front of them when the turn is still about it, image descriptions
+    // appended for the vehicles this turn actually matched.
+    if (groundSelectedVehicleChunk && selectedVehicleChunk) {
+      contextChunks.unshift(selectedVehicleChunk);
+    }
+    if (matchedVehicles !== undefined) {
+      const matchedIds = matchedVehicles
+        .slice(0, 20)
+        .map((vehicle) => vehicle.id);
+      if (matchedIds.length > 0) {
+        const { data: imageDescriptions } = await supabase
+          .from("vehicle_images")
+          .select("vehicle_id, ai_description")
+          .eq("tenant_id", tenant.tenantId)
+          .eq("is_primary", true)
+          .eq("ai_description_status", "completed")
+          .in("vehicle_id", matchedIds);
+        for (const image of imageDescriptions ?? []) {
+          if (!image.ai_description) continue;
+          const vehicle = matchedVehicles.find(
+            (candidate) => candidate.id === image.vehicle_id,
+          );
+          if (vehicle)
+            contextChunks.push({
+              category: "vehicle-image",
+              text: `Primary image for ${vehicle.year} ${vehicle.make} ${vehicle.model}: ${image.ai_description}`,
+              score: 1,
+            });
+        }
+      }
+    }
+
+    // Without this the prompt omitted "Total vehicles in full inventory"
+    // entirely, so with a filter active the model could only see TOTAL
+    // MATCHING — and "how many cars do you have?" got answered as "how many
+    // match your filters". Cached per tenant; a failure leaves it undefined
+    // and the line is omitted exactly as before.
+    const totalInventory = await tenantLiveVehicleCount(
+      tenant.tenantId,
+      async (tenantId) => {
+        const { count, error } = await supabase
+          .from("vehicles")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .neq("status", "archived")
+          .is("sold_at", null);
+        return error ? undefined : (count ?? undefined);
+      },
+    );
+
+    assembled = assembleSystemPrompt({
+      basePrompt: personaBasePrompt(persona, tenantName),
+      contextChunks,
+      matchedVehicles,
+      totalMatched,
+      filters,
+      totalInventory,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "RAG failure";
+    captureError("api/chat/context-build", err, {
+      tenantId: tenant.tenantId,
+      detail: message,
+    });
+    return json(
+      { error: "Failed to build context" },
+      500,
+      request,
+      quotaHeaders,
+    );
+  }
+
+  const sseHeaders = buildSseHeaders(assembled.sourceCategories);
+  const metaEvent = buildMetaEvent(assembled.sourceCategories);
 
   const systemMessage = {
     role: "system" as const,

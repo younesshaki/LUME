@@ -316,3 +316,22 @@ function priceConstraintLabel(
     return `over $${filters.priceMin.toLocaleString()}`;
   return undefined;
 }
+
+/**
+ * Source categories for a turn answered without the model.
+ *
+ * A deterministic answer is rendered from verified inventory rows and stored
+ * result-set state — never from the document corpus, which is why the corpus
+ * is no longer fetched for these turns at all. Reporting a document category
+ * here would claim provenance the answer does not have.
+ */
+export function deterministicSourceCategories(input: {
+  /** A fresh tenant-scoped vehicle query ran this turn. */
+  queriedInventory: boolean;
+  /** Verified vehicle ids grounded the answer (stored result set, selection). */
+  groundedVehicleCount: number;
+}): string[] {
+  return input.queriedInventory || input.groundedVehicleCount > 0
+    ? ["vehicles"]
+    : [];
+}
