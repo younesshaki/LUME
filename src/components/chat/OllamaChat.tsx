@@ -251,6 +251,7 @@ export function OllamaChat() {
     let sourceCategories: string[] = [];
     let assistantInserted = false;
     let turnThinkingSteps: string[] = [];
+    let duplicateTurn = false;
 
     try {
       const messages: DeepseekMessage[] = nextApiMessages.map((m) => ({
@@ -309,6 +310,13 @@ export function OllamaChat() {
           botActionBus.publish(event.action);
           continue;
         }
+        if (event.kind === "duplicate") {
+          // A retry of a turn already being answered. The delivery holding the
+          // lease is producing the reply, so this one ends quietly: no second
+          // assistant bubble, no error banner for something that is working.
+          duplicateTurn = true;
+          break;
+        }
         if (event.kind === "thinking") {
           turnThinkingSteps = appendThinkingStep(turnThinkingSteps, event.text);
           setPendingThinkingSteps(turnThinkingSteps);
@@ -340,6 +348,12 @@ export function OllamaChat() {
             );
           }
         }
+      }
+
+      if (duplicateTurn) {
+        // Nothing was inserted for this turn, so there is nothing to tidy up
+        // and nothing to show. The finally block clears the pending states.
+        return;
       }
 
       setMessages((prev) =>

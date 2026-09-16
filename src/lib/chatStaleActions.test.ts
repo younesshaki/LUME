@@ -193,6 +193,90 @@ describe("stale SSE actions cannot mutate the site", () => {
   });
 });
 
+describe("duplicate in-flight turns reach the client safely", () => {
+  function duplicateStream(): ReadableStream<Uint8Array> {
+    const encoder = new TextEncoder();
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"type":"duplicate"}\n\n'));
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    });
+  }
+
+  it("surfaces a duplicate as its own outcome, not an error", async () => {
+    // Throwing here would render "chat failed" for a turn that is being
+    // answered by the delivery holding the lease.
+    vi.stubGlobal("fetch", async () =>
+      new Response(duplicateStream(), { status: 200 }),
+    );
+    const events = [];
+    for await (const event of streamChat(
+      [{ role: "user", content: "hi" }],
+      undefined,
+      "session-1",
+      false,
+      newChatRequestId(),
+    )) {
+      events.push(event);
+    }
+    expect(events).toEqual([{ kind: "duplicate" }]);
+  });
+
+  it("produces no assistant text for the duplicate delivery", async () => {
+    // The visitor must not see the same reply twice.
+    vi.stubGlobal("fetch", async () =>
+      new Response(duplicateStream(), { status: 200 }),
+    );
+    const deltas = [];
+    for await (const event of streamChat([{ role: "user", content: "hi" }])) {
+      if (event.kind === "delta") deltas.push(event.text);
+    }
+    expect(deltas).toEqual([]);
+  });
+
+  it("executes no action from a duplicate delivery", async () => {
+    const received: BotAction[] = [];
+    botActionBus.onAny((action) => received.push(action));
+    const sequencer = createChatTurnSequencer();
+    const turnId = newChatRequestId();
+    sequencer.begin(turnId);
+
+    vi.stubGlobal("fetch", async () =>
+      new Response(duplicateStream(), { status: 200 }),
+    );
+    await runTurn(sequencer, turnId, [{ role: "user", content: "hi" }]);
+    expect(received).toHaveLength(0);
+  });
+
+  it("ends the stream at the duplicate event", async () => {
+    // Anything the server sent afterwards would belong to a turn this
+    // delivery is not answering.
+    const encoder = new TextEncoder();
+    vi.stubGlobal("fetch", async () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encoder.encode('data: {"type":"duplicate"}\n\n'));
+            controller.enqueue(
+              encoder.encode('data: {"choices":[{"delta":{"content":"leaked"}}]}\n\n'),
+            );
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    const events = [];
+    for await (const event of streamChat([{ role: "user", content: "hi" }])) {
+      events.push(event);
+    }
+    expect(events).toEqual([{ kind: "duplicate" }]);
+  });
+});
+
 describe("the chat component actually applies the guard", () => {
   // The integration tests above mirror the component's loop. This pins that
   // the component has not drifted away from the behaviour they assert.
@@ -212,6 +296,24 @@ describe("the chat component actually applies the guard", () => {
     expect(component).toContain("const turnRequestId = newChatRequestId()");
     expect(component).toContain("turnSequencerRef.current.begin(turnRequestId)");
     expect(component).toContain("turnRequestId,\n      )) {");
+  });
+
+  it("ends a duplicate turn quietly instead of showing a failure", () => {
+    expect(component).toContain('event.kind === "duplicate"');
+    const branch = component.indexOf('event.kind === "duplicate"');
+    const body = component.slice(branch, branch + 400);
+    expect(body).toContain("duplicateTurn = true");
+    // No error state is set for an expected duplicate.
+    expect(body).not.toContain("setError");
+  });
+
+  it("inserts no assistant message for a duplicate turn", () => {
+    const guard = component.indexOf("if (duplicateTurn) {");
+    expect(guard).toBeGreaterThan(-1);
+    // The early return sits before the message is finalised, and the finally
+    // block still clears the pending/sending state.
+    const finalise = component.indexOf("content: m.content.trim()");
+    expect(guard).toBeLessThan(finalise);
   });
 
   it("revokes the turn when the chat resets or unmounts", () => {

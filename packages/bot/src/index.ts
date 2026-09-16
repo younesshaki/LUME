@@ -100,12 +100,14 @@ export {
   turnThinkingSteps,
 } from "./thinkingSteps";
 export {
+  type ConversationClaimResult,
   type ConversationMemoryDegradation,
   type ConversationMemorySnapshot,
   type ConversationMemoryStore,
   type ConversationMemoryUpdate,
   type MemoryMessage,
   type MemoryToolResult,
+  CONVERSATION_CLAIM_TTL_SECONDS,
   CONVERSATION_MEMORY_SCHEMA_VERSION,
   CONVERSATION_MEMORY_TTL_SECONDS,
   ConversationMemoryConflictError,

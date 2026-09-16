@@ -67,24 +67,74 @@ export class ConversationMemoryConflictError extends Error {
   }
 }
 
+/** Outcome of trying to take a turn's in-flight lease. */
+export type ConversationClaimResult = {
+  /** False when another delivery of this exact turn already holds the lease. */
+  granted: boolean;
+  /**
+   * Whether the lease is shared across instances or only local to this one.
+   * A local lease is real protection against a double-submit hitting the same
+   * warm instance, but it is NOT distributed idempotency and must never be
+   * reported as such.
+   */
+  scope: "shared" | "local";
+};
+
 export interface ConversationMemoryStore {
   get(key: string): Promise<ConversationMemorySnapshot | null>;
   append(key: string, update: ConversationMemoryUpdate): Promise<ConversationMemorySnapshot>;
   delete(key: string): Promise<void>;
+  /**
+   * Take a short exclusive lease on one turn, so a duplicate delivery cannot
+   * run the model a second time.
+   *
+   * The lease is never released explicitly: it expires. A crashed or timed-out
+   * server therefore frees it on its own, and a retry arriving after a
+   * completed turn is still refused for the rest of the window rather than
+   * paying for a second generation. Correctness of history does not depend on
+   * this — the requestId dedupe in appendConversationMemory covers that — so
+   * expiry can be generous without risking a stuck conversation.
+   */
+  claim(key: string, ttlSeconds: number): Promise<ConversationClaimResult>;
 }
 
 export const CONVERSATION_MEMORY_TTL_SECONDS = 24 * 60 * 60;
+/**
+ * Lease window for one in-flight turn. Long enough to outlive a slow two-call
+ * tool turn, short enough that a crashed server's lease frees quickly. A
+ * visitor re-asking gets a new requestId, so this never blocks real use.
+ */
+export const CONVERSATION_CLAIM_TTL_SECONDS = 120;
+/** Bound the claim map so a spray of ids cannot grow memory without limit. */
+const MAX_TRACKED_CLAIMS = 10_000;
 export const MAX_MEMORY_MESSAGES = 20;
 export const MAX_MEMORY_TOOL_RESULTS = 5;
 export const MAX_MEMORY_TOOL_PROMPT_LENGTH = 12_000;
 
 export class InMemoryConversationMemoryStore implements ConversationMemoryStore {
   private readonly values = new Map<string, ConversationMemorySnapshot>();
+  /** claim key -> epoch ms at which the lease expires. */
+  private readonly claims = new Map<string, number>();
 
   constructor(
     private readonly now: () => number = Date.now,
     private readonly ttlSeconds = CONVERSATION_MEMORY_TTL_SECONDS,
   ) {}
+
+  async claim(key: string, ttlSeconds: number): Promise<ConversationClaimResult> {
+    const now = this.now();
+    const heldUntil = this.claims.get(key);
+    if (heldUntil !== undefined && heldUntil > now) {
+      return { granted: false, scope: "local" };
+    }
+    if (this.claims.size >= MAX_TRACKED_CLAIMS) {
+      for (const [claimKey, expiry] of this.claims) {
+        if (expiry <= now) this.claims.delete(claimKey);
+      }
+    }
+    this.claims.set(key, now + ttlSeconds * 1_000);
+    return { granted: true, scope: "local" };
+  }
 
   async get(key: string): Promise<ConversationMemorySnapshot | null> {
     const value = this.values.get(key);
@@ -173,7 +223,7 @@ export function appendConversationMemory(
 
 /** Reported whenever the shared store could not serve a request. */
 export type ConversationMemoryDegradation = {
-  operation: "get" | "append" | "delete";
+  operation: "get" | "append" | "delete" | "claim";
   error: unknown;
 };
 
@@ -249,6 +299,21 @@ export class FallbackConversationMemoryStore implements ConversationMemoryStore 
       this.markHealthy();
     } catch (error) {
       this.markDegraded("delete", error);
+    }
+  }
+
+  async claim(key: string, ttlSeconds: number): Promise<ConversationClaimResult> {
+    try {
+      const shared = await this.primary.claim(key, ttlSeconds);
+      this.markHealthy();
+      return shared;
+    } catch (error) {
+      // The shared lease is what makes this idempotent across instances. With
+      // it gone we still take the local one — a double-submit landing on the
+      // same warm instance is the common case — but the result says "local"
+      // so no caller can report protection that is not there.
+      this.markDegraded("claim", error);
+      return this.fallback.claim(key, ttlSeconds);
     }
   }
 }

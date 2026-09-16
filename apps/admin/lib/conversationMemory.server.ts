@@ -2,12 +2,14 @@ import { createHash } from "node:crypto";
 import { Redis } from "@upstash/redis";
 import {
   appendConversationMemory,
+  CONVERSATION_CLAIM_TTL_SECONDS,
   CONVERSATION_MEMORY_TTL_SECONDS,
   ConversationMemoryConflictError,
   FallbackConversationMemoryStore,
   InMemoryConversationMemoryStore,
   isDuplicateMemoryUpdate,
   normalizeConversationMemory,
+  type ConversationClaimResult,
   type ConversationMemorySnapshot,
   type ConversationMemoryStore,
   type ConversationMemoryUpdate,
@@ -16,7 +18,16 @@ import { captureError } from "./observability";
 
 type RedisMemoryClient = {
   get(key: string): Promise<unknown>;
-  set(key: string, value: unknown, options: { ex: number }): Promise<unknown>;
+  /**
+   * `nx` makes the write conditional on the key not existing, which is what
+   * turns a claim into an atomic lease rather than a read-then-write race.
+   * Upstash returns "OK" when it wrote and null when it did not.
+   */
+  set(
+    key: string,
+    value: unknown,
+    options: { ex: number } | { ex: number; nx: true },
+  ): Promise<unknown>;
   del(key: string): Promise<unknown>;
   /**
    * Optional: present on @upstash/redis, absent on the minimal fakes used in
@@ -110,6 +121,17 @@ export class UpstashConversationMemoryStore implements ConversationMemoryStore {
   async delete(key: string): Promise<void> {
     await this.redis.del(key);
   }
+
+  async claim(
+    key: string,
+    ttlSeconds: number,
+  ): Promise<ConversationClaimResult> {
+    // SET key value EX ttl NX — one round trip, atomic across instances. The
+    // stored value is a constant: the key's existence is the whole signal, and
+    // putting anything about the turn in it would be data we do not need.
+    const written = await this.redis.set(key, "1", { ex: ttlSeconds, nx: true });
+    return { granted: written !== null && written !== undefined, scope: "shared" };
+  }
 }
 
 const fallback = new InMemoryConversationMemoryStore();
@@ -151,6 +173,42 @@ export function isConversationMemoryDegraded(): boolean {
 /** Test hook: drop the cached store so env changes take effect. */
 export function resetConversationMemoryStoreForTests(): void {
   configuredStore = null;
+}
+
+/**
+ * Lease key for one delivery of one turn.
+ *
+ * Built from the conversation memory key, which is already a SHA-256 of
+ * (tenant, visitor), so two tenants cannot collide even if a client reuses a
+ * request id. Both halves are opaque.
+ */
+export function conversationClaimKey(
+  memoryKey: string,
+  requestId: string,
+): string {
+  return `${memoryKey}:turn:${requestId}`;
+}
+
+/**
+ * Try to become the one delivery of this turn that does the work.
+ *
+ * Returns `granted:false` only when another delivery of the SAME turn already
+ * holds the lease. Any store failure grants rather than blocks: refusing to
+ * answer a visitor because a lease could not be written would turn a cache
+ * problem into an outage.
+ */
+export async function claimConversationTurn(
+  memoryKey: string,
+  requestId: string,
+): Promise<ConversationClaimResult> {
+  try {
+    return await getConversationMemoryStore().claim(
+      conversationClaimKey(memoryKey, requestId),
+      CONVERSATION_CLAIM_TTL_SECONDS,
+    );
+  } catch {
+    return { granted: true, scope: "local" };
+  }
 }
 
 export function conversationMemoryKey(tenantId: string, visitorId: string): string {

@@ -159,6 +159,78 @@ An action that fails the server's grounding or entitlement checks never reaches
 the client at all; the client only decides whether an already-authorized action
 is still current.
 
+### Follow-up — environment audit and duplicate-turn lease (same branch)
+
+**The Upstash question is answered: it is not configured anywhere.** A
+read-only audit of the `lume-admin` Vercel project (`vercel env ls`, which
+prints names and environments, never values) returns **zero** `UPSTASH_*`
+entries — not Production, not Preview (staging), not Development. No Redis or
+KV-shaped variable of any kind is provisioned. This matches the repository's
+own record: `PROGRESS.md` still carries SCRUM-151 as
+`Status: needs-provisioning(UPSTASH)`, and `apps/admin/.env.example` documents
+the pair as optional with "missing values use a per-instance in-memory
+fallback". Neither `scripts/verify-deployment-env.mjs` nor
+`docs/deployment-environments.md` lists them, so a deployment missing them
+does not even warn. Local `apps/admin/.env.local` does not set them either.
+
+Consequences, true of **every environment today**:
+
+- `getConversationMemoryStore()` returns the plain in-memory store, not the
+  fallback wrapper. Conversation memory is therefore **per-instance**, and
+  continuity across Vercel instances is already best-effort in production —
+  that predates this branch and is not caused by it.
+- The compare-and-set Lua **never executes**, so it remains unproven outside
+  the simulator.
+- `isConversationMemoryDegraded()` is always false, because there is no
+  configured shared store to fail. The degraded-mode reference guards are
+  therefore inert until Upstash is provisioned. They are correct and tested;
+  they simply have nothing to react to yet.
+- The duplicate-turn lease below is **local to one instance**, not
+  distributed.
+
+None of this is a regression; it is the standing state finally measured. The
+deployed behaviour is unchanged by these commits.
+
+**The duplicate-turn lease.** Before doing any expensive work, a turn with a
+client-supplied id takes a short exclusive lease on
+`<conversationMemoryKey>:turn:<requestId>`. The memory key is already a
+SHA-256 of (tenant, visitor), so two tenants cannot collide even if a client
+reuses an id, and neither half of the key reveals its inputs. The lease is
+taken with `SET … EX … NX` — one atomic round trip — because a read-then-write
+lease is not a lease.
+
+- TTL is **120 seconds**: longer than a slow two-call tool turn, short enough
+  that a crashed server frees it quickly. A visitor re-asking gets a new id,
+  so this never blocks real use.
+- The lease is **never released explicitly, only expired**. That means a retry
+  arriving after the original completed is still refused for the rest of the
+  window instead of paying for a second generation. History correctness does
+  not depend on it — the `requestId` dedupe in `appendConversationMemory`
+  covers that independently — so expiry can be generous without wedging a
+  conversation.
+- A turn without a client id is not claimed at all: a server-generated id is
+  unique by construction, so there is nothing to deduplicate, and legacy
+  callers keep their exact previous behaviour.
+- **Failure grants rather than blocks.** If the store errors, the turn
+  proceeds; refusing to answer a visitor because a lease could not be written
+  would turn a cache problem into an outage. When the shared store fails, the
+  fallback lease is taken and reported with `scope: "local"`, so no caller can
+  report distributed idempotency it does not have.
+
+**What the browser sees.** A duplicate delivery gets HTTP 200 with an explicit
+`{"type":"duplicate"}` SSE event and nothing else — no assistant text, no
+actions. A 409 or 429 would make every existing client render "chat failed"
+for a turn that is actually being answered. The client ends that turn quietly:
+no second assistant bubble, no error banner, pending state cleared, abort and
+reset behaviour untouched. A client that ignores the event sees an empty turn
+rather than a duplicated reply. The response says nothing about who holds the
+lease.
+
+**Honest limit.** If the original delivery died and its retry lands inside the
+120-second window, that retry is refused and the visitor sees no answer until
+they ask again. That is the deliberate trade for never double-charging a
+generation, and it is bounded by the TTL.
+
 ### Verification performed
 
 - `npm run typecheck:all`, `npx vitest run` (1642 passing), `npm run build`,
@@ -172,9 +244,10 @@ is still current.
   started before this branch was built, so it serves pre-change code. Running
   it would also incur real provider spend against the production-backed
   Supabase project. Left for a staging or explicitly approved local run.
-- **Unverified in production:** whether Upstash is configured on `lume-admin`.
-  If it is not, the CAS work is inert there and every instance keeps its own
-  conversation; the degradation signal now makes that visible either way.
+- **Measured 2026-09-16:** Upstash is configured on `lume-admin` in **no**
+  environment, so the CAS work and the degraded-mode guards are inert in every
+  deployment today and each instance keeps its own conversation. See the
+  environment audit above.
 
 ## 2. Authority, constraints, and exclusions
 

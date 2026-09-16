@@ -34,6 +34,8 @@ type ChatMetaEvent = {
   capabilities?: { actions?: boolean };
 };
 type ChatActionEvent = { type: "action"; action: BotAction };
+/** Another delivery of this exact turn is already being answered. */
+type ChatDuplicateEvent = { type: "duplicate" };
 type ChatErrorEvent = { type: "error"; message: string };
 
 export type ChatStreamYield =
@@ -48,7 +50,13 @@ export type ChatStreamYield =
     }
   | { kind: "delta"; text: string }
   | { kind: "action"; action: BotAction }
-  | { kind: "thinking"; text: string };
+  | { kind: "thinking"; text: string }
+  /**
+   * This delivery was a duplicate of a turn already in flight. Not an error:
+   * the visitor is being answered by the delivery that holds the lease, so the
+   * caller should end this turn quietly rather than showing a failure.
+   */
+  | { kind: "duplicate" };
 
 type DeepseekStreamChunk = {
   choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
@@ -152,6 +160,10 @@ export async function* streamChat(
           };
           continue;
         }
+        if (isDuplicateEvent(parsed)) {
+          yield { kind: "duplicate" };
+          return;
+        }
         if (isActionEvent(parsed)) {
           yield { kind: "action", action: parsed.action };
           continue;
@@ -185,6 +197,10 @@ function isMetaEvent(v: unknown): v is ChatMetaEvent {
     (v as { type?: string }).type === "meta" &&
     Array.isArray((v as ChatMetaEvent).sourceCategories)
   );
+}
+
+function isDuplicateEvent(v: unknown): v is ChatDuplicateEvent {
+  return isRecord(v) && v.type === "duplicate";
 }
 
 function isErrorEvent(v: unknown): v is ChatErrorEvent {

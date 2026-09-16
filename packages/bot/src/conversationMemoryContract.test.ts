@@ -152,6 +152,7 @@ describe("conversation memory: degraded shared store", () => {
     get: () => Promise.reject(new Error("upstream down")),
     append: () => Promise.reject(new Error("upstream down")),
     delete: () => Promise.reject(new Error("upstream down")),
+    claim: () => Promise.reject(new Error("upstream down")),
   };
 
   it("reports every degradation instead of silently downgrading", async () => {
@@ -193,6 +194,7 @@ describe("conversation memory: degraded shared store", () => {
       },
       append: async (_key, update) => appendConversationMemory(null, update, NOW),
       delete: async () => {},
+      claim: async () => ({ granted: true, scope: "shared" as const }),
     };
     const store = new FallbackConversationMemoryStore(
       flaky,
@@ -214,6 +216,7 @@ describe("conversation memory: degraded shared store", () => {
       get: async () => null,
       append: () => Promise.reject(new ConversationMemoryConflictError(1, 2)),
       delete: async () => {},
+      claim: async () => ({ granted: true, scope: "shared" as const }),
     };
     const onDegraded = vi.fn();
     const store = new FallbackConversationMemoryStore(
@@ -318,5 +321,55 @@ describe("conversation memory: retry-safe idempotency end to end", () => {
     const replayed = await store.append("k", turn);
     expect(replayed.stateVersion).toBe(1);
     expect(replayed.messages).toHaveLength(1);
+  });
+});
+
+describe("conversation memory: claim and dedupe together", () => {
+  it("blocks a concurrent duplicate, and a post-expiry retry still cannot double history", async () => {
+    // The two layers answer different questions. The lease stops a duplicate
+    // from PAYING for a second generation while the first is in flight; the
+    // requestId dedupe stops it from CORRUPTING history if it runs later.
+    const store = new InMemoryConversationMemoryStore(() => NOW);
+    const key = "conv";
+    const turn: ConversationMemoryUpdate = {
+      requestId: "turn-1",
+      messages: [
+        { role: "user", content: "any BMWs?" },
+        { role: "assistant", content: "Two." },
+      ],
+    };
+
+    expect((await store.claim("conv:turn:turn-1", 120)).granted).toBe(true);
+    await store.append(key, turn);
+    // Concurrent duplicate: refused before it can run.
+    expect((await store.claim("conv:turn:turn-1", 120)).granted).toBe(false);
+
+    // Much later, after the lease expired, the same turn is redelivered.
+    const later = new InMemoryConversationMemoryStore(() => NOW);
+    expect((await later.claim("conv:turn:turn-1", 120)).granted).toBe(true);
+    await store.append(key, turn);
+
+    const snapshot = await store.get(key);
+    expect(snapshot?.messages).toHaveLength(2);
+    expect(snapshot?.stateVersion).toBe(1);
+  });
+
+  it("leaves two identical messages with different ids as two independent turns", async () => {
+    const store = new InMemoryConversationMemoryStore(() => NOW);
+    expect((await store.claim("conv:turn:a", 120)).granted).toBe(true);
+    await store.append("conv", {
+      requestId: "a",
+      messages: [{ role: "user", content: "show me" }],
+    });
+    // A different turn: its own lease, its own history entry.
+    expect((await store.claim("conv:turn:b", 120)).granted).toBe(true);
+    await store.append("conv", {
+      requestId: "b",
+      messages: [{ role: "user", content: "show me" }],
+    });
+
+    const snapshot = await store.get("conv");
+    expect(snapshot?.messages).toHaveLength(2);
+    expect(snapshot?.stateVersion).toBe(2);
   });
 });

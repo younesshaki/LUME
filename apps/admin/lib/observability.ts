@@ -307,7 +307,13 @@ export type ConciergeUsageSource =
   | "estimated"
   | "unknown";
 
-export type ConciergeTurnRoute = "deterministic" | "model" | "tool" | "error";
+/** "duplicate" is a turn refused because another delivery of it is running. */
+export type ConciergeTurnRoute =
+  | "deterministic"
+  | "model"
+  | "tool"
+  | "duplicate"
+  | "error";
 
 /** Outcome of this turn's tenant-scoped inventory query, if one ran. */
 export type ConciergeQueryStatus =

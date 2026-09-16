@@ -122,6 +122,7 @@ import {
   visitorPreferenceSystemPrompt,
 } from "@/lib/visitorPreferences";
 import {
+  claimConversationTurn,
   conversationMemoryKey,
   getConversationMemoryStore,
   isConversationMemoryDegraded,
@@ -317,6 +318,38 @@ export async function POST(request: Request): Promise<Response> {
     tenant.tenantId,
     visitor ? visitor.id : `anonymous:${anonymousConversationId!}`,
   );
+  // Take the turn's in-flight lease before doing anything expensive. Only a
+  // client-supplied id can be duplicated — a server-generated one is unique by
+  // construction — so there is nothing to claim without one, and skipping it
+  // keeps the old behaviour and one round trip for legacy callers.
+  const turnClaim =
+    memoryKey && clientRequestId
+      ? await claimConversationTurn(memoryKey, clientRequestId)
+      : null;
+  if (turnClaim && !turnClaim.granted) {
+    // Another delivery of this exact turn is already running. Answering it
+    // again would pay for a second generation and could emit a second set of
+    // actions. The response deliberately carries no assistant text: the
+    // delivery that holds the lease is producing it.
+    captureDebug("api/chat/duplicate-turn", {
+      tenantId: tenant.tenantId,
+      claimScope: turnClaim.scope,
+    });
+    recordConciergeTurn({
+      surface: "public",
+      requestId,
+      tenantId: tenant.tenantId,
+      conversationId: anonymousConversationId ?? null,
+      route: "duplicate",
+      clientRequestId: true,
+      // No model was called. That is the point of the lease.
+      model: null,
+      memoryDegraded: isConversationMemoryDegraded(),
+      timingsMs: { total: Date.now() - turnStartedAtMs },
+    });
+    return duplicateTurnResponse(request, quotaHeaders);
+  }
+
   const remembered = memoryKey
     ? await memoryStore.get(memoryKey).catch((error: unknown) => {
         captureError("api/chat/memory-read", error, {
@@ -1813,6 +1846,42 @@ function json(
 
 function sseEvent(payload: unknown): string {
   return `data: ${JSON.stringify(payload)}\n\n`;
+}
+
+/**
+ * The answer to a duplicate delivery of a turn already in flight.
+ *
+ * A 200 with an explicit `duplicate` event rather than an error status: this
+ * is an expected outcome of a retry, not a failure, and surfacing it as 409 or
+ * 429 would have every existing client render "chat failed" for something the
+ * visitor is already being answered. It carries no assistant text and no
+ * actions, so a client that ignores the event simply sees an empty turn rather
+ * than a second copy of the reply.
+ *
+ * It says nothing about who holds the lease — only that this delivery is a
+ * duplicate of itself, which the caller already knows.
+ */
+function duplicateTurnResponse(
+  request: Request,
+  quotaHeaders: Record<string, string>,
+): Response {
+  const stream = new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder();
+      controller.enqueue(encoder.encode(sseEvent({ type: "duplicate" })));
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    headers: new Headers({
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      ...quotaHeaders,
+      ...corsHeadersFor(request),
+    }),
+  });
 }
 
 type ProviderMessage = {

@@ -221,6 +221,53 @@ describe("public chat route: deterministic turns commit before they act", () => 
   });
 });
 
+describe("public chat route: duplicate in-flight turns", () => {
+  it("claims the turn before any expensive work", () => {
+    // The whole point is to avoid paying for a second generation, so the
+    // lease has to sit ahead of the model, the tools and the context loads.
+    const claim = at("claimConversationTurn(memoryKey, clientRequestId)");
+    expect(claim).toBeLessThan(at(CORPUS_QUERY));
+    expect(claim).toBeLessThan(at(DETERMINISTIC_GUARD));
+  });
+
+  it("only claims when the id could actually be duplicated", () => {
+    // A server-generated id is unique by construction; claiming it would cost
+    // a round trip to prove something already true.
+    const claim = at("const turnClaim =");
+    expect(route.slice(claim, claim + 240)).toContain("clientRequestId");
+  });
+
+  it("returns without calling the model when the lease is held", () => {
+    const guard = at("if (turnClaim && !turnClaim.granted)");
+    const body = route.slice(guard, route.indexOf("}", route.indexOf("duplicateTurnResponse", guard)));
+    expect(body).toContain("duplicateTurnResponse");
+    // The refusal must come before the state/model machinery, not after it.
+    expect(guard).toBeLessThan(at("const stateResolvedAtMs"));
+  });
+
+  it("answers a duplicate with 200 and an explicit event, not an error status", () => {
+    // 409/429 would make every existing client render "chat failed" for
+    // something that is actually being answered.
+    const responder = at("function duplicateTurnResponse(");
+    const body = route.slice(responder, responder + 900);
+    expect(body).toContain('sseEvent({ type: "duplicate" })');
+    expect(body).toContain("text/event-stream");
+    expect(body).not.toContain("status: 4");
+  });
+
+  it("emits no assistant text and no actions on the duplicate path", () => {
+    const responder = at("function duplicateTurnResponse(");
+    const body = route.slice(responder, responder + 900);
+    expect(body).not.toContain('type: "action"');
+    expect(body).not.toContain("delta");
+  });
+
+  it("records the duplicate as a turn that called no model", () => {
+    const record = at('route: "duplicate"');
+    expect(route.slice(record, record + 400)).toContain("model: null");
+  });
+});
+
 describe("public chat route: degraded shared memory", () => {
   it("derives the degraded flag from the configured store, not from a guess", () => {
     expect(route).toContain("const memoryDegraded = isConversationMemoryDegraded()");
@@ -248,8 +295,11 @@ describe("public chat route: degraded shared memory", () => {
   });
 
   it("reports the degraded state on every turn record", () => {
+    // Three recording sites: the deterministic path, the shared model/tool
+    // helper, and the duplicate refusal. A run of degraded turns is only
+    // legible if every path reports it.
     const records = route.split("memoryDegraded: isConversationMemoryDegraded()").length - 1;
-    expect(records).toBe(2);
+    expect(records).toBe(3);
   });
 });
 

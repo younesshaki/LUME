@@ -65,6 +65,7 @@ describe("conversation memory", () => {
       get: async () => { throw new Error("offline"); },
       append: async () => { throw new Error("offline"); },
       delete: async () => { throw new Error("offline"); },
+      claim: async () => { throw new Error("offline"); },
     };
     const store = new FallbackConversationMemoryStore(
       unavailable,
