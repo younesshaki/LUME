@@ -231,23 +231,92 @@ lease.
 they ask again. That is the deliberate trade for never double-charging a
 generation, and it is bounded by the TTL.
 
+### Follow-up — integration, browser verification, Phase 3 shadow (2026-09-18)
+
+The work now lives on `integrate/concierge-core-hardening`, a clean worktree at
+`/Users/younesshaki/Documents/LUME-concierge-integration` branched from
+`origin/features/upcoming` (`fd8ee1c`). The ten hardening commits
+(`072bd63`..`579239b`) cherry-picked onto it with **zero conflicts**; the only
+difference between the integration tree and the original feature branch is that
+branch's separate repo-hygiene commit, which is not part of this work.
+`feat/concierge-core-hardening` is left intact as a reference. Nothing is
+pushed or merged.
+
+Four further commits were added there:
+
+| Commit | What |
+|---|---|
+| `3b02c1d` | Shared-memory readiness in the deploy verifier, memory-mode on `/api/ready`, opt-in real-Upstash harness |
+| `6b3a79e` | Browser verification of the stale-action and duplicate-turn guarantees |
+| `94eb4fe` | Phase 3 contextual interpretation, shadow-only, off by default |
+| *(this)* | Documentation reconciliation |
+
+**Phase 3 is shadow-only and enabled nowhere.** Phases 4-6 remain out of scope:
+no embeddings, no hybrid retrieval, no FTS, no knowledge CRUD, no reranking and
+no schema work were implemented in this round.
+
 ### Verification performed
 
-- `npm run typecheck:all`, `npx vitest run` (1642 passing), `npm run build`,
-  `npm run build:admin`, `npm run check:migrations`, `git diff --check`: all
-  green on the branch.
-- Test evidence is **fixture and unit level**. The CAS protocol is proven
-  against a Redis simulator; the Lua script has not executed against real
-  Upstash.
-- **No live scenario run.** `scripts/run-concierge-scenarios.mjs` drives
-  `:5173 -> :3100`; nothing was listening on 5173, and the process on 3100
-  started before this branch was built, so it serves pre-change code. Running
-  it would also incur real provider spend against the production-backed
-  Supabase project. Left for a staging or explicitly approved local run.
-- **Measured 2026-09-16:** Upstash is configured on `lume-admin` in **no**
-  environment, so the CAS work and the degraded-mode guards are inert in every
-  deployment today and each instance keeps its own conversation. See the
-  environment audit above.
+Everything below was re-run by me in the integration worktree on 2026-09-18,
+not carried forward from an earlier report:
+
+| Gate | Result |
+|---|---|
+| `npm run check:migrations` | 86 sequential files, unchanged from `features/upcoming` |
+| `npm run typecheck:all` | clean |
+| `VITE_LUME_TENANT=default npx vitest run` | **226 files / 1777 tests passing** |
+| `npm run build` | clean |
+| `npm run build:admin` | clean |
+| `git diff --check` | clean |
+| `npm run test:e2e:concierge` | **7 browser specs passing** |
+
+The 1,642 figure previously recorded here was stale. For the record, the counts
+diverge legitimately between checkouts: the main worktree reports two tests more
+(1,779 at the same point) because it carries uncommitted trade-in work that adds
+two cases to `dealershipBlocks.test.tsx`. That delta was verified to be exactly
+those two, not a regression.
+
+**What each class of evidence actually proves:**
+
+- *Unit and fixture level* — the state machine, memory contract, turn claim,
+  telemetry redaction, interpretation schema and gold set. Real proof of our
+  logic.
+- *Browser level, mocked backend* — that a current turn's action reaches the
+  router and changes the URL, and that a superseded, aborted or duplicate turn
+  does not. Real proof that the guard reaches the DOM; the chat endpoint is
+  fulfilled by `page.route`, so it proves nothing about a live server.
+- *Simulator level only* — the compare-and-set Lua and the `SET NX EX` lease.
+  `scripts/verify-shared-conversation-memory.mjs` exists to prove them against
+  a real Upstash and **has not been run**, because there is none to run against.
+- *Not verified at all* — any live user journey against a real provider and a
+  real Supabase. No live scenario run was performed. A green build proves a
+  build; it does not prove a conversation.
+
+**Standing blockers, unchanged:**
+
+- **Upstash is provisioned in no `lume-admin` environment** (re-verified
+  2026-09-18 across Development, Preview and Production; names only, values
+  never read). The CAS path, the degraded-mode guards and the duplicate-turn
+  lease are therefore all per-instance in every deployment today. Provisioning
+  it is an external marketplace action with billing implications and was not
+  performed.
+- **No approved staging chat endpoint.** Staging shares the `lume-admin`
+  project, and exercising it spends real provider budget against
+  production-backed data.
+
+To provision a disposable preview instance and unblock the live run, a human
+with Vercel authority would add the Upstash integration to `lume-admin`
+(Preview scope only), then:
+
+```bash
+VERIFY_SHARED_MEMORY=1 \
+VERIFY_UPSTASH_REDIS_REST_URL=<preview url> \
+VERIFY_UPSTASH_REDIS_REST_TOKEN=<preview token> \
+node scripts/verify-shared-conversation-memory.mjs
+```
+
+The harness refuses the ambient `UPSTASH_*` pair on purpose, so an exported
+production credential cannot be used by forgetting a flag.
 
 ## 2. Authority, constraints, and exclusions
 
