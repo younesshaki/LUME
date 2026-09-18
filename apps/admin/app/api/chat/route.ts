@@ -122,6 +122,11 @@ import {
   visitorPreferenceSystemPrompt,
 } from "@/lib/visitorPreferences";
 import {
+  buildInterpreterContext,
+  isShadowInterpretationEnabled,
+} from "@/lib/chatInterpretationShadow";
+import { runShadowInterpretation } from "@/lib/chatInterpretationRunner.server";
+import {
   claimConversationTurn,
   conversationMemoryKey,
   getConversationMemoryStore,
@@ -1239,6 +1244,31 @@ export async function POST(request: Request): Promise<Response> {
     content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}${conversationMemoryToolPrompt(remembered?.toolResults ?? [])}${conciergeTargetSystemPrompt(!chatActionsEnabled || persona.capabilities.navigate === false ? [] : conciergeTargets)}\n${actionSystemPrompt(chatActionsEnabled ? persona.capabilities : CHAT_ACTIONS_DISABLED_CAPABILITIES, enabledToolNames)}`,
   };
 
+  // ── Phase 3 shadow interpretation (default OFF) ───────────────────────────
+  // Reaching here means the deterministic layer could NOT resolve this turn,
+  // which is exactly the population the contextual interpreter exists to
+  // improve. The candidate plan is generated, compared and discarded: it
+  // cannot execute an action, touch memory, or change one byte of the
+  // response. Started here and awaited after phase 1 so it runs alongside the
+  // real call rather than delaying it.
+  const shadowInterpretation = isShadowInterpretationEnabled(tenant.slug)
+    ? runShadowInterpretation({
+        provider: chatProvider,
+        userMessage: lastUser.content,
+        context: buildInterpreterContext({
+          state: conversationState,
+          deterministicFilters: extractedInventoryFilters,
+        }),
+        deterministic: {
+          // The deterministic layer got far enough to extract filters but not
+          // far enough to answer, which is the disagreement worth measuring.
+          kind: statePresentationRequest ? "present" : "search",
+          filters: conversationState.activeFilters,
+          hasReference: Boolean(stateOrdinalVehicleId ?? stateSelectedVehicleId),
+        },
+      }).catch(() => null)
+    : null;
+
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
   // parseToolCalls expects the non-streamed message.tool_calls shape; if the
   // model answers in prose we re-emit its content as SSE below, so the client
@@ -1315,6 +1345,18 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const modelCompletedAtMs = Date.now();
+  // Awaited, never allowed to fail the turn: the runner resolves null on every
+  // error path including its own timeout.
+  const shadowResult = shadowInterpretation ? await shadowInterpretation : null;
+  if (shadowResult) {
+    captureDebug("api/chat/shadow-interpretation", {
+      tenantId: tenant.tenantId,
+      ...shadowResult.comparison,
+      // Field names and booleans only; no message, no filter values.
+      filterFieldsDiffering: shadowResult.comparison.filterFieldsDiffering.join(","),
+      shadowDurationMs: shadowResult.durationMs,
+    });
+  }
   /**
    * Both model paths report through here so their fields cannot drift.
    *
@@ -1353,6 +1395,9 @@ export async function POST(request: Request): Promise<Response> {
         fellBack: chatProvider.fellBack,
         calls: input.calls,
       },
+      // Counted apart from the turn's own calls: an experiment's spend must
+      // never be mistaken for the product's cost per answer.
+      shadowModelCalls: shadowResult?.modelCalls ?? 0,
       // Phase 2 streams without stream_options.include_usage, so only the
       // phase-1 block is ever present. Absent => "unknown", never 0; present
       // on a two-call turn => "provider_partial", because reporting one call's

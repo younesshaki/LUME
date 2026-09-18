@@ -354,6 +354,13 @@ export type ConciergeTurnInput = {
     calls?: number;
   } | null;
   /**
+   * Extra upstream calls made by a shadow experiment on this turn. Kept out of
+   * `model.calls` on purpose: an experiment's spend must never be mistaken for
+   * the product's cost per answer, and folding them together would quietly
+   * inflate every per-turn cost figure the moment shadow mode is enabled.
+   */
+  shadowModelCalls?: number;
+  /**
    * Provider-reported token usage. Omit entirely when the upstream response
    * carried none — the record then says "unknown", never zero.
    */
@@ -410,6 +417,7 @@ export type ConciergeTurnRecord = {
     fellBack: boolean;
     calls: number;
   } | null;
+  shadowModelCalls: number;
   usage: {
     inputTokens: number | null;
     outputTokens: number | null;
@@ -509,6 +517,7 @@ export function buildConciergeTurnRecord(
           calls: finiteOrNull(input.model.calls) ?? 0,
         }
       : null,
+    shadowModelCalls: finiteOrNull(input.shadowModelCalls) ?? 0,
     usage: {
       inputTokens,
       outputTokens,

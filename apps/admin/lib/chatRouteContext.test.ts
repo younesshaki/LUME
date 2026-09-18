@@ -315,6 +315,48 @@ describe("public chat route: multi-call usage honesty", () => {
   });
 });
 
+describe("public chat route: shadow interpretation is inert by default", () => {
+  it("only runs where the deterministic layer already failed to resolve", () => {
+    // The population the interpreter exists to improve. Running it on turns
+    // the rules already answered would spend money to confirm agreement.
+    const shadow = at("isShadowInterpretationEnabled(tenant.slug)");
+    expect(shadow).toBeGreaterThan(at(DETERMINISTIC_RETURN));
+  });
+
+  it("never lets a shadow failure reach the turn", () => {
+    const shadow = at("runShadowInterpretation({");
+    const window = route.slice(shadow, shadow + 1200);
+    expect(window).toContain(".catch(() => null)");
+  });
+
+  it("starts before phase 1 so it does not serialize behind the real call", () => {
+    expect(at("const shadowInterpretation =")).toBeLessThan(
+      at("const modelStartedAtMs"),
+    );
+  });
+
+  it("emits no action and writes no memory from the shadow path", () => {
+    const shadow = at("const shadowResult = shadowInterpretation");
+    const window = route.slice(shadow, shadow + 900);
+    expect(window).not.toContain("persistTurnMemory");
+    expect(window).not.toContain('type: "action"');
+    expect(window).not.toContain("controller.enqueue");
+  });
+
+  it("counts shadow calls apart from the turn's own model calls", () => {
+    // Folding them together would inflate every cost-per-answer figure the
+    // moment the experiment is switched on.
+    expect(route).toContain("shadowModelCalls: shadowResult?.modelCalls ?? 0");
+  });
+
+  it("logs field names and booleans, never the message or filter values", () => {
+    const log = at('captureDebug("api/chat/shadow-interpretation"');
+    const window = route.slice(log, log + 600);
+    expect(window).not.toContain("lastUser.content");
+    expect(window).toContain("filterFieldsDiffering");
+  });
+});
+
 describe("deterministicSourceCategories", () => {
   it("claims vehicle provenance when a fresh query grounded the answer", () => {
     expect(
