@@ -7,6 +7,10 @@ const route = readFileSync(
   resolve(process.cwd(), "apps/admin/app/api/chat/route.ts"),
   "utf8",
 );
+const observability = readFileSync(
+  resolve(process.cwd(), "apps/admin/lib/observability.ts"),
+  "utf8",
+);
 
 /**
  * Conditional-context contract for the public concierge handler.
@@ -22,13 +26,15 @@ const route = readFileSync(
  * A runtime assertion on the same guarantee belongs in the scenario runner,
  * which drives the deployed route; see scripts/run-concierge-scenarios.mjs.
  */
-const DETERMINISTIC_RETURN = "return new Response(stream, { headers: sseHeaders });";
+const DETERMINISTIC_RETURN =
+  "return new Response(stream, { headers: sseHeaders });";
 const CORPUS_QUERY = '.from("rag_chunks")';
 const FACETS_RPC = 'supabase.rpc("vehicle_facets_v2"';
 const LOYALTY_CALL = "loadChatLoyaltyContext(supabase";
 const PREFERENCES_CALL = "loadVisitorPreferenceContext(supabase";
 const IMAGE_DESCRIPTIONS = '.from("vehicle_images")';
-const SELECTED_VEHICLE_FETCH = "getTenantVehicle(supabase, tenant.tenantId, selectedVehicleCandidate)";
+const SELECTED_VEHICLE_FETCH =
+  "getTenantVehicle(supabase, tenant.tenantId, selectedVehicleCandidate)";
 const DETERMINISTIC_GUARD = "if (hasDeterministicAnswer(";
 
 const at = (needle: string) => {
@@ -144,7 +150,10 @@ describe("public chat route: memory lifecycle wiring", () => {
     // A conflict is a healthy store refusing a stale write, not an incident.
     const guard = at("error instanceof ConversationMemoryConflictError");
     // The conflict branch only, up to its early return.
-    const branch = route.slice(guard, route.indexOf('return "conflict";', guard));
+    const branch = route.slice(
+      guard,
+      route.indexOf('return "conflict";', guard),
+    );
     expect(branch).toContain("memory-conflict");
     expect(branch).not.toContain("captureError");
   });
@@ -175,7 +184,8 @@ describe("public chat route: client-supplied turn id", () => {
   });
 
   it("records only whether an id was client-supplied, never the id's origin detail", () => {
-    const records = route.split("clientRequestId: clientRequestId !== null").length - 1;
+    const records =
+      route.split("clientRequestId: clientRequestId !== null").length - 1;
     expect(records).toBe(2);
   });
 
@@ -192,12 +202,15 @@ describe("public chat route: deterministic turns commit before they act", () => 
     // This path knows its whole answer up front, so it can close the
     // stale-action race at the source rather than relying on the browser.
     const start = at("const persisted = visibleContent");
-    const firstAction = route.indexOf('sseEvent({ type: "action", action })', start);
+    const firstAction = route.indexOf(
+      'sseEvent({ type: "action", action })',
+      start,
+    );
     expect(firstAction).toBeGreaterThan(start);
   });
 
   it("withholds the actions of a turn that lost the race", () => {
-    const guard = at("const supersededByNewerTurn = persisted === \"conflict\"");
+    const guard = at('const supersededByNewerTurn = persisted === "conflict"');
     const window = route.slice(guard, guard + 500);
     expect(window).toContain("if (!supersededByNewerTurn)");
   });
@@ -207,7 +220,9 @@ describe("public chat route: deterministic turns commit before they act", () => 
     // turn whose answer simply does not move the page.
     const guard = at("const supersededByNewerTurn");
     const window = route.slice(guard, guard + 900);
-    const meta = window.indexOf("controller.enqueue(encoder.encode(metaEvent))");
+    const meta = window.indexOf(
+      "controller.enqueue(encoder.encode(metaEvent))",
+    );
     const gate = window.indexOf("if (!supersededByNewerTurn)");
     expect(meta).toBeGreaterThan(-1);
     expect(meta).toBeLessThan(gate);
@@ -239,7 +254,10 @@ describe("public chat route: duplicate in-flight turns", () => {
 
   it("returns without calling the model when the lease is held", () => {
     const guard = at("if (turnClaim && !turnClaim.granted)");
-    const body = route.slice(guard, route.indexOf("}", route.indexOf("duplicateTurnResponse", guard)));
+    const body = route.slice(
+      guard,
+      route.indexOf("}", route.indexOf("duplicateTurnResponse", guard)),
+    );
     expect(body).toContain("duplicateTurnResponse");
     // The refusal must come before the state/model machinery, not after it.
     expect(guard).toBeLessThan(at("const stateResolvedAtMs"));
@@ -270,7 +288,9 @@ describe("public chat route: duplicate in-flight turns", () => {
 
 describe("public chat route: degraded shared memory", () => {
   it("derives the degraded flag from the configured store, not from a guess", () => {
-    expect(route).toContain("const memoryDegraded = isConversationMemoryDegraded()");
+    expect(route).toContain(
+      "const memoryDegraded = isConversationMemoryDegraded()",
+    );
   });
 
   it("passes it to both reference resolvers", () => {
@@ -291,14 +311,17 @@ describe("public chat route: degraded shared memory", () => {
   });
 
   it("does not re-present a stored result set during an outage", () => {
-    expect(route).toContain("stateTransition.useStoredResultSet && memoryDegraded");
+    expect(route).toContain(
+      "stateTransition.useStoredResultSet && memoryDegraded",
+    );
   });
 
   it("reports the degraded state on every turn record", () => {
     // Three recording sites: the deterministic path, the shared model/tool
     // helper, and the duplicate refusal. A run of degraded turns is only
     // legible if every path reports it.
-    const records = route.split("memoryDegraded: isConversationMemoryDegraded()").length - 1;
+    const records =
+      route.split("memoryDegraded: isConversationMemoryDegraded()").length - 1;
     expect(records).toBe(3);
   });
 });
@@ -307,11 +330,15 @@ describe("public chat route: multi-call usage honesty", () => {
   it("declares that phase-1 counts cover only one of the tool path's two calls", () => {
     // The tool path makes two upstream calls; only the first reports usage.
     expect(route).toContain("coversCalls: 1");
-    expect(route).toContain('recordModelTurn({ route: "tool", emitted: emittedActions, calls: 2 })');
+    expect(route).toContain(
+      'recordModelTurn({ route: "tool", emitted: emittedActions, calls: 2 })',
+    );
   });
 
   it("still reports the prose path as a single call", () => {
-    expect(route).toContain('recordModelTurn({ route: "model", emitted: actions, calls: 1 })');
+    expect(route).toContain(
+      'recordModelTurn({ route: "model", emitted: actions, calls: 1 })',
+    );
   });
 });
 
@@ -319,25 +346,27 @@ describe("public chat route: shadow interpretation is inert by default", () => {
   it("only runs where the deterministic layer already failed to resolve", () => {
     // The population the interpreter exists to improve. Running it on turns
     // the rules already answered would spend money to confirm agreement.
-    const shadow = at("isShadowInterpretationEnabled(tenant.slug)");
+    const shadow = at("const shadowInterpretationScheduled =");
     expect(shadow).toBeGreaterThan(at(DETERMINISTIC_RETURN));
   });
 
-  it("never lets a shadow failure reach the turn", () => {
-    const shadow = at("runShadowInterpretation({");
+  it("runs through the framework lifecycle after the response", () => {
+    const shadow = at("after(async () =>");
     const window = route.slice(shadow, shadow + 1200);
-    expect(window).toContain(".catch(() => null)");
+    expect(window).toContain("runShadowInterpretation(shadowInput)");
+    expect(window).toContain("recordChatInterpretationShadow");
   });
 
-  it("starts before phase 1 so it does not serialize behind the real call", () => {
-    expect(at("const shadowInterpretation =")).toBeLessThan(
-      at("const modelStartedAtMs"),
+  it("does not await the experiment on the visitor response path", () => {
+    expect(route).not.toContain("await shadowInterpretation");
+    expect(route).toContain(
+      "shadowModelCalls: shadowInterpretationScheduled ? 1 : 0",
     );
   });
 
   it("emits no action and writes no memory from the shadow path", () => {
-    const shadow = at("const shadowResult = shadowInterpretation");
-    const window = route.slice(shadow, shadow + 900);
+    const shadow = at("after(async () =>");
+    const window = route.slice(shadow, shadow + 1100);
     expect(window).not.toContain("persistTurnMemory");
     expect(window).not.toContain('type: "action"');
     expect(window).not.toContain("controller.enqueue");
@@ -346,14 +375,17 @@ describe("public chat route: shadow interpretation is inert by default", () => {
   it("counts shadow calls apart from the turn's own model calls", () => {
     // Folding them together would inflate every cost-per-answer figure the
     // moment the experiment is switched on.
-    expect(route).toContain("shadowModelCalls: shadowResult?.modelCalls ?? 0");
+    expect(route).toContain(
+      "shadowModelCalls: shadowInterpretationScheduled ? 1 : 0",
+    );
   });
 
   it("logs field names and booleans, never the message or filter values", () => {
-    const log = at('captureDebug("api/chat/shadow-interpretation"');
+    const log = at("recordChatInterpretationShadow({");
     const window = route.slice(log, log + 600);
     expect(window).not.toContain("lastUser.content");
-    expect(window).toContain("filterFieldsDiffering");
+    expect(window).toContain("comparison: result.comparison");
+    expect(observability).toContain("filterFieldsDiffering");
   });
 });
 

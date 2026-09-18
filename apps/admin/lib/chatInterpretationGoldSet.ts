@@ -20,7 +20,12 @@ export type GoldTurn = {
   message: string;
   /** The reading a correct interpreter produces. */
   expected: Pick<ChatInterpretation, "kind"> &
-    Partial<Pick<ChatInterpretation, "setFilters" | "clearFilters" | "reference" | "clarifyReason">> & {
+    Partial<
+      Pick<
+        ChatInterpretation,
+        "setFilters" | "clearFilters" | "reference" | "clarifyReason"
+      >
+    > & {
       /** Clauses a correct reading must NOT silently drop. */
       expectUnsupported?: boolean;
     };
@@ -44,14 +49,21 @@ export const CHAT_INTERPRETATION_GOLD_SET: readonly GoldConversation[] = [
     turns: [
       {
         message: "any BMWs under 70k?",
-        expected: { kind: "search", setFilters: { make: "BMW", priceMax: 70000 } },
+        expected: {
+          kind: "search",
+          setFilters: { make: "BMW", priceMax: 70000 },
+        },
         note: "Baseline search with a budget.",
       },
       {
         message: "2026 Camry",
         expected: {
           kind: "search",
-          setFilters: { make: "Toyota", model: "Camry", year: 2026 },
+          // The interpreter reports only what the visitor said. The trusted
+          // tenant facet vocabulary may deterministically resolve Camry to
+          // Toyota later; asking the model to invent the make would contradict
+          // the schema contract.
+          setFilters: { model: "Camry", year: 2026 },
         },
         note: "The 2026-07-23 drift bug: the $70k cap must not survive an explicit new vehicle topic.",
       },
@@ -96,12 +108,18 @@ export const CHAT_INTERPRETATION_GOLD_SET: readonly GoldConversation[] = [
       },
       {
         message: "open the 3rd one",
-        expected: { kind: "reference", reference: { kind: "ordinal", position: 3 } },
+        expected: {
+          kind: "reference",
+          reference: { kind: "ordinal", position: 3 },
+        },
         note: "Numeral ordinals fell through to the model, which opened the 4th.",
       },
       {
         message: "compare the first two",
-        expected: { kind: "reference", reference: { kind: "compare", positions: [1, 2] } },
+        expected: {
+          kind: "reference",
+          reference: { kind: "compare", positions: [1, 2] },
+        },
         note: "'compare' was once typo-corrected into the model name 'Compass'.",
       },
     ],
@@ -118,8 +136,8 @@ export const CHAT_INTERPRETATION_GOLD_SET: readonly GoldConversation[] = [
       },
       {
         message: "anything cheaper?",
-        expected: { kind: "refine" },
-        note: "Relative budget language with no number at all.",
+        expected: { kind: "clarify", clarifyReason: "relative_constraint" },
+        note: "Relative budget language with no numeric anchor needs a bounded clarification before it can become a trusted filter.",
       },
     ],
   },
@@ -172,7 +190,10 @@ export const CHAT_INTERPRETATION_GOLD_SET: readonly GoldConversation[] = [
 export function goldSetDenominators(): {
   conversations: number;
   turns: number;
-  byPartition: Record<GoldConversation["partition"], { conversations: number; turns: number }>;
+  byPartition: Record<
+    GoldConversation["partition"],
+    { conversations: number; turns: number }
+  >;
 } {
   const byPartition = {
     development: { conversations: 0, turns: 0 },
@@ -184,7 +205,10 @@ export function goldSetDenominators(): {
   }
   return {
     conversations: CHAT_INTERPRETATION_GOLD_SET.length,
-    turns: CHAT_INTERPRETATION_GOLD_SET.reduce((sum, c) => sum + c.turns.length, 0),
+    turns: CHAT_INTERPRETATION_GOLD_SET.reduce(
+      (sum, c) => sum + c.turns.length,
+      0,
+    ),
     byPartition,
   };
 }

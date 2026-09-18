@@ -31,6 +31,7 @@ import type {
   RetrievedChunk,
   Vehicle,
 } from "@lume/types";
+import { after } from "next/server";
 import { createAnonServerClient, createServiceClient } from "@lume/db/server";
 import {
   getTenantVehicle,
@@ -126,6 +127,7 @@ import {
   isShadowInterpretationEnabled,
 } from "@/lib/chatInterpretationShadow";
 import { runShadowInterpretation } from "@/lib/chatInterpretationRunner.server";
+import { CHAT_INTERPRETATION_SCHEMA_VERSION } from "@/lib/chatInterpretation";
 import {
   claimConversationTurn,
   conversationMemoryKey,
@@ -136,6 +138,7 @@ import {
   captureConciergeTranscript,
   captureDebug,
   captureError,
+  recordChatInterpretationShadow,
   recordConciergeTurn,
   recordModelUsage,
 } from "@/lib/observability";
@@ -1249,25 +1252,46 @@ export async function POST(request: Request): Promise<Response> {
   // which is exactly the population the contextual interpreter exists to
   // improve. The candidate plan is generated, compared and discarded: it
   // cannot execute an action, touch memory, or change one byte of the
-  // response. Started here and awaited after phase 1 so it runs alongside the
-  // real call rather than delaying it.
-  const shadowInterpretation = isShadowInterpretationEnabled(tenant.slug)
-    ? runShadowInterpretation({
-        provider: chatProvider,
-        userMessage: lastUser.content,
-        context: buildInterpreterContext({
-          state: conversationState,
-          deterministicFilters: extractedInventoryFilters,
-        }),
-        deterministic: {
-          // The deterministic layer got far enough to extract filters but not
-          // far enough to answer, which is the disagreement worth measuring.
-          kind: statePresentationRequest ? "present" : "search",
-          filters: conversationState.activeFilters,
-          hasReference: Boolean(stateOrdinalVehicleId ?? stateSelectedVehicleId),
-        },
-      }).catch(() => null)
-    : null;
+  // response. `after()` starts the observation once the response lifecycle is
+  // complete, so a slow or timed-out experiment cannot add latency to the
+  // visitor. It is still lifecycle-managed by Next/Vercel rather than an
+  // unawaited promise that a serverless instance may discard.
+  const shadowInterpretationScheduled = isShadowInterpretationEnabled(
+    tenant.slug,
+  );
+  if (shadowInterpretationScheduled) {
+    const shadowInput = {
+      provider: chatProvider,
+      userMessage: lastUser.content,
+      context: buildInterpreterContext({
+        state: conversationState,
+        deterministicFilters: extractedInventoryFilters,
+      }),
+      deterministic: {
+        // The deterministic layer got far enough to extract filters but not
+        // far enough to answer, which is the disagreement worth measuring.
+        kind: statePresentationRequest
+          ? ("present" as const)
+          : ("search" as const),
+        filters: conversationState.activeFilters,
+        hasReference: Boolean(stateOrdinalVehicleId ?? stateSelectedVehicleId),
+      },
+    };
+    after(async () => {
+      const result = await runShadowInterpretation(shadowInput);
+      recordChatInterpretationShadow({
+        requestId,
+        tenantId: tenant.tenantId,
+        provider: chatProvider.profile.provider,
+        modelId: chatProvider.profile.id,
+        schemaVersion: CHAT_INTERPRETATION_SCHEMA_VERSION,
+        outcome: result.outcome,
+        durationMs: result.durationMs,
+        usage: result.usage,
+        comparison: result.comparison,
+      });
+    });
+  }
 
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
   // parseToolCalls expects the non-streamed message.tool_calls shape; if the
@@ -1345,18 +1369,6 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const modelCompletedAtMs = Date.now();
-  // Awaited, never allowed to fail the turn: the runner resolves null on every
-  // error path including its own timeout.
-  const shadowResult = shadowInterpretation ? await shadowInterpretation : null;
-  if (shadowResult) {
-    captureDebug("api/chat/shadow-interpretation", {
-      tenantId: tenant.tenantId,
-      ...shadowResult.comparison,
-      // Field names and booleans only; no message, no filter values.
-      filterFieldsDiffering: shadowResult.comparison.filterFieldsDiffering.join(","),
-      shadowDurationMs: shadowResult.durationMs,
-    });
-  }
   /**
    * Both model paths report through here so their fields cannot drift.
    *
@@ -1397,7 +1409,9 @@ export async function POST(request: Request): Promise<Response> {
       },
       // Counted apart from the turn's own calls: an experiment's spend must
       // never be mistaken for the product's cost per answer.
-      shadowModelCalls: shadowResult?.modelCalls ?? 0,
+      // The scheduled call is counted even if it later times out or returns a
+      // malformed plan. Its detailed outcome is emitted by the after() task.
+      shadowModelCalls: shadowInterpretationScheduled ? 1 : 0,
       // Phase 2 streams without stream_options.include_usage, so only the
       // phase-1 block is ever present. Absent => "unknown", never 0; present
       // on a two-call turn => "provider_partial", because reporting one call's

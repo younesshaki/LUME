@@ -12,7 +12,10 @@
  * never throws — observability must not take a route down.
  */
 
-export type ErrorContext = Record<string, string | number | boolean | null | undefined>;
+export type ErrorContext = Record<
+  string,
+  string | number | boolean | null | undefined
+>;
 
 export type CapturedError = {
   level: "error";
@@ -46,6 +49,86 @@ export function captureDebug(
   }
 }
 
+export type ChatInterpretationShadowRecord = {
+  level: "info";
+  scope: "concierge.interpretation.shadow";
+  requestId: string;
+  tenantId: string;
+  provider: string;
+  modelId: string;
+  schemaVersion: number;
+  outcome: "accepted" | "malformed" | "provider_error" | "timeout";
+  modelCalls: 1;
+  durationMs: number | null;
+  usage: { inputTokens: number | null; outputTokens: number | null };
+  kindAgrees: boolean | null;
+  referenceAgrees: boolean | null;
+  candidateClarifies: boolean | null;
+  candidateRetainedUnsupported: boolean | null;
+  filterFieldsDiffering: string[];
+  at: string;
+};
+
+/**
+ * One privacy-safe record for every attempted shadow interpretation call.
+ *
+ * Unlike debug output this is always emitted when shadow mode is enabled: a
+ * timeout or malformed response still cost a provider call and must count as
+ * an abstention. Only field names and booleans are accepted; visitor text,
+ * filter values, model output and identifiers cannot enter this shape.
+ */
+export function recordChatInterpretationShadow(input: {
+  requestId: string;
+  tenantId: string;
+  provider: string;
+  modelId: string;
+  schemaVersion: number;
+  outcome: ChatInterpretationShadowRecord["outcome"];
+  durationMs?: number | null;
+  usage?: { inputTokens?: number | null; outputTokens?: number | null };
+  comparison?: {
+    kindAgrees: boolean;
+    referenceAgrees: boolean;
+    candidateClarifies: boolean;
+    candidateRetainedUnsupported: boolean;
+    filterFieldsDiffering: readonly string[];
+  } | null;
+  now?: () => number;
+}): ChatInterpretationShadowRecord | null {
+  try {
+    const comparison = input.comparison ?? null;
+    const record: ChatInterpretationShadowRecord = {
+      level: "info",
+      scope: "concierge.interpretation.shadow",
+      requestId: input.requestId.slice(0, 80),
+      tenantId: input.tenantId.slice(0, 80),
+      provider: input.provider.slice(0, 40),
+      modelId: input.modelId.slice(0, 100),
+      schemaVersion: input.schemaVersion,
+      outcome: input.outcome,
+      modelCalls: 1,
+      durationMs: finiteOrNull(input.durationMs),
+      usage: {
+        inputTokens: finiteOrNull(input.usage?.inputTokens),
+        outputTokens: finiteOrNull(input.usage?.outputTokens),
+      },
+      kindAgrees: comparison?.kindAgrees ?? null,
+      referenceAgrees: comparison?.referenceAgrees ?? null,
+      candidateClarifies: comparison?.candidateClarifies ?? null,
+      candidateRetainedUnsupported:
+        comparison?.candidateRetainedUnsupported ?? null,
+      filterFieldsDiffering: [...(comparison?.filterFieldsDiffering ?? [])]
+        .slice(0, 20)
+        .map((field) => String(field).slice(0, 40)),
+      at: new Date((input.now ?? Date.now)()).toISOString(),
+    };
+    console.info(JSON.stringify(record));
+    return record;
+  } catch {
+    return null;
+  }
+}
+
 export type ConciergeTranscriptTurn = {
   sessionId: string;
   tenantId: string;
@@ -70,7 +153,9 @@ export type ConciergeTranscriptTurn = {
  * stream. Gated by the same LUME_CHAT_DEBUG flag — never on by default, and
  * this is server console output only, never sent to the visitor.
  */
-export function captureConciergeTranscript(turn: ConciergeTranscriptTurn): void {
+export function captureConciergeTranscript(
+  turn: ConciergeTranscriptTurn,
+): void {
   if (process.env.LUME_CHAT_DEBUG?.trim() !== "1") return;
   try {
     const serialized = JSON.stringify({
@@ -148,7 +233,10 @@ export function withRouteErrorCapture(
     try {
       return await handler(request);
     } catch (error) {
-      captureError(scope, error, { url: new URL(request.url).pathname, method: request.method });
+      captureError(scope, error, {
+        url: new URL(request.url).pathname,
+        method: request.method,
+      });
       return new Response(JSON.stringify({ error: "Internal error" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
@@ -204,7 +292,9 @@ function sanitizeContext(context: ErrorContext): ErrorContext {
   return out;
 }
 
-function boundedDebugDetail(value: Record<string, unknown>): Record<string, unknown> {
+function boundedDebugDetail(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) {
     if (typeof entry === "string") out[key] = entry.slice(0, 300);
@@ -280,7 +370,6 @@ export function recordModelUsage(input: {
   }
 }
 
-
 /* ────────────────────────────────────────────────────────────────────────── *
  * Per-turn concierge telemetry
  *
@@ -302,25 +391,15 @@ export function recordModelUsage(input: {
  * saying so is the difference between a usable spend figure and a wrong one.
  */
 export type ConciergeUsageSource =
-  | "provider"
-  | "provider_partial"
-  | "estimated"
-  | "unknown";
+  "provider" | "provider_partial" | "estimated" | "unknown";
 
 /** "duplicate" is a turn refused because another delivery of it is running. */
 export type ConciergeTurnRoute =
-  | "deterministic"
-  | "model"
-  | "tool"
-  | "duplicate"
-  | "error";
+  "deterministic" | "model" | "tool" | "duplicate" | "error";
 
 /** Outcome of this turn's tenant-scoped inventory query, if one ran. */
 export type ConciergeQueryStatus =
-  | "not_run"
-  | "success"
-  | "empty"
-  | "unavailable";
+  "not_run" | "success" | "empty" | "unavailable";
 
 export type ConciergeTurnInput = {
   surface: "public" | "admin";
@@ -379,7 +458,11 @@ export type ConciergeTurnInput = {
    * LUME has no owner-approved price table yet, and inventing rates would
    * produce confident, wrong spend figures. Absent rates => cost "unpriced".
    */
-  price?: { inputPer1k: number; outputPer1k: number; tableVersion: string } | null;
+  price?: {
+    inputPer1k: number;
+    outputPer1k: number;
+    tableVersion: string;
+  } | null;
   timingsMs?: {
     state?: number | null;
     context?: number | null;
@@ -464,7 +547,10 @@ export function buildConciergeTurnRecord(
     ? (finiteOrNull(input.usage?.coversCalls) ?? modelCalls)
     : null;
   const partial =
-    hasCounts && coversCalls !== null && modelCalls > 0 && coversCalls < modelCalls;
+    hasCounts &&
+    coversCalls !== null &&
+    modelCalls > 0 &&
+    coversCalls < modelCalls;
 
   // A caller that supplies no counts gets "unknown" — never a zero that would
   // read as "this turn was free" in a spend report.

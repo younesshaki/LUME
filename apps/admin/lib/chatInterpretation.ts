@@ -47,6 +47,7 @@ export const INTERPRETATION_CLARIFY_REASONS = [
   "ambiguous_make",
   "ambiguous_reference",
   "conflicting_constraints",
+  "relative_constraint",
   "unsupported_request",
 ] as const;
 
@@ -92,6 +93,20 @@ const MAX_CLAUSE_LENGTH = 120;
 const MAX_ORDINAL_POSITION = 20;
 const MAX_COMPARE_POSITIONS = 4;
 const MAX_FILTER_TEXT_LENGTH = 60;
+const MIN_VEHICLE_YEAR = 1886;
+const MAX_VEHICLE_YEAR = 2100;
+const MAX_PRICE = 100_000_000;
+const MAX_MILEAGE = 10_000_000;
+
+const TOP_LEVEL_KEYS = new Set([
+  "version",
+  "kind",
+  "setFilters",
+  "clearFilters",
+  "reference",
+  "clarifyReason",
+  "unsupportedClauses",
+]);
 
 const KINDS: readonly ChatInterpretationKind[] = [
   "search",
@@ -138,22 +153,32 @@ function parseReference(value: unknown): InterpretationReference | null {
   if (!isRecord(value)) return null;
   switch (value.kind) {
     case "ordinal": {
+      if (!hasExactKeys(value, ["kind", "position"])) return null;
       const position = boundedPosition(value.position);
       return position === null ? null : { kind: "ordinal", position };
     }
     case "last":
+      if (!hasExactKeys(value, ["kind"])) return null;
       return { kind: "last" };
     case "selected":
+      if (!hasExactKeys(value, ["kind"])) return null;
       return { kind: "selected" };
     case "compare": {
+      if (!hasExactKeys(value, ["kind", "positions"])) return null;
       if (!Array.isArray(value.positions)) return null;
-      const positions = value.positions
-        .map(boundedPosition)
-        .filter((entry): entry is number => entry !== null);
+      const parsedPositions = value.positions.map(boundedPosition);
+      // Reject the whole reference when even one position is invalid. Keeping
+      // the valid subset would silently change "compare 1, 999 and 2" into a
+      // request the visitor did not make.
+      if (parsedPositions.some((position) => position === null)) return null;
+      const positions = parsedPositions as number[];
       // A comparison of one thing is not a comparison; treat it as malformed
       // rather than quietly turning it into a reference.
       return positions.length >= 2 && positions.length <= MAX_COMPARE_POSITIONS
-        ? { kind: "compare", positions: positions.slice(0, MAX_COMPARE_POSITIONS) }
+        ? {
+            kind: "compare",
+            positions: positions.slice(0, MAX_COMPARE_POSITIONS),
+          }
         : null;
     }
     default:
@@ -172,12 +197,13 @@ function parseSetFilters(
     // working from a schema this build does not implement.
     if (!isFilterKey(key)) return null;
     if (NUMERIC_KEYS.includes(key)) {
-      if (typeof raw !== "number" || !Number.isFinite(raw) || raw < 0) return null;
+      if (!validNumericFilter(key, raw)) return null;
       out[key] = raw;
       continue;
     }
     if (typeof raw !== "string") return null;
-    const text = raw.trim().slice(0, MAX_FILTER_TEXT_LENGTH);
+    const text = raw.trim();
+    if (text.length > MAX_FILTER_TEXT_LENGTH) return null;
     if (!text) return null;
     out[key] = text;
   }
@@ -191,7 +217,9 @@ function parseSetFilters(
  * a partially-understood plan. A plan we half-understand is worse than none,
  * because the half we kept looks confident.
  */
-export function parseChatInterpretation(content: string): ChatInterpretation | null {
+export function parseChatInterpretation(
+  content: string,
+): ChatInterpretation | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(stripCodeFence(content));
@@ -199,6 +227,10 @@ export function parseChatInterpretation(content: string): ChatInterpretation | n
     return null;
   }
   if (!isRecord(parsed)) return null;
+  // A model working from a newer/different schema must be rejected wholesale.
+  // Silently dropping an `action`, URL, id, or future field would turn a
+  // partially-understood plan into an apparently valid one.
+  if (Object.keys(parsed).some((key) => !TOP_LEVEL_KEYS.has(key))) return null;
   if (parsed.version !== CHAT_INTERPRETATION_SCHEMA_VERSION) return null;
   if (!KINDS.includes(parsed.kind as ChatInterpretationKind)) return null;
   const kind = parsed.kind as ChatInterpretationKind;
@@ -206,30 +238,34 @@ export function parseChatInterpretation(content: string): ChatInterpretation | n
   const setFilters = parseSetFilters(parsed.setFilters);
   if (setFilters === null) return null;
 
-  if (parsed.clearFilters !== undefined && !Array.isArray(parsed.clearFilters)) {
+  if (
+    parsed.clearFilters !== undefined &&
+    !Array.isArray(parsed.clearFilters)
+  ) {
     return null;
   }
   const clearFilters = (parsed.clearFilters ?? []) as unknown[];
   if (!clearFilters.every(isFilterKey)) return null;
+  if (clearFilters.some((key) => setFilters[key] !== undefined)) return null;
 
-  const reference =
-    parsed.reference === undefined || parsed.reference === null
-      ? null
-      : parseReference(parsed.reference);
-  if (parsed.reference && reference === null) return null;
+  const hasRawReference =
+    parsed.reference !== undefined && parsed.reference !== null;
+  const reference = hasRawReference ? parseReference(parsed.reference) : null;
+  if (hasRawReference && reference === null) return null;
   // A reference kind with no reference is a contradiction, not a default.
   if (kind === "reference" && reference === null) return null;
 
-  const clarifyReason =
-    parsed.clarifyReason === undefined || parsed.clarifyReason === null
-      ? null
-      : typeof parsed.clarifyReason === "string" &&
-          (INTERPRETATION_CLARIFY_REASONS as readonly string[]).includes(
-            parsed.clarifyReason,
-          )
-        ? (parsed.clarifyReason as InterpretationClarifyReason)
-        : null;
-  if (parsed.clarifyReason && clarifyReason === null) return null;
+  const hasRawClarifyReason =
+    parsed.clarifyReason !== undefined && parsed.clarifyReason !== null;
+  const clarifyReason = !hasRawClarifyReason
+    ? null
+    : typeof parsed.clarifyReason === "string" &&
+        (INTERPRETATION_CLARIFY_REASONS as readonly string[]).includes(
+          parsed.clarifyReason,
+        )
+      ? (parsed.clarifyReason as InterpretationClarifyReason)
+      : null;
+  if (hasRawClarifyReason && clarifyReason === null) return null;
   if (kind === "clarify" && clarifyReason === null) return null;
 
   if (
@@ -238,13 +274,24 @@ export function parseChatInterpretation(content: string): ChatInterpretation | n
   ) {
     return null;
   }
-  const unsupportedClauses = ((parsed.unsupportedClauses ?? []) as unknown[])
+  const rawUnsupportedClauses = (parsed.unsupportedClauses ?? []) as unknown[];
+  if (rawUnsupportedClauses.length > MAX_UNSUPPORTED_CLAUSES) return null;
+  if (!rawUnsupportedClauses.every((entry) => typeof entry === "string")) {
+    return null;
+  }
+  if (
+    rawUnsupportedClauses.some(
+      (entry) => (entry as string).trim().length > MAX_CLAUSE_LENGTH,
+    )
+  ) {
+    return null;
+  }
+  const unsupportedClauses = rawUnsupportedClauses
     .filter((entry): entry is string => typeof entry === "string")
-    .map((entry) => entry.trim().slice(0, MAX_CLAUSE_LENGTH))
-    .filter(Boolean)
-    .slice(0, MAX_UNSUPPORTED_CLAUSES);
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
-  return {
+  const interpretation: ChatInterpretation = {
     version: CHAT_INTERPRETATION_SCHEMA_VERSION,
     kind,
     setFilters,
@@ -253,12 +300,113 @@ export function parseChatInterpretation(content: string): ChatInterpretation | n
     clarifyReason,
     unsupportedClauses,
   };
+  return interpretationIsConsistent(interpretation) ? interpretation : null;
+}
+
+function hasExactKeys(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+): boolean {
+  const expected = new Set(allowed);
+  return (
+    Object.keys(value).every((key) => expected.has(key)) &&
+    allowed.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+  );
+}
+
+function validNumericFilter(
+  key: InterpretableFilterKey,
+  value: unknown,
+): value is number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return false;
+  }
+  if (key === "year" || key === "yearMin" || key === "yearMax") {
+    return (
+      Number.isInteger(value) &&
+      value >= MIN_VEHICLE_YEAR &&
+      value <= MAX_VEHICLE_YEAR
+    );
+  }
+  if (key === "mileageMax") return value <= MAX_MILEAGE;
+  if (key === "priceMin" || key === "priceMax") return value <= MAX_PRICE;
+  return true;
+}
+
+function interpretationIsConsistent(value: ChatInterpretation): boolean {
+  const setCount = Object.keys(value.setFilters).length;
+  const clearCount = value.clearFilters.length;
+  const hasFilterChanges = setCount > 0 || clearCount > 0;
+  const hasReference = value.reference !== null;
+  const hasClarifier = value.clarifyReason !== null;
+  const priceMin = value.setFilters.priceMin;
+  const priceMax = value.setFilters.priceMax;
+  const yearMin = value.setFilters.yearMin;
+  const yearMax = value.setFilters.yearMax;
+
+  if (
+    typeof priceMin === "number" &&
+    typeof priceMax === "number" &&
+    priceMin > priceMax
+  ) {
+    return false;
+  }
+  if (
+    typeof yearMin === "number" &&
+    typeof yearMax === "number" &&
+    yearMin > yearMax
+  ) {
+    return false;
+  }
+  const year = value.setFilters.year;
+  if (
+    typeof year === "number" &&
+    ((typeof yearMin === "number" && year < yearMin) ||
+      (typeof yearMax === "number" && year > yearMax))
+  ) {
+    return false;
+  }
+
+  switch (value.kind) {
+    case "reference":
+      return hasReference && !hasFilterChanges && !hasClarifier;
+    case "clarify":
+      return hasClarifier && !hasReference && !hasFilterChanges;
+    case "present":
+      return !hasReference && !hasClarifier && !hasFilterChanges;
+    case "selected_followup":
+    case "lead_form":
+      return (
+        (!hasReference || value.reference?.kind === "selected") &&
+        !hasClarifier &&
+        !hasFilterChanges
+      );
+    case "search":
+      return setCount > 0 && !hasReference && !hasClarifier;
+    case "refine":
+      // Relative refinements such as "anything cheaper?" cannot be reduced to
+      // a trusted numeric filter. They must retain that clause for a later
+      // clarification rather than becoming an empty executable refinement.
+      return hasFilterChanges && !hasReference && !hasClarifier;
+    case "reset":
+      return setCount === 0 && !hasReference && !hasClarifier;
+    case "unsupported":
+      return (
+        value.unsupportedClauses.length > 0 &&
+        !hasReference &&
+        !hasClarifier &&
+        !hasFilterChanges
+      );
+  }
 }
 
 function stripCodeFence(content: string): string {
   const trimmed = content.trim();
   if (!trimmed.startsWith("```")) return trimmed;
-  return trimmed.replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
+  return trimmed
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```$/, "")
+    .trim();
 }
 
 /** The schema, described for the model. No tenant data appears here. */

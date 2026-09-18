@@ -53,16 +53,16 @@ All twelve were **confirmed**. The line anchors in §3.2 were accurate to within
 a line or two. Evidence is recorded in the review that preceded implementation;
 the load-bearing ones:
 
-| # | Finding | Evidence | Status now |
-|---|---|---|---|
-| 1 | Public route uses `retrieveByKeywords` | `route.ts:54,451` | Unchanged (still keyword-only; RAG deferred) |
-| 2 | Unpaginated `rag_chunks` read each turn | `route.ts:417-420` | **Fixed**: deferred to the model path |
-| 4 | Context loaded before it is known to be needed | one unconditional `Promise.all` | **Fixed** |
-| 7 | Admin planner gets the message with no task context; `clarify` → `unsupported` | `route.ts:271-303` | **Fixed** |
-| 9 | `recordModelUsage` has no tokens/latency/cost | `observability.ts:253-281` | **Fixed**: `recordConciergeTurn` |
-| 10 | Memory append is an unguarded read-modify-write | `conversationMemory.server.ts:33-37` | **Fixed**: compare-and-set |
-| 11 | Rate limiting is instance-local | `rateLimit.ts:1-9` | Unchanged (deferred with Phase 5) |
-| 12 | Vectors are 768-dim | `011:129` | Unchanged (RAG deferred) |
+| #   | Finding                                                                        | Evidence                             | Status now                                   |
+| --- | ------------------------------------------------------------------------------ | ------------------------------------ | -------------------------------------------- |
+| 1   | Public route uses `retrieveByKeywords`                                         | `route.ts:54,451`                    | Unchanged (still keyword-only; RAG deferred) |
+| 2   | Unpaginated `rag_chunks` read each turn                                        | `route.ts:417-420`                   | **Fixed**: deferred to the model path        |
+| 4   | Context loaded before it is known to be needed                                 | one unconditional `Promise.all`      | **Fixed**                                    |
+| 7   | Admin planner gets the message with no task context; `clarify` → `unsupported` | `route.ts:271-303`                   | **Fixed**                                    |
+| 9   | `recordModelUsage` has no tokens/latency/cost                                  | `observability.ts:253-281`           | **Fixed**: `recordConciergeTurn`             |
+| 10  | Memory append is an unguarded read-modify-write                                | `conversationMemory.server.ts:33-37` | **Fixed**: compare-and-set                   |
+| 11  | Rate limiting is instance-local                                                | `rateLimit.ts:1-9`                   | Unchanged (deferred with Phase 5)            |
+| 12  | Vectors are 768-dim                                                            | `011:129`                            | Unchanged (RAG deferred)                     |
 
 ### Corrections to this plan's assumptions
 
@@ -78,7 +78,7 @@ Recorded so the next agent does not re-derive them:
    Phase 4a (authoring) before 4b (retrieval).
 3. **No embedder is configured.** The only implementation is Ollama pointed at
    a LAN address; `apps/admin/.env.local` carries no embedding provider. The
-   provider decision in §12.3 is a Phase 4 *blocker*, not a deferral.
+   provider decision in §12.3 is a Phase 4 _blocker_, not a deferral.
 4. **`retrieveContext` and `match_rag_chunks_for_tenant` are dead code** — not
    called anywhere in app code. The RPC exists but has never run in production.
 5. **`rag_chunks` is anon-readable table-wide** for any active tenant
@@ -95,7 +95,7 @@ Recorded so the next agent does not re-derive them:
 8. **§4.3 conflicts with a deliberate fix.** `preserveResultSetForZeroResults`
    intentionally rolls filters back and retains the prior result set to prevent
    the 2026-07-22 compounding bug. The attempted-zero separation was
-   implemented *on top of* that rollback, not instead of it.
+   implemented _on top of_ that rollback, not instead of it.
 
 ### Follow-up — lifecycle wiring (same branch)
 
@@ -144,7 +144,7 @@ It does two jobs:
    is withheld.
 
 **Server ordering.** The deterministic path now commits its memory write
-*before* emitting any action, so a turn that loses the compare-and-set race
+_before_ emitting any action, so a turn that loses the compare-and-set race
 never emits actions at all — the race is closed at the source there, and meta
 and the visible text are still sent. The model and tool paths deliberately keep
 persistence after streaming: their prose arrives token by token, and buffering
@@ -244,31 +244,102 @@ pushed or merged.
 
 Four further commits were added there:
 
-| Commit | What |
-|---|---|
+| Commit    | What                                                                                                     |
+| --------- | -------------------------------------------------------------------------------------------------------- |
 | `3b02c1d` | Shared-memory readiness in the deploy verifier, memory-mode on `/api/ready`, opt-in real-Upstash harness |
-| `6b3a79e` | Browser verification of the stale-action and duplicate-turn guarantees |
-| `94eb4fe` | Phase 3 contextual interpretation, shadow-only, off by default |
-| *(this)* | Documentation reconciliation |
+| `6b3a79e` | Browser verification of the stale-action and duplicate-turn guarantees                                   |
+| `94eb4fe` | Phase 3 contextual interpretation, shadow-only, off by default                                           |
+| _(this)_  | Documentation reconciliation                                                                             |
 
 **Phase 3 is shadow-only and enabled nowhere.** Phases 4-6 remain out of scope:
 no embeddings, no hybrid retrieval, no FTS, no knowledge CRUD, no reranking and
 no schema work were implemented in this round.
+
+### Phase 3 evidence-gate hardening (2026-09-18)
+
+The first shadow implementation was reviewed before any tenant was enabled.
+That review found four reasons it was not yet safe to treat shadow output as
+evidence: provider failures and malformed replies disappeared from the metric,
+the route awaited the experiment before returning and could add up to six
+seconds of latency, unknown plan fields were silently discarded, and the gold
+set had no executable scorer or minimum sample requirement.
+
+The follow-up corrects those issues without enabling behavior:
+
+- `chatInterpretation.ts` now rejects unknown top-level/nested fields,
+  contradictory set/clear instructions, invalid ranges, impossible years,
+  partially valid comparisons, and intent/payload combinations that cannot be
+  executed consistently. A selected follow-up may carry only a `selected`
+  reference. Relative constraints have their own typed clarification reason.
+- `runShadowInterpretation()` returns an explicit outcome for every attempted
+  call (`accepted`, `malformed`, `provider_error`, or `timeout`), plus duration
+  and provider-reported usage. An attempted paid call can no longer disappear
+  because there was no candidate to compare. Calls have a six-second deadline,
+  a 600-character input cap, and a 350-token output cap.
+- The public route schedules the experiment with Next.js `after()`. The real
+  response never awaits it, while the platform still keeps the serverless task
+  alive. One always-on, privacy-safe telemetry line records the outcome,
+  duration, token usage, and disagreement field names—never visitor text,
+  filter values, model output, vehicle IDs, or action parameters.
+- `chatInterpretationEvaluation.ts` scores exact meaning over every expected
+  turn, counts timeout/provider/malformed/missing rows as abstentions, and
+  separately measures unsupported-clause retention. Duplicate or unknown rows
+  cannot inflate results, and partition membership comes from the versioned
+  gold set rather than caller input.
+- `npm run evaluate:chat-interpretation` is an explicit-spend, fixture-only
+  runner. Development is the default partition; held-out requires a second
+  acknowledgement. It refuses provider fallback so the named model is the one
+  being measured, and prints fixture IDs/outcomes rather than messages or
+  plans.
+
+**Activation remains blocked at the evidence gate.** Execution wiring was
+intentionally not added before that proof exists. The provisional gate is at
+least 100 independently reviewed held-out turns, 98% exact match over all
+held-out turns (not merely accepted turns), 98% acceptance, and 100% retention
+on mixed requests. The current held-out corpus has only
+seven turns, so even a perfect provider run is ineligible. No provider key is
+available in the integration worktree and no paid evaluation was run. Until an
+independent corpus is assembled and a named provider clears the gate, plans
+remain shadow-only and cannot mutate state, execute queries/actions, or alter a
+reply.
+
+Run development fixtures only:
+
+```bash
+CONCIERGE_INTERPRETATION_EVAL=1 \
+CONCIERGE_INTERPRETATION_EVAL_MODEL=deepseek-v4-flash \
+npm run evaluate:chat-interpretation
+```
+
+Run held-out fixtures as a separate, intentional measurement:
+
+```bash
+CONCIERGE_INTERPRETATION_EVAL=1 \
+CONCIERGE_INTERPRETATION_EVAL_CONFIRM=held-out \
+CONCIERGE_INTERPRETATION_EVAL_MODEL=deepseek-v4-flash \
+npm run evaluate:chat-interpretation -- --held-out
+```
+
+The next activation change must be a separate reviewable commit: compile an
+accepted interpretation into the existing deterministic state/query/reference
+pipeline, canary it by tenant, and retain the old unresolved-model path as the
+rollback. It must not add a second executor or allow a model-produced vehicle
+ID, URL, capability, SQL fragment, or action.
 
 ### Verification performed
 
 Everything below was re-run by me in the integration worktree on 2026-09-18,
 not carried forward from an earlier report:
 
-| Gate | Result |
-|---|---|
-| `npm run check:migrations` | 86 sequential files, unchanged from `features/upcoming` |
-| `npm run typecheck:all` | clean |
-| `VITE_LUME_TENANT=default npx vitest run` | **226 files / 1777 tests passing** |
-| `npm run build` | clean |
-| `npm run build:admin` | clean |
-| `git diff --check` | clean |
-| `npm run test:e2e:concierge` | **7 browser specs passing** |
+| Gate                                      | Result                                                  |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `npm run check:migrations`                | 86 sequential files, unchanged from `features/upcoming` |
+| `npm run typecheck:all`                   | clean                                                   |
+| `VITE_LUME_TENANT=default npx vitest run` | **228 files / 1794 tests passing**                      |
+| `npm run build`                           | clean                                                   |
+| `npm run build:admin`                     | clean                                                   |
+| `git diff --check`                        | clean                                                   |
+| `npm run test:e2e:concierge`              | **7 browser specs passing**                             |
 
 The 1,642 figure previously recorded here was stale. For the record, the counts
 diverge legitimately between checkouts: the main worktree reports two tests more
@@ -278,17 +349,17 @@ those two, not a regression.
 
 **What each class of evidence actually proves:**
 
-- *Unit and fixture level* — the state machine, memory contract, turn claim,
+- _Unit and fixture level_ — the state machine, memory contract, turn claim,
   telemetry redaction, interpretation schema and gold set. Real proof of our
   logic.
-- *Browser level, mocked backend* — that a current turn's action reaches the
+- _Browser level, mocked backend_ — that a current turn's action reaches the
   router and changes the URL, and that a superseded, aborted or duplicate turn
   does not. Real proof that the guard reaches the DOM; the chat endpoint is
   fulfilled by `page.route`, so it proves nothing about a live server.
-- *Simulator level only* — the compare-and-set Lua and the `SET NX EX` lease.
+- _Simulator level only_ — the compare-and-set Lua and the `SET NX EX` lease.
   `scripts/verify-shared-conversation-memory.mjs` exists to prove them against
   a real Upstash and **has not been run**, because there is none to run against.
-- *Not verified at all* — any live user journey against a real provider and a
+- _Not verified at all_ — any live user journey against a real provider and a
   real Supabase. No live scenario run was performed. A green build proves a
   build; it does not prove a conversation.
 
@@ -355,28 +426,28 @@ Do not infer deployed migration status from SQL filenames or old documents. Insp
 
 Line anchors refer to the September 12 checkout and will drift. Locate named symbols before editing.
 
-| Concern | Current entry points | What to inspect |
-|---|---|---|
-| Public orchestration | `apps/admin/app/api/chat/route.ts:245` | Tenant, plan, session, retrieval, tools, deterministic precedence, SSE |
-| Public state | `apps/admin/lib/chatConversationState.ts:169` | `transitionInventoryState`, reference resolution, constraint enforcement, reset/zero behavior |
-| Extracted deterministic rules | `apps/admin/lib/chatDeterministicRules.ts` and `chatDeterministicAnswer.ts` | Preserve prior bug fixes and precedence |
-| Language and trusted queries | `packages/rag/src/vehicleFilters.ts`, `vehicleTerms.ts`, `fuzzyMatch.ts` | Phrase extraction versus authoritative filter execution |
-| Public tool execution | `packages/bot/src/`, `apps/admin/lib/chatTools.ts`, `chatNavigation.ts` | Tool advertisement, validation, execution, action grounding |
-| Public client | `src/lib/deepseekService.ts`, `src/components/chat/OllamaChat.tsx` | Session lifecycle, SSE handling, action dispatch; follow imports to actual UI consumers |
-| Admin control plane | `apps/admin/lib/adminConcierge.ts` | Capability registry, closed intent union, minimum role, confirmation |
-| Admin route | `apps/admin/app/api/admin/concierge/route.ts:271` | Model fallback, context, structured queries, safe responses |
-| Admin state | `apps/admin/lib/adminConciergeState.ts` | Result-set TTL, ordered IDs, selection, terse references |
-| Admin commands | `apps/admin/lib/adminConciergeCommands.server.ts`, `adminConciergeCommandReceipt.ts` | Proposal, exact target, stale-state checks, idempotency, verification |
-| Confirm endpoint | `apps/admin/app/api/admin/concierge/commands/[commandId]/confirm/route.ts` | Fresh authorization and transactional execution |
-| Adjacent editor copilot | `apps/admin/app/api/editor/chat/route.ts` | Keep its draft/Apply contract; do not silently merge it into an operator |
-| Shared memory | `packages/bot/src/conversationMemory.ts`, `apps/admin/lib/conversationMemory.server.ts` | Key scopes, TTL, serialization, fallback, concurrent updates |
-| Keyword retrieval | `packages/rag/src/keywordRetrieval.ts:24` | Substring/fuzzy scoring and top-k behavior |
-| Semantic retrieval | `packages/rag/src/server.ts` | Existing embedder seam and tenant vector RPC |
-| Prompt evidence | `packages/rag/src/prompt.ts` | Counts, source categories, factual boundaries, token budget |
-| Knowledge admin | `apps/admin/app/admin/[tenant]/knowledge/`, `apps/admin/lib/knowledge.ts` | Follow mutations to establish ingestion/edit behavior |
-| Legacy embedding tooling | `scripts/generateEmbeddings.ts`, `scripts/seed-default-tenant.ts` | Seed/offline behavior; not a production incremental ingestion solution by assumption |
-| Initial vector schema | `supabase/migrations/011_multi_tenant_foundation.sql:106` | 768-dimensional vectors, HNSW, document/chunk model; also inspect later policy migrations |
-| Observability and limits | `apps/admin/lib/observability.ts:253`, `apps/admin/lib/rateLimit.ts` | Model metadata versus actual usage; distributed enforcement |
+| Concern                       | Current entry points                                                                    | What to inspect                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Public orchestration          | `apps/admin/app/api/chat/route.ts:245`                                                  | Tenant, plan, session, retrieval, tools, deterministic precedence, SSE                        |
+| Public state                  | `apps/admin/lib/chatConversationState.ts:169`                                           | `transitionInventoryState`, reference resolution, constraint enforcement, reset/zero behavior |
+| Extracted deterministic rules | `apps/admin/lib/chatDeterministicRules.ts` and `chatDeterministicAnswer.ts`             | Preserve prior bug fixes and precedence                                                       |
+| Language and trusted queries  | `packages/rag/src/vehicleFilters.ts`, `vehicleTerms.ts`, `fuzzyMatch.ts`                | Phrase extraction versus authoritative filter execution                                       |
+| Public tool execution         | `packages/bot/src/`, `apps/admin/lib/chatTools.ts`, `chatNavigation.ts`                 | Tool advertisement, validation, execution, action grounding                                   |
+| Public client                 | `src/lib/deepseekService.ts`, `src/components/chat/OllamaChat.tsx`                      | Session lifecycle, SSE handling, action dispatch; follow imports to actual UI consumers       |
+| Admin control plane           | `apps/admin/lib/adminConcierge.ts`                                                      | Capability registry, closed intent union, minimum role, confirmation                          |
+| Admin route                   | `apps/admin/app/api/admin/concierge/route.ts:271`                                       | Model fallback, context, structured queries, safe responses                                   |
+| Admin state                   | `apps/admin/lib/adminConciergeState.ts`                                                 | Result-set TTL, ordered IDs, selection, terse references                                      |
+| Admin commands                | `apps/admin/lib/adminConciergeCommands.server.ts`, `adminConciergeCommandReceipt.ts`    | Proposal, exact target, stale-state checks, idempotency, verification                         |
+| Confirm endpoint              | `apps/admin/app/api/admin/concierge/commands/[commandId]/confirm/route.ts`              | Fresh authorization and transactional execution                                               |
+| Adjacent editor copilot       | `apps/admin/app/api/editor/chat/route.ts`                                               | Keep its draft/Apply contract; do not silently merge it into an operator                      |
+| Shared memory                 | `packages/bot/src/conversationMemory.ts`, `apps/admin/lib/conversationMemory.server.ts` | Key scopes, TTL, serialization, fallback, concurrent updates                                  |
+| Keyword retrieval             | `packages/rag/src/keywordRetrieval.ts:24`                                               | Substring/fuzzy scoring and top-k behavior                                                    |
+| Semantic retrieval            | `packages/rag/src/server.ts`                                                            | Existing embedder seam and tenant vector RPC                                                  |
+| Prompt evidence               | `packages/rag/src/prompt.ts`                                                            | Counts, source categories, factual boundaries, token budget                                   |
+| Knowledge admin               | `apps/admin/app/admin/[tenant]/knowledge/`, `apps/admin/lib/knowledge.ts`               | Follow mutations to establish ingestion/edit behavior                                         |
+| Legacy embedding tooling      | `scripts/generateEmbeddings.ts`, `scripts/seed-default-tenant.ts`                       | Seed/offline behavior; not a production incremental ingestion solution by assumption          |
+| Initial vector schema         | `supabase/migrations/011_multi_tenant_foundation.sql:106`                               | 768-dimensional vectors, HNSW, document/chunk model; also inspect later policy migrations     |
+| Observability and limits      | `apps/admin/lib/observability.ts:253`, `apps/admin/lib/rateLimit.ts`                    | Model metadata versus actual usage; distributed enforcement                                   |
 
 ### 3.3 Current findings to verify and classify
 
@@ -401,16 +472,16 @@ The previous analysis was code-based. It did not establish fresh production accu
 
 ### 4.1 Evidence authority
 
-| Information/action | Authority | Never substitute |
-|---|---|---|
-| Price, mileage, make, availability, filtered count | Current tenant-scoped structured query | Similar document, prior prose, or approximate vector result |
-| “Second one,” “open it” | Referenced server-owned ordered result set and selected entity | Newly rerun broad query |
-| Public policy/FAQ | Published public tenant document/version | Another tenant's text or model general knowledge |
-| Dashboard help | Curated, versioned help matching supported features | An imagined capability from retrieved prose |
-| Leads/customer/operational records | Authorized structured reads | Public knowledge corpus or model memory |
-| Write permission | Current authenticated role and capability contract | Model plan, client assertion, or document instruction |
-| Write completion | Existing durable receipt and verification read | Model saying “done” |
-| Browser action completion | Client outcome acknowledgment with correlation ID | Server emission alone |
+| Information/action                                 | Authority                                                      | Never substitute                                            |
+| -------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------- |
+| Price, mileage, make, availability, filtered count | Current tenant-scoped structured query                         | Similar document, prior prose, or approximate vector result |
+| “Second one,” “open it”                            | Referenced server-owned ordered result set and selected entity | Newly rerun broad query                                     |
+| Public policy/FAQ                                  | Published public tenant document/version                       | Another tenant's text or model general knowledge            |
+| Dashboard help                                     | Curated, versioned help matching supported features            | An imagined capability from retrieved prose                 |
+| Leads/customer/operational records                 | Authorized structured reads                                    | Public knowledge corpus or model memory                     |
+| Write permission                                   | Current authenticated role and capability contract             | Model plan, client assertion, or document instruction       |
+| Write completion                                   | Existing durable receipt and verification read                 | Model saying “done”                                         |
+| Browser action completion                          | Client outcome acknowledgment with correlation ID              | Server emission alone                                       |
 
 ### 4.2 Search and preference semantics
 
@@ -649,15 +720,15 @@ Writes always re-check current role and exact target at confirmation. Retrieval 
 
 ### 8.1 Expected call budgets
 
-| Request class | Intended default model usage | Other work |
-|---|---|---|
-| Unambiguous stored reference/navigation | Zero | State/existence checks and UI action |
-| Deterministically understood inventory query | Zero | Scoped SQL + deterministic answer |
-| Novel inventory phrasing | One bounded interpretation | SQL + deterministic answer |
-| Straightforward knowledge question | One answer generation | Query embedding + retrieval; embedding is metered too |
-| Ambiguous knowledge follow-up | At most a bounded additional interpretation if needed | Measure separately; do not hide extra calls |
-| Admin read | Zero or one interpretation | Authorized structured handler |
-| Approved admin write | Zero or one interpretation before proposal | Existing confirmation/execution/verification path |
+| Request class                                | Intended default model usage                          | Other work                                            |
+| -------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| Unambiguous stored reference/navigation      | Zero                                                  | State/existence checks and UI action                  |
+| Deterministically understood inventory query | Zero                                                  | Scoped SQL + deterministic answer                     |
+| Novel inventory phrasing                     | One bounded interpretation                            | SQL + deterministic answer                            |
+| Straightforward knowledge question           | One answer generation                                 | Query embedding + retrieval; embedding is metered too |
+| Ambiguous knowledge follow-up                | At most a bounded additional interpretation if needed | Measure separately; do not hide extra calls           |
+| Admin read                                   | Zero or one interpretation                            | Authorized structured handler                         |
+| Approved admin write                         | Zero or one interpretation before proposal            | Existing confirmation/execution/verification path     |
 
 These are design budgets, not claims about today's measurements. Keep provider failure retries bounded by a turn deadline. Do not change tenant model choices, entitlement clamps, or provider data-processing terms silently.
 
@@ -704,11 +775,11 @@ Example record, illustrative rather than a required wire schema:
   "stateVersionBefore": 12,
   "stateVersionAfter": 13,
   "ruleCodes": ["replace_search", "clear_previous_price_scope"],
-  "result": {"status": "success", "totalCount": 9},
+  "result": { "status": "success", "totalCount": 9 },
   "modelCalls": 1,
-  "usage": {"inputTokens": 700, "outputTokens": 65, "source": "provider"},
-  "timingsMs": {"interpretation": 480, "query": 65, "total": 630},
-  "action": {"type": "filter_inventory", "status": "emitted"}
+  "usage": { "inputTokens": 700, "outputTokens": 65, "source": "provider" },
+  "timingsMs": { "interpretation": 480, "query": 65, "total": 630 },
+  "action": { "type": "filter_inventory", "status": "emitted" }
 }
 ```
 
@@ -782,15 +853,15 @@ Hard gates:
 
 Provisional performance/quality targets to approve after baseline measurement:
 
-| Metric | Initial target, not an existing result |
-|---|---|
-| Gold-set interpretation exact match | At least 98% on supported intents; report by surface/language and sample size |
-| Supporting evidence recall@8 | At least 95% on answerable knowledge examples |
-| Supported factual claims | At least 98% on human-reviewed document answers; report unsupported-claim rate separately |
-| Warm deterministic action response p95 | At most 750 ms server-side; separately measure browser application |
-| Warm one-model inventory task p95 | At most 2.5 s end-to-end server response |
-| Knowledge first meaningful response p95 | At most 3 s; separately report full-answer completion and cold starts |
-| Cost per successful task | No regression for existing supported tasks; owner approves an absolute monthly/tenant envelope after baseline |
+| Metric                                  | Initial target, not an existing result                                                                        |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Gold-set interpretation exact match     | At least 98% on supported intents; report by surface/language and sample size                                 |
+| Supporting evidence recall@8            | At least 95% on answerable knowledge examples                                                                 |
+| Supported factual claims                | At least 98% on human-reviewed document answers; report unsupported-claim rate separately                     |
+| Warm deterministic action response p95  | At most 750 ms server-side; separately measure browser application                                            |
+| Warm one-model inventory task p95       | At most 2.5 s end-to-end server response                                                                      |
+| Knowledge first meaningful response p95 | At most 3 s; separately report full-answer completion and cold starts                                         |
+| Cost per successful task                | No regression for existing supported tasks; owner approves an absolute monthly/tenant envelope after baseline |
 
 Do not treat these percentages as statistical certainty. Record numerator, denominator, abstentions, coverage, and confidence intervals where useful. Use separate development and held-out sets, grouped by conversation/document to reduce leakage. A system that refuses everything must fail the successful-completion metric.
 

@@ -25,6 +25,7 @@
     "test:e2e": "npm run test:e2e --workspace=@lume/admin",
     "test:e2e:public": "playwright test --config=playwright.public.config.ts",
     "test:e2e:concierge": "playwright test --config=playwright.concierge.config.ts",
+    "evaluate:chat-interpretation": "tsx scripts/evaluate-chat-interpretation.ts",
     "build": "tsc && vite build",
     "build:admin": "npm run build --workspace=@lume/admin",
     "preview": "vite preview",
