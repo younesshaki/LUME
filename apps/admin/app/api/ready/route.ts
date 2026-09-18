@@ -1,4 +1,5 @@
 import { createServiceClient } from "@lume/db/server";
+import { conversationMemoryMode } from "@/lib/conversationMemory.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,7 +26,15 @@ function response(status: "ready" | "unavailable", code: number, durationMs: num
   return Response.json(
     {
       status,
-      checks: { database: status === "ready" ? "ok" : "failed" },
+      checks: {
+        database: status === "ready" ? "ok" : "failed",
+        // Reported, never enforced: "local" is a legitimate deployment shape
+        // and "degraded" still serves chat, so neither makes the app
+        // unready. This exists so the mode is observable at all — it was
+        // previously impossible to tell from outside which one was running.
+        // A mode name only; no host, URL or token can appear here.
+        conversationMemory: conversationMemoryMode(),
+      },
       durationMs: Math.round(durationMs),
       timestamp: new Date().toISOString(),
     },

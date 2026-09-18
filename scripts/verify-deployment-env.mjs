@@ -33,6 +33,51 @@ const ADMIN_OPTIONAL_PRODUCTION_KEYS = [
   ["ANTHROPIC_API_KEY", "AI vehicle image descriptions stay disabled"],
 ];
 
+// Shared conversation memory. Both values must be present together: the store
+// only activates when it has a URL *and* a token, so half a pair is the same
+// as none, and is more likely to be a half-finished provisioning than a
+// deliberate choice.
+//
+// A warning rather than an error, deliberately. Without these the concierge
+// keeps working on a per-instance in-memory store — bounded continuity, no
+// cross-instance idempotency — which is a legitimate shape for a small
+// deployment and, as of 2026-09-16, the shape every LUME environment actually
+// runs. Failing the build over it would break every deploy for a degradation
+// the product is designed to survive. Reporting nothing, on the other hand, is
+// how the cron-secret outage went unnoticed for months.
+const SHARED_MEMORY_KEYS = ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"];
+
+/**
+ * Shared conversation-memory readiness, as { warnings, mode }.
+ *
+ * Reports presence only. Values are never read into the message, so this is
+ * safe to print in build logs.
+ */
+export function validateSharedConversationMemory(environment, app, expected) {
+  if (app !== "admin" || (expected !== "production" && expected !== "staging")) {
+    return { warnings: [], mode: "not-checked" };
+  }
+  const present = SHARED_MEMORY_KEYS.filter((key) => environment[key]?.trim());
+  if (present.length === SHARED_MEMORY_KEYS.length) {
+    return { warnings: [], mode: "shared" };
+  }
+  const missing = SHARED_MEMORY_KEYS.filter((key) => !environment[key]?.trim());
+  if (present.length > 0) {
+    return {
+      warnings: [
+        `${missing.join(" and ")} missing while ${present.join(" and ")} is set — shared conversation memory stays OFF until both are present; this looks like half-finished provisioning`,
+      ],
+      mode: "local",
+    };
+  }
+  return {
+    warnings: [
+      `${missing.join(" and ")} not set — conversation memory is per-instance in ${expected}: continuity is not guaranteed across instances, and the duplicate-turn lease and compare-and-set writes protect only within one instance`,
+    ],
+    mode: "local",
+  };
+}
+
 export function expectedEnvironment(environment, explicitExpected) {
   if (explicitExpected) return explicitExpected;
   if (environment.VERCEL_GIT_COMMIT_REF === "staging") return "staging";
@@ -127,6 +172,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const expected = expectedEnvironment(process.env, explicitExpected);
   for (const warning of validateAdminWorkerSecrets(process.env, app, expected).warnings) {
     console.warn(`[deployment-env] warning: ${warning}`);
+  }
+  const sharedMemory = validateSharedConversationMemory(process.env, app, expected);
+  for (const warning of sharedMemory.warnings) {
+    console.warn(`[deployment-env] warning: ${warning}`);
+  }
+  if (sharedMemory.mode !== "not-checked") {
+    console.log(`[deployment-env] conversation memory mode: ${sharedMemory.mode}`);
   }
   const errors = validateDeploymentEnvironment(process.env, explicitExpected, app);
   if (errors.length > 0) {

@@ -161,6 +161,28 @@ export function getConversationMemoryStore(): ConversationMemoryStore {
 }
 
 /**
+ * How this process is storing conversation state, as a non-secret signal.
+ *
+ * - `shared`   — a shared store is configured and currently answering.
+ * - `degraded` — a shared store is configured but failing; this process is
+ *                serving from per-instance memory and continuity across
+ *                instances is not guaranteed.
+ * - `local`    — no shared store is configured. Legitimate for a single
+ *                instance, but the duplicate-turn lease and the
+ *                compare-and-set writes then protect only within this process.
+ *
+ * Deliberately reports the MODE and never a URL, token or host, so it is safe
+ * to expose on an unauthenticated probe.
+ */
+export type ConversationMemoryMode = "shared" | "degraded" | "local";
+
+export function conversationMemoryMode(): ConversationMemoryMode {
+  const store = getConversationMemoryStore();
+  if (!(store instanceof FallbackConversationMemoryStore)) return "local";
+  return store.isDegraded() ? "degraded" : "shared";
+}
+
+/**
  * True when the process is answering from per-instance memory because the
  * shared store failed. Continuity is not guaranteed in that mode.
  */

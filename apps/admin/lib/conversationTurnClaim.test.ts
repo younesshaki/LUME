@@ -218,3 +218,33 @@ describe("turn claim: degraded shared store", () => {
     expect((await store.claim("k", TTL)).granted).toBe(true);
   });
 });
+
+describe("memory mode signal", () => {
+  it("names the mode and nothing else", async () => {
+    // The signal is exposed on an unauthenticated readiness probe, so the
+    // safety property is that it can only ever be one of three words.
+    const { conversationMemoryMode, resetConversationMemoryStoreForTests } =
+      await import("./conversationMemory.server");
+    resetConversationMemoryStoreForTests();
+    const mode = conversationMemoryMode();
+    expect(["shared", "degraded", "local"]).toContain(mode);
+  });
+
+  it("reports local when no shared store is configured", async () => {
+    // The shape every LUME environment actually runs as of 2026-09-16.
+    const { conversationMemoryMode, resetConversationMemoryStoreForTests } =
+      await import("./conversationMemory.server");
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    resetConversationMemoryStoreForTests();
+    try {
+      expect(conversationMemoryMode()).toBe("local");
+    } finally {
+      if (url !== undefined) process.env.UPSTASH_REDIS_REST_URL = url;
+      if (token !== undefined) process.env.UPSTASH_REDIS_REST_TOKEN = token;
+      resetConversationMemoryStoreForTests();
+    }
+  });
+});
