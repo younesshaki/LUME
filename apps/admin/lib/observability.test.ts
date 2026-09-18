@@ -85,7 +85,8 @@ describe("recordChatInterpretationShadow", () => {
       now: () => 1_000,
     });
     expect(record).toMatchObject({
-      scope: "concierge.interpretation.shadow",
+      scope: "concierge.interpretation",
+      mode: "shadow",
       requestId: "request-1",
       outcome: "malformed",
       modelCalls: 1,

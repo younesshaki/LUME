@@ -60,6 +60,7 @@ import {
   mergeTrustedVehicleQuery,
   retrieveByKeywords,
   vehicleQueryFromFilters,
+  type VehicleQueryFilters,
 } from "@lume/rag";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
@@ -128,6 +129,10 @@ import {
 } from "@/lib/chatInterpretationShadow";
 import { runShadowInterpretation } from "@/lib/chatInterpretationRunner.server";
 import { CHAT_INTERPRETATION_SCHEMA_VERSION } from "@/lib/chatInterpretation";
+import {
+  compileChatInterpretation,
+  isContextualInterpretationEnabled,
+} from "@/lib/chatInterpretationExecution";
 import {
   claimConversationTurn,
   conversationMemoryKey,
@@ -311,6 +316,16 @@ export async function POST(request: Request): Promise<Response> {
   );
   const enabledToolNames = enabledTools.map((tool) => tool.name);
   const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
+  const planClampedModelId =
+    isPremiumConciergeModel(botRuntimeConfig.modelId) &&
+    !tenantPlan.entitlements["chat.premium_models"]
+      ? DEFAULT_CONCIERGE_MODEL_ID
+      : botRuntimeConfig.modelId;
+  const chatProvider = resolveChatProvider(planClampedModelId);
+  const contextualInterpretationEnabled = isContextualInterpretationEnabled(
+    tenant.slug,
+    planClampedModelId,
+  );
   const tenantName = tenant.name ?? tenant.slug;
   const memoryStore = getConversationMemoryStore();
   // Public visitors need the same deterministic continuity as signed-in
@@ -456,7 +471,7 @@ export async function POST(request: Request): Promise<Response> {
   // instead of honoring the reset (live-reproduced 2026-07-23, session
   // 2c19e8d4 turn 4: Jeep detail text duplicated, on a full-reset turn).
   const scopeResetRequested = hasScopeResetIntent(lastUser.content);
-  const fullInventoryResetRequested = hasFullInventoryResetIntent(
+  let fullInventoryResetRequested = hasFullInventoryResetIntent(
     lastUser.content,
   );
   const turnNowMs = Date.now();
@@ -497,6 +512,12 @@ export async function POST(request: Request): Promise<Response> {
   let extractedInventoryFilters: ReturnType<typeof extractVehicleFilters> = {};
   let stateRules: string[] = [];
   let selectedVehicleId: string | null = null;
+  let deterministicUserText = lastUser.content;
+  let activeInterpretationResult: Awaited<
+    ReturnType<typeof runShadowInterpretation>
+  > | null = null;
+  let activeInterpretationApplied = false;
+  let interpretedClearFilters: readonly (keyof VehicleQueryFilters)[] = [];
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> =
     null;
   let visitorPreferenceContext: Awaited<
@@ -576,12 +597,11 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
     const vocabulary = vehicleFilterVocabulary(facetResult.data);
-    const extractedFilters =
+    let extractedFilters =
       unsupportedVehicleFactRequest || selectedVehicleDetailRequest
         ? {}
         : extractVehicleFilters(lastUser.content, [], vocabulary);
-    extractedInventoryFilters = extractedFilters;
-    const hasInventoryIntent =
+    let hasInventoryIntent =
       !unsupportedVehicleFactRequest &&
       !selectedVehicleDetailRequest &&
       (isVehicleQuery(lastUser.content, vocabulary) ||
@@ -593,6 +613,73 @@ export async function POST(request: Request): Promise<Response> {
             isPresentationRequest(lastUser.content)),
         ) ||
         hasScopeResetIntent(lastUser.content));
+
+    // Phase 3 active canary: ask the bounded interpreter only when the
+    // established deterministic vocabulary found no inventory intent at all.
+    // Accepted plans are compiled back into this same deterministic pipeline;
+    // malformed, unsupported or mixed plans fall through unchanged.
+    if (
+      contextualInterpretationEnabled &&
+      chatProvider &&
+      !hasInventoryIntent &&
+      !unsupportedVehicleFactRequest &&
+      !selectedVehicleDetailRequest &&
+      !deterministicClarifier
+    ) {
+      activeInterpretationResult = await runShadowInterpretation({
+        provider: chatProvider,
+        userMessage: lastUser.content,
+        context: buildInterpreterContext({
+          state: conversationState,
+          deterministicFilters: extractedFilters,
+        }),
+        deterministic: {
+          kind: "unsupported",
+          filters: {},
+          hasReference: false,
+        },
+      });
+      recordChatInterpretationShadow({
+        mode: "active",
+        requestId,
+        tenantId: tenant.tenantId,
+        provider: chatProvider.profile.provider,
+        modelId: chatProvider.profile.id,
+        schemaVersion: CHAT_INTERPRETATION_SCHEMA_VERSION,
+        outcome: activeInterpretationResult.outcome,
+        durationMs: activeInterpretationResult.durationMs,
+        usage: activeInterpretationResult.usage,
+        comparison: activeInterpretationResult.comparison,
+      });
+      recordModelUsage({
+        route: "api/chat/interpretation",
+        tenantId: tenant.tenantId,
+        provider: chatProvider.profile.provider,
+        requestedModelId: botRuntimeConfig.modelId,
+        effectiveModelId: chatProvider.profile.id,
+        clamped: planClampedModelId !== botRuntimeConfig.modelId,
+        fellBack: chatProvider.fellBack,
+      });
+      const compiled = activeInterpretationResult.candidate
+        ? compileChatInterpretation(
+            activeInterpretationResult.candidate,
+            lastUser.content,
+          )
+        : null;
+      if (compiled) {
+        activeInterpretationApplied = true;
+        deterministicUserText = compiled.userText;
+        extractedFilters = compiled.filters;
+        interpretedClearFilters = compiled.clearFilters;
+        hasInventoryIntent = compiled.hasInventoryIntent;
+        deterministicMakeSwitchClarifier = compiled.clarification;
+        fullInventoryResetRequested = hasFullInventoryResetIntent(
+          deterministicUserText,
+        );
+        stateRules.push(compiled.rule);
+      }
+    }
+    extractedInventoryFilters = extractedFilters;
     // Inject the open vehicle only when the turn is plausibly still about it.
     // pagePath keeps pointing at a vehicle for the rest of the session, so
     // without this the first and highest-scored chunk on "show me your SUVs"
@@ -605,9 +692,9 @@ export async function POST(request: Request): Promise<Response> {
         extractedFilters,
         activeFilters: conversationState.activeFilters,
         isSelectedVehicleDetailRequest: selectedVehicleDetailRequest,
-        isOrdinalReference: isOrdinalVehicleReference(lastUser.content),
+        isOrdinalReference: isOrdinalVehicleReference(deterministicUserText),
         isSelectedVehicleAction: isSelectedVehicleActionRequest(
-          lastUser.content,
+          deterministicUserText,
         ),
       })
     ) {
@@ -616,26 +703,29 @@ export async function POST(request: Request): Promise<Response> {
 
     const stateTransition = transitionInventoryState(
       conversationState,
-      lastUser.content,
+      deterministicUserText,
       extractedFilters,
       hasInventoryIntent,
-      { nowMs: turnNowMs },
+      { nowMs: turnNowMs, clearFilters: interpretedClearFilters },
     );
     conversationState = stateTransition.state;
-    stateRules = stateTransition.rules;
+    stateRules = [...stateRules, ...stateTransition.rules];
     statePresentationRequest = stateTransition.useStoredResultSet;
     stateOrdinalVehicleId = ordinalResultSetVehicleId(
-      lastUser.content,
+      deterministicUserText,
       conversationState.resultSet,
     );
     stateSelectedVehicleId = selectedResultSetVehicleId(
-      lastUser.content,
+      deterministicUserText,
       conversationState,
     );
     const stateReferencedVehicleId =
       stateOrdinalVehicleId ?? stateSelectedVehicleId;
 
-    if (isAmbiguousMakeSwitchRequest(lastUser.content, extractedFilters)) {
+    if (
+      !deterministicMakeSwitchClarifier &&
+      isAmbiguousMakeSwitchRequest(deterministicUserText, extractedFilters)
+    ) {
       // Ambiguous make switch: the reset already cleared the scope in state.
       // Ask which make — do NOT query, and do NOT let the model volunteer the
       // old make's grounded results underneath its own clarifying question.
@@ -647,7 +737,7 @@ export async function POST(request: Request): Promise<Response> {
     // from the stored, verified list — never from the model improvising.
     const compareIndexes = stateReferencedVehicleId
       ? null
-      : compareOrdinalIndexesFromText(lastUser.content);
+      : compareOrdinalIndexesFromText(deterministicUserText);
     if (compareIndexes) {
       const orderedIds = conversationState.resultSet?.orderedIds ?? [];
       // Fetch only when the indexes are in range; resolveCompareOutcome
@@ -698,7 +788,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const referenceOutcome = resolveReferenceOutcome({
-      userText: lastUser.content,
+      userText: deterministicUserText,
       referencedVehicleId: stateReferencedVehicleId,
       fetched: stateReferencedVehicleId
         ? await getTenantVehicle(
@@ -710,8 +800,8 @@ export async function POST(request: Request): Promise<Response> {
       activeFilters: conversationState.activeFilters,
       resultSet: conversationState.resultSet,
       hasOrdinalOrSelectionPhrase:
-        isOrdinalVehicleReference(lastUser.content) ||
-        isSelectedVehicleActionRequest(lastUser.content),
+        isOrdinalVehicleReference(deterministicUserText) ||
+        isSelectedVehicleActionRequest(deterministicUserText),
       attemptedZeroResult: conversationState.attemptedZeroResult,
       memoryDegraded,
     });
@@ -758,7 +848,7 @@ export async function POST(request: Request): Promise<Response> {
       totalMatched = match.totalCount ?? matchedVehicles.length;
 
       const inventoryOutcome = resolveInventoryOutcome({
-        userText: lastUser.content,
+        userText: deterministicUserText,
         filters,
         matchedVehicles,
         totalMatched,
@@ -810,7 +900,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const stateActions: BotAction[] = [
     ...((stateOrdinalVehicleId &&
-      isOrdinalVehicleActionRequest(lastUser.content)) ||
+      isOrdinalVehicleActionRequest(deterministicUserText)) ||
     stateSelectedVehicleId
       ? [
           {
@@ -1005,7 +1095,7 @@ export async function POST(request: Request): Promise<Response> {
       turn: conversationState.turn,
       userText: lastUser.content,
       assistantText: visibleContent,
-      source: "deterministic",
+      source: activeInterpretationApplied ? "interpreted" : "deterministic",
       actions: actionDebugSummary(actions),
     });
     const stream = new ReadableStream({
@@ -1061,7 +1151,7 @@ export async function POST(request: Request): Promise<Response> {
       tenantId: tenant.tenantId,
       conversationId: transcriptSessionId,
       turn: conversationState.turn,
-      route: "deterministic",
+      route: activeInterpretationApplied ? "interpreted" : "deterministic",
       clientRequestId: clientRequestId !== null,
       ruleCodes: stateRules,
       clarification: Boolean(
@@ -1075,10 +1165,22 @@ export async function POST(request: Request): Promise<Response> {
         emitted: actions.map((action) => action.type),
         dropped: droppedActionTypes,
       },
-      // No model was called, so there is nothing to bill and nothing to
-      // report as usage. This is the metric the whole deterministic-first
-      // design exists to move.
-      model: null,
+      model:
+        activeInterpretationResult && chatProvider
+          ? {
+              provider: chatProvider.profile.provider,
+              requestedModelId: botRuntimeConfig.modelId,
+              effectiveModelId: chatProvider.profile.id,
+              clamped: planClampedModelId !== botRuntimeConfig.modelId,
+              fellBack: chatProvider.fellBack,
+              calls: 1,
+            }
+          : null,
+      usage:
+        activeInterpretationResult?.usage.inputTokens !== null ||
+        activeInterpretationResult?.usage.outputTokens !== null
+          ? { ...activeInterpretationResult!.usage, coversCalls: 1 }
+          : undefined,
       timingsMs: {
         state: stateResolvedAtMs - turnStartedAtMs,
         total: Date.now() - turnStartedAtMs,
@@ -1092,12 +1194,6 @@ export async function POST(request: Request): Promise<Response> {
   // stored premium selection is clamped to the base model when the tenant's
   // plan no longer entitles it (e.g. after a downgrade). Selection-time
   // enforcement lives in the persona save action; this is the runtime gate.
-  const planClampedModelId =
-    isPremiumConciergeModel(botRuntimeConfig.modelId) &&
-    !tenantPlan.entitlements["chat.premium_models"]
-      ? DEFAULT_CONCIERGE_MODEL_ID
-      : botRuntimeConfig.modelId;
-  const chatProvider = resolveChatProvider(planClampedModelId);
   if (chatProvider) {
     // Highest-volume model path in the product; without this, provider
     // invoices cannot be attributed to a tenant.
@@ -1256,9 +1352,9 @@ export async function POST(request: Request): Promise<Response> {
   // complete, so a slow or timed-out experiment cannot add latency to the
   // visitor. It is still lifecycle-managed by Next/Vercel rather than an
   // unawaited promise that a serverless instance may discard.
-  const shadowInterpretationScheduled = isShadowInterpretationEnabled(
-    tenant.slug,
-  );
+  const shadowInterpretationScheduled =
+    !contextualInterpretationEnabled &&
+    isShadowInterpretationEnabled(tenant.slug);
   if (shadowInterpretationScheduled) {
     const shadowInput = {
       provider: chatProvider,
@@ -1280,6 +1376,7 @@ export async function POST(request: Request): Promise<Response> {
     after(async () => {
       const result = await runShadowInterpretation(shadowInput);
       recordChatInterpretationShadow({
+        mode: "shadow",
         requestId,
         tenantId: tenant.tenantId,
         provider: chatProvider.profile.provider,
@@ -1382,6 +1479,27 @@ export async function POST(request: Request): Promise<Response> {
     emitted: readonly BotAction[];
     calls: number;
   }): void => {
+    const interpretationUsage = activeInterpretationResult?.usage;
+    const interpretationHasUsage = Boolean(
+      interpretationUsage &&
+      (interpretationUsage.inputTokens !== null ||
+        interpretationUsage.outputTokens !== null),
+    );
+    const phaseOneHasUsage = Boolean(providerUsage);
+    const inputTokens =
+      interpretationHasUsage || phaseOneHasUsage
+        ? (interpretationUsage?.inputTokens ?? 0) +
+          (providerUsage?.inputTokens ?? 0)
+        : null;
+    const outputTokens =
+      interpretationHasUsage || phaseOneHasUsage
+        ? (interpretationUsage?.outputTokens ?? 0) +
+          (providerUsage?.outputTokens ?? 0)
+        : null;
+    const interpretationCalls = activeInterpretationResult ? 1 : 0;
+    const calls = input.calls + interpretationCalls;
+    const coversCalls =
+      (interpretationHasUsage ? 1 : 0) + (phaseOneHasUsage ? 1 : 0);
     recordConciergeTurn({
       surface: "public",
       requestId,
@@ -1405,7 +1523,7 @@ export async function POST(request: Request): Promise<Response> {
         effectiveModelId: chatProvider.profile.id,
         clamped: planClampedModelId !== botRuntimeConfig.modelId,
         fellBack: chatProvider.fellBack,
-        calls: input.calls,
+        calls,
       },
       // Counted apart from the turn's own calls: an experiment's spend must
       // never be mistaken for the product's cost per answer.
@@ -1416,7 +1534,10 @@ export async function POST(request: Request): Promise<Response> {
       // phase-1 block is ever present. Absent => "unknown", never 0; present
       // on a two-call turn => "provider_partial", because reporting one call's
       // tokens as the turn's total is an undercount of real spend.
-      usage: providerUsage ? { ...providerUsage, coversCalls: 1 } : undefined,
+      usage:
+        inputTokens !== null || outputTokens !== null
+          ? { inputTokens, outputTokens, coversCalls }
+          : undefined,
       timingsMs: {
         state: stateResolvedAtMs - turnStartedAtMs,
         context: contextLoadedAtMs - stateResolvedAtMs,

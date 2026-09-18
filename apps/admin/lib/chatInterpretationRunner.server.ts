@@ -15,13 +15,11 @@ import {
 } from "./chatInterpretationShadow";
 
 /**
- * One bounded interpretation call, for shadow evaluation only.
+ * One bounded interpretation call for shadow evaluation or an active canary.
  *
- * Nothing this returns can reach the visitor. The caller records the
- * comparison and discards the plan — no action, no state, no memory write, no
- * effect on the response. Every failure mode (timeout, malformed JSON, a
- * provider outage) resolves to null, because a shadow experiment that can
- * break a real conversation is not a shadow experiment.
+ * The runner only validates a closed meaning plan. It cannot create actions,
+ * ids, URLs, queries, or memory writes. Every failure resolves to null so the
+ * caller can retain the established model path without weakening availability.
  */
 
 /** Hard ceiling. A shadow call must never outlive the turn it observes. */
@@ -85,7 +83,10 @@ export async function runShadowInterpretation(input: {
             { role: "system", content: buildInterpretationSchemaPrompt() },
             ...messages,
           ] as MemoryMessage[],
-          toolFields: { max_tokens: MAX_OUTPUT_TOKENS },
+          toolFields: {
+            max_tokens: MAX_OUTPUT_TOKENS,
+            temperature: 0,
+          },
         }),
       ),
     });

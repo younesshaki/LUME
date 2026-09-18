@@ -81,7 +81,7 @@ describe("Phase 3 interpretation evaluation", () => {
     expect(report.activation.eligible).toBe(false);
   });
 
-  it("cannot approve production from the current tiny held-out set", () => {
+  it("can approve only a complete, perfect run of the independently reviewed held-out set", () => {
     const cases: InterpretationEvaluationCase[] = [];
     for (const conversation of CHAT_INTERPRETATION_GOLD_SET) {
       conversation.turns.forEach((turn, index) => {
@@ -109,10 +109,9 @@ describe("Phase 3 interpretation evaluation", () => {
     });
     expect(report.byPartition["held-out"].exactMatchRate).toBe(1);
     expect(report.byPartition["held-out"].acceptanceRate).toBe(1);
-    expect(report.activation.eligible).toBe(false);
-    expect(report.activation.reasons).toContain(
-      "held-out sample too small (7/100 turns)",
-    );
+    expect(report.byPartition["held-out"].turns).toBeGreaterThanOrEqual(100);
+    expect(report.activation.eligible).toBe(true);
+    expect(report.activation.reasons).toEqual([]);
   });
 
   it("ignores duplicate and unknown result rows instead of inflating metrics", () => {

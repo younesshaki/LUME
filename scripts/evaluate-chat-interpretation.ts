@@ -1,5 +1,8 @@
 #!/usr/bin/env npx tsx
-import { evaluateChatInterpretations } from "../apps/admin/lib/chatInterpretationEvaluation";
+import {
+  evaluateChatInterpretations,
+  matchesGoldTurn,
+} from "../apps/admin/lib/chatInterpretationEvaluation";
 import {
   CHAT_INTERPRETATION_GOLD_SET,
   CHAT_INTERPRETATION_GOLD_SET_VERSION,
@@ -122,6 +125,14 @@ console.info(
       cases: cases.map((entry) => ({
         id: `${entry.conversationId}:${entry.turn}`,
         outcome: entry.outcome,
+        exact:
+          entry.candidate !== null &&
+          matchesGoldTurn(
+            entry.candidate,
+            selected.find(
+              (conversation) => conversation.id === entry.conversationId,
+            )!.turns[entry.turn - 1]!,
+          ),
       })),
     },
     null,

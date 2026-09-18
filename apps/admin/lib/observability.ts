@@ -51,7 +51,8 @@ export function captureDebug(
 
 export type ChatInterpretationShadowRecord = {
   level: "info";
-  scope: "concierge.interpretation.shadow";
+  scope: "concierge.interpretation";
+  mode: "shadow" | "active";
   requestId: string;
   tenantId: string;
   provider: string;
@@ -78,6 +79,7 @@ export type ChatInterpretationShadowRecord = {
  * filter values, model output and identifiers cannot enter this shape.
  */
 export function recordChatInterpretationShadow(input: {
+  mode?: ChatInterpretationShadowRecord["mode"];
   requestId: string;
   tenantId: string;
   provider: string;
@@ -99,7 +101,8 @@ export function recordChatInterpretationShadow(input: {
     const comparison = input.comparison ?? null;
     const record: ChatInterpretationShadowRecord = {
       level: "info",
-      scope: "concierge.interpretation.shadow",
+      scope: "concierge.interpretation",
+      mode: input.mode ?? "shadow",
       requestId: input.requestId.slice(0, 80),
       tenantId: input.tenantId.slice(0, 80),
       provider: input.provider.slice(0, 40),
@@ -139,7 +142,7 @@ export type ConciergeTranscriptTurn = {
   assistantText: string;
   /** Which response path produced assistantText — the single most useful
    * field for spotting "this should have been deterministic but wasn't." */
-  source: "deterministic" | "model" | "tool";
+  source: "deterministic" | "interpreted" | "model" | "tool";
   actions: readonly Record<string, unknown>[];
   toolCalls?: readonly { name: string; result: unknown }[];
 };
@@ -395,7 +398,7 @@ export type ConciergeUsageSource =
 
 /** "duplicate" is a turn refused because another delivery of it is running. */
 export type ConciergeTurnRoute =
-  "deterministic" | "model" | "tool" | "duplicate" | "error";
+  "deterministic" | "interpreted" | "model" | "tool" | "duplicate" | "error";
 
 /** Outcome of this turn's tenant-scoped inventory query, if one ran. */
 export type ConciergeQueryStatus =

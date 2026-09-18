@@ -68,8 +68,12 @@ describe("shadow interpretation provider accounting", () => {
     });
     expect(result.usage).toEqual({ inputTokens: 40, outputTokens: 20 });
     const request = vi.mocked(fetch).mock.calls[0]?.[1];
-    const body = JSON.parse(String(request?.body)) as { max_tokens?: number };
+    const body = JSON.parse(String(request?.body)) as {
+      max_tokens?: number;
+      temperature?: number;
+    };
     expect(body.max_tokens).toBe(350);
+    expect(body.temperature).toBe(0);
   });
 
   it("counts non-2xx and malformed responses as attempted calls", async () => {

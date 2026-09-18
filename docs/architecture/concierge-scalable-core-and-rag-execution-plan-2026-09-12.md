@@ -292,16 +292,51 @@ The follow-up corrects those issues without enabling behavior:
   being measured, and prints fixture IDs/outcomes rather than messages or
   plans.
 
-**Activation remains blocked at the evidence gate.** Execution wiring was
-intentionally not added before that proof exists. The provisional gate is at
-least 100 independently reviewed held-out turns, 98% exact match over all
-held-out turns (not merely accepted turns), 98% acceptance, and 100% retention
-on mixed requests. The current held-out corpus has only
-seven turns, so even a perfect provider run is ineligible. No provider key is
-available in the integration worktree and no paid evaluation was run. Until an
-independent corpus is assembled and a named provider clears the gate, plans
-remain shadow-only and cannot mutate state, execute queries/actions, or alter a
-reply.
+### Phase 3 active-canary completion (2026-09-18)
+
+The execution path is now implemented, but activation remains correctly
+blocked by model evidence:
+
+- The version-2 corpus contains 107 held-out turns across natural searches,
+  refinements, resets, presentations, references, clarifications, explicit
+  facet clears, and mixed/unsupported requests. Conversations remain the
+  partition unit.
+- Only turns the established deterministic layer cannot resolve are eligible
+  for interpretation. A valid plan is compiled into canonical text, current-
+  turn filters and explicit filter clears, then passed through the existing
+  `transitionInventoryState` → tenant query → grounded action pipeline. There
+  is no second query or action executor.
+- Mixed requests and unrepresentable references are not partially executed;
+  they fall back to the existing model/tool path. Provider errors, timeouts and
+  malformed plans do the same.
+- Active mode requires three gates: a model id in the source-controlled
+  certified-model list, `CONCIERGE_CONTEXTUAL_INTERPRETER=true`, and exact
+  tenant membership in `CONCIERGE_CONTEXTUAL_INTERPRETER_TENANTS`. Shadow and
+  active calls are mutually exclusive for a tenant. Emptying either runtime
+  flag rolls back immediately.
+- Interpreted turns have their own transcript/turn route and include the
+  interpreter call in token/call accounting. Shadow spend remains separate.
+  Telemetry still cannot carry visitor text, filter values, plans, vehicle ids,
+  action parameters, or lead data.
+
+The evidence threshold remains at least 100 held-out turns, 98% exact match
+over every held-out turn, 98% acceptance, and 100% unsupported-clause
+retention. Real development evaluation produced the following results before
+any held-out spend:
+
+| Model               | Development result                                                                                | Decision                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `deepseek-v4-flash` | 0/9 accepted; every call returned a provider error                                                | Not certified; the direct provider does not accept the configured product model id.                    |
+| `kimi-k2.6`         | Best run 8/9 exact; repeat 6/9 accepted because of two six-second timeouts and one malformed plan | Not certified; below the 98% development bar and not stable enough to justify a 107-call held-out run. |
+| `kimi-k3`           | 5/9 accepted; four six-second timeouts                                                            | Not certified; too slow and below the quality bar for this synchronous fallback.                       |
+
+Consequently `CERTIFIED_CONTEXTUAL_INTERPRETER_MODELS` is intentionally empty.
+This is a measured rollout block, not missing execution code: setting the two
+environment gates cannot accidentally promote an unqualified model. The next
+step is to configure a fast provider model whose real API identifier is valid,
+pass development repeatedly, then run the held-out command once and add that
+exact model id to the certification list only if the report says
+`activation.eligible: true`.
 
 Run development fixtures only:
 
@@ -319,12 +354,6 @@ CONCIERGE_INTERPRETATION_EVAL_CONFIRM=held-out \
 CONCIERGE_INTERPRETATION_EVAL_MODEL=deepseek-v4-flash \
 npm run evaluate:chat-interpretation -- --held-out
 ```
-
-The next activation change must be a separate reviewable commit: compile an
-accepted interpretation into the existing deterministic state/query/reference
-pipeline, canary it by tenant, and retain the old unresolved-model path as the
-rollback. It must not add a second executor or allow a model-produced vehicle
-ID, URL, capability, SQL fragment, or action.
 
 ### Verification performed
 

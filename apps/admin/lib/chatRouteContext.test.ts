@@ -85,7 +85,9 @@ describe("public chat route: turn telemetry", () => {
   it("records a turn on every response path", () => {
     // Deterministic, prose-model and tool-model each end in their own
     // Response; a path without a record is a silent hole in the metrics.
-    const deterministic = route.indexOf('route: "deterministic"');
+    const deterministic = route.indexOf(
+      'route: activeInterpretationApplied ? "interpreted" : "deterministic"',
+    );
     const prose = route.indexOf('recordModelTurn({ route: "model"');
     const tool = route.indexOf('recordModelTurn({ route: "tool"');
     expect(deterministic).toBeGreaterThan(-1);
@@ -116,10 +118,13 @@ describe("public chat route: turn telemetry", () => {
     expect(transcriptBody).toContain("LUME_CHAT_DEBUG");
   });
 
-  it("reports the deterministic path as having called no model", () => {
-    const index = at('route: "deterministic"');
-    const window = route.slice(index, index + 900);
-    expect(window).toContain("model: null");
+  it("reports model usage only when the deterministic answer came through interpretation", () => {
+    const index = at(
+      'route: activeInterpretationApplied ? "interpreted" : "deterministic"',
+    );
+    const window = route.slice(index, index + 1300);
+    expect(window).toContain("activeInterpretationResult && chatProvider");
+    expect(window).toContain(": null");
   });
 });
 
@@ -380,12 +385,67 @@ describe("public chat route: shadow interpretation is inert by default", () => {
     );
   });
 
+  it("does not schedule shadow and active interpretation for the same tenant", () => {
+    const schedule = at("const shadowInterpretationScheduled =");
+    expect(route.slice(schedule, schedule + 220)).toContain(
+      "!contextualInterpretationEnabled",
+    );
+  });
+
   it("logs field names and booleans, never the message or filter values", () => {
-    const log = at("recordChatInterpretationShadow({");
+    const shadow = at("after(async () =>");
+    const log = route.indexOf("recordChatInterpretationShadow({", shadow);
+    expect(log).toBeGreaterThan(shadow);
     const window = route.slice(log, log + 600);
     expect(window).not.toContain("lastUser.content");
     expect(window).toContain("comparison: result.comparison");
     expect(observability).toContain("filterFieldsDiffering");
+  });
+});
+
+describe("public chat route: active contextual interpretation", () => {
+  it("runs only behind both rollout gates and only after deterministic extraction misses", () => {
+    expect(route).toContain(
+      "const contextualInterpretationEnabled = isContextualInterpretationEnabled(\n    tenant.slug,\n    planClampedModelId,\n  )",
+    );
+    const active = at("// Phase 3 active canary:");
+    const window = route.slice(active, active + 1800);
+    expect(window).toContain("contextualInterpretationEnabled");
+    expect(window).toContain("!hasInventoryIntent");
+    expect(active).toBeGreaterThan(
+      at("extractVehicleFilters(lastUser.content"),
+    );
+  });
+
+  it("compiles accepted meaning into deterministic inputs rather than actions", () => {
+    const active = at("const compiled = activeInterpretationResult.candidate");
+    const window = route.slice(active, active + 850);
+    expect(window).toContain("compileChatInterpretation");
+    expect(window).toContain("deterministicUserText = compiled.userText");
+    expect(window).toContain("extractedFilters = compiled.filters");
+    expect(window).not.toContain('type: "action"');
+    expect(
+      at(
+        "transitionInventoryState(\n      conversationState,\n      deterministicUserText",
+      ),
+    ).toBeGreaterThan(active);
+  });
+
+  it("falls through unchanged when a candidate is absent or cannot be compiled", () => {
+    const active = at("const compiled = activeInterpretationResult.candidate");
+    const window = route.slice(active, active + 800);
+    expect(window).toContain(": null");
+    expect(window).toContain("if (compiled)");
+  });
+
+  it("marks interpreted deterministic turns and includes their model call", () => {
+    expect(route).toContain(
+      'source: activeInterpretationApplied ? "interpreted" : "deterministic"',
+    );
+    expect(route).toContain(
+      'route: activeInterpretationApplied ? "interpreted" : "deterministic"',
+    );
+    expect(route).toContain("calls: 1");
   });
 });
 

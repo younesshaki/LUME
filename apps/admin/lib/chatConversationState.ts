@@ -215,7 +215,9 @@ export function normalizeConversationInventoryState(
     activeFilters,
     retainedPreferences: pickFilters(value.retainedPreferences),
     resultSet,
-    attemptedZeroResult: normalizeAttemptedZeroResult(value.attemptedZeroResult),
+    attemptedZeroResult: normalizeAttemptedZeroResult(
+      value.attemptedZeroResult,
+    ),
     pendingClarification: normalizePendingClarification(
       value.pendingClarification,
     ),
@@ -226,7 +228,9 @@ export function normalizeConversationInventoryState(
   };
 }
 
-function normalizeAttemptedZeroResult(value: unknown): AttemptedZeroResult | null {
+function normalizeAttemptedZeroResult(
+  value: unknown,
+): AttemptedZeroResult | null {
   if (!isRecord(value)) return null;
   const attemptedAtTurn = value.attemptedAtTurn;
   if (
@@ -242,7 +246,9 @@ function normalizeAttemptedZeroResult(value: unknown): AttemptedZeroResult | nul
   return Object.keys(filters).length > 0 ? { filters, attemptedAtTurn } : null;
 }
 
-function normalizePendingClarification(value: unknown): PendingClarification | null {
+function normalizePendingClarification(
+  value: unknown,
+): PendingClarification | null {
   if (!isRecord(value)) return null;
   const kind = value.kind;
   const askedAtTurn = value.askedAtTurn;
@@ -259,6 +265,8 @@ function normalizePendingClarification(value: unknown): PendingClarification | n
 
 export type InventoryTransitionContext = {
   nowMs: number;
+  /** Trusted semantic clears compiled from the closed interpretation schema. */
+  clearFilters?: readonly (keyof VehicleQueryFilters)[];
 };
 
 /** A new visitor turn only changes filters the visitor explicitly supplied. */
@@ -307,7 +315,7 @@ export function transitionInventoryState(
     normalizedExtracted.model !== current.activeFilters.model;
   const clearsVehicleScope =
     switchesMake || clearsStrandedModel || switchesModelWithoutMake;
-  const base = clearsStaleBroadScope
+  const inferredBase = clearsStaleBroadScope
     ? {}
     : resetScope
       ? normalizedExtracted.make !== undefined ||
@@ -319,6 +327,7 @@ export function transitionInventoryState(
         : clearsVehicleScope
           ? dropVehicleSpecificScope(current.activeFilters)
           : current.activeFilters;
+  const base = clearExplicitFilters(inferredBase, context?.clearFilters ?? []);
   const activeFilters = mergeFilters(base, normalizedExtracted);
   const hasExplicitFilters =
     Object.keys(normalizedExtracted).length > 0 || resetScope;
@@ -343,6 +352,7 @@ export function transitionInventoryState(
     ...(useStoredResultSet ? ["reuse_result_set"] : []),
     ...(ordinal ? ["ordinal_from_result_set"] : []),
     ...(selectedAction ? ["selected_vehicle_from_result_set"] : []),
+    ...(context?.clearFilters?.length ? ["clear_interpreted_filters"] : []),
   ];
   return {
     state: {
@@ -375,6 +385,16 @@ export function transitionInventoryState(
     useStoredResultSet,
     rules,
   };
+}
+
+function clearExplicitFilters(
+  filters: VehicleQueryFilters,
+  keys: readonly (keyof VehicleQueryFilters)[],
+): VehicleQueryFilters {
+  if (keys.length === 0) return filters;
+  const next = { ...filters };
+  for (const key of keys) delete next[key];
+  return next;
 }
 
 export function setConversationResultSet(

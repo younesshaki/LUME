@@ -437,7 +437,7 @@ describe("shadow mode is off unless two separate gates are opened", () => {
 
 describe("gold set is usable as evidence", () => {
   it("is versioned", () => {
-    expect(CHAT_INTERPRETATION_GOLD_SET_VERSION).toBe(1);
+    expect(CHAT_INTERPRETATION_GOLD_SET_VERSION).toBe(2);
   });
 
   it("partitions by conversation, not by turn", () => {
