@@ -70,3 +70,7 @@ dist/
 # Local Supabase CLI state
 supabase/.temp/
 .vercel
+
+# Playwright run artifacts
+test-results/
+playwright-report/

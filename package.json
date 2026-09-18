@@ -24,6 +24,7 @@
     "test:watch": "vitest",
     "test:e2e": "npm run test:e2e --workspace=@lume/admin",
     "test:e2e:public": "playwright test --config=playwright.public.config.ts",
+    "test:e2e:concierge": "playwright test --config=playwright.concierge.config.ts",
     "build": "tsc && vite build",
     "build:admin": "npm run build --workspace=@lume/admin",
     "preview": "vite preview",
