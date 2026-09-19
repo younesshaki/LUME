@@ -70,10 +70,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_member_preferences"]["Row"],
-          "sidebar_single_expand" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_member_preferences"]["Row"], "sidebar_single_expand" | "created_at" | "updated_at"> & {
           sidebar_single_expand?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -94,18 +91,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_settings"]["Row"],
-          | "lead_assignment_mode"
-          | "last_lead_assignee_id"
-          | "email_from_address"
-          | "lead_email_enabled"
-          | "lead_email_roles"
-          | "lead_email_mode"
-          | "lead_email_unassigned_address"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_settings"]["Row"], "lead_assignment_mode" | "last_lead_assignee_id" | "email_from_address" | "lead_email_enabled" | "lead_email_roles" | "lead_email_mode" | "lead_email_unassigned_address" | "created_at" | "updated_at"> & {
           lead_assignment_mode?: "manual" | "round_robin";
           last_lead_assignee_id?: string | null;
           email_from_address?: string | null;
@@ -131,10 +117,7 @@ export type Database = {
           read_at: string | null;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["admin_notifications"]["Row"],
-          "id" | "user_id" | "link" | "dedupe_key" | "read_at" | "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["admin_notifications"]["Row"], "id" | "user_id" | "link" | "dedupe_key" | "read_at" | "created_at"> & {
           id?: string;
           user_id?: string | null;
           link?: string | null;
@@ -153,10 +136,7 @@ export type Database = {
           limits: Record<string, unknown>;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["plans"]["Row"],
-          "id" | "monthly_price_cents" | "limits" | "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["plans"]["Row"], "id" | "monthly_price_cents" | "limits" | "created_at"> & {
           id?: string;
           monthly_price_cents?: number;
           limits?: Record<string, unknown>;
@@ -177,16 +157,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["subscriptions"]["Row"],
-          | "id"
-          | "status"
-          | "current_period_start"
-          | "current_period_end"
-          | "stripe_subscription_id"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["subscriptions"]["Row"], "id" | "status" | "current_period_start" | "current_period_end" | "stripe_subscription_id" | "created_at" | "updated_at"> & {
           id?: string;
           status?: "inactive" | "trialing" | "active" | "past_due" | "canceled" | "incomplete";
           current_period_start?: string | null;
@@ -209,10 +180,7 @@ export type Database = {
           paid_at: string | null;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["invoices"]["Row"],
-          "id" | "status" | "stripe_invoice_id" | "paid_at" | "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["invoices"]["Row"], "id" | "status" | "stripe_invoice_id" | "paid_at" | "created_at"> & {
           id?: string;
           status?: "draft" | "open" | "paid" | "void" | "uncollectible";
           stripe_invoice_id?: string | null;
@@ -225,20 +193,13 @@ export type Database = {
       usage_events: {
         Row: {
           tenant_id: string;
-          event_type:
-            | "chat_requests"
-            | "vehicle_requests"
-            | "bot_action_requests"
-            | "lead_requests";
+          event_type: "chat_requests" | "vehicle_requests" | "bot_action_requests" | "lead_requests";
           period_start: string;
           count: number;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["usage_events"]["Row"],
-          "count" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["usage_events"]["Row"], "count" | "created_at" | "updated_at"> & {
           count?: number;
           created_at?: string;
           updated_at?: string;
@@ -258,10 +219,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["usage_snapshots"]["Row"],
-          "captured_on" | "object_count" | "metadata" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["usage_snapshots"]["Row"], "captured_on" | "object_count" | "metadata" | "created_at" | "updated_at"> & {
           captured_on?: string;
           object_count?: number;
           metadata?: Record<string, unknown>;
@@ -286,10 +244,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_storage_usage"]["Row"],
-          "captured_on" | "captured_at" | "metadata" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_storage_usage"]["Row"], "captured_on" | "captured_at" | "metadata" | "created_at" | "updated_at"> & {
           captured_on?: string;
           captured_at?: string;
           metadata?: Record<string, unknown>;
@@ -308,10 +263,7 @@ export type Database = {
           upload_expires_at: string;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["storage_upload_reservations"]["Row"],
-          "id" | "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["storage_upload_reservations"]["Row"], "id" | "created_at"> & {
           id?: string;
           created_at?: string;
         };
@@ -334,11 +286,7 @@ export type Database = {
           occurred_at: string;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_email_events"]["Row"],
-          "id" | "provider" | "template_key" | "bounce_type" | "bounce_subtype" |
-          "bounce_message" | "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_email_events"]["Row"], "id" | "provider" | "template_key" | "bounce_type" | "bounce_subtype" | "bounce_message" | "created_at"> & {
           id?: string;
           provider?: "resend";
           template_key?: string | null;
@@ -359,10 +307,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_email_suppressions"]["Row"],
-          "reason" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_email_suppressions"]["Row"], "reason" | "created_at" | "updated_at"> & {
           reason?: "hard_bounce";
           created_at?: string;
           updated_at?: string;
@@ -384,11 +329,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["lead_email_digest_batches"]["Row"],
-          "id" | "status" | "attempt_count" | "last_error" | "sent_at" |
-          "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["lead_email_digest_batches"]["Row"], "id" | "status" | "attempt_count" | "last_error" | "sent_at" | "created_at" | "updated_at"> & {
           id?: string;
           status?: "pending" | "delivering" | "retrying" | "sent" | "failed";
           attempt_count?: number;
@@ -413,11 +354,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_webhooks"]["Row"],
-          "id" | "events" | "enabled" | "integration_kind" |
-          "retry_delays_seconds" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_webhooks"]["Row"], "id" | "events" | "enabled" | "integration_kind" | "retry_delays_seconds" | "created_at" | "updated_at"> & {
           id?: string;
           events?: string[];
           enabled?: boolean;
@@ -437,10 +374,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_webhook_credentials"]["Row"],
-          "created_at" | "updated_at"
-        > & { created_at?: string; updated_at?: string };
+        Insert: Omit<Database["public"]["Tables"]["tenant_webhook_credentials"]["Row"], "created_at" | "updated_at"> & { created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["tenant_webhook_credentials"]["Insert"]>;
         Relationships: [];
       };
@@ -461,18 +395,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["webhook_deliveries"]["Row"],
-          | "id"
-          | "status"
-          | "attempt_count"
-          | "next_attempt_at"
-          | "response_status"
-          | "last_error"
-          | "delivered_at"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["webhook_deliveries"]["Row"], "id" | "status" | "attempt_count" | "next_attempt_at" | "response_status" | "last_error" | "delivered_at" | "created_at" | "updated_at"> & {
           id?: string;
           status?: "pending" | "delivering" | "retrying" | "succeeded" | "dead_letter";
           attempt_count?: number;
@@ -508,26 +431,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["csv_imports"]["Row"],
-          | "id"
-          | "import_type"
-          | "mode"
-          | "status"
-          | "source_object_path"
-          | "total_rows"
-          | "processed_rows"
-          | "succeeded_rows"
-          | "failed_rows"
-          | "skipped_rows"
-          | "errors"
-          | "attempt_count"
-          | "created_by"
-          | "started_at"
-          | "completed_at"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["csv_imports"]["Row"], "id" | "import_type" | "mode" | "status" | "source_object_path" | "total_rows" | "processed_rows" | "succeeded_rows" | "failed_rows" | "skipped_rows" | "errors" | "attempt_count" | "created_by" | "started_at" | "completed_at" | "created_at" | "updated_at"> & {
           id?: string;
           import_type?: "vehicle_inventory";
           mode?: "add" | "replace" | "sync";
@@ -580,27 +484,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["inventory_feed_sources"]["Row"],
-          | "id"
-          | "source_kind"
-          | "source_format"
-          | "profile"
-          | "sync_mode"
-          | "enabled"
-          | "retry_delays_seconds"
-          | "next_scheduled_at"
-          | "last_enqueued_at"
-          | "last_attempt_at"
-          | "last_succeeded_at"
-          | "last_source_hash"
-          | "config_version"
-          | "consecutive_failure_count"
-          | "last_error"
-          | "archived_at"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["inventory_feed_sources"]["Row"], "id" | "source_kind" | "source_format" | "profile" | "sync_mode" | "enabled" | "retry_delays_seconds" | "next_scheduled_at" | "last_enqueued_at" | "last_attempt_at" | "last_succeeded_at" | "last_source_hash" | "config_version" | "consecutive_failure_count" | "last_error" | "archived_at" | "created_at" | "updated_at"> & {
           id?: string;
           source_kind?: "https" | "storage" | "sftp";
           source_format?: "csv" | "json" | "xml";
@@ -631,10 +515,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["inventory_feed_source_credentials"]["Row"],
-          "created_at" | "updated_at"
-        > & { created_at?: string; updated_at?: string };
+        Insert: Omit<Database["public"]["Tables"]["inventory_feed_source_credentials"]["Row"], "created_at" | "updated_at"> & { created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["inventory_feed_source_credentials"]["Insert"]>;
         Relationships: [];
       };
@@ -665,31 +546,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["inventory_feed_runs"]["Row"],
-          | "id"
-          | "run_trigger"
-          | "source_snapshot"
-          | "status"
-          | "attempt_count"
-          | "next_attempt_at"
-          | "claimed_at"
-          | "source_hash"
-          | "input_bytes"
-          | "total_rows"
-          | "processed_rows"
-          | "created_rows"
-          | "updated_rows"
-          | "skipped_rows"
-          | "conflict_rows"
-          | "failed_rows"
-          | "errors"
-          | "last_error"
-          | "started_at"
-          | "completed_at"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["inventory_feed_runs"]["Row"], "id" | "run_trigger" | "source_snapshot" | "status" | "attempt_count" | "next_attempt_at" | "claimed_at" | "source_hash" | "input_bytes" | "total_rows" | "processed_rows" | "created_rows" | "updated_rows" | "skipped_rows" | "conflict_rows" | "failed_rows" | "errors" | "last_error" | "started_at" | "completed_at" | "created_at" | "updated_at"> & {
           id?: string;
           run_trigger?: "manual" | "scheduled";
           source_snapshot?: Record<string, unknown>;
@@ -758,27 +615,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["inventory_export_destinations"]["Row"],
-          | "id"
-          | "http_method"
-          | "export_format"
-          | "profile"
-          | "enabled"
-          | "retry_delays_seconds"
-          | "next_scheduled_at"
-          | "last_enqueued_at"
-          | "last_attempt_at"
-          | "last_succeeded_at"
-          | "last_noop_at"
-          | "last_payload_hash"
-          | "config_version"
-          | "consecutive_failure_count"
-          | "last_error"
-          | "archived_at"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["inventory_export_destinations"]["Row"], "id" | "http_method" | "export_format" | "profile" | "enabled" | "retry_delays_seconds" | "next_scheduled_at" | "last_enqueued_at" | "last_attempt_at" | "last_succeeded_at" | "last_noop_at" | "last_payload_hash" | "config_version" | "consecutive_failure_count" | "last_error" | "archived_at" | "created_at" | "updated_at"> & {
           id?: string;
           http_method?: "POST" | "PUT";
           export_format?: "csv" | "json" | "xml";
@@ -809,10 +646,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["inventory_export_destination_credentials"]["Row"],
-          "created_at" | "updated_at"
-        > & { created_at?: string; updated_at?: string };
+        Insert: Omit<Database["public"]["Tables"]["inventory_export_destination_credentials"]["Row"], "created_at" | "updated_at"> & { created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["inventory_export_destination_credentials"]["Insert"]>;
         Relationships: [];
       };
@@ -836,24 +670,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["inventory_export_runs"]["Row"],
-          | "id"
-          | "run_trigger"
-          | "destination_snapshot"
-          | "status"
-          | "attempt_count"
-          | "next_attempt_at"
-          | "claimed_at"
-          | "payload_hash"
-          | "record_count"
-          | "response_status"
-          | "last_error"
-          | "started_at"
-          | "completed_at"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["inventory_export_runs"]["Row"], "id" | "run_trigger" | "destination_snapshot" | "status" | "attempt_count" | "next_attempt_at" | "claimed_at" | "payload_hash" | "record_count" | "response_status" | "last_error" | "started_at" | "completed_at" | "created_at" | "updated_at"> & {
           id?: string;
           run_trigger?: "manual" | "scheduled";
           destination_snapshot?: Record<string, unknown>;
@@ -905,19 +722,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["vehicles"]["Row"],
-          | "id"
-          | "search_vector"
-          | "status"
-          | "sold_at"
-          | "sold_price"
-          | "feed_vin"
-          | "feed_image_urls"
-          | "feed_updated_at"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["vehicles"]["Row"], "id" | "search_vector" | "status" | "sold_at" | "sold_price" | "feed_vin" | "feed_image_urls" | "feed_updated_at" | "created_at" | "updated_at"> & {
           id?: string;
           status?: "draft" | "live" | "sold" | "archived";
           feed_vin?: string | null;
@@ -947,12 +752,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["vehicle_images"]["Row"],
-          "id" | "sort_order" | "is_primary" | "ai_description" |
-          "ai_description_status" | "ai_description_model" |
-          "ai_description_updated_at" | "source_url" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["vehicle_images"]["Row"], "id" | "sort_order" | "is_primary" | "ai_description" | "ai_description_status" | "ai_description_model" | "ai_description_updated_at" | "source_url" | "created_at" | "updated_at"> & {
           id?: string;
           sort_order?: number;
           is_primary?: boolean;
@@ -994,11 +794,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["vehicle_image_description_jobs"]["Row"],
-          "id" | "status" | "attempt_count" | "next_attempt_at" | "last_error" |
-          "completed_at" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["vehicle_image_description_jobs"]["Row"], "id" | "status" | "attempt_count" | "next_attempt_at" | "last_error" | "completed_at" | "created_at" | "updated_at"> & {
           id?: string;
           status?: "pending" | "delivering" | "retrying" | "completed" | "dead_letter";
           attempt_count?: number;
@@ -1018,13 +814,32 @@ export type Database = {
           title: string;
           category: string;
           source: string | null;
+          content: string;
+          status: "draft" | "published" | "archived";
+          visibility: "public";
+          revision: number;
+          published_revision: number | null;
+          published_at: string | null;
+          embedding_status: "not_indexed" | "pending" | "indexed" | "lexical_only" | "failed";
+          embedding_model: string | null;
+          indexed_at: string | null;
+          indexing_error: string | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["rag_documents"]["Row"],
-          "id" | "created_at" | "updated_at"
-        > & { id?: string };
+        Insert: Omit<Database["public"]["Tables"]["rag_documents"]["Row"], "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          content?: string;
+          status?: "draft" | "published" | "archived";
+          visibility?: "public";
+          revision?: number;
+          published_revision?: number | null;
+          published_at?: string | null;
+          embedding_status?: "not_indexed" | "pending" | "indexed" | "lexical_only" | "failed";
+          embedding_model?: string | null;
+          indexed_at?: string | null;
+          indexing_error?: string | null;
+        };
         Update: Partial<Database["public"]["Tables"]["rag_documents"]["Insert"]>;
         Relationships: [];
       };
@@ -1037,13 +852,49 @@ export type Database = {
           text: string;
           category: string;
           embedding: number[] | null;
+          revision: number;
+          chunk_index: number;
+          content_hash: string | null;
+          embedding_model: string | null;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["rag_chunks"]["Row"],
-          "id" | "created_at"
-        > & { id?: string };
+        Insert: Omit<Database["public"]["Tables"]["rag_chunks"]["Row"], "id" | "created_at"> & {
+          id?: string;
+          revision?: number;
+          chunk_index?: number;
+          content_hash?: string | null;
+          embedding_model?: string | null;
+        };
         Update: Partial<Database["public"]["Tables"]["rag_chunks"]["Insert"]>;
+        Relationships: [];
+      };
+      rag_indexing_jobs: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          document_id: string;
+          revision: number;
+          status: "pending" | "processing" | "retrying" | "completed" | "dead_letter" | "superseded";
+          attempt_count: number;
+          next_attempt_at: string;
+          claimed_at: string | null;
+          last_error: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["rag_indexing_jobs"]["Row"], "id" | "status" | "attempt_count" | "next_attempt_at" | "claimed_at" | "last_error" | "completed_at" | "created_at" | "updated_at"> & {
+          id?: string;
+          status?: "pending" | "processing" | "retrying" | "completed" | "dead_letter" | "superseded";
+          attempt_count?: number;
+          next_attempt_at?: string;
+          claimed_at?: string | null;
+          last_error?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["rag_indexing_jobs"]["Insert"]>;
         Relationships: [];
       };
       leads: {
@@ -1072,10 +923,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["leads"]["Row"],
-          "id" | "created_at" | "updated_at" | "visitor_id"
-        > & { id?: string; visitor_id?: string | null };
+        Insert: Omit<Database["public"]["Tables"]["leads"]["Row"], "id" | "created_at" | "updated_at" | "visitor_id"> & { id?: string; visitor_id?: string | null };
         Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
         Relationships: [];
       };
@@ -1090,19 +938,14 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["lead_lost_reason_options"]["Row"],
-          "id" | "sort_order" | "is_active" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["lead_lost_reason_options"]["Row"], "id" | "sort_order" | "is_active" | "created_at" | "updated_at"> & {
           id?: string;
           sort_order?: number;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
-        Update: Partial<
-          Database["public"]["Tables"]["lead_lost_reason_options"]["Insert"]
-        >;
+        Update: Partial<Database["public"]["Tables"]["lead_lost_reason_options"]["Insert"]>;
         Relationships: [];
       };
       lead_activities: {
@@ -1115,10 +958,7 @@ export type Database = {
           body: string | null;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["lead_activities"]["Row"],
-          "id" | "created_at"
-        > & { id?: string };
+        Insert: Omit<Database["public"]["Tables"]["lead_activities"]["Row"], "id" | "created_at"> & { id?: string };
         Update: Partial<Database["public"]["Tables"]["lead_activities"]["Insert"]>;
         Relationships: [];
       };
@@ -1134,10 +974,7 @@ export type Database = {
           ip_addr: string | null;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["audit_log"]["Row"],
-          "id" | "created_at" | "metadata"
-        > & { id?: string; metadata?: Record<string, unknown> };
+        Insert: Omit<Database["public"]["Tables"]["audit_log"]["Row"], "id" | "created_at" | "metadata"> & { id?: string; metadata?: Record<string, unknown> };
         Update: Partial<Database["public"]["Tables"]["audit_log"]["Insert"]>;
         Relationships: [];
       };
@@ -1159,11 +996,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["admin_concierge_commands"]["Row"],
-          "id" | "idempotency_key" | "status" | "result" | "error" |
-          "confirmed_at" | "executed_at" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["admin_concierge_commands"]["Row"], "id" | "idempotency_key" | "status" | "result" | "error" | "confirmed_at" | "executed_at" | "created_at" | "updated_at"> & {
           id?: string;
           idempotency_key?: string;
           status?: "pending" | "executed" | "failed" | "expired" | "cancelled";
@@ -1187,10 +1020,7 @@ export type Database = {
           changed_by: string | null;
           changed_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["price_history"]["Row"],
-          "id" | "changed_at"
-        > & { id?: string };
+        Insert: Omit<Database["public"]["Tables"]["price_history"]["Row"], "id" | "changed_at"> & { id?: string };
         Update: Partial<Database["public"]["Tables"]["price_history"]["Insert"]>;
         Relationships: [];
       };
@@ -1209,10 +1039,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["pages"]["Row"],
-          "id" | "archived_at" | "created_at" | "updated_at"
-        > & { id?: string; archived_at?: string | null };
+        Insert: Omit<Database["public"]["Tables"]["pages"]["Row"], "id" | "archived_at" | "created_at" | "updated_at"> & { id?: string; archived_at?: string | null };
         Update: Partial<Database["public"]["Tables"]["pages"]["Insert"]> & {
           updated_at?: string;
         };
@@ -1224,14 +1051,18 @@ export type Database = {
           page_id: string;
           tenant_id: string;
           kind: "draft" | "published" | "autosave";
-          blocks: { version: number; blocks: Array<{ id: string; type: string; props: Record<string, unknown> }> };
+          blocks: {
+            version: number;
+            blocks: Array<{
+              id: string;
+              type: string;
+              props: Record<string, unknown>;
+            }>;
+          };
           created_by: string | null;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["page_revisions"]["Row"],
-          "id" | "created_at"
-        > & { id?: string };
+        Insert: Omit<Database["public"]["Tables"]["page_revisions"]["Row"], "id" | "created_at"> & { id?: string };
         Update: Partial<Database["public"]["Tables"]["page_revisions"]["Insert"]>;
         Relationships: [];
       };
@@ -1248,12 +1079,7 @@ export type Database = {
           verification_failed_at: string | null;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_domains"]["Row"],
-          "id" | "verified" | "verification_token" | "vercel_config" |
-          "verification_status" | "verification_checked_at" | "verification_failed_at" |
-          "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_domains"]["Row"], "id" | "verified" | "verification_token" | "vercel_config" | "verification_status" | "verification_checked_at" | "verification_failed_at" | "created_at"> & {
           id?: string;
           verified?: boolean;
           verification_token?: string;
@@ -1282,11 +1108,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_asset_scans"]["Row"],
-          "id" | "status" | "scanner" | "signature" | "quarantine_key" |
-          "scanned_at" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_asset_scans"]["Row"], "id" | "status" | "scanner" | "signature" | "quarantine_key" | "scanned_at" | "created_at" | "updated_at"> & {
           id?: string;
           status?: "pending" | "clean" | "infected" | "error" | "skipped" | "unavailable";
           scanner?: string | null;
@@ -1311,17 +1133,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["bot_personas"]["Row"],
-          | "id"
-          | "name"
-          | "tone"
-          | "system_prompt"
-          | "capabilities"
-          | "is_active"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["bot_personas"]["Row"], "id" | "name" | "tone" | "system_prompt" | "capabilities" | "is_active" | "created_at" | "updated_at"> & {
           id?: string;
           name?: string;
           tone?: "cinematic" | "concise" | "warm" | "formal" | "technical";
@@ -1346,17 +1158,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_bot_config"]["Row"],
-          | "persona"
-          | "allowed_tools"
-          | "model"
-          | "temperature"
-          | "max_iterations"
-          | "system_prompt_override"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_bot_config"]["Row"], "persona" | "allowed_tools" | "model" | "temperature" | "max_iterations" | "system_prompt_override" | "created_at" | "updated_at"> & {
           persona?: Record<string, unknown>;
           allowed_tools?: string[];
           model?: string;
@@ -1387,18 +1189,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["concierge_targets"]["Row"],
-          | "id"
-          | "is_conversion"
-          | "enabled"
-          | "example_prompts"
-          | "sort_order"
-          | "created_by"
-          | "updated_by"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["concierge_targets"]["Row"], "id" | "is_conversion" | "enabled" | "example_prompts" | "sort_order" | "created_by" | "updated_by" | "created_at" | "updated_at"> & {
           id?: string;
           is_conversion?: boolean;
           enabled?: boolean;
@@ -1426,19 +1217,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["loyalty_accounts"]["Row"],
-          | "id"
-          | "lead_id"
-          | "visitor_id"
-          | "external_customer_id"
-          | "email"
-          | "phone"
-          | "points_balance"
-          | "tier"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["loyalty_accounts"]["Row"], "id" | "lead_id" | "visitor_id" | "external_customer_id" | "email" | "phone" | "points_balance" | "tier" | "created_at" | "updated_at"> & {
           id?: string;
           lead_id?: string | null;
           visitor_id?: string | null;
@@ -1467,16 +1246,7 @@ export type Database = {
           occurred_at: string;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["loyalty_transactions"]["Row"],
-          | "id"
-          | "lead_id"
-          | "source"
-          | "description"
-          | "metadata"
-          | "occurred_at"
-          | "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["loyalty_transactions"]["Row"], "id" | "lead_id" | "source" | "description" | "metadata" | "occurred_at" | "created_at"> & {
           id?: string;
           lead_id?: string | null;
           source?: "manual" | "lead" | "purchase" | "redemption" | "adjustment" | "expiration";
@@ -1500,10 +1270,7 @@ export type Database = {
           metadata: Record<string, unknown>;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["loyalty_accrual_events"]["Row"],
-          "id" | "visitor_id" | "metadata" | "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["loyalty_accrual_events"]["Row"], "id" | "visitor_id" | "metadata" | "created_at"> & {
           id?: string;
           visitor_id?: string | null;
           metadata?: Record<string, unknown>;
@@ -1522,10 +1289,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["loyalty_tiers"]["Row"],
-          "id" | "threshold" | "sort_order" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["loyalty_tiers"]["Row"], "id" | "threshold" | "sort_order" | "created_at" | "updated_at"> & {
           id?: string;
           threshold?: number;
           sort_order?: number;
@@ -1546,10 +1310,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["visitors"]["Row"],
-          "id" | "first_name" | "last_name" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["visitors"]["Row"], "id" | "first_name" | "last_name" | "created_at" | "updated_at"> & {
           id?: string;
           first_name?: string;
           last_name?: string;
@@ -1567,10 +1328,7 @@ export type Database = {
           vehicle_id: string;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["visitor_saved_vehicles"]["Row"],
-          "id" | "created_at"
-        > & { id?: string; created_at?: string };
+        Insert: Omit<Database["public"]["Tables"]["visitor_saved_vehicles"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["visitor_saved_vehicles"]["Insert"]>;
         Relationships: [];
       };
@@ -1583,10 +1341,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["visitor_profiles"]["Row"],
-          "preferences" | "learned_session_count" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["visitor_profiles"]["Row"], "preferences" | "learned_session_count" | "created_at" | "updated_at"> & {
           preferences?: Record<string, unknown>;
           learned_session_count?: number;
           created_at?: string;
@@ -1604,10 +1359,7 @@ export type Database = {
           expires_at: string;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["visitor_sessions"]["Row"],
-          "id" | "created_at"
-        > & { id?: string; created_at?: string };
+        Insert: Omit<Database["public"]["Tables"]["visitor_sessions"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["visitor_sessions"]["Insert"]>;
         Relationships: [];
       };
@@ -1619,10 +1371,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["chat_sessions"]["Row"],
-          "id" | "visitor_id" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["chat_sessions"]["Row"], "id" | "visitor_id" | "created_at" | "updated_at"> & {
           id?: string;
           visitor_id?: string | null;
           created_at?: string;
@@ -1641,10 +1390,7 @@ export type Database = {
           is_server_observed: boolean;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["chat_messages"]["Row"],
-          "id" | "is_server_observed" | "created_at"
-        > & { id?: string; is_server_observed?: boolean; created_at?: string };
+        Insert: Omit<Database["public"]["Tables"]["chat_messages"]["Row"], "id" | "is_server_observed" | "created_at"> & { id?: string; is_server_observed?: boolean; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["chat_messages"]["Insert"]>;
         Relationships: [];
       };
@@ -1661,17 +1407,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_invites"]["Row"],
-          | "id"
-          | "role"
-          | "token"
-          | "status"
-          | "expires_at"
-          | "created_by"
-          | "created_at"
-          | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_invites"]["Row"], "id" | "role" | "token" | "status" | "expires_at" | "created_by" | "created_at" | "updated_at"> & {
           id?: string;
           role?: "owner" | "admin" | "editor" | "viewer";
           token?: string;
@@ -1701,10 +1437,7 @@ export type Database = {
           consent_version: number;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["consent_events"]["Row"],
-          "id" | "consent_version" | "created_at"
-        > & { id?: string; consent_version?: number; created_at?: string };
+        Insert: Omit<Database["public"]["Tables"]["consent_events"]["Row"], "id" | "consent_version" | "created_at"> & { id?: string; consent_version?: number; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["consent_events"]["Insert"]>;
         Relationships: [];
       };
@@ -1757,10 +1490,7 @@ export type Database = {
           published_by: string | null;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["site_design_revisions"]["Row"],
-          "id" | "published_by" | "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["site_design_revisions"]["Row"], "id" | "published_by" | "created_at"> & {
           id?: string;
           published_by?: string | null;
           created_at?: string;
@@ -1778,10 +1508,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["site_design_drafts"]["Row"],
-          "id" | "updated_by" | "created_at" | "updated_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["site_design_drafts"]["Row"], "id" | "updated_by" | "created_at" | "updated_at"> & {
           id?: string;
           updated_by?: string | null;
           created_at?: string;
@@ -1803,10 +1530,7 @@ export type Database = {
           revoked_at: string | null;
           created_at: string;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["tenant_api_keys"]["Row"],
-          "id" | "scopes" | "created_by" | "last_used_at" | "revoked_at" | "created_at"
-        > & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_api_keys"]["Row"], "id" | "scopes" | "created_by" | "last_used_at" | "revoked_at" | "created_at"> & {
           id?: string;
           scopes?: string[];
           created_by?: string | null;
@@ -1838,7 +1562,11 @@ export type Database = {
         Returns: string[];
       };
       vehicle_facets: {
-        Args: { p_tenant_id: string; p_make?: string | null; p_state?: string | null };
+        Args: {
+          p_tenant_id: string;
+          p_make?: string | null;
+          p_state?: string | null;
+        };
         Returns: {
           makes: string[];
           models: string[];
@@ -1847,7 +1575,11 @@ export type Database = {
         }[];
       };
       vehicle_facets_v2: {
-        Args: { p_tenant_id: string; p_make?: string | null; p_state?: string | null };
+        Args: {
+          p_tenant_id: string;
+          p_make?: string | null;
+          p_state?: string | null;
+        };
         Returns: {
           makes: string[];
           models: string[];
@@ -1863,7 +1595,11 @@ export type Database = {
         }[];
       };
       vehicle_facets_by_slug: {
-        Args: { p_slug: string; p_make?: string | null; p_state?: string | null };
+        Args: {
+          p_slug: string;
+          p_make?: string | null;
+          p_state?: string | null;
+        };
         Returns: {
           makes: string[];
           models: string[];
@@ -1949,23 +1685,43 @@ export type Database = {
         Returns: boolean;
       };
       execute_admin_concierge_lead_status_command: {
-        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Args: {
+          p_command_id: string;
+          p_tenant_id: string;
+          p_actor_user_id: string;
+        };
         Returns: Record<string, unknown>;
       };
       execute_admin_concierge_vehicle_price_command: {
-        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Args: {
+          p_command_id: string;
+          p_tenant_id: string;
+          p_actor_user_id: string;
+        };
         Returns: Record<string, unknown>;
       };
       execute_admin_concierge_vehicle_status_command: {
-        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Args: {
+          p_command_id: string;
+          p_tenant_id: string;
+          p_actor_user_id: string;
+        };
         Returns: Record<string, unknown>;
       };
       execute_admin_concierge_lead_assign_command: {
-        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Args: {
+          p_command_id: string;
+          p_tenant_id: string;
+          p_actor_user_id: string;
+        };
         Returns: Record<string, unknown>;
       };
       execute_admin_concierge_feed_run_command: {
-        Args: { p_command_id: string; p_tenant_id: string; p_actor_user_id: string };
+        Args: {
+          p_command_id: string;
+          p_tenant_id: string;
+          p_actor_user_id: string;
+        };
         Returns: Record<string, unknown>;
       };
       match_rag_chunks_for_tenant: {
@@ -1982,6 +1738,60 @@ export type Database = {
           similarity: number;
         }[];
       };
+      hybrid_rag_chunks_for_tenant: {
+        Args: {
+          p_tenant_id: string;
+          p_query_text: string;
+          p_query_embedding?: number[] | null;
+          p_match_count?: number;
+        };
+        Returns: {
+          id: string;
+          document_id: string;
+          text: string;
+          category: string;
+          score: number;
+          source: "lexical" | "semantic" | "hybrid";
+          document_title: string;
+          document_revision: number;
+          published_at: string | null;
+        }[];
+      };
+      enqueue_rag_indexing_job: {
+        Args: { p_tenant_id: string; p_document_id: string };
+        Returns: string;
+      };
+      save_rag_document: {
+        Args: {
+          p_tenant_id: string;
+          p_document_id: string | null;
+          p_title: string;
+          p_category: string;
+          p_source: string | null;
+          p_content: string;
+        };
+        Returns: string;
+      };
+      archive_rag_document: {
+        Args: { p_tenant_id: string; p_document_id: string };
+        Returns: boolean;
+      };
+      claim_rag_indexing_jobs: {
+        Args: { p_limit?: number };
+        Returns: Database["public"]["Tables"]["rag_indexing_jobs"]["Row"][];
+      };
+      complete_rag_indexing_job: {
+        Args: {
+          p_job_id: string;
+          p_chunks: unknown;
+          p_embedding_model?: string | null;
+        };
+        Returns: boolean;
+      };
+      fail_rag_indexing_job: {
+        Args: { p_job_id: string; p_error: string };
+        Returns: string;
+      };
       get_published_page: {
         Args: { p_tenant_id: string; p_slug: string };
         Returns: {
@@ -1989,7 +1799,14 @@ export type Database = {
           slug: string;
           title: string;
           seo_meta: Record<string, unknown>;
-          blocks: { version: number; blocks: Array<{ id: string; type: string; props: Record<string, unknown> }> };
+          blocks: {
+            version: number;
+            blocks: Array<{
+              id: string;
+              type: string;
+              props: Record<string, unknown>;
+            }>;
+          };
           published_revision_id: string | null;
         }[];
       };
@@ -2049,7 +1866,11 @@ export type Database = {
       };
       tenant_conversion_funnel: {
         Args: { p_tenant_id: string; p_since: string };
-        Returns: Array<{ event_name: string; event_count: number; session_count: number }>;
+        Returns: Array<{
+          event_name: string;
+          event_count: number;
+          session_count: number;
+        }>;
       };
       tenant_conversion_report: {
         Args: { p_tenant_id: string; p_since: string };
@@ -2077,7 +1898,11 @@ export type Database = {
         Returns: { enabled: boolean; reductions: number }[];
       };
       reorder_vehicle_images: {
-        Args: { p_tenant_id: string; p_vehicle_id: string; p_image_ids: string[] };
+        Args: {
+          p_tenant_id: string;
+          p_vehicle_id: string;
+          p_image_ids: string[];
+        };
         Returns: boolean;
       };
       set_primary_vehicle_image: {
@@ -2091,11 +1916,7 @@ export type Database = {
       increment_usage_event: {
         Args: {
           p_tenant_id: string;
-          p_event_type:
-            | "chat_requests"
-            | "vehicle_requests"
-            | "bot_action_requests"
-            | "lead_requests";
+          p_event_type: "chat_requests" | "vehicle_requests" | "bot_action_requests" | "lead_requests";
           p_period_start?: string | null;
           p_increment?: number;
         };
@@ -2104,11 +1925,7 @@ export type Database = {
       consume_usage_event: {
         Args: {
           p_tenant_id: string;
-          p_event_type:
-            | "chat_requests"
-            | "vehicle_requests"
-            | "bot_action_requests"
-            | "lead_requests";
+          p_event_type: "chat_requests" | "vehicle_requests" | "bot_action_requests" | "lead_requests";
           p_limit: number | null;
           p_period_start?: string | null;
         };
@@ -2352,7 +2169,11 @@ export type Database = {
         Returns: boolean;
       };
       set_inventory_feed_source_enabled: {
-        Args: { p_feed_source_id: string; p_tenant_id: string; p_enabled: boolean };
+        Args: {
+          p_feed_source_id: string;
+          p_tenant_id: string;
+          p_enabled: boolean;
+        };
         Returns: boolean;
       };
       enqueue_inventory_feed_run: {
@@ -2450,7 +2271,11 @@ export type Database = {
         Returns: boolean;
       };
       set_inventory_export_destination_enabled: {
-        Args: { p_export_destination_id: string; p_tenant_id: string; p_enabled: boolean };
+        Args: {
+          p_export_destination_id: string;
+          p_tenant_id: string;
+          p_enabled: boolean;
+        };
         Returns: boolean;
       };
       enqueue_inventory_export_run: {

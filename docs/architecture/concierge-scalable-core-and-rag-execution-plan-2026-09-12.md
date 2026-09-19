@@ -1,7 +1,7 @@
 # LUME Concierge: Scalable Core and RAG Execution Plan
 
 - **Date:** 2026-09-12
-- **Status:** Phases 1-2 implemented (see below); Phases 3-6 not started
+- **Status:** Phases 1-4 implemented in code; Phase 3 activation and Phase 4 migration/live benchmark remain gated; Phases 5-6 not started
 - **Audience:** product owner and Claude, as reviewer and subsequent implementing agent
 - **Scope:** public website concierge and authenticated dashboard concierge
 
@@ -43,9 +43,9 @@ The benchmark—not provider marketing or a single demo—selects the production
 
 Phases 1 and 2 are implemented on branch `feat/concierge-core-hardening`
 (commits `072bd63`, `db0dc11`, `f4a0d62`, `8a3e909`, `682a664`, `2abec20`).
-Phases 3-6 are NOT started. RAG, embeddings, knowledge authoring, FTS,
-rerankers, migrations and production mutations were explicitly out of scope
-for this round and none were performed.
+This historical checkpoint covered Phases 1-2 only. See the dated Phase 3 and
+Phase 4 sections below for the work subsequently added on the integration
+branch. No migration or production mutation has been performed.
 
 ### Section 3.3 findings, as verified against the checkout
 
@@ -354,6 +354,122 @@ CONCIERGE_INTERPRETATION_EVAL_CONFIRM=held-out \
 CONCIERGE_INTERPRETATION_EVAL_MODEL=deepseek-v4-flash \
 npm run evaluate:chat-interpretation -- --held-out
 ```
+
+### Phase 4 implementation — lifecycle and hybrid retrieval (2026-09-19)
+
+Phase 4 is implemented in code on `integrate/concierge-core-hardening`, but it
+is deliberately **not deployed or schema-activated**. Migration 087 remains
+unapplied and the live retrieval benchmark remains blocked until an approved
+test database is named.
+
+**Authoring and publication lifecycle**
+
+- The existing Knowledge screen now creates and edits bounded plain-text
+  documents, queues publication, displays draft/live revision and indexing
+  state, surfaces sanitized failures, and archives instead of permanently
+  deleting. All browser mutations pass `tenant_id` into role-checking RPCs.
+- Document revisions are coherent: editing creates a new revision while the
+  last published revision remains retrievable. The queue publishes chunks and
+  flips `published_revision` inside one database function. Archiving removes a
+  document from retrieval immediately and supersedes queued work.
+- The durable `rag_indexing_jobs` queue uses `FOR UPDATE SKIP LOCKED`, bounded
+  claims, a ten-minute stale lease, exponential retry and dead-letter after
+  five attempts. The cron route uses the existing `CRON_SECRET` and service
+  client pattern.
+- Chunking is deterministic and bounded at 200,000 document characters and
+  400 chunks. Content hashes let a replacement revision reuse matching
+  768-dimensional embeddings; only changed chunks call the embedder. Vectors
+  must be finite and exactly 768 dimensions.
+- Local Ollama with `nomic-embed-text` is the optional no-metered-cost adapter
+  chosen for this phase. If `OLLAMA_HOST` is absent or query embedding fails,
+  publication and retrieval remain lexical-only. Cohere Embed remains a future
+  adapter requiring a dimension/model migration, data-processing approval and
+  spend limits; model generations are never mixed silently.
+
+**Security and compatibility**
+
+- Migration 087 removes the active-tenant anonymous table policy and revokes
+  anon chunk reads. The legacy vector RPC is revoked from anon/authenticated.
+  The new hybrid RPC is service-only and filters active tenant, public status,
+  published document status and the exact `published_revision` at the database
+  boundary. Private tenant knowledge remains unsupported by schema constraint.
+- Queue internals are RLS-enabled and service-only. Editor-facing save,
+  archive and enqueue functions re-check owner/admin/editor membership. The
+  public chat route uses a server service client, so its RPC must and does
+  enforce the complete publication scope itself rather than claiming RLS
+  protects a service-role read.
+- Legacy chunks are assigned a deterministic ordinal and their existing text
+  is reconstructed into revision 1. Existing documents with chunks are
+  promoted to public/published revision 1 because that is their pre-migration
+  visibility; no legacy row is deleted. The seed script now updates only its
+  own content-addressed seed documents and never clears editor content.
+- Code-first rollout remains available before schema activation: only a
+  missing-function/schema-cache error uses the legacy keyword reader. Other
+  database failures fail closed rather than broad-reading the corpus. Once
+  migration 087 is applied, the normal route never fetches the whole corpus.
+
+**Retrieval and grounded evidence**
+
+- PostgreSQL generated `tsvector` + GIN search and optional pgvector cosine
+  candidates are fused with reciprocal-rank fusion, bounded to 50 candidates
+  per channel and at most 20 returned passages (the chat requests seven).
+  Empty/malformed/outage embeddings fall back through the same authorized
+  lexical RPC.
+- Returned evidence includes an internal chunk/document identity, document
+  title, revision, publication time and retrieval channel. Prompts treat
+  passages as untrusted quoted data and label them `K1…Kn`; public SSE metadata
+  exposes only those turn-local handles plus safe title/revision/date—not raw
+  document IDs or source URLs.
+- Dashboard product help is intentionally separate from tenant RAG. It is a
+  small code-versioned curated catalog whose destinations resolve through the
+  closed admin capability registry. This avoids implementing global product
+  help as a missing-tenant wildcard over tenant-owned content.
+- Reranking remains off. English is the only declared lexical configuration in
+  this phase. French, Arabic and mixed-language FTS require a measured language
+  strategy rather than pretending English stemming is multilingual.
+
+**Benchmark and activation procedure**
+
+`npm run evaluate:rag-retrieval` compares the old in-memory keyword scorer,
+database lexical retrieval and (only when Ollama is configured) hybrid
+retrieval against a versioned gold fixture. It refuses database access unless
+`RAG_RETRIEVAL_EVAL=1` and requires an explicitly approved
+`RAG_EVAL_TENANT_ID`. It has not been run because migration 087 has not been
+applied to an approved test database.
+
+```bash
+RAG_RETRIEVAL_EVAL=1 \
+RAG_EVAL_TENANT_ID=<approved-test-tenant-uuid> \
+SUPABASE_URL=<approved-test-project-url> \
+SUPABASE_SERVICE_ROLE_KEY=<approved-test-service-key> \
+npm run evaluate:rag-retrieval
+```
+
+Add `OLLAMA_HOST` and `OLLAMA_EMBED_MODEL=nomic-embed-text` to include the
+semantic/hybrid arm. Do not run the bundled legacy fixture as a product-quality
+approval for dealership knowledge; replace or supplement it with independently
+labeled dealership questions after representative documents are authored.
+
+Verification in the integration worktree on 2026-09-19:
+
+| Gate | Result |
+| --- | --- |
+| `npm run check:migrations` | 87 sequential migration files |
+| `npm run typecheck:all` | clean |
+| `npm test -- --run` | 234 files / 1,831 tests passing |
+| `npm run build` | clean (existing asset/chunk-size warnings only) |
+| `npm run build:admin` | clean (existing middleware deprecation warning only) |
+| `git diff --check` | clean |
+| Migration 087 on a database | not run; explicit environment approval required |
+| `npm run evaluate:rag-retrieval` | not run; depends on the approved migrated test database |
+
+**Rollback**
+
+Before any private visibility class exists, rollback is: stop the indexing
+cron, disable publishing in the UI, and deploy the prior code while preserving
+the additive columns/tables. Do not restore anonymous direct chunk reads. If a
+schema rollback is ever required, keep the publication filter in a compatible
+server RPC; never return to a table-wide active-tenant reader.
 
 ### Verification performed
 

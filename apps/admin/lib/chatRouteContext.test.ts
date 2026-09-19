@@ -29,6 +29,7 @@ const observability = readFileSync(
 const DETERMINISTIC_RETURN =
   "return new Response(stream, { headers: sseHeaders });";
 const CORPUS_QUERY = '.from("rag_chunks")';
+const HYBRID_RETRIEVAL = "retrieveHybridContext({";
 const FACETS_RPC = 'supabase.rpc("vehicle_facets_v2"';
 const LOYALTY_CALL = "loadChatLoyaltyContext(supabase";
 const PREFERENCES_CALL = "loadVisitorPreferenceContext(supabase";
@@ -49,6 +50,24 @@ describe("public chat route: model-only context is deferred", () => {
     // deterministic early return. Anything written after it cannot run for a
     // turn a verified-state rule already answered.
     expect(at(CORPUS_QUERY)).toBeGreaterThan(at(DETERMINISTIC_RETURN));
+  });
+
+  it("uses bounded database-side hybrid retrieval on the normal model path", () => {
+    expect(at(HYBRID_RETRIEVAL)).toBeGreaterThan(at(DETERMINISTIC_RETURN));
+    const call = route.slice(at(HYBRID_RETRIEVAL), at(HYBRID_RETRIEVAL) + 300);
+    expect(call).toContain("tenantId");
+    expect(call).toContain("topK: 7");
+  });
+
+  it("uses the whole-corpus reader only as a migration-compatibility fallback", () => {
+    const loader = at("async function loadPublishedKnowledgeContext(");
+    const body = route.slice(loader, loader + 1_800);
+    expect(body).toContain(
+      "hybrid_rag_chunks_for_tenant|schema cache|could not find",
+    );
+    expect(body.indexOf(CORPUS_QUERY)).toBeGreaterThan(
+      body.indexOf("if (!/hybrid_rag_chunks_for_tenant"),
+    );
   });
 
   it("reads loyalty and visitor preferences only on the model path", () => {
@@ -185,7 +204,8 @@ describe("public chat route: client-supplied turn id", () => {
 
   it("echoes the turn id in meta so the browser can correlate its stream", () => {
     const meta = at("const buildMetaEvent =");
-    expect(route.slice(meta, meta + 700)).toContain("requestId");
+    const end = route.indexOf("const deterministicAnswers", meta);
+    expect(route.slice(meta, end)).toContain("requestId");
   });
 
   it("records only whether an id was client-supplied, never the id's origin detail", () => {

@@ -39,6 +39,7 @@ export type AdminCapability = {
  * before a planner can ever name them.
  */
 export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
+  capability("help.search", "Search dashboard help", "read", "viewer", "/", ["help", "how to", "how do i"]),
   capability("overview.view", "Open overview", "navigate", "viewer", "/", ["overview", "dashboard", "home"]),
   capability("overview.summary", "Summarize dashboard", "read", "viewer", "/", ["dashboard summary", "overview summary", "summarize dashboard"]),
   capability("vehicles.search", "Find vehicles", "read", "viewer", "/vehicles", ["vehicle", "vehicles", "inventory", "car", "cars"]),
@@ -80,15 +81,7 @@ export const ADMIN_CAPABILITIES: readonly AdminCapability[] = [
   capability("preferences.view", "Open system preferences", "navigate", "viewer", "/settings/system-preferences", ["system preferences", "preferences"]),
 ] as const;
 
-function capability(
-  id: string,
-  title: string,
-  effect: AdminCapabilityEffect,
-  minRole: AdminRole,
-  route: string,
-  aliases: readonly string[],
-  confirmation: AdminConfirmation = "none",
-): AdminCapability {
+function capability(id: string, title: string, effect: AdminCapabilityEffect, minRole: AdminRole, route: string, aliases: readonly string[], confirmation: AdminConfirmation = "none"): AdminCapability {
   return { id, title, effect, minRole, confirmation, route, aliases };
 }
 
@@ -100,25 +93,15 @@ function capability(
  * "which lead did you mean?" written by a model is one step from a question
  * that names a record the actor may not be allowed to see.
  */
-export type AdminClarifyReason =
-  | "ambiguous_surface"
-  | "ambiguous_record"
-  | "missing_target"
-  | "missing_value"
-  | "unsupported_scope";
+export type AdminClarifyReason = "ambiguous_surface" | "ambiguous_record" | "missing_target" | "missing_value" | "unsupported_scope";
 
 /** Server-authored text for each reason. No tenant data can appear here. */
 export const ADMIN_CLARIFY_QUESTIONS: Record<AdminClarifyReason, string> = {
-  ambiguous_surface:
-    "Which area do you mean? Tell me the dashboard section — for example inventory, leads, pages, or inventory feeds — and I’ll take you there.",
-  ambiguous_record:
-    "More than one record could match that. Give me a more specific name, email, or stock number and I’ll find the exact one.",
-  missing_target:
-    "Tell me which record you mean and I’ll look it up — a name, email, or stock number works.",
-  missing_value:
-    "I need the new value before I can prepare that change. What should it be set to?",
-  unsupported_scope:
-    "I can’t do that in one step. Narrow it to a single record, or tell me the area you want and I’ll take you to the screen that can.",
+  ambiguous_surface: "Which area do you mean? Tell me the dashboard section — for example inventory, leads, pages, or inventory feeds — and I’ll take you there.",
+  ambiguous_record: "More than one record could match that. Give me a more specific name, email, or stock number and I’ll find the exact one.",
+  missing_target: "Tell me which record you mean and I’ll look it up — a name, email, or stock number works.",
+  missing_value: "I need the new value before I can prepare that change. What should it be set to?",
+  unsupported_scope: "I can’t do that in one step. Narrow it to a single record, or tell me the area you want and I’ll take you to the screen that can.",
 };
 
 export type AdminConciergeIntent =
@@ -127,20 +110,35 @@ export type AdminConciergeIntent =
   | { kind: "describe_current_page" }
   | { kind: "summarize_concierge_config" }
   | { kind: "summarize_overview" }
+  | { kind: "search_help"; query: string }
   | { kind: "search_vehicles"; query: string | null }
-  | { kind: "search_leads"; status: "new" | "contacted" | "qualified" | "won" | "lost" | null }
+  | {
+      kind: "search_leads";
+      status: "new" | "contacted" | "qualified" | "won" | "lost" | null;
+    }
   | { kind: "search_customers"; query: string | null }
   | { kind: "search_pages"; query: string | null }
-  | { kind: "inspect_feed_runs"; status: "failed" | "dead_letter" | "partial" | null }
+  | {
+      kind: "inspect_feed_runs";
+      status: "failed" | "dead_letter" | "partial" | null;
+    }
   | { kind: "inspect_photo_gap" }
   | { kind: "inspect_aging_inventory"; days: number }
   | { kind: "inspect_launch_readiness" }
   | { kind: "summarize_conversion"; days: number }
   | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
   | { kind: "update_vehicle_price"; vehicleQuery: string; price: number }
-  | { kind: "update_vehicle_status"; vehicleQuery: string; status: "draft" | "live" | "archived" }
+  | {
+      kind: "update_vehicle_status";
+      vehicleQuery: string;
+      status: "draft" | "live" | "archived";
+    }
   | { kind: "enqueue_feed_run"; feedQuery: string }
-  | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
+  | {
+      kind: "update_lead_status";
+      leadQuery: string;
+      status: "new" | "contacted" | "qualified" | "won";
+    }
   | { kind: "unsupported" };
 
 export type AdminConciergeModelPlan =
@@ -148,20 +146,35 @@ export type AdminConciergeModelPlan =
   | { kind: "describe_current_page" }
   | { kind: "summarize_concierge_config" }
   | { kind: "summarize_overview" }
+  | { kind: "search_help"; query: string }
   | { kind: "search_vehicles"; query: string | null }
-  | { kind: "search_leads"; status: "new" | "contacted" | "qualified" | "won" | "lost" | null }
+  | {
+      kind: "search_leads";
+      status: "new" | "contacted" | "qualified" | "won" | "lost" | null;
+    }
   | { kind: "search_customers"; query: string | null }
   | { kind: "search_pages"; query: string | null }
-  | { kind: "inspect_feed_runs"; status: "failed" | "dead_letter" | "partial" | null }
+  | {
+      kind: "inspect_feed_runs";
+      status: "failed" | "dead_letter" | "partial" | null;
+    }
   | { kind: "inspect_photo_gap" }
   | { kind: "inspect_aging_inventory"; days: number }
   | { kind: "inspect_launch_readiness" }
   | { kind: "summarize_conversion"; days: number }
   | { kind: "assign_lead"; leadQuery: string; assigneeQuery: string }
   | { kind: "update_vehicle_price"; vehicleQuery: string; price: number }
-  | { kind: "update_vehicle_status"; vehicleQuery: string; status: "draft" | "live" | "archived" }
+  | {
+      kind: "update_vehicle_status";
+      vehicleQuery: string;
+      status: "draft" | "live" | "archived";
+    }
   | { kind: "enqueue_feed_run"; feedQuery: string }
-  | { kind: "update_lead_status"; leadQuery: string; status: "new" | "contacted" | "qualified" | "won" }
+  | {
+      kind: "update_lead_status";
+      leadQuery: string;
+      status: "new" | "contacted" | "qualified" | "won";
+    }
   | { kind: "clarify"; reason: AdminClarifyReason };
 
 export type AdminConciergeRequest = {
@@ -171,9 +184,7 @@ export type AdminConciergeRequest = {
   sessionId?: string;
 };
 
-export type ParsedAdminConciergeRequest =
-  | { ok: true; request: AdminConciergeRequest }
-  | { ok: false; error: string };
+export type ParsedAdminConciergeRequest = { ok: true; request: AdminConciergeRequest } | { ok: false; error: string };
 
 export function parseAdminConciergeRequest(body: unknown): ParsedAdminConciergeRequest {
   if (!isRecord(body)) return { ok: false, error: "Request body must be an object." };
@@ -189,12 +200,8 @@ export function parseAdminConciergeRequest(body: unknown): ParsedAdminConciergeR
     request: {
       tenantSlug,
       message,
-      ...(typeof body.currentPath === "string" && body.currentPath.startsWith("/admin/")
-        ? { currentPath: body.currentPath.slice(0, 500) }
-        : {}),
-      ...(typeof body.sessionId === "string" && isUuid(body.sessionId)
-        ? { sessionId: body.sessionId }
-        : {}),
+      ...(typeof body.currentPath === "string" && body.currentPath.startsWith("/admin/") ? { currentPath: body.currentPath.slice(0, 500) } : {}),
+      ...(typeof body.sessionId === "string" && isUuid(body.sessionId) ? { sessionId: body.sessionId } : {}),
     },
   };
 }
@@ -239,36 +246,37 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
   }
 
   if (isFeedInspectionRequest(normalized)) {
-    return { kind: "inspect_feed_runs", status: feedRunStatusFromMessage(normalized) };
+    return {
+      kind: "inspect_feed_runs",
+      status: feedRunStatusFromMessage(normalized),
+    };
   }
 
   // “Inventory feeds” is a named dashboard surface, not a vehicle query.
   // Keep the generic “inventory” synonym from stealing that navigation intent.
   const namesInventoryFeedSurface = /\b(?:inventory|managed)\s+feeds?\b/.test(normalized);
-  if (/\b(ready to launch|launch readiness|am i ready|go live|setup checklist)\b/.test(normalized)
-    || /\bwhat(?:'s| is)? (left|blocking|missing)\b/.test(normalized)) {
+  if (/\b(ready to launch|launch readiness|am i ready|go live|setup checklist)\b/.test(normalized) || /\bwhat(?:'s| is)? (left|blocking|missing)\b/.test(normalized)) {
     return { kind: "inspect_launch_readiness" };
   }
 
-  if (/\b(aging|aged|stale|slow movers?)\s*(inventory|stock|vehicles|cars)?\b/.test(normalized)
-    || /\bdays on (the )?lot\b/.test(normalized)
-    || /\bsitting (too long|for)\b/.test(normalized)
-    || /\bbeen listed\b/.test(normalized)) {
-    return { kind: "inspect_aging_inventory", days: agingThresholdFromMessage(normalized) };
+  if (/\b(aging|aged|stale|slow movers?)\s*(inventory|stock|vehicles|cars)?\b/.test(normalized) || /\bdays on (the )?lot\b/.test(normalized) || /\bsitting (too long|for)\b/.test(normalized) || /\bbeen listed\b/.test(normalized)) {
+    return {
+      kind: "inspect_aging_inventory",
+      days: agingThresholdFromMessage(normalized),
+    };
   }
 
-  if (/\b(missing|without|no|need)\s+(photo|photos|image|images|picture|pictures)\b/.test(normalized)
-    || /\bphoto (gap|coverage)\b/.test(normalized)) {
+  if (/\b(missing|without|no|need)\s+(photo|photos|image|images|picture|pictures)\b/.test(normalized) || /\bphoto (gap|coverage)\b/.test(normalized)) {
     return { kind: "inspect_photo_gap" };
   }
 
   // Placed ahead of the generic find-fallbacks: "how many views did we get"
   // otherwise degrades into a vehicle search that answers a different question.
-  if (/\b(conversion|conversions|conversion rate|funnel)\b/.test(normalized)
-    || /\bhow (are|did) (we|things|business) (doing|do|going)\b/.test(normalized)
-    || /\bperformance summary\b/.test(normalized)
-    || /\bhow many (views|visitors|sessions)\b/.test(normalized)) {
-    return { kind: "summarize_conversion", days: conversionWindowFromMessage(normalized) };
+  if (/\b(conversion|conversions|conversion rate|funnel)\b/.test(normalized) || /\bhow (are|did) (we|things|business) (doing|do|going)\b/.test(normalized) || /\bperformance summary\b/.test(normalized) || /\bhow many (views|visitors|sessions)\b/.test(normalized)) {
+    return {
+      kind: "summarize_conversion",
+      days: conversionWindowFromMessage(normalized),
+    };
   }
 
   if (asksToFind && !namesInventoryFeedSurface && /\b(vehicle|vehicles|inventory|car|cars)\b/.test(normalized)) {
@@ -278,10 +286,17 @@ export function compileDeterministicAdminIntent(message: string): AdminConcierge
     return { kind: "search_leads", status: leadStatusFromMessage(normalized) };
   }
   if (asksToFind && /\b(customer|customers|account|accounts)\b/.test(normalized)) {
-    return { kind: "search_customers", query: customerQueryFromMessage(message) };
+    return {
+      kind: "search_customers",
+      query: customerQueryFromMessage(message),
+    };
   }
   if (asksToFind && /\b(page|pages)\b/.test(normalized)) {
     return { kind: "search_pages", query: pageQueryFromMessage(message) };
+  }
+
+  if (/\b(?:how (?:do|can) i|help (?:me )?(?:with|to)|where (?:do|can) i)\b/.test(normalized)) {
+    return { kind: "search_help", query: message.slice(0, 500) };
   }
 
   const hasNavigationLanguage = /\b(open|go to|take me to|show me|view|manage|add|create|new|import|upload)\b/.test(normalized);
@@ -308,10 +323,7 @@ export function capabilityFromAdminPath(currentPath: string | undefined, tenantS
   const prefix = `/admin/${encodeURIComponent(tenantSlug)}`;
   if (currentPath !== prefix && !currentPath.startsWith(`${prefix}/`)) return null;
   const relativePath = currentPath.slice(prefix.length) || "/";
-  const matches = ADMIN_CAPABILITIES
-    .filter((capability) => relativePath === capability.route ||
-      (capability.route !== "/" && relativePath.startsWith(`${capability.route}/`)))
-    .sort((a, b) => b.route.length - a.route.length);
+  const matches = ADMIN_CAPABILITIES.filter((capability) => relativePath === capability.route || (capability.route !== "/" && relativePath.startsWith(`${capability.route}/`))).sort((a, b) => b.route.length - a.route.length);
   return matches.length ? matches[0] : null;
 }
 
@@ -323,9 +335,15 @@ export function capabilityFromAdminPath(currentPath: string | undefined, tenantS
  */
 export function findNavigationCapability(normalizedMessage: string): AdminCapability | null {
   const scored = ADMIN_CAPABILITIES.flatMap((capability) => {
-    const best = capability.aliases.reduce<{ words: number; characters: number } | null>((current, alias) => {
+    const best = capability.aliases.reduce<{
+      words: number;
+      characters: number;
+    } | null>((current, alias) => {
       if (!containsWholePhrase(normalizedMessage, alias)) return current;
-      const candidate = { words: alias.trim().split(/\s+/).length, characters: alias.length };
+      const candidate = {
+        words: alias.trim().split(/\s+/).length,
+        characters: alias.length,
+      };
       if (!current || candidate.words > current.words || (candidate.words === current.words && candidate.characters > current.characters)) {
         return candidate;
       }
@@ -379,6 +397,7 @@ export function hasAdminCapabilityRole(actorRole: AdminRole, requiredRole: Admin
  */
 export const INTENT_CAPABILITY_ID: Partial<Record<AdminConciergeIntent["kind"], string>> = {
   summarize_overview: "overview.summary",
+  search_help: "help.search",
   search_vehicles: "vehicles.search",
   search_leads: "leads.search",
   search_customers: "customers.search",
@@ -400,27 +419,20 @@ export const INTENT_CAPABILITY_ID: Partial<Record<AdminConciergeIntent["kind"], 
  * two together cover the union exhaustively — the test asserts that, because
  * a `Partial` record cannot make it a compile error.
  */
-export const CAPABILITY_FREE_INTENTS = [
-  "clarify",
-  "describe_current_page",
-  "summarize_concierge_config",
-  "unsupported",
-] as const satisfies ReadonlyArray<AdminConciergeIntent["kind"]>;
+export const CAPABILITY_FREE_INTENTS = ["clarify", "describe_current_page", "summarize_concierge_config", "unsupported"] as const satisfies ReadonlyArray<AdminConciergeIntent["kind"]>;
 
 /** Null means a plan names no currently registered capability and must fail closed. */
 export function adminIntentMinimumRole(intent: AdminConciergeIntent): AdminRole | null {
   // `navigate` carries its target on the intent; everything else resolves
   // through the map above. Both paths end at the registry.
-  const capabilityId = intent.kind === "navigate"
-    ? intent.capabilityId
-    : INTENT_CAPABILITY_ID[intent.kind];
+  const capabilityId = intent.kind === "navigate" ? intent.capabilityId : INTENT_CAPABILITY_ID[intent.kind];
   if (capabilityId) return capabilityById(capabilityId)?.minRole ?? null;
 
   return (CAPABILITY_FREE_INTENTS as readonly string[]).includes(intent.kind)
     ? "viewer"
-    // An intent was added to the union without a capability and without being
-    // declared capability-free. Fail closed rather than assume it is harmless.
-    : null;
+    : // An intent was added to the union without a capability and without being
+      // declared capability-free. Fail closed rather than assume it is harmless.
+      null;
 }
 
 /**
@@ -437,9 +449,7 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
       case "navigate": {
         const capabilityId = typeof parsed.intent.capabilityId === "string" ? parsed.intent.capabilityId : "";
         const capability = capabilityById(capabilityId);
-        return capability && (capability.effect === "read" || capability.effect === "navigate")
-          ? { kind: "navigate", capabilityId }
-          : null;
+        return capability && (capability.effect === "read" || capability.effect === "navigate") ? { kind: "navigate", capabilityId } : null;
       }
       case "describe_current_page":
         return { kind: "describe_current_page" };
@@ -447,6 +457,10 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
         return { kind: "summarize_concierge_config" };
       case "summarize_overview":
         return { kind: "summarize_overview" };
+      case "search_help": {
+        const query = normalizeSearchText(parsed.intent.query);
+        return query ? { kind: "search_help", query } : null;
+      }
       case "search_vehicles":
         return {
           kind: "search_vehicles",
@@ -454,19 +468,21 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
         };
       case "search_leads": {
         const status = parsed.intent.status;
-        return status === null || status === "new" || status === "contacted" || status === "qualified" || status === "won" || status === "lost"
-          ? { kind: "search_leads", status }
-          : null;
+        return status === null || status === "new" || status === "contacted" || status === "qualified" || status === "won" || status === "lost" ? { kind: "search_leads", status } : null;
       }
       case "search_customers":
-        return { kind: "search_customers", query: normalizeSearchText(parsed.intent.query) };
+        return {
+          kind: "search_customers",
+          query: normalizeSearchText(parsed.intent.query),
+        };
       case "search_pages":
-        return { kind: "search_pages", query: normalizeSearchText(parsed.intent.query) };
+        return {
+          kind: "search_pages",
+          query: normalizeSearchText(parsed.intent.query),
+        };
       case "inspect_feed_runs": {
         const status = parsed.intent.status;
-        return status === null || status === "failed" || status === "dead_letter" || status === "partial"
-          ? { kind: "inspect_feed_runs", status }
-          : null;
+        return status === null || status === "failed" || status === "dead_letter" || status === "partial" ? { kind: "inspect_feed_runs", status } : null;
       }
       case "enqueue_feed_run": {
         const feedQuery = normalizeSearchText(parsed.intent.feedQuery);
@@ -475,9 +491,7 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
       case "update_lead_status": {
         const leadQuery = normalizeSearchText(parsed.intent.leadQuery);
         const status = parsed.intent.status;
-        return leadQuery && (status === "new" || status === "contacted" || status === "qualified" || status === "won")
-          ? { kind: "update_lead_status", leadQuery, status }
-          : null;
+        return leadQuery && (status === "new" || status === "contacted" || status === "qualified" || status === "won") ? { kind: "update_lead_status", leadQuery, status } : null;
       }
       case "clarify": {
         const reason = parsed.intent.reason;
@@ -494,10 +508,7 @@ export function parseAdminConciergeModelPlan(content: string): AdminConciergeMod
 }
 
 export function isAdminClarifyReason(value: unknown): value is AdminClarifyReason {
-  return (
-    typeof value === "string" &&
-    Object.prototype.hasOwnProperty.call(ADMIN_CLARIFY_QUESTIONS, value)
-  );
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(ADMIN_CLARIFY_QUESTIONS, value);
 }
 
 /**
@@ -525,52 +536,41 @@ export type AdminPlannerContext = {
   hasSelection?: boolean;
 };
 
-export function buildAdminPlannerContextPrompt(
-  context: AdminPlannerContext,
-): string {
+export function buildAdminPlannerContextPrompt(context: AdminPlannerContext): string {
   const lines: string[] = [];
   if (context.currentSurface) {
     lines.push(`The user is currently on the ${context.currentSurface} screen.`);
   }
   if (context.resultSet && context.resultSet.size > 0) {
-    lines.push(
-      `A previous search is still on screen: ${context.resultSet.size} ${context.resultSet.kind} result(s). Ordinal references such as "the second one" refer to that list.`,
-    );
+    lines.push(`A previous search is still on screen: ${context.resultSet.size} ${context.resultSet.kind} result(s). Ordinal references such as "the second one" refer to that list.`);
   }
   if (context.hasSelection) {
     lines.push("The user has one record selected from that list.");
   }
   if (lines.length === 0) return "";
-  return [
-    "",
-    "Current session context (shape only — you have no access to the records themselves):",
-    ...lines.map((line) => `- ${line}`),
-  ].join("\n");
+  return ["", "Current session context (shape only — you have no access to the records themselves):", ...lines.map((line) => `- ${line}`)].join("\n");
 }
 
-export function buildAdminConciergeSystemPrompt(
-  context: AdminPlannerContext = {},
-): string {
-  const catalog = ADMIN_CAPABILITIES.map((capability) =>
-    `- ${capability.id}: ${capability.title} (${capability.effect}; aliases: ${capability.aliases.join(", ")})`,
-  ).join("\n");
+export function buildAdminConciergeSystemPrompt(context: AdminPlannerContext = {}): string {
+  const catalog = ADMIN_CAPABILITIES.map((capability) => `- ${capability.id}: ${capability.title} (${capability.effect}; aliases: ${capability.aliases.join(", ")})`).join("\n");
   return [
     "You are LUME's authenticated dashboard concierge. Translate the user's request into exactly one allowed command intent.",
     "You do not have access to tenant data and must not invent facts, records, URLs, IDs, or actions. You cannot execute writes, publish, delete, change roles, handle credentials, billing, domains, API keys, or integrations. You may only PROPOSE a one-lead status update or one named managed-feed run; LUME will resolve, preview, authorize and require confirmation separately.",
-    "Return ONLY JSON with this exact shape: {\"intent\":{...}}.",
+    'Return ONLY JSON with this exact shape: {"intent":{...}}.',
     "Allowed intents:",
-    "- {\"kind\":\"navigate\",\"capabilityId\":\"<one catalog id>\"}",
-    "- {\"kind\":\"describe_current_page\"}",
-    "- {\"kind\":\"summarize_concierge_config\"}",
-    "- {\"kind\":\"summarize_overview\"}",
-    "- {\"kind\":\"search_vehicles\",\"query\":\"<make/model/free-text search or null>\"}",
-    "- {\"kind\":\"search_leads\",\"status\":\"new\"|\"contacted\"|\"qualified\"|\"won\"|\"lost\"|null}",
-    "- {\"kind\":\"search_customers\",\"query\":\"<name/email fragment or null>\"}",
-    "- {\"kind\":\"search_pages\",\"query\":\"<page title/slug fragment or null>\"}",
-    "- {\"kind\":\"inspect_feed_runs\",\"status\":\"failed\"|\"dead_letter\"|\"partial\"|null}",
-    "- {\"kind\":\"enqueue_feed_run\",\"feedQuery\":\"<named managed inventory feed>\"}",
-    "- {\"kind\":\"update_lead_status\",\"leadQuery\":\"<lead name or email fragment>\",\"status\":\"new\"|\"contacted\"|\"qualified\"|\"won\"}",
-    "- {\"kind\":\"clarify\",\"reason\":\"ambiguous_surface\"|\"ambiguous_record\"|\"missing_target\"|\"missing_value\"|\"unsupported_scope\"} when the request is ambiguous or cannot be done in one step. Choose the reason only; LUME writes the question.",
+    '- {"kind":"navigate","capabilityId":"<one catalog id>"}',
+    '- {"kind":"describe_current_page"}',
+    '- {"kind":"summarize_concierge_config"}',
+    '- {"kind":"summarize_overview"}',
+    '- {"kind":"search_help","query":"<dashboard how-to question>"}',
+    '- {"kind":"search_vehicles","query":"<make/model/free-text search or null>"}',
+    '- {"kind":"search_leads","status":"new"|"contacted"|"qualified"|"won"|"lost"|null}',
+    '- {"kind":"search_customers","query":"<name/email fragment or null>"}',
+    '- {"kind":"search_pages","query":"<page title/slug fragment or null>"}',
+    '- {"kind":"inspect_feed_runs","status":"failed"|"dead_letter"|"partial"|null}',
+    '- {"kind":"enqueue_feed_run","feedQuery":"<named managed inventory feed>"}',
+    '- {"kind":"update_lead_status","leadQuery":"<lead name or email fragment>","status":"new"|"contacted"|"qualified"|"won"}',
+    '- {"kind":"clarify","reason":"ambiguous_surface"|"ambiguous_record"|"missing_target"|"missing_value"|"unsupported_scope"} when the request is ambiguous or cannot be done in one step. Choose the reason only; LUME writes the question.',
     "Catalog:",
     catalog,
     buildAdminPlannerContextPrompt(context),
@@ -611,7 +611,10 @@ function normalizeSearchText(value: unknown): string | null {
   // Lead resolution accepts email fragments, so preserve the bounded email
   // punctuation here. The eventual query still escapes LIKE wildcards and
   // applies a tenant filter; this is not a raw query language.
-  const normalized = value.replace(/[^\p{L}\p{N}\s@.+-]/gu, " ").replace(/\s+/g, " ").trim();
+  const normalized = value
+    .replace(/[^\p{L}\p{N}\s@.+-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   return normalized ? normalized.slice(0, 120) : null;
 }
 
@@ -633,21 +636,18 @@ function isFeedInspectionRequest(normalized: string): boolean {
   return mentionsFeed && asksForHealth;
 }
 
-function feedRunStatusFromMessage(
-  normalized: string,
-): "failed" | "dead_letter" | "partial" | null {
+function feedRunStatusFromMessage(normalized: string): "failed" | "dead_letter" | "partial" | null {
   if (/\b(dead[ -]?letter)\b/.test(normalized)) return "dead_letter";
   if (/\bpartial\b/.test(normalized)) return "partial";
   if (/\b(failed|failure|failures|error|errors)\b/.test(normalized)) return "failed";
   return null;
 }
 
-function extractLeadStatusUpdate(
-  message: string,
-): { leadQuery: string; status: "new" | "contacted" | "qualified" | "won" } | null {
-  const match = message.match(
-    /\b(?:mark|set|change|update)\s+(?:the\s+)?(?:lead\s+)?(.+?)\s+(?:as|to)\s+(new|contacted|qualified|won)\b/i,
-  );
+function extractLeadStatusUpdate(message: string): {
+  leadQuery: string;
+  status: "new" | "contacted" | "qualified" | "won";
+} | null {
+  const match = message.match(/\b(?:mark|set|change|update)\s+(?:the\s+)?(?:lead\s+)?(.+?)\s+(?:as|to)\s+(new|contacted|qualified|won)\b/i);
   if (!match) return null;
   // Regex backtracking can let the non-greedy capture absorb the optional
   // "lead" noun ("mark lead jane@example.com as qualified"). Strip it after
@@ -659,9 +659,7 @@ function extractLeadStatusUpdate(
 }
 
 function extractFeedRunEnqueue(message: string): { feedQuery: string } | null {
-  const match = message.match(
-    /\b(?:run|sync|refresh|enqueue)\s+(?:the\s+)?(?:inventory\s+)?feed\s+(.+?)(?:\s+now)?\s*[.!?]?$/i,
-  );
+  const match = message.match(/\b(?:run|sync|refresh|enqueue)\s+(?:the\s+)?(?:inventory\s+)?feed\s+(.+?)(?:\s+now)?\s*[.!?]?$/i);
   if (!match) return null;
   const feedQuery = normalizeSearchText(match[1]);
   return feedQuery ? { feedQuery } : null;
@@ -693,15 +691,17 @@ function agingThresholdFromMessage(normalized: string): number {
  * rather than being guessed at, because guessing here reassigns someone's
  * commission.
  */
-export function extractLeadAssignment(
-  message: string,
-): { leadQuery: string; assigneeQuery: string } | null {
-  const match = message.match(
-    /\b(?:assign|reassign|hand off|give)\s+(?:the\s+)?(?:lead\s+)?(.+?)\s+to\s+(.+?)\s*$/i,
-  );
+export function extractLeadAssignment(message: string): { leadQuery: string; assigneeQuery: string } | null {
+  const match = message.match(/\b(?:assign|reassign|hand off|give)\s+(?:the\s+)?(?:lead\s+)?(.+?)\s+to\s+(.+?)\s*$/i);
   if (!match) return null;
-  const leadQuery = match[1].replace(/\blead\b/gi, " ").replace(/\s+/g, " ").trim();
-  const assigneeQuery = match[2].replace(/\s+/g, " ").trim().replace(/[.!?]+$/, "");
+  const leadQuery = match[1]
+    .replace(/\blead\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const assigneeQuery = match[2]
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.!?]+$/, "");
   if (leadQuery.length < 2 || assigneeQuery.length < 2) return null;
   return { leadQuery, assigneeQuery };
 }
@@ -714,12 +714,8 @@ export function extractLeadAssignment(
  * an amount outside a plausible vehicle range is rejected instead of clamped —
  * mis-parsing "12" as $12 would publish a car for twelve dollars.
  */
-export function extractVehiclePriceUpdate(
-  message: string,
-): { vehicleQuery: string; price: number } | null {
-  const match = message.match(
-    /\b(?:reprice|re-price|change the price of|set the price of|price)\s+(?:the\s+)?(.+?)\s+(?:to|at)\s+\$?\s*([\d,]+(?:\.\d+)?)\s*(k)?\b/i,
-  );
+export function extractVehiclePriceUpdate(message: string): { vehicleQuery: string; price: number } | null {
+  const match = message.match(/\b(?:reprice|re-price|change the price of|set the price of|price)\s+(?:the\s+)?(.+?)\s+(?:to|at)\s+\$?\s*([\d,]+(?:\.\d+)?)\s*(k)?\b/i);
   if (!match) return null;
   const vehicleQuery = match[1].replace(/\s+/g, " ").trim();
   const raw = Number(match[2].replace(/,/g, ""));
@@ -761,15 +757,11 @@ export function conversionWindowFromMessage(normalized: string): number {
   return 30;
 }
 
-export function extractVehicleStatusUpdate(
-  message: string,
-): { vehicleQuery: string; status: "draft" | "live" | "archived" } | null {
+export function extractVehicleStatusUpdate(message: string): { vehicleQuery: string; status: "draft" | "live" | "archived" } | null {
   // "list" is deliberately not a verb here — it is already a read verb
   // ("list my leads"), and matching it would turn a read into a write
   // proposal. "delist" is unambiguous and stays.
-  const match = message.match(
-    /\b(archive|unarchive|publish|unpublish|delist|take down|put back)\s+(?:the\s+|that\s+|this\s+)?(.+?)\s*$/i,
-  );
+  const match = message.match(/\b(archive|unarchive|publish|unpublish|delist|take down|put back)\s+(?:the\s+|that\s+|this\s+)?(.+?)\s*$/i);
   if (!match) return null;
 
   const verb = match[1].toLowerCase();

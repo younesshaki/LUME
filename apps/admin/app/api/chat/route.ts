@@ -62,6 +62,7 @@ import {
   vehicleQueryFromFilters,
   type VehicleQueryFilters,
 } from "@lume/rag";
+import { createOllamaEmbedder, retrieveHybridContext } from "@lume/rag/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
@@ -1018,10 +1019,19 @@ export async function POST(request: Request): Promise<Response> {
       ...quotaHeaders,
       ...cors,
     });
-  const buildMetaEvent = (sourceCategories: readonly string[]) =>
+  const buildMetaEvent = (
+    sourceCategories: readonly string[],
+    sourceHandles: readonly {
+      handle: string;
+      title: string;
+      revision: number | null;
+      publishedAt: string | null;
+    }[] = [],
+  ) =>
     sseEvent({
       type: "meta",
       sourceCategories,
+      sourceHandles,
       botName: persona.name,
       // Capability level for client display only — enforcement is the
       // server-side plan gate above, never this hint.
@@ -1235,12 +1245,13 @@ export async function POST(request: Request): Promise<Response> {
   // read, image descriptions or the inventory count.
   let assembled: ReturnType<typeof assembleSystemPrompt>;
   try {
-    const [chunkResult, loadedLoyaltyContext, loadedPreferenceContext] =
+    const [contextChunks, loadedLoyaltyContext, loadedPreferenceContext] =
       await Promise.all([
-        supabase
-          .from("rag_chunks")
-          .select("text, category")
-          .eq("tenant_id", tenant.tenantId),
+        loadPublishedKnowledgeContext(
+          supabase,
+          tenant.tenantId,
+          lastUser.content,
+        ),
         visitor
           ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
           : Promise.resolve(null),
@@ -1253,14 +1264,6 @@ export async function POST(request: Request): Promise<Response> {
       ]);
     chatLoyaltyContext = loadedLoyaltyContext;
     visitorPreferenceContext = loadedPreferenceContext;
-    if (chunkResult.error)
-      throw new Error(`rag_chunks query failed: ${chunkResult.error.message}`);
-
-    const contextChunks = retrieveByKeywords(
-      chunkResult.data ?? [],
-      lastUser.content,
-      7,
-    );
     // Same ordering as before the split: retrieved chunks, the open vehicle
     // in front of them when the turn is still about it, image descriptions
     // appended for the vehicles this turn actually matched.
@@ -1336,7 +1339,10 @@ export async function POST(request: Request): Promise<Response> {
 
   const contextLoadedAtMs = Date.now();
   const sseHeaders = buildSseHeaders(assembled.sourceCategories);
-  const metaEvent = buildMetaEvent(assembled.sourceCategories);
+  const metaEvent = buildMetaEvent(
+    assembled.sourceCategories,
+    assembled.sourceHandles,
+  );
 
   const systemMessage = {
     role: "system" as const,
@@ -1943,6 +1949,39 @@ function vehicleFilterVocabulary(value: unknown): {
     states: stringArray(record.states),
     cities: stringArray(record.cities),
   };
+}
+
+async function loadPublishedKnowledgeContext(
+  client: ReturnType<typeof createServiceClient>,
+  tenantId: Parameters<typeof retrieveHybridContext>[0]["tenantId"],
+  query: string,
+): Promise<RetrievedChunk[]> {
+  try {
+    return await retrieveHybridContext({
+      client,
+      tenantId,
+      query,
+      embed: process.env.OLLAMA_HOST ? createOllamaEmbedder() : null,
+      topK: 7,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    // Code-first deployments must remain available until migration 087 is
+    // applied. Do not turn arbitrary DB failures into a whole-corpus read.
+    if (
+      !/hybrid_rag_chunks_for_tenant|schema cache|could not find/i.test(message)
+    ) {
+      throw error;
+    }
+    const legacy = await client
+      .from("rag_chunks")
+      .select("text, category")
+      .eq("tenant_id", tenantId);
+    if (legacy.error) {
+      throw new Error(`rag_chunks query failed: ${legacy.error.message}`);
+    }
+    return retrieveByKeywords(legacy.data ?? [], query, 7);
+  }
 }
 
 function previousAssistantContentForLastUser(

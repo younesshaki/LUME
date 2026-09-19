@@ -22,9 +22,10 @@ export type OllamaEmbedderOptions = {
  * Default embedder: calls Ollama's /api/embeddings.
  * Reads OLLAMA_HOST and OLLAMA_EMBED_MODEL from env if not provided.
  */
-export function createOllamaEmbedder(opts: OllamaEmbedderOptions = {}): Embedder {
-  const host =
-    opts.host ?? process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434";
+export function createOllamaEmbedder(
+  opts: OllamaEmbedderOptions = {},
+): Embedder {
+  const host = opts.host ?? process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434";
   const model =
     opts.model ?? process.env.OLLAMA_EMBED_MODEL ?? "nomic-embed-text";
   const url = `${host.replace(/\/$/, "")}/api/embeddings`;
@@ -34,14 +35,23 @@ export function createOllamaEmbedder(opts: OllamaEmbedderOptions = {}): Embedder
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt: text }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
       throw new Error(
-        `[@lume/rag] Embedding failed: ${res.status} ${res.statusText}`
+        `[@lume/rag] Embedding failed: ${res.status} ${res.statusText}`,
       );
     }
-    const data = (await res.json()) as { embedding: number[] };
-    return data.embedding;
+    const data = (await res.json()) as { embedding?: unknown };
+    if (
+      !Array.isArray(data.embedding) ||
+      !data.embedding.every(Number.isFinite)
+    ) {
+      throw new Error(
+        "[@lume/rag] Embedding response did not contain a finite vector",
+      );
+    }
+    return data.embedding as number[];
   };
 }
 
@@ -58,6 +68,59 @@ export type RetrieveOptions = {
   minScore?: number;
 };
 
+export type HybridRetrieveOptions = {
+  client: ServerSupabaseClient;
+  tenantId: TenantId;
+  query: string;
+  /** Optional during the local-Ollama transition; lexical retrieval remains available. */
+  embed?: Embedder | null;
+  topK?: number;
+};
+
+/**
+ * Visibility-safe hybrid retrieval. The database fuses FTS and vector ranks
+ * only across the currently published revision. If embedding is unavailable,
+ * the exact same RPC degrades to lexical search rather than fetching the whole
+ * tenant corpus into a serverless function.
+ */
+export async function retrieveHybridContext(
+  opts: HybridRetrieveOptions,
+): Promise<RetrievedChunk[]> {
+  const { client, tenantId, query, embed = null, topK = 7 } = opts;
+  let embedding: number[] | null = null;
+  if (embed) {
+    try {
+      const candidate = await embed(query);
+      embedding =
+        candidate.length === 768 && candidate.every(Number.isFinite)
+          ? candidate
+          : null;
+    } catch {
+      embedding = null;
+    }
+  }
+  const { data, error } = await client.rpc("hybrid_rag_chunks_for_tenant", {
+    p_tenant_id: tenantId,
+    p_query_text: query,
+    p_query_embedding: embedding,
+    p_match_count: topK,
+  });
+  if (error) {
+    throw new Error(`[@lume/rag] hybrid search failed: ${error.message}`);
+  }
+  return (data ?? []).map((row) => ({
+    chunkId: row.id,
+    text: row.text,
+    category: row.category,
+    score: row.score,
+    documentId: row.document_id,
+    documentTitle: row.document_title,
+    documentRevision: row.document_revision,
+    publishedAt: row.published_at,
+    retrievalSource: row.source,
+  }));
+}
+
 /**
  * Tenant-scoped semantic retrieval.
  *
@@ -69,17 +132,19 @@ export type RetrieveOptions = {
  * stays minimal — easy to swap for an RPC later.
  */
 export async function retrieveContext(
-  opts: RetrieveOptions
+  opts: RetrieveOptions,
 ): Promise<RetrievedChunk[]> {
   const { client, tenantId, query, embed, topK = 7, minScore = 0 } = opts;
   const embedding = await embed(query);
 
-  const { data, error } = await client
-    .rpc("match_rag_chunks_for_tenant" as never, {
+  const { data, error } = await client.rpc(
+    "match_rag_chunks_for_tenant" as never,
+    {
       p_tenant_id: tenantId,
       p_query_embedding: embedding,
       p_match_count: topK,
-    } as never);
+    } as never,
+  );
 
   if (error) {
     throw new Error(`[@lume/rag] pgvector search failed: ${error.message}`);

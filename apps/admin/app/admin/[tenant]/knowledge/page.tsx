@@ -14,7 +14,7 @@ type PageProps = {
 type RagDocumentRow = Database["public"]["Tables"]["rag_documents"]["Row"];
 type RagChunkRow = Pick<
   Database["public"]["Tables"]["rag_chunks"]["Row"],
-  "document_id"
+  "document_id" | "revision"
 >;
 
 export default async function KnowledgePage({ params }: PageProps) {
@@ -40,14 +40,23 @@ export default async function KnowledgePage({ params }: PageProps) {
 
   const { data: chunks, error: chunksError } = await supabase
     .from("rag_chunks")
-    .select("document_id")
+    .select("document_id, revision")
     .eq("tenant_id", tenant.id);
 
   if (chunksError) {
     throw new Error(`Unable to load knowledge chunks: ${chunksError.message}`);
   }
 
-  const chunkCounts = countChunksByDocument((chunks ?? []) as RagChunkRow[]);
+  const publishedRevisions = new Map(
+    ((documents ?? []) as RagDocumentRow[]).map((document) => [
+      document.id,
+      document.published_revision,
+    ]),
+  );
+  const chunkCounts = countChunksByDocument(
+    (chunks ?? []) as RagChunkRow[],
+    publishedRevisions,
+  );
 
   return (
     <KnowledgeClient
