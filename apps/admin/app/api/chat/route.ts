@@ -1187,8 +1187,9 @@ export async function POST(request: Request): Promise<Response> {
             }
           : null,
       usage:
-        activeInterpretationResult?.usage.inputTokens !== null ||
-        activeInterpretationResult?.usage.outputTokens !== null
+        activeInterpretationResult?.usage &&
+        (activeInterpretationResult.usage.inputTokens !== null ||
+          activeInterpretationResult.usage.outputTokens !== null)
           ? { ...activeInterpretationResult!.usage, coversCalls: 1 }
           : undefined,
       timingsMs: {
