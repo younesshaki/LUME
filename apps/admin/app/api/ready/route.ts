@@ -1,5 +1,6 @@
 import { createServiceClient } from "@lume/db/server";
 import { conversationMemoryMode } from "@/lib/conversationMemory.server";
+import { posthogServerMode } from "@/lib/posthog.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,9 @@ function response(status: "ready" | "unavailable", code: number, durationMs: num
         // previously impossible to tell from outside which one was running.
         // A mode name only; no host, URL or token can appear here.
         conversationMemory: conversationMemoryMode(),
+        // A configuration-mode only signal. PostHog remains best-effort, so
+        // its absence must not mark the application unavailable.
+        posthog: posthogServerMode(),
       },
       durationMs: Math.round(durationMs),
       timestamp: new Date().toISOString(),

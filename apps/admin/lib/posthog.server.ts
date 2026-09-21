@@ -5,6 +5,13 @@ type Properties = Record<string, boolean | number | string | null | undefined>;
 
 let client: PostHog | null | undefined;
 
+/** A value-free readiness signal; no endpoint should reveal configuration. */
+export function posthogServerMode(): "configured" | "off" {
+  return process.env.POSTHOG_PROJECT_TOKEN?.trim() && process.env.POSTHOG_HOST?.trim()
+    ? "configured"
+    : "off";
+}
+
 function getPostHog(): PostHog | null {
   if (client !== undefined) return client;
   const apiKey = process.env.POSTHOG_PROJECT_TOKEN?.trim();
