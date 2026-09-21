@@ -57,6 +57,7 @@ POSTHOG_HOST=https://us.i.posthog.com
 sets `maskAllInputs: true` and `maskTextSelector: "*"`; it is useful for
 layout/click reproduction but cannot become a backdoor for transcript capture.
 
+
 ## Event taxonomy
 
 Public browser events:
