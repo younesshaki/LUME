@@ -32,7 +32,11 @@ import type {
   Vehicle,
 } from "@lume/types";
 import { after } from "next/server";
-import { createAnonServerClient, createServiceClient } from "@lume/db/server";
+import {
+  createAnonServerClient,
+  createServiceClient,
+  type ServerSupabaseClient,
+} from "@lume/db/server";
 import {
   getTenantVehicle,
   queryTenantVehicles,
@@ -148,6 +152,10 @@ import {
   recordConciergeTurn,
   recordModelUsage,
 } from "@/lib/observability";
+import {
+  writeInternalConciergeTrace,
+  type ConciergeTraceSource,
+} from "@/lib/conciergeTrace.server";
 import {
   type DeterministicAnswers,
   hasDeterministicAnswer,
@@ -1108,6 +1116,23 @@ export async function POST(request: Request): Promise<Response> {
       source: activeInterpretationApplied ? "interpreted" : "deterministic",
       actions: actionDebugSummary(actions),
     });
+    queueInternalConciergeTrace({
+      client: supabase,
+      tenantId: tenant.tenantId,
+      requestId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      source: activeInterpretationApplied ? "interpreted" : "deterministic",
+      userMessage: lastUser.content,
+      assistantResponse: visibleContent,
+      stateBefore: conversationStateBefore,
+      stateAfter: conversationState,
+      actions,
+      retrieval: { sourceCategories, totalMatched: totalMatched ?? null },
+      model: activeInterpretationResult && chatProvider
+        ? { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id }
+        : {},
+    });
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -1598,6 +1623,21 @@ export async function POST(request: Request): Promise<Response> {
       source: "model",
       actions: actionDebugSummary(actions),
     });
+    queueInternalConciergeTrace({
+      client: supabase,
+      tenantId: tenant.tenantId,
+      requestId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      source: "model",
+      userMessage: lastUser.content,
+      assistantResponse: visibleContent,
+      stateBefore: conversationStateBefore,
+      stateAfter: conversationState,
+      actions,
+      retrieval: { sourceCategories: assembled.sourceCategories, totalMatched: totalMatched ?? null },
+      model: { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id },
+    });
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -1922,6 +1962,25 @@ export async function POST(request: Request): Promise<Response> {
               result: step.result,
             })),
           });
+          queueInternalConciergeTrace({
+            client: supabase,
+            tenantId: tenant.tenantId,
+            requestId,
+            conversationId: transcriptSessionId,
+            turn: conversationState.turn,
+            source: "tool",
+            userMessage: lastUser.content,
+            assistantResponse: assistantContent,
+            stateBefore: conversationStateBefore,
+            stateAfter: conversationState,
+            actions: emittedActions,
+            toolSummary: turn.steps.map((step) => ({
+              name: step.call.name,
+              result: step.result,
+            })),
+            retrieval: { totalMatched: totalMatched ?? null },
+            model: { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id },
+          });
         }
         // Emitted here rather than beside the return: emittedActions is
         // built inside the stream, and a turn's action list is only final
@@ -1934,6 +1993,43 @@ export async function POST(request: Request): Promise<Response> {
   });
 
   return new Response(stream, { headers: sseHeaders });
+}
+
+function queueInternalConciergeTrace(input: {
+  client: ServerSupabaseClient;
+  tenantId: string;
+  requestId: string;
+  conversationId: string;
+  turn: number;
+  source: ConciergeTraceSource;
+  userMessage: string;
+  assistantResponse: string;
+  stateBefore: ConversationInventoryState;
+  stateAfter: ConversationInventoryState;
+  actions: readonly BotAction[];
+  toolSummary?: readonly unknown[];
+  retrieval?: Record<string, unknown>;
+  model?: Record<string, unknown>;
+}): void {
+  // `after` keeps the database write off the visitor's response path. The
+  // helper checks all explicit internal-test gates again before it writes.
+  after(async () => {
+    await writeInternalConciergeTrace(input.client, {
+      tenantId: input.tenantId,
+      requestId: input.requestId,
+      conversationId: input.conversationId,
+      turn: input.turn,
+      source: input.source,
+      userMessage: input.userMessage,
+      assistantResponse: input.assistantResponse,
+      stateBefore: input.stateBefore as unknown as Record<string, unknown>,
+      stateAfter: input.stateAfter as unknown as Record<string, unknown>,
+      actions: input.actions,
+      toolSummary: input.toolSummary,
+      retrieval: input.retrieval,
+      model: input.model,
+    });
+  });
 }
 
 function vehicleFilterVocabulary(value: unknown): {

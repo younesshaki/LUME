@@ -57,6 +57,7 @@
     "lucide-react": "^1.11.0",
     "mersennetwister": "^0.2.3",
     "motion": "^12.38.0",
+    "posthog-js": "1.434.5",
     "postprocessing": "6.38.0",
     "r3f-perf": "^7.2.3",
     "react": "^18.3.1",

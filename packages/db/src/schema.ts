@@ -897,6 +897,45 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["rag_indexing_jobs"]["Insert"]>;
         Relationships: [];
       };
+      concierge_traces: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          request_id: string;
+          conversation_id: string;
+          turn: number | null;
+          trace_mode: "internal_full";
+          source: "deterministic" | "interpreted" | "model" | "tool" | "error";
+          status: "completed" | "failed" | "stream_incomplete" | "duplicate";
+          user_message: string;
+          assistant_response: string | null;
+          state_before: Record<string, unknown>;
+          state_after: Record<string, unknown>;
+          actions: unknown[];
+          tool_summary: unknown[];
+          retrieval: Record<string, unknown>;
+          model: Record<string, unknown>;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["concierge_traces"]["Row"],
+          "id" | "status" | "state_before" | "state_after" | "actions" | "tool_summary" | "retrieval" | "model" | "created_at" | "completed_at"
+        > & {
+          id?: string;
+          status?: "completed" | "failed" | "stream_incomplete" | "duplicate";
+          state_before?: Record<string, unknown>;
+          state_after?: Record<string, unknown>;
+          actions?: unknown[];
+          tool_summary?: unknown[];
+          retrieval?: Record<string, unknown>;
+          model?: Record<string, unknown>;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Update: never;
+        Relationships: [];
+      };
       leads: {
         Row: {
           id: string;

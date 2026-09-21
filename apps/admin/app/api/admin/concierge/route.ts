@@ -8,6 +8,7 @@
  * this path.
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { after } from "next/server";
 import { evaluateLaunchReadiness } from "@/lib/launchReadiness";
 import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
 import { adminCapabilityHref, adminIntentMinimumRole, adminClarifyIntent, capabilityFromAdminPath, type AdminPlannerContext, capabilityById, buildAdminConciergeSystemPrompt, compileDeterministicAdminIntent, hasAdminCapabilityRole, isAdminRole, parseAdminConciergeModelPlan, parseAdminConciergeRequest, ADMIN_CONCIERGE_LIMITS } from "@/lib/adminConcierge";
@@ -16,6 +17,7 @@ import { DEFAULT_CONCIERGE_MODEL_ID, getConciergeModelProfile, isPremiumConcierg
 import { checkChatRateLimit } from "@/lib/rateLimit";
 import { collectManagedImageVehicleIds } from "@/lib/managedImageScan";
 import { captureDebug, captureError, recordModelUsage } from "@/lib/observability";
+import { captureConciergeOperationalEvent } from "@/lib/posthog.server";
 import { createFeedRunCommand, createLeadAssignCommand, createLeadStatusCommand, createVehiclePriceCommand, createVehicleStatusCommand, resolveTenantTeammateNames } from "@/lib/adminConciergeCommands.server";
 import { adminConversationMemoryKey, getConversationMemoryStore } from "@/lib/conversationMemory.server";
 import { emptyAdminConciergeState, normalizeAdminConciergeState, resolveAdminPresentationRequest, resultSetState, selectAdminConciergeResult, type AdminConciergeState } from "@/lib/adminConciergeState";
@@ -61,6 +63,13 @@ export async function POST(request: Request): Promise<Response> {
   if (membershipError || !membership || !isAdminRole(membership.role)) {
     return json({ error: "Not authorized for this tenant." }, 403);
   }
+  after(() =>
+    captureConciergeOperationalEvent({
+      tenantId: tenant.id,
+      event: "lume_admin_concierge_turn_started",
+      properties: { role: membership.role },
+    }),
+  );
 
   // Rate limiting sits above every branch below, not just the model fallback.
   // The deterministic path is not cheap: inspect_photo_gap and
@@ -145,6 +154,13 @@ export async function POST(request: Request): Promise<Response> {
     model: modelMetadata,
     intent: debugIntent(intent),
   });
+  after(() =>
+    captureConciergeOperationalEvent({
+      tenantId: tenant.id,
+      event: "lume_admin_concierge_intent_resolved",
+      properties: { source, intent_kind: intent.kind, model_attempted: modelAttempted },
+    }),
+  );
   const requiredRole = adminIntentMinimumRole(intent);
   if (!requiredRole || !hasAdminCapabilityRole(membership.role, requiredRole)) {
     return json(
