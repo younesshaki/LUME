@@ -24,11 +24,11 @@ describe("LUME PostHog browser telemetry", () => {
     expect(capture).not.toHaveBeenCalled();
   });
 
-  it("initializes with manual, text-masked capture and sends scalar metadata", async () => {
+  it("initializes with autocapture and replay enabled, while masking replay text", async () => {
     vi.stubEnv("VITE_POSTHOG_ENABLED", "1");
     vi.stubEnv("VITE_POSTHOG_PROJECT_TOKEN", "phc_test");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://posthog.test");
-    vi.stubEnv("VITE_POSTHOG_SESSION_REPLAY", "0");
+    vi.stubEnv("VITE_POSTHOG_SESSION_REPLAY", "1");
     const { captureLumeEvent, initializeLumePostHog } = await import("./posthog");
 
     initializeLumePostHog();
@@ -41,10 +41,10 @@ describe("LUME PostHog browser telemetry", () => {
       "phc_test",
       expect.objectContaining({
         api_host: "https://posthog.test",
-        autocapture: false,
-        capture_pageview: false,
-        capture_pageleave: false,
-        disable_session_recording: true,
+        autocapture: true,
+        capture_pageview: true,
+        capture_pageleave: true,
+        disable_session_recording: false,
         session_recording: expect.objectContaining({
           maskAllInputs: true,
           maskTextSelector: "*",

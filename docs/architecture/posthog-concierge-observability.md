@@ -43,7 +43,7 @@ The public Vite deployment requires only publishable browser variables:
 VITE_POSTHOG_ENABLED=1
 VITE_POSTHOG_PROJECT_TOKEN=<PostHog project API key>
 VITE_POSTHOG_HOST=https://us.i.posthog.com
-VITE_POSTHOG_SESSION_REPLAY=0
+VITE_POSTHOG_SESSION_REPLAY=1
 ```
 
 The Next.js admin deployment uses separate server-only settings:
@@ -53,9 +53,10 @@ POSTHOG_PROJECT_TOKEN=<same PostHog project API key>
 POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-`VITE_POSTHOG_SESSION_REPLAY` is opt-in. If enabled, the LUME client still
-sets `maskAllInputs: true` and `maskTextSelector: "*"`; it is useful for
-layout/click reproduction but cannot become a backdoor for transcript capture.
+LUME enables PostHog autocapture, page analytics, and session replay. Replay
+still sets `maskAllInputs: true` and
+`maskTextSelector: "*"`; it is useful for layout/click reproduction but cannot
+become a backdoor for transcript capture.
 
 
 ## Event taxonomy
