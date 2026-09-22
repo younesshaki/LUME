@@ -1,9 +1,10 @@
 /**
- * Privacy-minimal PostHog browser telemetry for the public LUME site.
+ * PostHog product analytics for the public LUME site.
  *
+ * Autocapture, page analytics, and session replay are deliberately enabled.
  * Concierge content, prompts, model output, lead details and action arguments
- * never enter PostHog. Full internal evaluation transcripts live in the
- * server-only `concierge_traces` table behind a tenant allowlist instead.
+ * still never enter PostHog through LUME's explicit telemetry. Full internal
+ * evaluation transcripts live in the server-only `concierge_traces` table.
  */
 import posthog from "posthog-js";
 import { publicTenantSlug } from "./publicTenant";
@@ -12,7 +13,7 @@ type Properties = Record<string, boolean | number | string | null | undefined>;
 
 let initialized = false;
 
-/** Initialise explicitly: no automatic page-view or DOM autocapture. */
+/** Initialise once per browser session. */
 export function initializeLumePostHog(): void {
   const token = import.meta.env.VITE_POSTHOG_PROJECT_TOKEN?.trim();
   const host = import.meta.env.VITE_POSTHOG_HOST?.trim();
@@ -31,9 +32,9 @@ export function initializeLumePostHog(): void {
 
   posthog.init(token, {
     api_host: host,
-    autocapture: false,
-    capture_pageview: false,
-    capture_pageleave: false,
+    autocapture: true,
+    capture_pageview: true,
+    capture_pageleave: true,
     capture_exceptions: false,
     disable_session_recording: !sessionReplayEnabled,
     session_recording: {
