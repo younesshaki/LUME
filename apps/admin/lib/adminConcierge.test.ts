@@ -2,25 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { extractVehicleFilters } from "@lume/rag";
-import {
-  ADMIN_CAPABILITIES,
-  CAPABILITY_FREE_INTENTS,
-  INTENT_CAPABILITY_ID,
-  adminIntentMinimumRole,
-  adminCapabilityHref,
-  capabilityById,
-  capabilityFromAdminPath,
-  buildAdminConciergeSystemPrompt,
-  compileDeterministicAdminIntent,
-  extractLeadAssignment,
-  extractVehiclePriceUpdate,
-  extractVehicleStatusUpdate,
-  conversionWindowFromMessage,
-  findNavigationCapability,
-  hasAdminCapabilityRole,
-  parseAdminConciergeModelPlan,
-  parseAdminConciergeRequest,
-} from "./adminConcierge";
+import { ADMIN_CAPABILITIES, CAPABILITY_FREE_INTENTS, INTENT_CAPABILITY_ID, adminIntentMinimumRole, adminCapabilityHref, capabilityById, capabilityFromAdminPath, buildAdminConciergeSystemPrompt, compileDeterministicAdminIntent, extractLeadAssignment, extractVehiclePriceUpdate, extractVehicleStatusUpdate, conversionWindowFromMessage, findNavigationCapability, hasAdminCapabilityRole, parseAdminConciergeModelPlan, parseAdminConciergeRequest } from "./adminConcierge";
 
 describe("admin concierge control plane", () => {
   // The registry stays read-only apart from an explicit, enumerated set of
@@ -28,11 +10,15 @@ describe("admin concierge control plane", () => {
   // not something that slips in with a feature.
   const CONFIRMED_WRITES = ["lead.status.update", "feed.run.enqueue", "lead.assign", "vehicle.price.update", "vehicle.status.update"];
 
+  it("routes dashboard how-to language to curated help", () => {
+    expect(compileDeterministicAdminIntent("How do I upload an inventory CSV?")).toEqual({
+      kind: "search_help",
+      query: "How do I upload an inventory CSV?",
+    });
+  });
+
   it("keeps the launch registry read-only except for confirmed bounded capabilities", () => {
-    expect(ADMIN_CAPABILITIES.every((capability) =>
-      capability.effect === "read" || capability.effect === "navigate" ||
-      CONFIRMED_WRITES.includes(capability.id),
-    )).toBe(true);
+    expect(ADMIN_CAPABILITIES.every((capability) => capability.effect === "read" || capability.effect === "navigate" || CONFIRMED_WRITES.includes(capability.id))).toBe(true);
   });
 
   it("requires explicit confirmation on every write", () => {
@@ -43,18 +29,15 @@ describe("admin concierge control plane", () => {
   });
 
   it("has no write capability outside the enumerated set", () => {
-    const writes = ADMIN_CAPABILITIES.filter((c) => c.effect === "write").map((c) => c.id).sort();
+    const writes = ADMIN_CAPABILITIES.filter((c) => c.effect === "write")
+      .map((c) => c.id)
+      .sort();
     expect(writes).toEqual([...CONFIRMED_WRITES].sort());
   });
 
   it("covers every tenant-facing sidebar surface with an explicit capability", () => {
     const routes = new Set(ADMIN_CAPABILITIES.map((capability) => capability.route));
-    expect([
-      "/", "/vehicles", "/leads", "/customers", "/loyalty",
-      "/website", "/pages", "/templates", "/design", "/navigation", "/branding", "/assets",
-      "/persona", "/concierge-targets", "/knowledge", "/analytics", "/team", "/domains",
-      "/settings/billing", "/settings/api-keys", "/settings/integrations", "/settings/inventory-feeds", "/settings/system-preferences",
-    ].every((route) => routes.has(route))).toBe(true);
+    expect(["/", "/vehicles", "/leads", "/customers", "/loyalty", "/website", "/pages", "/templates", "/design", "/navigation", "/branding", "/assets", "/persona", "/concierge-targets", "/knowledge", "/analytics", "/team", "/domains", "/settings/billing", "/settings/api-keys", "/settings/integrations", "/settings/inventory-feeds", "/settings/system-preferences"].every((route) => routes.has(route))).toBe(true);
   });
 
   it("enforces the registry's declared role boundary independently of UI access", () => {
@@ -62,8 +45,19 @@ describe("admin concierge control plane", () => {
     expect(hasAdminCapabilityRole("viewer", "editor")).toBe(false);
     expect(hasAdminCapabilityRole("admin", "editor")).toBe(true);
     expect(adminIntentMinimumRole({ kind: "describe_current_page" })).toBe("viewer");
-    expect(adminIntentMinimumRole({ kind: "update_lead_status", leadQuery: "jane@example.com", status: "qualified" })).toBe("editor");
-    expect(adminIntentMinimumRole({ kind: "navigate", capabilityId: "analytics.view" })).toBe("viewer");
+    expect(
+      adminIntentMinimumRole({
+        kind: "update_lead_status",
+        leadQuery: "jane@example.com",
+        status: "qualified",
+      }),
+    ).toBe("editor");
+    expect(
+      adminIntentMinimumRole({
+        kind: "navigate",
+        capabilityId: "analytics.view",
+      }),
+    ).toBe("viewer");
     expect(adminIntentMinimumRole({ kind: "navigate", capabilityId: "unknown" })).toBeNull();
   });
 
@@ -81,10 +75,7 @@ describe("admin concierge control plane", () => {
     // union is read from source and checked here. A new intent must declare a
     // capability or be explicitly capability-free; neither is the default.
     const source = readFileSync(resolve(process.cwd(), "apps/admin/lib/adminConcierge.ts"), "utf8");
-    const union = source.slice(
-      source.indexOf("export type AdminConciergeIntent"),
-      source.indexOf("export type AdminConciergeModelPlan"),
-    );
+    const union = source.slice(source.indexOf("export type AdminConciergeIntent"), source.indexOf("export type AdminConciergeModelPlan"));
     const kinds = [...union.matchAll(/\{ kind: "([a-z_]+)"/g)].map((match) => match[1]);
     expect(kinds.length).toBeGreaterThan(15);
 
@@ -102,37 +93,86 @@ describe("admin concierge control plane", () => {
     // The drift the map exists to prevent: reprice is editor-level today, and
     // the gate must report whatever the registry says, not a second opinion.
     expect(capabilityById("vehicle.price.update")?.minRole).toBe("editor");
-    expect(adminIntentMinimumRole({ kind: "update_vehicle_price", vehicleQuery: "CX-90", price: 52000 }))
-      .toBe(capabilityById("vehicle.price.update")?.minRole);
-    expect(adminIntentMinimumRole({ kind: "enqueue_feed_run", feedQuery: "autotrader" }))
-      .toBe(capabilityById("feed.run.enqueue")?.minRole);
-    expect(adminIntentMinimumRole({ kind: "enqueue_feed_run", feedQuery: "autotrader" })).toBe("admin");
+    expect(
+      adminIntentMinimumRole({
+        kind: "update_vehicle_price",
+        vehicleQuery: "CX-90",
+        price: 52000,
+      }),
+    ).toBe(capabilityById("vehicle.price.update")?.minRole);
+    expect(
+      adminIntentMinimumRole({
+        kind: "enqueue_feed_run",
+        feedQuery: "autotrader",
+      }),
+    ).toBe(capabilityById("feed.run.enqueue")?.minRole);
+    expect(
+      adminIntentMinimumRole({
+        kind: "enqueue_feed_run",
+        feedQuery: "autotrader",
+      }),
+    ).toBe("admin");
   });
 
   it("parses bounded, client-safe requests and drops untrusted path values", () => {
-    expect(parseAdminConciergeRequest({ tenantSlug: " demo ", message: "show vehicles", currentPath: "/admin/demo/vehicles", sessionId: "11111111-1111-4111-8111-111111111111" })).toEqual({
+    expect(
+      parseAdminConciergeRequest({
+        tenantSlug: " demo ",
+        message: "show vehicles",
+        currentPath: "/admin/demo/vehicles",
+        sessionId: "11111111-1111-4111-8111-111111111111",
+      }),
+    ).toEqual({
       ok: true,
-      request: { tenantSlug: "demo", message: "show vehicles", currentPath: "/admin/demo/vehicles", sessionId: "11111111-1111-4111-8111-111111111111" },
+      request: {
+        tenantSlug: "demo",
+        message: "show vehicles",
+        currentPath: "/admin/demo/vehicles",
+        sessionId: "11111111-1111-4111-8111-111111111111",
+      },
     });
-    expect(parseAdminConciergeRequest({ tenantSlug: "demo", message: "hello", currentPath: "https://attacker.test" })).toEqual({
+    expect(
+      parseAdminConciergeRequest({
+        tenantSlug: "demo",
+        message: "hello",
+        currentPath: "https://attacker.test",
+      }),
+    ).toEqual({
       ok: true,
       request: { tenantSlug: "demo", message: "hello" },
     });
     expect(parseAdminConciergeRequest({ tenantSlug: "", message: "hello" }).ok).toBe(false);
-    expect(parseAdminConciergeRequest({ tenantSlug: "demo", message: "hello", sessionId: "not-a-session" })).toEqual({
+    expect(
+      parseAdminConciergeRequest({
+        tenantSlug: "demo",
+        message: "hello",
+        sessionId: "not-a-session",
+      }),
+    ).toEqual({
       ok: true,
       request: { tenantSlug: "demo", message: "hello" },
     });
   });
 
   it("grounds vehicle and lead searches to closed intent shapes", () => {
-    expect(compileDeterministicAdminIntent("where am I?")).toEqual({ kind: "describe_current_page" });
+    expect(compileDeterministicAdminIntent("where am I?")).toEqual({
+      kind: "describe_current_page",
+    });
     expect(compileDeterministicAdminIntent("what model is the concierge using?")).toEqual({ kind: "summarize_concierge_config" });
     expect(compileDeterministicAdminIntent("give me a dashboard summary")).toEqual({ kind: "summarize_overview" });
-    expect(compileDeterministicAdminIntent("show me BMW vehicles")).toEqual({ kind: "search_vehicles", query: "BMW" });
-    expect(compileDeterministicAdminIntent("list new leads")).toEqual({ kind: "search_leads", status: "new" });
+    expect(compileDeterministicAdminIntent("show me BMW vehicles")).toEqual({
+      kind: "search_vehicles",
+      query: "BMW",
+    });
+    expect(compileDeterministicAdminIntent("list new leads")).toEqual({
+      kind: "search_leads",
+      status: "new",
+    });
     expect(compileDeterministicAdminIntent("find customer jane@example.com")).toEqual({ kind: "search_customers", query: "jane@example.com" });
-    expect(compileDeterministicAdminIntent("show pages")).toEqual({ kind: "search_pages", query: null });
+    expect(compileDeterministicAdminIntent("show pages")).toEqual({
+      kind: "search_pages",
+      query: null,
+    });
     expect(compileDeterministicAdminIntent("what is the latest failed inventory feed?")).toEqual({
       kind: "inspect_feed_runs",
       status: "failed",
@@ -147,7 +187,10 @@ describe("admin concierge control plane", () => {
   });
 
   it("uses the shared trusted filter extractor for natural budget phrasing", () => {
-    expect(extractVehicleFilters("show BMWs under 70k")).toMatchObject({ make: "BMW", priceMax: 70_000 });
+    expect(extractVehicleFilters("show BMWs under 70k")).toMatchObject({
+      make: "BMW",
+      priceMax: 70_000,
+    });
     expect(extractVehicleFilters("only show me BMWs between 40k and 55k")).toMatchObject({
       make: "BMW",
       priceMin: 40_000,
@@ -174,8 +217,14 @@ describe("admin concierge control plane", () => {
   });
 
   it("navigates only when one registry capability matches", () => {
-    expect(compileDeterministicAdminIntent("take me to analytics")).toEqual({ kind: "navigate", capabilityId: "analytics.view" });
-    expect(compileDeterministicAdminIntent("open the site pages")).toEqual({ kind: "search_pages", query: null });
+    expect(compileDeterministicAdminIntent("take me to analytics")).toEqual({
+      kind: "navigate",
+      capabilityId: "analytics.view",
+    });
+    expect(compileDeterministicAdminIntent("open the site pages")).toEqual({
+      kind: "search_pages",
+      query: null,
+    });
     const feeds = capabilityById("feeds.view");
     expect(feeds && adminCapabilityHref("demo", feeds)).toBe("/admin/demo/settings/inventory-feeds");
   });
@@ -193,7 +242,10 @@ describe("admin concierge control plane", () => {
 
   it("prefers a specific route phrase over overlapping generic aliases", () => {
     expect(findNavigationCapability("open inventory feeds")?.id).toBe("feeds.view");
-    expect(compileDeterministicAdminIntent("open inventory feeds")).toEqual({ kind: "navigate", capabilityId: "feeds.view" });
+    expect(compileDeterministicAdminIntent("open inventory feeds")).toEqual({
+      kind: "navigate",
+      capabilityId: "feeds.view",
+    });
     expect(compileDeterministicAdminIntent("take me to concierge targets")).toEqual({ kind: "navigate", capabilityId: "concierge.targets.view" });
     // "open settings" names no specific settings surface, so it must not guess.
     expect(findNavigationCapability("open settings")).toBeNull();
@@ -201,7 +253,9 @@ describe("admin concierge control plane", () => {
 
   it("does not invent a capability for unsupported operation requests", () => {
     expect(compileDeterministicAdminIntent("delete every sold vehicle")).toEqual({ kind: "unsupported" });
-    expect(compileDeterministicAdminIntent("change our billing plan")).toEqual({ kind: "unsupported" });
+    expect(compileDeterministicAdminIntent("change our billing plan")).toEqual({
+      kind: "unsupported",
+    });
   });
 
   it("accepts only safe, closed model plans and ignores model prose", () => {
@@ -247,23 +301,35 @@ describe("creation intents", () => {
   const intent = (message: string) => compileDeterministicAdminIntent(message);
 
   it("routes 'add a vehicle' to the new-vehicle form", () => {
-    expect(intent("add a vehicle")).toEqual({ kind: "navigate", capabilityId: "vehicles.new" });
+    expect(intent("add a vehicle")).toEqual({
+      kind: "navigate",
+      capabilityId: "vehicles.new",
+    });
   });
 
   it("routes phrasings a dealer actually uses", () => {
     for (const phrase of ["new vehicle", "create vehicle", "add a car"]) {
-      expect(intent(phrase)).toEqual({ kind: "navigate", capabilityId: "vehicles.new" });
+      expect(intent(phrase)).toEqual({
+        kind: "navigate",
+        capabilityId: "vehicles.new",
+      });
     }
   });
 
   it("routes import wording to the importer, not the inventory list", () => {
     for (const phrase of ["import inventory", "import csv", "upload vehicles"]) {
-      expect(intent(phrase)).toEqual({ kind: "navigate", capabilityId: "vehicles.import" });
+      expect(intent(phrase)).toEqual({
+        kind: "navigate",
+        capabilityId: "vehicles.import",
+      });
     }
   });
 
   it("routes 'new page' to the page builder", () => {
-    expect(intent("new page")).toEqual({ kind: "navigate", capabilityId: "pages.new" });
+    expect(intent("new page")).toEqual({
+      kind: "navigate",
+      capabilityId: "pages.new",
+    });
   });
 
   it("keeps creation capabilities behind editor", () => {
@@ -291,12 +357,7 @@ describe("photo coverage intent", () => {
   const intent = (message: string) => compileDeterministicAdminIntent(message);
 
   it("recognises the ways a dealer asks about photo gaps", () => {
-    for (const phrase of [
-      "how many vehicles are missing photos",
-      "which cars have no photos",
-      "show me vehicles without images",
-      "what is my photo coverage",
-    ]) {
+    for (const phrase of ["how many vehicles are missing photos", "which cars have no photos", "show me vehicles without images", "what is my photo coverage"]) {
       expect(intent(phrase).kind).toBe("inspect_photo_gap");
     }
   });
@@ -350,13 +411,7 @@ describe("launch readiness intent", () => {
   const intent = (message: string) => compileDeterministicAdminIntent(message);
 
   it("recognises the ways an owner asks if they can go live", () => {
-    for (const phrase of [
-      "am i ready to launch",
-      "launch readiness",
-      "what is left to set up",
-      "what's blocking",
-      "can i go live",
-    ]) {
+    for (const phrase of ["am i ready to launch", "launch readiness", "what is left to set up", "what's blocking", "can i go live"]) {
       expect(intent(phrase).kind).toBe("inspect_launch_readiness");
     }
   });
@@ -383,11 +438,7 @@ describe("lead assignment intent", () => {
   });
 
   it("accepts the natural phrasings", () => {
-    for (const phrase of [
-      "reassign the lead Jane Doe to marcus",
-      "hand off Jane Doe to marcus",
-      "give the lead Jane Doe to marcus",
-    ]) {
+    for (const phrase of ["reassign the lead Jane Doe to marcus", "hand off Jane Doe to marcus", "give the lead Jane Doe to marcus"]) {
       expect(intent(phrase).kind).toBe("assign_lead");
     }
   });
@@ -401,7 +452,13 @@ describe("lead assignment intent", () => {
   });
 
   it("requires editor to even prepare one", () => {
-    expect(adminIntentMinimumRole({ kind: "assign_lead", leadQuery: "a", assigneeQuery: "b" })).toBe("editor");
+    expect(
+      adminIntentMinimumRole({
+        kind: "assign_lead",
+        leadQuery: "a",
+        assigneeQuery: "b",
+      }),
+    ).toBe("editor");
     expect(capabilityById("lead.assign")?.effect).toBe("write");
     expect(capabilityById("lead.assign")?.confirmation).toBe("standard");
   });
@@ -416,9 +473,15 @@ describe("vehicle reprice intent", () => {
   const intent = (message: string) => compileDeterministicAdminIntent(message);
 
   it("parses the phrasings a dealer uses", () => {
-    expect(extractVehiclePriceUpdate("reprice the CX-90 to 52000")).toEqual({ vehicleQuery: "CX-90", price: 52000 });
+    expect(extractVehiclePriceUpdate("reprice the CX-90 to 52000")).toEqual({
+      vehicleQuery: "CX-90",
+      price: 52000,
+    });
     expect(extractVehiclePriceUpdate("set the price of the Gladiator to $44,500")).toEqual({ vehicleQuery: "Gladiator", price: 44500 });
-    expect(extractVehiclePriceUpdate("reprice the Durango at 39k")).toEqual({ vehicleQuery: "Durango", price: 39000 });
+    expect(extractVehiclePriceUpdate("reprice the Durango at 39k")).toEqual({
+      vehicleQuery: "Durango",
+      price: 39000,
+    });
     expect(intent("reprice the CX-90 to 52000").kind).toBe("update_vehicle_price");
   });
 
@@ -431,7 +494,13 @@ describe("vehicle reprice intent", () => {
   });
 
   it("requires editor and explicit confirmation", () => {
-    expect(adminIntentMinimumRole({ kind: "update_vehicle_price", vehicleQuery: "CX-90", price: 52000 })).toBe("editor");
+    expect(
+      adminIntentMinimumRole({
+        kind: "update_vehicle_price",
+        vehicleQuery: "CX-90",
+        price: 52000,
+      }),
+    ).toBe("editor");
     expect(capabilityById("vehicle.price.update")?.confirmation).toBe("standard");
   });
 
@@ -482,11 +551,7 @@ describe("extractVehicleStatusUpdate", () => {
   // 'sold' carries revenue meaning and needs sold_at + sold_price, so it must
   // never be reachable from one sentence.
   it("cannot produce the sold status", () => {
-    for (const message of [
-      "mark the Civic as sold",
-      "sold the Model 3",
-      "set the Tacoma to sold",
-    ]) {
+    for (const message of ["mark the Civic as sold", "sold the Model 3", "set the Tacoma to sold"]) {
       expect(extractVehicleStatusUpdate(message)?.status).not.toBe("sold");
     }
   });
@@ -513,12 +578,7 @@ describe("conversionWindowFromMessage", () => {
 
 describe("conversion summary intent", () => {
   it("compiles conversion questions to the summary intent", () => {
-    for (const message of [
-      "how are we doing",
-      "what is our conversion rate",
-      "show me the funnel",
-      "how many views did we get last week",
-    ]) {
+    for (const message of ["how are we doing", "what is our conversion rate", "show me the funnel", "how many views did we get last week"]) {
       expect(compileDeterministicAdminIntent(message).kind).toBe("summarize_conversion");
     }
   });

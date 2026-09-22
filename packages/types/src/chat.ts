@@ -15,6 +15,14 @@ export type ChatRequest = {
   /** Untrusted public pathname; the server re-resolves any referenced entity tenant-safely. */
   pagePath?: string;
   stream?: boolean;
+  /**
+   * Client-generated opaque turn id (UUID), stable across retries of the SAME
+   * turn. It makes a retried delivery recognisable as a duplicate instead of a
+   * second turn, and lets the browser ignore actions from a superseded stream.
+   * Never an identity or authorization token; the server falls back to its own
+   * id when absent or malformed.
+   */
+  requestId?: string;
 };
 
 export type ChatStreamMeta = {
@@ -22,6 +30,11 @@ export type ChatStreamMeta = {
   sourceCategories: string[];
   /** Opaque server-issued ID used to retain bounded chat continuity. */
   sessionId?: string;
+  /**
+   * The turn id this stream belongs to — the client's own when it supplied
+   * one, otherwise the server's fallback. Additive: older clients ignore it.
+   */
+  requestId?: string;
 };
 
 export type ChatStreamError = {

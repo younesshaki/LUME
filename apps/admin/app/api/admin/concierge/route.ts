@@ -8,55 +8,23 @@
  * this path.
  */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { after } from "next/server";
 import { evaluateLaunchReadiness } from "@/lib/launchReadiness";
 import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
-import {
-  adminCapabilityHref,
-  adminIntentMinimumRole,
-  capabilityFromAdminPath,
-  capabilityById,
-  buildAdminConciergeSystemPrompt,
-  compileDeterministicAdminIntent,
-  hasAdminCapabilityRole,
-  isAdminRole,
-  parseAdminConciergeModelPlan,
-  parseAdminConciergeRequest,
-  ADMIN_CONCIERGE_LIMITS,
-} from "@/lib/adminConcierge";
+import { adminCapabilityHref, adminIntentMinimumRole, adminClarifyIntent, capabilityFromAdminPath, type AdminPlannerContext, capabilityById, buildAdminConciergeSystemPrompt, compileDeterministicAdminIntent, hasAdminCapabilityRole, isAdminRole, parseAdminConciergeModelPlan, parseAdminConciergeRequest, ADMIN_CONCIERGE_LIMITS } from "@/lib/adminConcierge";
 import { requestEditorCopilotCompletion } from "@/lib/editorCopilotLlm";
-import {
-  DEFAULT_CONCIERGE_MODEL_ID,
-  getConciergeModelProfile,
-  isPremiumConciergeModel,
-  normalizeConciergeModelId,
-  type ConciergeModelId,
-} from "@/lib/conciergeModels";
+import { DEFAULT_CONCIERGE_MODEL_ID, getConciergeModelProfile, isPremiumConciergeModel, normalizeConciergeModelId, type ConciergeModelId } from "@/lib/conciergeModels";
 import { checkChatRateLimit } from "@/lib/rateLimit";
 import { collectManagedImageVehicleIds } from "@/lib/managedImageScan";
 import { captureDebug, captureError, recordModelUsage } from "@/lib/observability";
-import {
-  createFeedRunCommand,
-  createLeadAssignCommand,
-  createLeadStatusCommand,
-  createVehiclePriceCommand,
-  createVehicleStatusCommand,
-  resolveTenantTeammateNames,
-} from "@/lib/adminConciergeCommands.server";
-import {
-  adminConversationMemoryKey,
-  getConversationMemoryStore,
-} from "@/lib/conversationMemory.server";
-import {
-  emptyAdminConciergeState,
-  normalizeAdminConciergeState,
-  resolveAdminPresentationRequest,
-  resultSetState,
-  selectAdminConciergeResult,
-  type AdminConciergeState,
-} from "@/lib/adminConciergeState";
+import { captureConciergeOperationalEvent } from "@/lib/posthog.server";
+import { createFeedRunCommand, createLeadAssignCommand, createLeadStatusCommand, createVehiclePriceCommand, createVehicleStatusCommand, resolveTenantTeammateNames } from "@/lib/adminConciergeCommands.server";
+import { adminConversationMemoryKey, getConversationMemoryStore } from "@/lib/conversationMemory.server";
+import { emptyAdminConciergeState, normalizeAdminConciergeState, resolveAdminPresentationRequest, resultSetState, selectAdminConciergeResult, type AdminConciergeState } from "@/lib/adminConciergeState";
 import { resolveTenantPlan } from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
 import { extractVehicleFilters } from "@lume/rag";
+import { searchAdminHelp } from "@/lib/adminHelp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,7 +32,10 @@ export const dynamic = "force-dynamic";
 function json(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+    },
   });
 }
 
@@ -83,23 +54,22 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsed.ok) return json({ error: parsed.error }, 400);
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: userData }, { data: tenant }] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase.from("tenants").select("id, slug").eq("slug", parsed.request.tenantSlug).maybeSingle(),
-  ]);
+  const [{ data: userData }, { data: tenant }] = await Promise.all([supabase.auth.getUser(), supabase.from("tenants").select("id, slug").eq("slug", parsed.request.tenantSlug).maybeSingle()]);
   if (!userData.user) return json({ error: "Authentication required." }, 401);
   // A tenant slug is not authority. The role RPC is a second explicit check
   // alongside RLS and covers every member role that may use read-only admin.
   if (!tenant) return json({ error: "Not authorized for this tenant." }, 403);
-  const { data: membership, error: membershipError } = await supabase
-    .from("tenant_members")
-    .select("role")
-    .eq("tenant_id", tenant.id)
-    .eq("user_id", userData.user.id)
-    .maybeSingle();
+  const { data: membership, error: membershipError } = await supabase.from("tenant_members").select("role").eq("tenant_id", tenant.id).eq("user_id", userData.user.id).maybeSingle();
   if (membershipError || !membership || !isAdminRole(membership.role)) {
     return json({ error: "Not authorized for this tenant." }, 403);
   }
+  after(() =>
+    captureConciergeOperationalEvent({
+      tenantId: tenant.id,
+      event: "lume_admin_concierge_turn_started",
+      properties: { role: membership.role },
+    }),
+  );
 
   // Rate limiting sits above every branch below, not just the model fallback.
   // The deterministic path is not cheap: inspect_photo_gap and
@@ -109,65 +79,58 @@ export async function POST(request: Request): Promise<Response> {
   // come first so an unauthorized caller can never consume a member's budget.
   const rate = checkChatRateLimit(`admin:${userData.user.id}`);
   if (!rate.allowed) {
-    return new Response(JSON.stringify({ error: "Too many concierge requests. Please retry shortly." }), {
-      status: 429,
-      headers: { "Content-Type": "application/json", "Retry-After": String(rate.retryAfterSeconds) },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Too many concierge requests. Please retry shortly.",
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(rate.retryAfterSeconds),
+        },
+      },
+    );
   }
 
   const memoryStore = getConversationMemoryStore();
-  const memoryKey = parsed.request.sessionId
-    ? adminConversationMemoryKey(tenant.id, userData.user.id, parsed.request.sessionId)
-    : null;
-  const adminState = memoryKey
-    ? normalizeAdminConciergeState(
-      (await memoryStore.get(memoryKey).catch(() => null))?.conversationState,
-    )
-    : emptyAdminConciergeState();
+  const memoryKey = parsed.request.sessionId ? adminConversationMemoryKey(tenant.id, userData.user.id, parsed.request.sessionId) : null;
+  const adminState = memoryKey ? normalizeAdminConciergeState((await memoryStore.get(memoryKey).catch(() => null))?.conversationState) : emptyAdminConciergeState();
   const storedPresentation = resolveAdminPresentationRequest(parsed.request.message, adminState);
   if (storedPresentation) {
-    return resolveStoredPresentation(
-      supabase,
-      tenant.id,
-      tenant.slug,
-      storedPresentation,
-      adminState,
-      memoryStore,
-      memoryKey,
-    );
+    return resolveStoredPresentation(supabase, tenant.id, tenant.slug, storedPresentation, adminState, memoryStore, memoryKey);
   }
 
   // The admin planner uses the tenant's explicitly selected concierge tier,
   // but applies the same entitlement clamp as public chat. A stored premium
   // choice can never bypass a later plan downgrade.
-  const [botConfigResult, tenantPlan] = await Promise.all([
-    supabase
-      .from("tenant_bot_config")
-      .select("model")
-      .eq("tenant_id", tenant.id)
-      .maybeSingle(),
-    resolveTenantPlan(createServiceClient(), tenant.id),
-  ]);
+  const [botConfigResult, tenantPlan] = await Promise.all([supabase.from("tenant_bot_config").select("model").eq("tenant_id", tenant.id).maybeSingle(), resolveTenantPlan(createServiceClient(), tenant.id)]);
   const configuredModelId = normalizeConciergeModelId(botConfigResult.data?.model);
-  const plannerModelId = isPremiumConciergeModel(configuredModelId) &&
-    !tenantPlan.entitlements["chat.premium_models"]
-    ? DEFAULT_CONCIERGE_MODEL_ID
-    : configuredModelId;
+  const plannerModelId = isPremiumConciergeModel(configuredModelId) && !tenantPlan.entitlements["chat.premium_models"] ? DEFAULT_CONCIERGE_MODEL_ID : configuredModelId;
 
   let intent = compileDeterministicAdminIntent(parsed.request.message);
   let source: "deterministic" | "model" = "deterministic";
   let modelAttempted = false;
-  let modelMetadata: { requestedModelId: ConciergeModelId; effectiveModelId?: ConciergeModelId; fellBack?: boolean } | null = null;
+  let modelMetadata: {
+    requestedModelId: ConciergeModelId;
+    effectiveModelId?: ConciergeModelId;
+    fellBack?: boolean;
+  } | null = null;
   // The model is a language-to-plan fallback only. It receives no tenant data,
   // and malformed/unsupported output remains unsupported rather than becoming
   // an executable action.
   if (intent.kind === "unsupported") {
     modelAttempted = true;
-    const compiled = await compileModelIntent(
-      parsed.request.message,
-      tenant.id,
-      plannerModelId,
-    );
+    const compiled = await compileModelIntent(parsed.request.message, tenant.id, plannerModelId, {
+      currentSurface: capabilityFromAdminPath(parsed.request.currentPath, tenant.slug)?.title ?? null,
+      resultSet: adminState.lastResultSet
+        ? {
+            kind: adminState.lastResultSet.kind,
+            size: adminState.lastResultSet.orderedIds.length,
+          }
+        : null,
+      hasSelection: adminState.selected !== null,
+    });
     intent = compiled.intent;
     modelMetadata = compiled.model;
     // The admin planner only runs when deterministic parsing failed, so this
@@ -191,12 +154,22 @@ export async function POST(request: Request): Promise<Response> {
     model: modelMetadata,
     intent: debugIntent(intent),
   });
+  after(() =>
+    captureConciergeOperationalEvent({
+      tenantId: tenant.id,
+      event: "lume_admin_concierge_intent_resolved",
+      properties: { source, intent_kind: intent.kind, model_attempted: modelAttempted },
+    }),
+  );
   const requiredRole = adminIntentMinimumRole(intent);
   if (!requiredRole || !hasAdminCapabilityRole(membership.role, requiredRole)) {
-    return json({
-      source,
-      reply: "Your tenant role does not permit that dashboard operation.",
-    }, 403);
+    return json(
+      {
+        source,
+        reply: "Your tenant role does not permit that dashboard operation.",
+      },
+      403,
+    );
   }
   switch (intent.kind) {
     case "navigate": {
@@ -228,6 +201,8 @@ export async function POST(request: Request): Promise<Response> {
       return summarizeConciergeConfig(supabase, tenant.id, tenant.slug, source);
     case "summarize_overview":
       return summarizeOverview(supabase, tenant.id, tenant.slug, source, memoryStore, memoryKey);
+    case "search_help":
+      return answerAdminHelp(tenant.slug, intent.query, source);
     case "search_vehicles":
       return searchVehicles(supabase, tenant.id, tenant.slug, intent.query, source, memoryStore, memoryKey);
     case "search_leads":
@@ -255,30 +230,56 @@ export async function POST(request: Request): Promise<Response> {
     case "assign_lead":
       return prepareLeadAssign(supabase, tenant.id, userData.user.id, intent.leadQuery, intent.assigneeQuery, source);
     case "update_lead_status":
-      return prepareLeadStatusUpdate(
-        supabase,
-        tenant.id,
-        userData.user.id,
-        intent.leadQuery,
-        intent.status,
-        source,
-      );
+      return prepareLeadStatusUpdate(supabase, tenant.id, userData.user.id, intent.leadQuery, intent.status, source);
     case "unsupported":
       return unsupported();
   }
+}
+
+function answerAdminHelp(tenantSlug: string, query: string, source: "deterministic" | "model"): Response {
+  const matches = searchAdminHelp(query);
+  const primary = matches[0];
+  if (!primary) {
+    return json({
+      source,
+      reply: "I couldn’t find a verified dashboard guide for that yet. Tell me the area—inventory, leads, pages, feeds, branding, or concierge—and I’ll narrow it down.",
+    });
+  }
+  const capability = capabilityById(primary.capabilityId);
+  if (!capability) return unsupported();
+  const href = adminCapabilityHref(tenantSlug, capability);
+  return json({
+    source,
+    reply: primary.answer,
+    action: { type: "navigate", href, label: capability.title },
+    sources: matches.map((article) => ({
+      id: article.id,
+      title: article.title,
+    })),
+  });
 }
 
 async function compileModelIntent(
   message: string,
   tenantId: string,
   modelId: ConciergeModelId,
+  plannerContext: AdminPlannerContext,
 ): Promise<{
   intent: ReturnType<typeof compileDeterministicAdminIntent>;
-  model: { requestedModelId: ConciergeModelId; effectiveModelId?: ConciergeModelId; fellBack?: boolean };
+  model: {
+    requestedModelId: ConciergeModelId;
+    effectiveModelId?: ConciergeModelId;
+    fellBack?: boolean;
+  };
 }> {
   const completion = await requestEditorCopilotCompletion(
     [
-      { role: "system", content: buildAdminConciergeSystemPrompt() },
+      // Shape-only session context: how many results are on screen and which
+      // surface the actor is on. No record content reaches the planner.
+      {
+        role: "system",
+        content: buildAdminConciergeSystemPrompt(plannerContext),
+      },
       { role: "user", content: message },
     ],
     modelId,
@@ -288,13 +289,18 @@ async function compileModelIntent(
       tenantId,
       requestedModelId: modelId,
     });
-    return { intent: { kind: "unsupported" }, model: { requestedModelId: modelId } };
+    return {
+      intent: { kind: "unsupported" },
+      model: { requestedModelId: modelId },
+    };
   }
   const plan = parseAdminConciergeModelPlan(completion.content);
-  // `clarify` is intentionally rendered as the same safe fallback in this
-  // initial UI. Future phases will add a typed clarifier state to the panel.
+  // A clarification is now a real outcome rather than a dead end: the model
+  // chooses one of five reason codes and LUME supplies the wording, so no
+  // model prose and no tenant record can reach the panel this way.
+  const intent = !plan ? ({ kind: "unsupported" } as const) : plan.kind === "clarify" ? adminClarifyIntent(plan.reason) : plan;
   return {
-    intent: plan && plan.kind !== "clarify" ? plan : { kind: "unsupported" },
+    intent,
     model: {
       requestedModelId: modelId,
       effectiveModelId: completion.modelId,
@@ -303,22 +309,13 @@ async function compileModelIntent(
   };
 }
 
-async function searchVehicles(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  queryText: string | null,
-  source: "deterministic" | "model",
-  memoryStore: ReturnType<typeof getConversationMemoryStore>,
-  memoryKey: string | null,
-): Promise<Response> {
-  let query = supabase
-    .from("vehicles")
-    .select("id, year, make, model, trim, price, status", { count: "exact" })
-    .eq("tenant_id", tenantId)
-    .order("updated_at", { ascending: false })
-    .limit(5);
-  const safeQuery = queryText?.replace(/[^\p{L}\p{N}\s-]/gu, "").trim().slice(0, 120) ?? "";
+async function searchVehicles(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, queryText: string | null, source: "deterministic" | "model", memoryStore: ReturnType<typeof getConversationMemoryStore>, memoryKey: string | null): Promise<Response> {
+  let query = supabase.from("vehicles").select("id, year, make, model, trim, price, status", { count: "exact" }).eq("tenant_id", tenantId).order("updated_at", { ascending: false }).limit(5);
+  const safeQuery =
+    queryText
+      ?.replace(/[^\p{L}\p{N}\s-]/gu, "")
+      .trim()
+      .slice(0, 120) ?? "";
   const filters = queryText ? extractVehicleFilters(queryText) : {};
   // Structured constraints are extracted from the user message, not model
   // output. They are applied to the query and carried to the issued Admin URL
@@ -357,35 +354,26 @@ async function searchVehicles(
   if (dashboardQuery) params.set("q", dashboardQuery);
   addVehicleFilterParams(params, filters);
   const href = `/admin/${encodeURIComponent(tenantSlug)}/vehicles${params.size ? `?${params}` : ""}`;
-  await persistAdminResultSet(memoryStore, memoryKey, resultSetState({
-    kind: "vehicles",
-    orderedIds: examples.map((vehicle) => vehicle.id),
-    totalCount: total,
-    href,
-  }));
+  await persistAdminResultSet(
+    memoryStore,
+    memoryKey,
+    resultSetState({
+      kind: "vehicles",
+      orderedIds: examples.map((vehicle) => vehicle.id),
+      totalCount: total,
+      href,
+    }),
+  );
   return json({
     source,
-    reply: total
-      ? `I found ${total.toLocaleString()} vehicle${total === 1 ? "" : "s"}${label}.`
-      : `No vehicles${label} match the current inventory.`,
+    reply: total ? `I found ${total.toLocaleString()} vehicle${total === 1 ? "" : "s"}${label}.` : `No vehicles${label} match the current inventory.`,
     action: { type: "navigate", href, label: "Open vehicles" },
     results: examples,
   });
 }
 
-async function summarizeOverview(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  source: "deterministic" | "model",
-  memoryStore: ReturnType<typeof getConversationMemoryStore>,
-  memoryKey: string | null,
-): Promise<Response> {
-  const [vehiclesResult, newLeadsResult, pagesResult] = await Promise.all([
-    supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).neq("status", "archived"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("status", "new"),
-    supabase.from("pages").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).is("archived_at", null),
-  ]);
+async function summarizeOverview(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, source: "deterministic" | "model", memoryStore: ReturnType<typeof getConversationMemoryStore>, memoryKey: string | null): Promise<Response> {
+  const [vehiclesResult, newLeadsResult, pagesResult] = await Promise.all([supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).neq("status", "archived"), supabase.from("leads").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("status", "new"), supabase.from("pages").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).is("archived_at", null)]);
   if (vehiclesResult.error || newLeadsResult.error || pagesResult.error) {
     return json({ error: "Unable to read the dashboard summary right now." }, 502);
   }
@@ -396,45 +384,45 @@ async function summarizeOverview(
   return json({
     source,
     reply: `Right now you have ${activeVehicles.toLocaleString()} active vehicle${activeVehicles === 1 ? "" : "s"}, ${newLeads.toLocaleString()} new lead${newLeads === 1 ? "" : "s"}, and ${pages.toLocaleString()} active page${pages === 1 ? "" : "s"}.`,
-    action: { type: "navigate", href: `/admin/${encodeURIComponent(tenantSlug)}`, label: "Open dashboard" },
+    action: {
+      type: "navigate",
+      href: `/admin/${encodeURIComponent(tenantSlug)}`,
+      label: "Open dashboard",
+    },
     details: [
-      { id: "active-vehicles", label: "Active inventory", value: activeVehicles.toLocaleString() },
+      {
+        id: "active-vehicles",
+        label: "Active inventory",
+        value: activeVehicles.toLocaleString(),
+      },
       { id: "new-leads", label: "New leads", value: newLeads.toLocaleString() },
-      { id: "active-pages", label: "Active pages", value: pages.toLocaleString() },
+      {
+        id: "active-pages",
+        label: "Active pages",
+        value: pages.toLocaleString(),
+      },
     ],
   });
 }
 
-async function summarizeConciergeConfig(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function summarizeConciergeConfig(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, source: "deterministic" | "model"): Promise<Response> {
   // Never select persona/system-prompt text here. The operational summary is
   // deliberately limited to non-sensitive runtime policy fields.
-  const [configResult, personaResult] = await Promise.all([
-    supabase
-      .from("tenant_bot_config")
-      .select("model, allowed_tools, max_iterations, updated_at")
-      .eq("tenant_id", tenantId)
-      .maybeSingle(),
-    supabase
-      .from("bot_personas")
-      .select("name, tone, updated_at")
-      .eq("tenant_id", tenantId)
-      .eq("is_active", true)
-      .maybeSingle(),
-  ]);
+  const [configResult, personaResult] = await Promise.all([supabase.from("tenant_bot_config").select("model, allowed_tools, max_iterations, updated_at").eq("tenant_id", tenantId).maybeSingle(), supabase.from("bot_personas").select("name, tone, updated_at").eq("tenant_id", tenantId).eq("is_active", true).maybeSingle()]);
   if (configResult.error || personaResult.error) {
     const missing = configResult.error?.code === "42P01" || personaResult.error?.code === "42P01";
-    return json({
-      source,
-      reply: missing
-        ? "Concierge configuration is unavailable until its required migration is applied."
-        : "Unable to read concierge configuration right now.",
-      action: { type: "navigate", href: `/admin/${encodeURIComponent(tenantSlug)}/persona`, label: "Open bot configuration" },
-    }, missing ? 503 : 502);
+    return json(
+      {
+        source,
+        reply: missing ? "Concierge configuration is unavailable until its required migration is applied." : "Unable to read concierge configuration right now.",
+        action: {
+          type: "navigate",
+          href: `/admin/${encodeURIComponent(tenantSlug)}/persona`,
+          label: "Open bot configuration",
+        },
+      },
+      missing ? 503 : 502,
+    );
   }
   const config = configResult.data;
   const persona = personaResult.data;
@@ -453,28 +441,27 @@ async function summarizeConciergeConfig(
     action: { type: "navigate", href, label: "Open bot configuration" },
     details: [
       { id: "model", label: "Model", value: config.model },
-      { id: "tools", label: "Allowed tools", value: config.allowed_tools.length.toLocaleString() },
-      { id: "iterations", label: "Maximum tool steps", value: config.max_iterations.toLocaleString() },
-      { id: "updated", label: "Runtime configuration updated", value: formatAdminTimestamp(config.updated_at) },
+      {
+        id: "tools",
+        label: "Allowed tools",
+        value: config.allowed_tools.length.toLocaleString(),
+      },
+      {
+        id: "iterations",
+        label: "Maximum tool steps",
+        value: config.max_iterations.toLocaleString(),
+      },
+      {
+        id: "updated",
+        label: "Runtime configuration updated",
+        value: formatAdminTimestamp(config.updated_at),
+      },
     ],
   });
 }
 
-async function searchLeads(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  status: "new" | "contacted" | "qualified" | "won" | "lost" | null,
-  source: "deterministic" | "model",
-  memoryStore: ReturnType<typeof getConversationMemoryStore>,
-  memoryKey: string | null,
-): Promise<Response> {
-  let query = supabase
-    .from("leads")
-    .select("id, first_name, last_name, email, status", { count: "exact" })
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false })
-    .limit(5);
+async function searchLeads(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, status: "new" | "contacted" | "qualified" | "won" | "lost" | null, source: "deterministic" | "model", memoryStore: ReturnType<typeof getConversationMemoryStore>, memoryKey: string | null): Promise<Response> {
+  let query = supabase.from("leads").select("id, first_name, last_name, email, status", { count: "exact" }).eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(5);
   if (status) query = query.eq("status", status);
   const { data, count, error } = await query;
   if (error) return json({ error: "Unable to read leads right now." }, 502);
@@ -488,12 +475,16 @@ async function searchLeads(
     label: leadLabel(lead),
     status: lead.status,
   }));
-  await persistAdminResultSet(memoryStore, memoryKey, resultSetState({
-    kind: "leads",
-    orderedIds: examples.map((lead) => lead.id),
-    totalCount: total,
-    href,
-  }));
+  await persistAdminResultSet(
+    memoryStore,
+    memoryKey,
+    resultSetState({
+      kind: "leads",
+      orderedIds: examples.map((lead) => lead.id),
+      totalCount: total,
+      href,
+    }),
+  );
   return json({
     source,
     reply: `I found ${total.toLocaleString()}${label} lead${total === 1 ? "" : "s"}.`,
@@ -507,25 +498,18 @@ async function searchLeads(
   });
 }
 
-async function searchCustomers(
-  tenantId: string,
-  tenantSlug: string,
-  queryText: string | null,
-  source: "deterministic" | "model",
-  memoryStore: ReturnType<typeof getConversationMemoryStore>,
-  memoryKey: string | null,
-): Promise<Response> {
+async function searchCustomers(tenantId: string, tenantSlug: string, queryText: string | null, source: "deterministic" | "model", memoryStore: ReturnType<typeof getConversationMemoryStore>, memoryKey: string | null): Promise<Response> {
   // `visitors` is deny-all under RLS because it coexists with credential
   // fields. The caller was authenticated and tenant-role-authorized above;
   // use service access only for this explicit safe projection and tenant ID.
   const service = createServiceClient();
-  let query = service
-    .from("visitors")
-    .select("id, first_name, last_name, email", { count: "exact" })
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false })
-    .limit(5);
-  const safeQuery = queryText?.replace(/[^\p{L}\p{N}\s@.+-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 80) ?? "";
+  let query = service.from("visitors").select("id, first_name, last_name, email", { count: "exact" }).eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(5);
+  const safeQuery =
+    queryText
+      ?.replace(/[^\p{L}\p{N}\s@.+-]/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80) ?? "";
   if (safeQuery) {
     const term = `%${safeQuery.replace(/[%_]/g, (character) => `\\${character}`)}%`;
     query = query.or(`email.ilike.${term},first_name.ilike.${term},last_name.ilike.${term}`);
@@ -541,40 +525,33 @@ async function searchCustomers(
   const params = new URLSearchParams();
   if (safeQuery) params.set("q", safeQuery);
   const href = `/admin/${encodeURIComponent(tenantSlug)}/customers${params.size ? `?${params}` : ""}`;
-  await persistAdminResultSet(memoryStore, memoryKey, resultSetState({
-    kind: "customers",
-    orderedIds: customers.map((customer) => customer.id),
-    totalCount: total,
-    href,
-  }));
+  await persistAdminResultSet(
+    memoryStore,
+    memoryKey,
+    resultSetState({
+      kind: "customers",
+      orderedIds: customers.map((customer) => customer.id),
+      totalCount: total,
+      href,
+    }),
+  );
   return json({
     source,
-    reply: total
-      ? `I found ${total.toLocaleString()} customer${total === 1 ? "" : "s"}${safeQuery ? ` matching “${safeQuery}”` : ""}.`
-      : `No customers${safeQuery ? ` matching “${safeQuery}”` : ""} were found.`,
+    reply: total ? `I found ${total.toLocaleString()} customer${total === 1 ? "" : "s"}${safeQuery ? ` matching “${safeQuery}”` : ""}.` : `No customers${safeQuery ? ` matching “${safeQuery}”` : ""} were found.`,
     action: { type: "navigate", href, label: "Open customers" },
     candidatesSelectable: true,
     ...(customers.length ? { candidates: customers } : {}),
   });
 }
 
-async function searchPages(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  queryText: string | null,
-  source: "deterministic" | "model",
-  memoryStore: ReturnType<typeof getConversationMemoryStore>,
-  memoryKey: string | null,
-): Promise<Response> {
-  let query = supabase
-    .from("pages")
-    .select("id, title, slug, is_reserved", { count: "exact" })
-    .eq("tenant_id", tenantId)
-    .is("archived_at", null)
-    .order("nav_order", { ascending: true })
-    .limit(5);
-  const safeQuery = queryText?.replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 80) ?? "";
+async function searchPages(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, queryText: string | null, source: "deterministic" | "model", memoryStore: ReturnType<typeof getConversationMemoryStore>, memoryKey: string | null): Promise<Response> {
+  let query = supabase.from("pages").select("id, title, slug, is_reserved", { count: "exact" }).eq("tenant_id", tenantId).is("archived_at", null).order("nav_order", { ascending: true }).limit(5);
+  const safeQuery =
+    queryText
+      ?.replace(/[^\p{L}\p{N}\s-]/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80) ?? "";
   if (safeQuery) {
     const term = `%${safeQuery.replace(/[%_]/g, (character) => `\\${character}`)}%`;
     query = query.or(`title.ilike.${term},slug.ilike.${term}`);
@@ -588,38 +565,27 @@ async function searchPages(
   }));
   const total = count ?? 0;
   const href = `/admin/${encodeURIComponent(tenantSlug)}/pages`;
-  await persistAdminResultSet(memoryStore, memoryKey, resultSetState({
-    kind: "pages",
-    orderedIds: pages.map((page) => page.id),
-    totalCount: total,
-    href,
-  }));
+  await persistAdminResultSet(
+    memoryStore,
+    memoryKey,
+    resultSetState({
+      kind: "pages",
+      orderedIds: pages.map((page) => page.id),
+      totalCount: total,
+      href,
+    }),
+  );
   return json({
     source,
-    reply: total
-      ? `I found ${total.toLocaleString()} page${total === 1 ? "" : "s"}${safeQuery ? ` matching “${safeQuery}”` : ""}.`
-      : `No pages${safeQuery ? ` matching “${safeQuery}”` : ""} were found.`,
+    reply: total ? `I found ${total.toLocaleString()} page${total === 1 ? "" : "s"}${safeQuery ? ` matching “${safeQuery}”` : ""}.` : `No pages${safeQuery ? ` matching “${safeQuery}”` : ""} were found.`,
     action: { type: "navigate", href, label: "Open pages" },
     candidatesSelectable: true,
     ...(pages.length ? { candidates: pages } : {}),
   });
 }
 
-async function inspectFeedRuns(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  status: "failed" | "dead_letter" | "partial" | null,
-  source: "deterministic" | "model",
-  memoryStore: ReturnType<typeof getConversationMemoryStore>,
-  memoryKey: string | null,
-): Promise<Response> {
-  let query = supabase
-    .from("inventory_feed_runs")
-    .select("id, feed_source_id, status, attempt_count, total_rows, updated_rows, last_error, created_at, completed_at", { count: "exact" })
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false })
-    .limit(5);
+async function inspectFeedRuns(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, status: "failed" | "dead_letter" | "partial" | null, source: "deterministic" | "model", memoryStore: ReturnType<typeof getConversationMemoryStore>, memoryKey: string | null): Promise<Response> {
+  let query = supabase.from("inventory_feed_runs").select("id, feed_source_id, status, attempt_count, total_rows, updated_rows, last_error, created_at, completed_at", { count: "exact" }).eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(5);
   if (status) query = query.eq("status", status);
   const { data: runs, count, error } = await query;
   if (error) {
@@ -627,35 +593,35 @@ async function inspectFeedRuns(
       return json({
         source,
         reply: "Managed feed history is unavailable until migration 077 is applied.",
-        action: { type: "navigate", href: `/admin/${encodeURIComponent(tenantSlug)}/settings/inventory-feeds`, label: "Open inventory feeds" },
+        action: {
+          type: "navigate",
+          href: `/admin/${encodeURIComponent(tenantSlug)}/settings/inventory-feeds`,
+          label: "Open inventory feeds",
+        },
       });
     }
     return json({ error: "Unable to read managed feed runs right now." }, 502);
   }
   const sourceIds = [...new Set((runs ?? []).map((run) => run.feed_source_id))];
-  const { data: sources, error: sourceError } = sourceIds.length
-    ? await supabase
-      .from("inventory_feed_sources")
-      .select("id, name")
-      .eq("tenant_id", tenantId)
-      .in("id", sourceIds)
-    : { data: [], error: null };
+  const { data: sources, error: sourceError } = sourceIds.length ? await supabase.from("inventory_feed_sources").select("id, name").eq("tenant_id", tenantId).in("id", sourceIds) : { data: [], error: null };
   if (sourceError) return json({ error: "Unable to resolve managed feed sources right now." }, 502);
   const namesById = new Map((sources ?? []).map((feed) => [feed.id, feed.name]));
   const total = count ?? 0;
   const label = status ? ` ${status.replace("_", " ")}` : "";
   const href = `/admin/${encodeURIComponent(tenantSlug)}/settings/inventory-feeds`;
-  await persistAdminResultSet(memoryStore, memoryKey, resultSetState({
-    kind: "feed_runs",
-    orderedIds: (runs ?? []).map((run) => run.id),
-    totalCount: total,
-    href,
-  }));
+  await persistAdminResultSet(
+    memoryStore,
+    memoryKey,
+    resultSetState({
+      kind: "feed_runs",
+      orderedIds: (runs ?? []).map((run) => run.id),
+      totalCount: total,
+      href,
+    }),
+  );
   return json({
     source,
-    reply: total
-      ? `I found ${total.toLocaleString()}${label} managed feed run${total === 1 ? "" : "s"}.`
-      : `There are no${label} managed feed runs.`,
+    reply: total ? `I found ${total.toLocaleString()}${label} managed feed run${total === 1 ? "" : "s"}.` : `There are no${label} managed feed runs.`,
     action: {
       type: "navigate",
       href,
@@ -698,11 +664,7 @@ async function inspectFeedRuns(
  * remediation route each check already carries — turns "am I ready?" into a
  * next action instead of a number.
  */
-async function inspectLaunchReadiness(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantSlug: string,
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function inspectLaunchReadiness(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantSlug: string, source: "deterministic" | "model"): Promise<Response> {
   const snapshot = await loadTenantLaunchSnapshot(supabase, tenantSlug);
   if (!snapshot) return json({ error: "Unable to read launch readiness right now." }, 502);
 
@@ -711,16 +673,22 @@ async function inspectLaunchReadiness(
   const warnings = report.checks.filter((check) => check.status === "warning");
   const attention = [...blockers, ...warnings].slice(0, 5);
 
-  const reply = report.ready
-    ? `You're ready to launch — all ${report.passedCount} checks pass.`
-    : `${report.blockerCount} ${report.blockerCount === 1 ? "blocker" : "blockers"} and ${report.warningCount} ${report.warningCount === 1 ? "warning" : "warnings"} left before launch. ${report.passedCount} checks already pass.`;
+  const reply = report.ready ? `You're ready to launch — all ${report.passedCount} checks pass.` : `${report.blockerCount} ${report.blockerCount === 1 ? "blocker" : "blockers"} and ${report.warningCount} ${report.warningCount === 1 ? "warning" : "warnings"} left before launch. ${report.passedCount} checks already pass.`;
 
   // Send them to the first blocker's own remediation route when there is one.
   const firstFix = attention.find((check) => check.remediationHref)?.remediationHref;
   return json({
     source,
     reply,
-    ...(firstFix ? { action: { type: "navigate", href: firstFix, label: "Fix the first item" } } : {}),
+    ...(firstFix
+      ? {
+          action: {
+            type: "navigate",
+            href: firstFix,
+            label: "Fix the first item",
+          },
+        }
+      : {}),
     details: attention.map((check) => ({
       id: check.id,
       label: check.title,
@@ -730,17 +698,13 @@ async function inspectLaunchReadiness(
   });
 }
 
-async function inspectAgingInventory(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  days: number,
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function inspectAgingInventory(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, days: number, source: "deterministic" | "model"): Promise<Response> {
   const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
   const { data, count, error } = await supabase
     .from("vehicles")
-    .select("id, year, make, model, trim, price, created_at", { count: "exact" })
+    .select("id, year, make, model, trim, price, created_at", {
+      count: "exact",
+    })
     .eq("tenant_id", tenantId)
     .neq("status", "archived")
     .is("sold_at", null)
@@ -752,7 +716,10 @@ async function inspectAgingInventory(
   const total = count ?? 0;
   const href = `/admin/${encodeURIComponent(tenantSlug)}/vehicles`;
   if (total === 0) {
-    return json({ source, reply: `Nothing unsold has been listed in LUME for ${days}+ days.` });
+    return json({
+      source,
+      reply: `Nothing unsold has been listed in LUME for ${days}+ days.`,
+    });
   }
 
   const ageInDays = (iso: string) => Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -768,14 +735,13 @@ async function inspectAgingInventory(
   });
 }
 
-async function inspectPhotoGap(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function inspectPhotoGap(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, source: "deterministic" | "model"): Promise<Response> {
   const PAGE = 1000;
-  const rows: Array<{ id: string; image_src: string | null; special_image_src: string | null }> = [];
+  const rows: Array<{
+    id: string;
+    image_src: string | null;
+    special_image_src: string | null;
+  }> = [];
   for (let page = 0; ; page++) {
     const from = page * PAGE;
     const { data, error } = await supabase
@@ -794,25 +760,16 @@ async function inspectPhotoGap(
   // for an *absent* table, not a *truncated* read — see managedImageScan.ts.
   // Bailing on any error used to leave the set partially populated, and every
   // vehicle whose row sat on an unread page was then counted as photoless.
-  const scan = await collectManagedImageVehicleIds(
-    async (from, to) => {
-      const { data, error } = await supabase
-        .from("vehicle_images")
-        .select("vehicle_id")
-        .eq("tenant_id", tenantId)
-        .order("vehicle_id", { ascending: true })
-        .range(from, to);
-      return { data, error };
-    },
-    PAGE,
-  );
+  const scan = await collectManagedImageVehicleIds(async (from, to) => {
+    const { data, error } = await supabase.from("vehicle_images").select("vehicle_id").eq("tenant_id", tenantId).order("vehicle_id", { ascending: true }).range(from, to);
+    return { data, error };
+  }, PAGE);
   if (!scan.ok) {
     return json({ error: "Unable to read inventory photo coverage right now." }, 502);
   }
   const managed = scan.vehicleIds;
 
-  const missing = rows.filter((row) =>
-    !managed.has(row.id) && !row.special_image_src?.trim() && !row.image_src?.trim());
+  const missing = rows.filter((row) => !managed.has(row.id) && !row.special_image_src?.trim() && !row.image_src?.trim());
   const total = rows.length;
   const share = total ? Math.round((missing.length / total) * 100) : 0;
   const href = `/admin/${encodeURIComponent(tenantSlug)}/vehicles?images=without`;
@@ -823,11 +780,13 @@ async function inspectPhotoGap(
 
   return json({
     source,
-    reply: missing.length === 0
-      ? `Every one of your ${total.toLocaleString()} live vehicles has at least one photo.`
-      : `${missing.length.toLocaleString()} of ${total.toLocaleString()} live vehicles have no photo (${share}%). Vehicles without a photo are effectively invisible to shoppers.`,
+    reply: missing.length === 0 ? `Every one of your ${total.toLocaleString()} live vehicles has at least one photo.` : `${missing.length.toLocaleString()} of ${total.toLocaleString()} live vehicles have no photo (${share}%). Vehicles without a photo are effectively invisible to shoppers.`,
     action: missing.length
-      ? { type: "navigate", href, label: `Review ${missing.length.toLocaleString()} without photos` }
+      ? {
+          type: "navigate",
+          href,
+          label: `Review ${missing.length.toLocaleString()} without photos`,
+        }
       : undefined,
   });
 }
@@ -841,13 +800,7 @@ async function inspectPhotoGap(
  * client — never the service client. A non-member gets the database's own
  * refusal rather than a check we would have to keep in sync here.
  */
-async function summarizeConversion(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  days: number,
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function summarizeConversion(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, days: number, source: "deterministic" | "model"): Promise<Response> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase.rpc("tenant_conversion_report", {
     p_tenant_id: tenantId,
@@ -886,17 +839,13 @@ async function summarizeConversion(
   // hit), and would otherwise render Infinity%.
   const rate = views > 0 ? (leads / views) * 100 : null;
   const median = Number(report.median_view_to_lead_seconds);
-  const parts = [
-    `In ${window}: ${views.toLocaleString()} vehicle views, ${saves.toLocaleString()} saves, ${leads.toLocaleString()} inquiries.`,
-  ];
+  const parts = [`In ${window}: ${views.toLocaleString()} vehicle views, ${saves.toLocaleString()} saves, ${leads.toLocaleString()} inquiries.`];
   if (rate !== null) {
     parts.push(`That is a ${rate.toFixed(rate < 1 ? 2 : 1)}% view-to-inquiry rate.`);
   }
   if (Number.isFinite(median) && median > 0) {
     const hours = median / 3600;
-    parts.push(hours >= 1
-      ? `Median time from first view to inquiry is ${hours.toFixed(1)} hours.`
-      : `Median time from first view to inquiry is ${Math.round(median / 60)} minutes.`);
+    parts.push(hours >= 1 ? `Median time from first view to inquiry is ${hours.toFixed(1)} hours.` : `Median time from first view to inquiry is ${Math.round(median / 60)} minutes.`);
   }
 
   return json({
@@ -906,15 +855,7 @@ async function summarizeConversion(
   });
 }
 
-async function resolveStoredPresentation(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  tenantSlug: string,
-  request: NonNullable<ReturnType<typeof resolveAdminPresentationRequest>>,
-  adminState: AdminConciergeState,
-  memoryStore: ReturnType<typeof getConversationMemoryStore>,
-  memoryKey: string | null,
-): Promise<Response> {
+async function resolveStoredPresentation(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, tenantSlug: string, request: NonNullable<ReturnType<typeof resolveAdminPresentationRequest>>, adminState: AdminConciergeState, memoryStore: ReturnType<typeof getConversationMemoryStore>, memoryKey: string | null): Promise<Response> {
   if (request.kind === "show_results") {
     return json({
       source: "deterministic",
@@ -922,19 +863,15 @@ async function resolveStoredPresentation(
       action: { type: "navigate", href: request.href, label: "Open results" },
     });
   }
-  const result = request.resultKind === "customers"
-    ? await createServiceClient()
-      .from("visitors")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("id", request.id)
-      .maybeSingle()
-    : await supabase
-      .from(request.resultKind === "vehicles" ? "vehicles" : request.resultKind === "leads" ? "leads" : "pages")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("id", request.id)
-      .maybeSingle();
+  const result =
+    request.resultKind === "customers"
+      ? await createServiceClient().from("visitors").select("id").eq("tenant_id", tenantId).eq("id", request.id).maybeSingle()
+      : await supabase
+          .from(request.resultKind === "vehicles" ? "vehicles" : request.resultKind === "leads" ? "leads" : "pages")
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .eq("id", request.id)
+          .maybeSingle();
   const { data, error } = result;
   if (error || !data) {
     await persistAdminResultSet(memoryStore, memoryKey, emptyAdminConciergeState());
@@ -944,11 +881,7 @@ async function resolveStoredPresentation(
     });
   }
   const kindLabel = request.resultKind === "vehicles" ? "vehicle" : request.resultKind === "leads" ? "lead" : request.resultKind === "customers" ? "customer" : "page";
-  await persistAdminResultSet(
-    memoryStore,
-    memoryKey,
-    selectAdminConciergeResult(adminState, request.id, request.resultKind),
-  );
+  await persistAdminResultSet(memoryStore, memoryKey, selectAdminConciergeResult(adminState, request.id, request.resultKind));
   return json({
     source: "deterministic",
     reply: `Opening the verified ${kindLabel}.`,
@@ -960,11 +893,7 @@ async function resolveStoredPresentation(
   });
 }
 
-async function persistAdminResultSet(
-  memoryStore: ReturnType<typeof getConversationMemoryStore>,
-  memoryKey: string | null,
-  state: AdminConciergeState,
-): Promise<void> {
+async function persistAdminResultSet(memoryStore: ReturnType<typeof getConversationMemoryStore>, memoryKey: string | null, state: AdminConciergeState): Promise<void> {
   if (!memoryKey) return;
   await memoryStore.append(memoryKey, { conversationState: state }).catch(() => undefined);
 }
@@ -984,14 +913,7 @@ async function persistAdminResultSet(
  * publishes a wrong asking price to the public site, so ambiguity returns
  * candidates rather than picking the first match.
  */
-async function prepareVehiclePriceUpdate(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  actorUserId: string,
-  vehicleQuery: string,
-  price: number,
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function prepareVehiclePriceUpdate(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, actorUserId: string, vehicleQuery: string, price: number, source: "deterministic" | "model"): Promise<Response> {
   const { data: canWrite, error: roleError } = await supabase.rpc("user_has_tenant_role", {
     p_tenant_id: tenantId,
     p_roles: ["editor", "admin", "owner"],
@@ -1000,24 +922,23 @@ async function prepareVehiclePriceUpdate(
     return json({ source, reply: "Editor access is required to prepare a price change." }, 403);
   }
 
-  const safeQuery = vehicleQuery.replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  const safeQuery = vehicleQuery
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
   if (!safeQuery) return unsupported();
   const term = `%${safeQuery.replace(/[%_]/g, (character) => `\\${character}`)}%`;
-  const { data, error } = await supabase
-    .from("vehicles")
-    .select("id, year, make, model, trim, price, status, sold_at, external_id")
-    .eq("tenant_id", tenantId)
-    .neq("status", "archived")
-    .or(`make.ilike.${term},model.ilike.${term},trim.ilike.${term},external_id.ilike.${term}`)
-    .order("created_at", { ascending: false })
-    .limit(4);
+  const { data, error } = await supabase.from("vehicles").select("id, year, make, model, trim, price, status, sold_at, external_id").eq("tenant_id", tenantId).neq("status", "archived").or(`make.ilike.${term},model.ilike.${term},trim.ilike.${term},external_id.ilike.${term}`).order("created_at", { ascending: false }).limit(4);
   if (error) return json({ error: "Unable to resolve that vehicle right now." }, 502);
 
-  const label = (vehicle: { year: number | null; make: string; model: string; trim: string | null }) =>
-    [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
+  const label = (vehicle: { year: number | null; make: string; model: string; trim: string | null }) => [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
 
   if (!data?.length) {
-    return json({ source, reply: `I couldn’t find a vehicle matching “${safeQuery}”, so I didn’t prepare a change.` });
+    return json({
+      source,
+      reply: `I couldn’t find a vehicle matching “${safeQuery}”, so I didn’t prepare a change.`,
+    });
   }
   if (data.length > 1) {
     return json({
@@ -1033,24 +954,35 @@ async function prepareVehiclePriceUpdate(
 
   const vehicle = data[0];
   if (vehicle.sold_at) {
-    return json({ source, reply: `${label(vehicle)} is sold, and sold vehicle prices are frozen.` });
+    return json({
+      source,
+      reply: `${label(vehicle)} is sold, and sold vehicle prices are frozen.`,
+    });
   }
   if (vehicle.price === price) {
-    return json({ source, reply: `${label(vehicle)} is already priced at $${price.toLocaleString()}.` });
+    return json({
+      source,
+      reply: `${label(vehicle)} is already priced at $${price.toLocaleString()}.`,
+    });
   }
 
   const created = await createVehiclePriceCommand({
     tenantId,
     actorUserId,
-    vehicle: { id: vehicle.id, label: label(vehicle), currentPrice: vehicle.price ?? 0 },
+    vehicle: {
+      id: vehicle.id,
+      label: label(vehicle),
+      currentPrice: vehicle.price ?? 0,
+    },
     nextPrice: price,
   });
   if (!created.ok) {
-    return json({
-      error: created.reason === "migration_required"
-        ? "Reviewed admin commands are not available until migration 083 is applied."
-        : "Unable to prepare the reviewed command.",
-    }, 503);
+    return json(
+      {
+        error: created.reason === "migration_required" ? "Reviewed admin commands are not available until migration 083 is applied." : "Unable to prepare the reviewed command.",
+      },
+      503,
+    );
   }
 
   return json({
@@ -1079,39 +1011,38 @@ const VEHICLE_STATUS_LABELS: Record<string, string> = {
  * candidates rather than picking the first match, because taking the wrong
  * car off the public site is a silent revenue loss.
  */
-async function prepareVehicleStatusUpdate(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  actorUserId: string,
-  vehicleQuery: string,
-  nextStatus: "draft" | "live" | "archived",
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function prepareVehicleStatusUpdate(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, actorUserId: string, vehicleQuery: string, nextStatus: "draft" | "live" | "archived", source: "deterministic" | "model"): Promise<Response> {
   const { data: canWrite, error: roleError } = await supabase.rpc("user_has_tenant_role", {
     p_tenant_id: tenantId,
     p_roles: ["editor", "admin", "owner"],
   });
   if (roleError || !canWrite) {
-    return json({ source, reply: "Editor access is required to change a vehicle's status." }, 403);
+    return json(
+      {
+        source,
+        reply: "Editor access is required to change a vehicle's status.",
+      },
+      403,
+    );
   }
 
-  const safeQuery = vehicleQuery.replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  const safeQuery = vehicleQuery
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
   if (!safeQuery) return unsupported();
   const term = `%${safeQuery.replace(/[%_]/g, (character) => `\\${character}`)}%`;
-  const { data, error } = await supabase
-    .from("vehicles")
-    .select("id, year, make, model, trim, price, status, sold_at, external_id")
-    .eq("tenant_id", tenantId)
-    .or(`make.ilike.${term},model.ilike.${term},trim.ilike.${term},external_id.ilike.${term}`)
-    .order("created_at", { ascending: false })
-    .limit(4);
+  const { data, error } = await supabase.from("vehicles").select("id, year, make, model, trim, price, status, sold_at, external_id").eq("tenant_id", tenantId).or(`make.ilike.${term},model.ilike.${term},trim.ilike.${term},external_id.ilike.${term}`).order("created_at", { ascending: false }).limit(4);
   if (error) return json({ error: "Unable to resolve that vehicle right now." }, 502);
 
-  const label = (vehicle: { year: number | null; make: string; model: string; trim: string | null }) =>
-    [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
+  const label = (vehicle: { year: number | null; make: string; model: string; trim: string | null }) => [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
 
   if (!data?.length) {
-    return json({ source, reply: `I couldn’t find a vehicle matching “${safeQuery}”, so I didn’t prepare a change.` });
+    return json({
+      source,
+      reply: `I couldn’t find a vehicle matching “${safeQuery}”, so I didn’t prepare a change.`,
+    });
   }
   if (data.length > 1) {
     return json({
@@ -1127,24 +1058,35 @@ async function prepareVehicleStatusUpdate(
 
   const vehicle = data[0];
   if (vehicle.status === "sold" || vehicle.sold_at) {
-    return json({ source, reply: `${label(vehicle)} is sold, so I left its status alone. Change it from the vehicle page if that was a mistake.` });
+    return json({
+      source,
+      reply: `${label(vehicle)} is sold, so I left its status alone. Change it from the vehicle page if that was a mistake.`,
+    });
   }
   if (vehicle.status === nextStatus) {
-    return json({ source, reply: `${label(vehicle)} is already ${VEHICLE_STATUS_LABELS[nextStatus]}.` });
+    return json({
+      source,
+      reply: `${label(vehicle)} is already ${VEHICLE_STATUS_LABELS[nextStatus]}.`,
+    });
   }
 
   const created = await createVehicleStatusCommand({
     tenantId,
     actorUserId,
-    vehicle: { id: vehicle.id, label: label(vehicle), currentStatus: vehicle.status },
+    vehicle: {
+      id: vehicle.id,
+      label: label(vehicle),
+      currentStatus: vehicle.status,
+    },
     nextStatus,
   });
   if (!created.ok) {
-    return json({
-      error: created.reason === "migration_required"
-        ? "Reviewed admin commands are not available until migration 086 is applied."
-        : "Unable to prepare the reviewed command.",
-    }, 503);
+    return json(
+      {
+        error: created.reason === "migration_required" ? "Reviewed admin commands are not available until migration 086 is applied." : "Unable to prepare the reviewed command.",
+      },
+      503,
+    );
   }
 
   return json({
@@ -1159,59 +1101,63 @@ async function prepareVehicleStatusUpdate(
   });
 }
 
-async function prepareLeadAssign(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  actorUserId: string,
-  leadQuery: string,
-  assigneeQuery: string,
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function prepareLeadAssign(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, actorUserId: string, leadQuery: string, assigneeQuery: string, source: "deterministic" | "model"): Promise<Response> {
   const { data: canWrite, error: roleError } = await supabase.rpc("user_has_tenant_role", {
     p_tenant_id: tenantId,
     p_roles: ["editor", "admin", "owner"],
   });
   if (roleError || !canWrite) {
-    return json({ source, reply: "Editor access is required to prepare a lead assignment." }, 403);
+    return json(
+      {
+        source,
+        reply: "Editor access is required to prepare a lead assignment.",
+      },
+      403,
+    );
   }
 
   const clean = (value: string) =>
-    value.replace(/[^\p{L}\p{N}\s@.+-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+    value
+      .replace(/[^\p{L}\p{N}\s@.+-]/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 120);
   const safeLead = clean(leadQuery);
   const safeAssignee = clean(assigneeQuery);
   if (!safeLead || !safeAssignee) return unsupported();
 
   const leadTerm = `%${safeLead.replace(/[%_]/g, (character) => `\\${character}`)}%`;
-  const { data: leads, error: leadError } = await supabase
-    .from("leads")
-    .select("id, first_name, last_name, email, status, assigned_to, created_at")
-    .eq("tenant_id", tenantId)
-    .or(`first_name.ilike.${leadTerm},last_name.ilike.${leadTerm},email.ilike.${leadTerm}`)
-    .order("created_at", { ascending: false })
-    .limit(3);
+  const { data: leads, error: leadError } = await supabase.from("leads").select("id, first_name, last_name, email, status, assigned_to, created_at").eq("tenant_id", tenantId).or(`first_name.ilike.${leadTerm},last_name.ilike.${leadTerm},email.ilike.${leadTerm}`).order("created_at", { ascending: false }).limit(3);
   if (leadError) return json({ error: "Unable to resolve that lead right now." }, 502);
   if (!leads?.length) {
-    return json({ source, reply: `I couldn’t find a lead matching “${safeLead}”, so I didn’t prepare anything.` });
+    return json({
+      source,
+      reply: `I couldn’t find a lead matching “${safeLead}”, so I didn’t prepare anything.`,
+    });
   }
   if (leads.length > 1) {
     return json({
       source,
       reply: `I found ${leads.length} leads matching “${safeLead}”. Please be more specific so I assign the right one.`,
-      candidates: leads.map((lead) => ({ id: lead.id, label: leadLabel(lead), status: lead.status })),
+      candidates: leads.map((lead) => ({
+        id: lead.id,
+        label: leadLabel(lead),
+        status: lead.status,
+      })),
     });
   }
   const lead = leads[0];
 
   // Teammates are resolved from this tenant's membership only, then matched by
   // username. The model never supplies a user id.
-  const { data: members, error: memberError } = await supabase
-    .from("tenant_members")
-    .select("user_id")
-    .eq("tenant_id", tenantId);
+  const { data: members, error: memberError } = await supabase.from("tenant_members").select("user_id").eq("tenant_id", tenantId);
   if (memberError) return json({ error: "Unable to read the team right now." }, 502);
   const memberIds = (members ?? []).map((member) => member.user_id);
   if (!memberIds.length) {
-    return json({ source, reply: "This tenant has no teammates to assign leads to yet." });
+    return json({
+      source,
+      reply: "This tenant has no teammates to assign leads to yet.",
+    });
   }
 
   // profiles is RLS'd to the caller's own row, so teammates must be read
@@ -1221,33 +1167,48 @@ async function prepareLeadAssign(
   const needle = safeAssignee.toLowerCase();
   const candidates = profiles.filter((profile) => profile.username.toLowerCase().includes(needle));
   if (!candidates.length) {
-    return json({ source, reply: `No teammate here matches “${safeAssignee}”, so I didn’t prepare an assignment.` });
+    return json({
+      source,
+      reply: `No teammate here matches “${safeAssignee}”, so I didn’t prepare an assignment.`,
+    });
   }
   if (candidates.length > 1) {
     return json({
       source,
       reply: `“${safeAssignee}” matches ${candidates.length} teammates. Please name one exactly so I assign the right person.`,
-      candidates: candidates.map((profile) => ({ id: profile.id, label: profile.username, status: "member" })),
+      candidates: candidates.map((profile) => ({
+        id: profile.id,
+        label: profile.username,
+        status: "member",
+      })),
     });
   }
   const assignee = candidates[0];
 
   if (lead.assigned_to === assignee.id) {
-    return json({ source, reply: `${leadLabel(lead)} is already assigned to ${assignee.username}.` });
+    return json({
+      source,
+      reply: `${leadLabel(lead)} is already assigned to ${assignee.username}.`,
+    });
   }
 
   const created = await createLeadAssignCommand({
     tenantId,
     actorUserId,
-    lead: { id: lead.id, label: leadLabel(lead), currentAssignee: lead.assigned_to },
+    lead: {
+      id: lead.id,
+      label: leadLabel(lead),
+      currentAssignee: lead.assigned_to,
+    },
     assignee: { userId: assignee.id, label: assignee.username },
   });
   if (!created.ok) {
-    return json({
-      error: created.reason === "migration_required"
-        ? "Reviewed admin commands are not available until migration 082 is applied."
-        : "Unable to prepare the reviewed command.",
-    }, 503);
+    return json(
+      {
+        error: created.reason === "migration_required" ? "Reviewed admin commands are not available until migration 082 is applied." : "Unable to prepare the reviewed command.",
+      },
+      503,
+    );
   }
 
   return json({
@@ -1262,35 +1223,29 @@ async function prepareLeadAssign(
   });
 }
 
-async function prepareLeadStatusUpdate(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  actorUserId: string,
-  leadQuery: string,
-  status: "new" | "contacted" | "qualified" | "won",
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function prepareLeadStatusUpdate(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, actorUserId: string, leadQuery: string, status: "new" | "contacted" | "qualified" | "won", source: "deterministic" | "model"): Promise<Response> {
   const { data: canWrite, error: roleError } = await supabase.rpc("user_has_tenant_role", {
     p_tenant_id: tenantId,
     p_roles: ["editor", "admin", "owner"],
   });
   if (roleError || !canWrite) {
-    return json({
-      source,
-      reply: "Editor access is required to prepare a lead-status change.",
-    }, 403);
+    return json(
+      {
+        source,
+        reply: "Editor access is required to prepare a lead-status change.",
+      },
+      403,
+    );
   }
 
-  const safeQuery = leadQuery.replace(/[^\p{L}\p{N}\s@.+-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  const safeQuery = leadQuery
+    .replace(/[^\p{L}\p{N}\s@.+-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
   if (!safeQuery) return unsupported();
   const term = `%${safeQuery.replace(/[%_]/g, (character) => `\\${character}`)}%`;
-  const { data, error } = await supabase
-    .from("leads")
-    .select("id, first_name, last_name, email, status, created_at")
-    .eq("tenant_id", tenantId)
-    .or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`)
-    .order("created_at", { ascending: false })
-    .limit(3);
+  const { data, error } = await supabase.from("leads").select("id, first_name, last_name, email, status, created_at").eq("tenant_id", tenantId).or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`).order("created_at", { ascending: false }).limit(3);
   if (error) return json({ error: "Unable to resolve that lead right now." }, 502);
   if (!data?.length) {
     return json({
@@ -1317,11 +1272,12 @@ async function prepareLeadStatusUpdate(
     nextStatus: status,
   });
   if (!created.ok) {
-    return json({
-      error: created.reason === "migration_required"
-        ? "Reviewed admin commands are not available until migration 080 is applied."
-        : "Unable to prepare the reviewed command.",
-    }, 503);
+    return json(
+      {
+        error: created.reason === "migration_required" ? "Reviewed admin commands are not available until migration 080 is applied." : "Unable to prepare the reviewed command.",
+      },
+      503,
+    );
   }
   const command = created.command;
   return json({
@@ -1336,50 +1292,63 @@ async function prepareLeadStatusUpdate(
   });
 }
 
-async function prepareFeedRun(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  tenantId: string,
-  actorUserId: string,
-  feedQuery: string,
-  source: "deterministic" | "model",
-): Promise<Response> {
+async function prepareFeedRun(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, tenantId: string, actorUserId: string, feedQuery: string, source: "deterministic" | "model"): Promise<Response> {
   const { data: canRun, error: roleError } = await supabase.rpc("user_has_tenant_role", {
     p_tenant_id: tenantId,
     p_roles: ["owner", "admin"],
   });
   if (roleError || !canRun) {
-    return json({ source, reply: "Owner or admin access is required to prepare a managed feed run." }, 403);
+    return json(
+      {
+        source,
+        reply: "Owner or admin access is required to prepare a managed feed run.",
+      },
+      403,
+    );
   }
-  const safeQuery = feedQuery.replace(/[^\p{L}\p{N}\s@.+-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  const safeQuery = feedQuery
+    .replace(/[^\p{L}\p{N}\s@.+-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
   if (!safeQuery) return unsupported();
   const term = `%${safeQuery.replace(/[%_]/g, (character) => `\\${character}`)}%`;
-  const { data, error } = await supabase
-    .from("inventory_feed_sources")
-    .select("id, name, enabled, config_version")
-    .eq("tenant_id", tenantId)
-    .is("archived_at", null)
-    .ilike("name", term)
-    .order("created_at", { ascending: false })
-    .limit(3);
+  const { data, error } = await supabase.from("inventory_feed_sources").select("id, name, enabled, config_version").eq("tenant_id", tenantId).is("archived_at", null).ilike("name", term).order("created_at", { ascending: false }).limit(3);
   if (error) {
     if (error.code === "42P01") {
-      return json({ source, reply: "Managed feeds are unavailable until migration 077 is applied." }, 503);
+      return json(
+        {
+          source,
+          reply: "Managed feeds are unavailable until migration 077 is applied.",
+        },
+        503,
+      );
     }
     return json({ error: "Unable to resolve that managed feed right now." }, 502);
   }
   if (!data?.length) {
-    return json({ source, reply: `I couldn’t find a managed feed matching “${safeQuery}”, so I didn’t prepare a run.` });
+    return json({
+      source,
+      reply: `I couldn’t find a managed feed matching “${safeQuery}”, so I didn’t prepare a run.`,
+    });
   }
   if (data.length > 1) {
     return json({
       source,
       reply: `I found ${data.length} managed feeds matching “${safeQuery}”. Please use a more specific name so I queue the right source.`,
-      candidates: data.map((feed) => ({ id: feed.id, label: feed.name, status: feed.enabled ? "enabled" : "paused" })),
+      candidates: data.map((feed) => ({
+        id: feed.id,
+        label: feed.name,
+        status: feed.enabled ? "enabled" : "paused",
+      })),
     });
   }
   const feed = data[0];
   if (!feed.enabled) {
-    return json({ source, reply: `${feed.name} is paused, so I did not prepare a run. Enable it in Inventory feeds first.` });
+    return json({
+      source,
+      reply: `${feed.name} is paused, so I did not prepare a run. Enable it in Inventory feeds first.`,
+    });
   }
   const created = await createFeedRunCommand({
     tenantId,
@@ -1387,11 +1356,12 @@ async function prepareFeedRun(
     feed: { id: feed.id, name: feed.name, configVersion: feed.config_version },
   });
   if (!created.ok) {
-    return json({
-      error: created.reason === "migration_required"
-        ? "Reviewed admin commands are not available until migration 080 is applied."
-        : "Unable to prepare the reviewed feed command.",
-    }, 503);
+    return json(
+      {
+        error: created.reason === "migration_required" ? "Reviewed admin commands are not available until migration 080 is applied." : "Unable to prepare the reviewed feed command.",
+      },
+      503,
+    );
   }
   const command = created.command;
   return json({
@@ -1426,6 +1396,8 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
       return { kind: intent.kind };
     case "summarize_overview":
       return { kind: intent.kind };
+    case "search_help":
+      return { kind: intent.kind, hasQuery: Boolean(intent.query) };
     case "inspect_photo_gap":
       return { kind: intent.kind };
     case "summarize_conversion":
@@ -1435,11 +1407,19 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
     case "inspect_launch_readiness":
       return { kind: intent.kind };
     case "assign_lead":
-      return { kind: intent.kind, hasLead: Boolean(intent.leadQuery), hasAssignee: Boolean(intent.assigneeQuery) };
+      return {
+        kind: intent.kind,
+        hasLead: Boolean(intent.leadQuery),
+        hasAssignee: Boolean(intent.assigneeQuery),
+      };
     case "update_vehicle_price":
       return { kind: intent.kind, hasVehicle: Boolean(intent.vehicleQuery) };
     case "update_vehicle_status":
-      return { kind: intent.kind, hasVehicle: Boolean(intent.vehicleQuery), status: intent.status };
+      return {
+        kind: intent.kind,
+        hasVehicle: Boolean(intent.vehicleQuery),
+        status: intent.status,
+      };
     case "search_vehicles":
       return { kind: intent.kind, hasQuery: Boolean(intent.query) };
     case "search_leads":
@@ -1453,7 +1433,11 @@ function debugIntent(intent: ReturnType<typeof compileDeterministicAdminIntent>)
     case "enqueue_feed_run":
       return { kind: intent.kind, hasFeedQuery: Boolean(intent.feedQuery) };
     case "update_lead_status":
-      return { kind: intent.kind, hasLeadQuery: Boolean(intent.leadQuery), status: intent.status };
+      return {
+        kind: intent.kind,
+        hasLeadQuery: Boolean(intent.leadQuery),
+        status: intent.status,
+      };
     case "unsupported":
       return { kind: intent.kind };
   }
@@ -1465,11 +1449,7 @@ function formatAdminTimestamp(value: string): string {
 }
 
 function hasStructuredVehicleScope(filters: ReturnType<typeof extractVehicleFilters>): boolean {
-  return filters.make !== undefined || filters.model !== undefined || filters.year !== undefined ||
-    filters.yearMin !== undefined || filters.yearMax !== undefined || filters.priceMin !== undefined ||
-    filters.priceMax !== undefined || filters.mileageMax !== undefined || filters.bodyStyle !== undefined ||
-    filters.stockType !== undefined || filters.fuelType !== undefined || filters.drivetrain !== undefined ||
-    filters.sellerState !== undefined;
+  return filters.make !== undefined || filters.model !== undefined || filters.year !== undefined || filters.yearMin !== undefined || filters.yearMax !== undefined || filters.priceMin !== undefined || filters.priceMax !== undefined || filters.mileageMax !== undefined || filters.bodyStyle !== undefined || filters.stockType !== undefined || filters.fuelType !== undefined || filters.drivetrain !== undefined || filters.sellerState !== undefined;
 }
 
 function addVehicleFilterParams(params: URLSearchParams, filters: ReturnType<typeof extractVehicleFilters>): void {
@@ -1485,14 +1465,7 @@ function addVehicleFilterParams(params: URLSearchParams, filters: ReturnType<typ
 }
 
 function vehicleSearchLabel(filters: ReturnType<typeof extractVehicleFilters>, safeQuery: string): string {
-  const parts = [
-    filters.make,
-    filters.model,
-    filters.year !== undefined ? String(filters.year) : undefined,
-    filters.priceMin !== undefined || filters.priceMax !== undefined
-      ? `${filters.priceMin !== undefined ? `$${filters.priceMin.toLocaleString()}–` : "under "}${filters.priceMax !== undefined ? `$${filters.priceMax.toLocaleString()}` : ""}`
-      : undefined,
-  ].filter((value): value is string => Boolean(value));
+  const parts = [filters.make, filters.model, filters.year !== undefined ? String(filters.year) : undefined, filters.priceMin !== undefined || filters.priceMax !== undefined ? `${filters.priceMin !== undefined ? `$${filters.priceMin.toLocaleString()}–` : "under "}${filters.priceMax !== undefined ? `$${filters.priceMax.toLocaleString()}` : ""}` : undefined].filter((value): value is string => Boolean(value));
   return parts.length ? ` matching ${parts.join(" · ")}` : safeQuery ? ` matching “${safeQuery}”` : "";
 }
 

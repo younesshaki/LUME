@@ -4,6 +4,7 @@ import {
   expectedEnvironment,
   supabaseProjectRef,
   validateAdminWorkerSecrets,
+  validateSharedConversationMemory,
   validateDeploymentEnvironment,
 } from "./verify-deployment-env.mjs";
 
@@ -136,5 +137,67 @@ describe("admin worker secrets", () => {
     const { errors, warnings } = validateAdminWorkerSecrets(adminProduction, "admin", "production");
     expect(errors).toEqual([]);
     expect(warnings.some((warning) => warning.startsWith("ANTHROPIC_API_KEY"))).toBe(true);
+  });
+});
+
+describe("shared conversation memory readiness", () => {
+  const staging = { LUME_ENVIRONMENT: "staging" };
+
+  it("reports shared mode with no warning when both values are present", () => {
+    const result = validateSharedConversationMemory(
+      { ...staging, UPSTASH_REDIS_REST_URL: "x", UPSTASH_REDIS_REST_TOKEN: "y" },
+      "admin",
+      "staging",
+    );
+    expect(result.warnings).toEqual([]);
+    expect(result.mode).toBe("shared");
+  });
+
+  it("warns rather than fails when neither is present", () => {
+    // The product is designed to survive this, and as of 2026-09-16 every
+    // LUME environment runs without them. A hard error would break every
+    // deploy over a degradation that is already the status quo.
+    const result = validateSharedConversationMemory(staging, "admin", "staging");
+    expect(result.mode).toBe("local");
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toMatch(/per-instance/);
+  });
+
+  it("calls out a half-provisioned pair specifically", () => {
+    // One value without the other is almost always an interrupted setup, not
+    // a decision, and the store stays off either way.
+    const result = validateSharedConversationMemory(
+      { ...staging, UPSTASH_REDIS_REST_URL: "x" },
+      "admin",
+      "staging",
+    );
+    expect(result.mode).toBe("local");
+    expect(result.warnings[0]).toMatch(/half-finished provisioning/);
+  });
+
+  it("never echoes a configured value", () => {
+    const result = validateSharedConversationMemory(
+      { ...staging, UPSTASH_REDIS_REST_URL: "https://secret-host.upstash.io" },
+      "admin",
+      "staging",
+    );
+    expect(result.warnings.join(" ")).not.toContain("secret-host");
+  });
+
+  it("checks production as well as staging", () => {
+    expect(
+      validateSharedConversationMemory({}, "admin", "production").mode,
+    ).toBe("local");
+  });
+
+  it("does not check the public app or local development", () => {
+    // The Vite build has no business with a server-only store, and local
+    // development must keep working with no Upstash at all.
+    expect(validateSharedConversationMemory(staging, "web", "staging").mode).toBe(
+      "not-checked",
+    );
+    expect(validateSharedConversationMemory({}, "admin", null).mode).toBe(
+      "not-checked",
+    );
   });
 });

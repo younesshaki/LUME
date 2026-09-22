@@ -10,8 +10,13 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { Check, ChevronDown, Copy, Loader2, MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { streamChat, type DeepseekMessage } from "@/lib/deepseekService";
+import {
+  createChatTurnSequencer,
+  newChatRequestId,
+} from "@/lib/chatTurnSequencer";
 import { publicTenantSlug } from "@/lib/publicTenant";
 import { botActionBus } from "@/lib/botActionBus";
+import { captureLumeEvent } from "@/lib/posthog";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
@@ -123,6 +128,10 @@ export function OllamaChat() {
     }
   });
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Decides which turn may still mutate the site. A superseded or aborted
+  // stream can keep yielding valid-looking actions long after the visitor has
+  // moved on; only the turn this holds is allowed through to the action bus.
+  const turnSequencerRef = useRef(createChatTurnSequencer());
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
 
@@ -147,7 +156,14 @@ export function OllamaChat() {
 
   // cleanup on unmount
   useEffect(() => {
-    return () => abortControllerRef.current?.abort();
+    const sequencer = turnSequencerRef.current;
+    return () => {
+      abortControllerRef.current?.abort();
+      // Aborting the fetch does not stop an in-flight generator from yielding
+      // a buffered action, so the turn loses its authority here too.
+      const active = sequencer.activeTurnId;
+      if (active) sequencer.abandon(active);
+    };
   }, []);
 
   // persist chat (skip during active stream to avoid partial messages)
@@ -175,8 +191,13 @@ export function OllamaChat() {
   }, [isOpen]);
 
   const resetChat = () => {
+    captureLumeEvent("lume_concierge_reset", {
+      had_user_messages: hasUserMessages,
+    });
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    const abandoned = turnSequencerRef.current.activeTurnId;
+    if (abandoned) turnSequencerRef.current.abandon(abandoned);
     streamingMessageIdRef.current = null;
     setMessages([welcomeMessage]);
     setInput("");
@@ -219,6 +240,16 @@ export function OllamaChat() {
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
+    // Generated before the request so a retry of this exact turn can reuse it
+    // and be deduplicated server-side instead of appending a second turn.
+    const turnRequestId = newChatRequestId();
+    turnSequencerRef.current.begin(turnRequestId);
+    const turnStartedAt = performance.now();
+    captureLumeEvent("lume_concierge_turn_started", {
+      turn_id: turnRequestId,
+      history_messages: nextApiMessages.length,
+      started_new_session: startNewSession,
+    });
 
     // The server handles RAG retrieval and prompt assembly. We show
     // `isRetrieving` until the first chunk arrives (meta or content).
@@ -230,6 +261,7 @@ export function OllamaChat() {
     let sourceCategories: string[] = [];
     let assistantInserted = false;
     let turnThinkingSteps: string[] = [];
+    let duplicateTurn = false;
 
     try {
       const messages: DeepseekMessage[] = nextApiMessages.map((m) => ({
@@ -242,6 +274,7 @@ export function OllamaChat() {
         abortController.signal,
         sessionId ?? undefined,
         startNewSession,
+        turnRequestId,
       )) {
         if (event.kind === "meta") {
           sourceCategories = event.sourceCategories;
@@ -273,13 +306,42 @@ export function OllamaChat() {
               // quota exceeded or private mode
             }
           }
+          captureLumeEvent("lume_concierge_turn_metadata", {
+            turn_id: event.requestId ?? turnRequestId,
+            source_count: event.sourceCategories.length,
+            actions_enabled: event.capabilities?.actions ?? null,
+          });
           continue;
         }
         if (event.kind === "action") {
+          // Only the current turn may touch the page. A superseded or aborted
+          // stream's actions are valid answers to a question that is no longer
+          // on screen, and applying one would navigate, refilter or open a
+          // form the visitor never asked for. The text of a stale turn is left
+          // alone; it is only site mutation that has to be withheld.
+          if (!turnSequencerRef.current.isAuthoritative(turnRequestId)) {
+            captureLumeEvent("lume_concierge_action_suppressed", {
+              turn_id: turnRequestId,
+              action_type: event.action.type,
+              reason: "stale_turn",
+            });
+            continue;
+          }
           // Hand the action to the bus; subscribed UI (router, inventory,
           // highlight overlay, lead form) reacts. Chat stays decoupled.
           botActionBus.publish(event.action);
+          captureLumeEvent("lume_concierge_action_dispatched", {
+            turn_id: turnRequestId,
+            action_type: event.action.type,
+          });
           continue;
+        }
+        if (event.kind === "duplicate") {
+          // A retry of a turn already being answered. The delivery holding the
+          // lease is producing the reply, so this one ends quietly: no second
+          // assistant bubble, no error banner for something that is working.
+          duplicateTurn = true;
+          break;
         }
         if (event.kind === "thinking") {
           turnThinkingSteps = appendThinkingStep(turnThinkingSteps, event.text);
@@ -314,6 +376,18 @@ export function OllamaChat() {
         }
       }
 
+      if (duplicateTurn) {
+        // Nothing was inserted for this turn, so there is nothing to tidy up
+        // and nothing to show. The finally block clears the pending states.
+        return;
+      }
+
+      captureLumeEvent("lume_concierge_turn_completed", {
+        turn_id: turnRequestId,
+        response_started: assistantInserted,
+        duration_ms: Math.round(performance.now() - turnStartedAt),
+      });
+
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMessageId
@@ -323,11 +397,20 @@ export function OllamaChat() {
       );
     } catch (caughtError) {
       if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
+        captureLumeEvent("lume_concierge_turn_aborted", {
+          turn_id: turnRequestId,
+          duration_ms: Math.round(performance.now() - turnStartedAt),
+        });
         setMessages((prev) => prev.filter((m) => m.id !== assistantMessageId));
         return;
       }
       setMessages((prev) => prev.filter((m) => m.id !== assistantMessageId));
       const message = caughtError instanceof Error ? caughtError.message : "Unable to reach chat API.";
+      captureLumeEvent("lume_concierge_turn_failed", {
+        turn_id: turnRequestId,
+        duration_ms: Math.round(performance.now() - turnStartedAt),
+        failure_kind: message.startsWith("Chat API ") ? "api" : "network_or_stream",
+      });
       setError(message);
     } finally {
       if (abortControllerRef.current === abortController) abortControllerRef.current = null;
@@ -365,6 +448,7 @@ export function OllamaChat() {
   const handleRate = (id: string, rating: "up" | "down") => {
     setRatings((prev) => ({ ...prev, [id]: prev[id] === rating ? null : rating }));
     chatSounds.rate();
+    captureLumeEvent("lume_concierge_response_rated", { rating });
   };
 
   const toggleSources = (id: string) => {
@@ -388,7 +472,11 @@ export function OllamaChat() {
             exit="exit"
             transition={{ duration: 0.15 }}
             onMouseEnter={chatSounds.hover}
-            onClick={() => { chatSounds.open(); setIsOpen(true); }}
+            onClick={() => {
+              chatSounds.open();
+              setIsOpen(true);
+              captureLumeEvent("lume_concierge_opened");
+            }}
           >
             <MessageCircle size={23} aria-hidden="true" />
           </motion.button>

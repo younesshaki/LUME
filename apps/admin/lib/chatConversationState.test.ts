@@ -72,6 +72,27 @@ describe("chat conversation inventory state", () => {
     expect(isPresentationRequest("show me")).toBe(true);
   });
 
+  it("applies explicit interpreted filter clears without mutating the input state", () => {
+    const state = {
+      ...emptyConversationInventoryState(),
+      activeFilters: { make: "BMW", model: "X5", priceMax: 70000 },
+    };
+    const transition = transitionInventoryState(
+      state,
+      "any brand is fine now",
+      {},
+      true,
+      { nowMs: 1_000, clearFilters: ["make", "model"] },
+    );
+    expect(transition.state.activeFilters).toEqual({ priceMax: 70000 });
+    expect(transition.rules).toContain("clear_interpreted_filters");
+    expect(state.activeFilters).toEqual({
+      make: "BMW",
+      model: "X5",
+      priceMax: 70000,
+    });
+  });
+
   it("clears stale make/model scope for all-inventory reset language", () => {
     const transition = transitionInventoryState(
       {
