@@ -1,15 +1,20 @@
 /**
  * PostHog product analytics for the public LUME site.
  *
- * Autocapture, page analytics, and session replay are deliberately enabled.
- * Concierge content, prompts, model output, lead details and action arguments
- * still never enter PostHog through LUME's explicit telemetry. Full internal
- * evaluation transcripts live in the server-only `concierge_traces` table.
+ * Autocapture, page analytics, session replay, and full concierge training
+ * transcripts are deliberately enabled for LUME's current internal training
+ * phase. The browser event below is paired with the server-side trace event so
+ * a replay can be correlated with the exact conversation and action outcome.
  */
 import posthog from "posthog-js";
 import { publicTenantSlug } from "./publicTenant";
 
 type Properties = Record<string, boolean | number | string | null | undefined>;
+
+type TranscriptMessage = {
+  role: "assistant" | "user";
+  content: string;
+};
 
 let initialized = false;
 
@@ -38,10 +43,9 @@ export function initializeLumePostHog(): void {
     capture_exceptions: false,
     disable_session_recording: !sessionReplayEnabled,
     session_recording: {
-      // Even internal replay keeps on-page text and form fields out of the
-      // third party. The controlled LUME trace store carries the actual text.
-      maskAllInputs: true,
-      maskTextSelector: "*",
+      // Deliberately unmasked for the internal training phase. PostHog itself
+      // still permanently masks password inputs.
+      maskAllInputs: false,
     },
     loaded: (client) => {
       client.register({
@@ -60,6 +64,31 @@ export function captureLumeEvent(name: string, properties: Properties = {}): voi
   } catch {
     // Third-party analytics is intentionally non-blocking.
   }
+}
+
+/**
+ * Full browser-side conversation window, correlated with the PostHog replay
+ * created in this same browser session. A server-side companion event records
+ * the authoritative response path, grounded actions, and tool outcomes.
+ */
+export function captureLumeConciergeTranscript(input: {
+  turnId: string;
+  conversationId: string | null;
+  userMessage: string;
+  assistantResponse: string;
+  history: readonly TranscriptMessage[];
+  sourceCategories: readonly string[];
+  actionTypes: readonly string[];
+}): void {
+  captureLumeEvent("lume_concierge_transcript", {
+    turn_id: input.turnId,
+    conversation_id: input.conversationId,
+    user_message: input.userMessage,
+    assistant_response: input.assistantResponse,
+    conversation_history_json: JSON.stringify(input.history),
+    source_categories_json: JSON.stringify(input.sourceCategories),
+    action_types_json: JSON.stringify(input.actionTypes),
+  });
 }
 
 function compactProperties(properties: Properties): Record<string, boolean | number | string | null> {
