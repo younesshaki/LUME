@@ -8,14 +8,59 @@ export type ConversationResultSet = {
   createdAtTurn: number;
 };
 
+/**
+ * A query that ran, was valid, and matched nothing.
+ *
+ * Kept separate from `resultSet` on purpose. After a zero-yield refinement the
+ * filters roll back so the conversation cannot get trapped (see
+ * preserveResultSetForZeroResults), which means `activeFilters` and
+ * `resultSet` again describe the PREVIOUS search. Without this record there is
+ * nothing left saying "the visitor's latest ask matched nothing", and an
+ * ordinal would happily open a vehicle the visitor has just excluded.
+ *
+ * An authoritative zero is not the same as a failed query: a query that errored
+ * is never recorded here, because "none exist" and "we could not find out" must
+ * not collapse into the same state.
+ */
+export type AttemptedZeroResult = {
+  /** The filters the visitor actually asked for, before the rollback. */
+  filters: VehicleQueryFilters;
+  attemptedAtTurn: number;
+};
+
+/** A bounded question the concierge asked and is waiting on. */
+export type PendingClarification = {
+  kind: "make-switch" | "affirmation";
+  askedAtTurn: number;
+};
+
 export type ConversationInventoryState = {
   activeFilters: VehicleQueryFilters;
+  /**
+   * Constraints the visitor explicitly asked to keep for the rest of the
+   * chat. Deliberately distinct from activeFilters, which are scoped to the
+   * current search and cleared by a make/model switch. Nothing writes this
+   * yet: recognising "keep my budget under 20k" is interpretation work, and
+   * the field exists so that work has somewhere correct to land.
+   */
+  retainedPreferences: VehicleQueryFilters;
   resultSet: ConversationResultSet | null;
+  /** Set when the latest inventory request returned an authoritative zero. */
+  attemptedZeroResult: AttemptedZeroResult | null;
+  pendingClarification: PendingClarification | null;
   selectedVehicleId: string | null;
   turn: number;
   /** Last inventory-intent timestamp; non-inventory chat must not refresh it. */
   lastInventoryActivityAt: string | null;
+  /** Envelope version for this state shape. */
+  schemaVersion: number;
 };
+
+/**
+ * Bump when a change would make an older build misread stored state. A
+ * snapshot from a FUTURE version is discarded rather than reinterpreted.
+ */
+export const CONVERSATION_STATE_SCHEMA_VERSION = 1;
 
 export type InventoryStateTransition = {
   state: ConversationInventoryState;
@@ -118,10 +163,14 @@ const COMPARE_PAIR_PATTERN =
 export function emptyConversationInventoryState(): ConversationInventoryState {
   return {
     activeFilters: {},
+    retainedPreferences: {},
     resultSet: null,
+    attemptedZeroResult: null,
+    pendingClarification: null,
     selectedVehicleId: null,
     turn: 0,
     lastInventoryActivityAt: null,
+    schemaVersion: CONVERSATION_STATE_SCHEMA_VERSION,
   };
 }
 
@@ -129,6 +178,16 @@ export function normalizeConversationInventoryState(
   value: unknown,
 ): ConversationInventoryState {
   if (!isRecord(value)) return emptyConversationInventoryState();
+  // State written by a newer deployment may encode rules this build does not
+  // implement. Starting clean loses continuity for one turn; reinterpreting it
+  // risks acting on a scope the visitor cannot see, which is the failure mode
+  // this whole module exists to prevent.
+  if (
+    typeof value.schemaVersion === "number" &&
+    value.schemaVersion > CONVERSATION_STATE_SCHEMA_VERSION
+  ) {
+    return emptyConversationInventoryState();
+  }
   const activeFilters = pickFilters(value.activeFilters);
   const resultSet = normalizeResultSet(value.resultSet);
   const selectedCandidate =
@@ -154,15 +213,60 @@ export function normalizeConversationInventoryState(
       : null;
   return {
     activeFilters,
+    retainedPreferences: pickFilters(value.retainedPreferences),
     resultSet,
+    attemptedZeroResult: normalizeAttemptedZeroResult(
+      value.attemptedZeroResult,
+    ),
+    pendingClarification: normalizePendingClarification(
+      value.pendingClarification,
+    ),
     selectedVehicleId,
     turn,
     lastInventoryActivityAt,
+    schemaVersion: CONVERSATION_STATE_SCHEMA_VERSION,
   };
+}
+
+function normalizeAttemptedZeroResult(
+  value: unknown,
+): AttemptedZeroResult | null {
+  if (!isRecord(value)) return null;
+  const attemptedAtTurn = value.attemptedAtTurn;
+  if (
+    typeof attemptedAtTurn !== "number" ||
+    !Number.isSafeInteger(attemptedAtTurn) ||
+    attemptedAtTurn < 0
+  ) {
+    return null;
+  }
+  const filters = pickFilters(value.filters);
+  // A zero record with no constraints would block every later reference for
+  // no stated reason, so an empty one is treated as absent.
+  return Object.keys(filters).length > 0 ? { filters, attemptedAtTurn } : null;
+}
+
+function normalizePendingClarification(
+  value: unknown,
+): PendingClarification | null {
+  if (!isRecord(value)) return null;
+  const kind = value.kind;
+  const askedAtTurn = value.askedAtTurn;
+  if (kind !== "make-switch" && kind !== "affirmation") return null;
+  if (
+    typeof askedAtTurn !== "number" ||
+    !Number.isSafeInteger(askedAtTurn) ||
+    askedAtTurn < 0
+  ) {
+    return null;
+  }
+  return { kind, askedAtTurn };
 }
 
 export type InventoryTransitionContext = {
   nowMs: number;
+  /** Trusted semantic clears compiled from the closed interpretation schema. */
+  clearFilters?: readonly (keyof VehicleQueryFilters)[];
 };
 
 /** A new visitor turn only changes filters the visitor explicitly supplied. */
@@ -211,7 +315,7 @@ export function transitionInventoryState(
     normalizedExtracted.model !== current.activeFilters.model;
   const clearsVehicleScope =
     switchesMake || clearsStrandedModel || switchesModelWithoutMake;
-  const base = clearsStaleBroadScope
+  const inferredBase = clearsStaleBroadScope
     ? {}
     : resetScope
       ? normalizedExtracted.make !== undefined ||
@@ -223,6 +327,7 @@ export function transitionInventoryState(
         : clearsVehicleScope
           ? dropVehicleSpecificScope(current.activeFilters)
           : current.activeFilters;
+  const base = clearExplicitFilters(inferredBase, context?.clearFilters ?? []);
   const activeFilters = mergeFilters(base, normalizedExtracted);
   const hasExplicitFilters =
     Object.keys(normalizedExtracted).length > 0 || resetScope;
@@ -247,6 +352,7 @@ export function transitionInventoryState(
     ...(useStoredResultSet ? ["reuse_result_set"] : []),
     ...(ordinal ? ["ordinal_from_result_set"] : []),
     ...(selectedAction ? ["selected_vehicle_from_result_set"] : []),
+    ...(context?.clearFilters?.length ? ["clear_interpreted_filters"] : []),
   ];
   return {
     state: {
@@ -264,7 +370,14 @@ export function transitionInventoryState(
       // reset inventory. The route re-queries and rebuilds the result set on
       // reset turns anyway, so this only removes stale state.
       ...(resetScope || clearsStaleBroadScope
-        ? { selectedVehicleId: null, resultSet: null }
+        ? {
+            selectedVehicleId: null,
+            resultSet: null,
+            // The reset replaces the visitor's latest ask, so a previous
+            // zero must stop constraining references too — otherwise
+            // "show me everything" would still refuse to open a result.
+            attemptedZeroResult: null,
+          }
         : {}),
     },
     shouldQuery:
@@ -274,6 +387,16 @@ export function transitionInventoryState(
   };
 }
 
+function clearExplicitFilters(
+  filters: VehicleQueryFilters,
+  keys: readonly (keyof VehicleQueryFilters)[],
+): VehicleQueryFilters {
+  if (keys.length === 0) return filters;
+  const next = { ...filters };
+  for (const key of keys) delete next[key];
+  return next;
+}
+
 export function setConversationResultSet(
   state: ConversationInventoryState,
   vehicles: readonly Pick<Vehicle, "id">[],
@@ -281,6 +404,9 @@ export function setConversationResultSet(
 ): ConversationInventoryState {
   return {
     ...state,
+    // A search that returned matches answers the visitor's latest ask, so the
+    // previous zero no longer constrains anything.
+    attemptedZeroResult: null,
     resultSet: {
       orderedIds: vehicles.map((vehicle) => vehicle.id),
       totalCount,
@@ -303,7 +429,18 @@ export function preserveResultSetForZeroResults(
   state: ConversationInventoryState,
   priorFilters: VehicleQueryFilters,
 ): ConversationInventoryState {
-  return { ...state, activeFilters: priorFilters };
+  return {
+    ...state,
+    activeFilters: priorFilters,
+    // The rollback is what stops the conversation getting trapped; this record
+    // is what stops the rollback from quietly re-authorising the vehicles the
+    // visitor just excluded. `state.activeFilters` is still the attempted
+    // combination at this point — the rollback happens in the same expression.
+    attemptedZeroResult: {
+      filters: { ...state.activeFilters },
+      attemptedAtTurn: state.turn,
+    },
+  };
 }
 
 export function selectConversationVehicle(

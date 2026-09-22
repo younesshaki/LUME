@@ -437,6 +437,31 @@ Broad wording such as “run every feed” is refused rather than reinterpreted 
 a feed-health lookup; a future bulk capability must declare its exact scope and
 use typed confirmation.
 
+### Progress — 2026-09-12: planner context and typed clarification
+
+Branch `feat/concierge-core-hardening`. Two gaps from the 2026-07-27 slice are
+closed; the capability registry, closed intent union, role gate, confirmation,
+idempotency, audit and verification paths are untouched.
+
+- **The planner now receives bounded session context.** It previously got the
+  user's message alone, so a contextual follow-up ("open the second one", "the
+  failed ones") had no referent and could only return `unsupported`. It now
+  also receives the *shape* of the session: which surface the actor is on, how
+  many results of what kind are on screen, and whether one is selected. Shape
+  only — no names, emails, ids, prices or record values, because the planner
+  has no business seeing tenant data to choose an intent.
+- **Clarification is a real outcome.** Every model `clarify` was collapsed into
+  the generic unsupported reply, so the concierge could not ask a question.
+  The model now selects one of five closed reason codes
+  (`ambiguous_surface`, `ambiguous_record`, `missing_target`, `missing_value`,
+  `unsupported_scope`) and LUME supplies the wording. The model cannot author
+  the question, which keeps model prose — and any record it might name — off
+  this surface; a `clarify` carrying an unknown reason is rejected as malformed
+  rather than rendered.
+
+This satisfies the "bounded, server-authored clarifying question" requirement
+in §5.1. It does not add any capability, and no write path changed.
+
 ### Phase 0 — establish the control plane (first)
 
 1. Document every dashboard action, its domain owner, role policy, side effects,

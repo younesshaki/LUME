@@ -2,10 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const route = readFileSync(
-  resolve(process.cwd(), "apps/admin/app/api/admin/concierge/route.ts"),
-  "utf8",
-);
+const route = readFileSync(resolve(process.cwd(), "apps/admin/app/api/admin/concierge/route.ts"), "utf8");
 
 /**
  * Ordering contract for the admin concierge handler.
@@ -33,8 +30,8 @@ describe("admin concierge route ordering", () => {
     // Then the limiter, ahead of every branch that costs a query. The stored
     // presentation path returns early, and the deterministic inspections page
     // whole tables, so both must sit downstream of the gate.
-    expect(at(LIMITER_CALL)).toBeLessThan(at("resolveAdminPresentationRequest(parsed.request.message"));
-    expect(at(LIMITER_CALL)).toBeLessThan(at("compileDeterministicAdminIntent(parsed.request.message"));
+    expect(at(LIMITER_CALL)).toBeLessThan(at("const storedPresentation = resolveAdminPresentationRequest("));
+    expect(at(LIMITER_CALL)).toBeLessThan(at("let intent = compileDeterministicAdminIntent("));
   });
 
   it("keeps exactly one limiter call, so no branch can be unmetered", () => {

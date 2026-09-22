@@ -30,16 +30,33 @@ type ChatMetaEvent = {
   sourceCategories: string[];
   botName?: string;
   sessionId?: string;
+  requestId?: string;
   capabilities?: { actions?: boolean };
 };
 type ChatActionEvent = { type: "action"; action: BotAction };
+/** Another delivery of this exact turn is already being answered. */
+type ChatDuplicateEvent = { type: "duplicate" };
 type ChatErrorEvent = { type: "error"; message: string };
 
 export type ChatStreamYield =
-  | { kind: "meta"; sourceCategories: string[]; botName?: string; sessionId?: string; capabilities?: { actions: boolean } }
+  | {
+      kind: "meta";
+      sourceCategories: string[];
+      botName?: string;
+      sessionId?: string;
+      /** Turn this stream belongs to, for correlation with the caller's id. */
+      requestId?: string;
+      capabilities?: { actions: boolean };
+    }
   | { kind: "delta"; text: string }
   | { kind: "action"; action: BotAction }
-  | { kind: "thinking"; text: string };
+  | { kind: "thinking"; text: string }
+  /**
+   * This delivery was a duplicate of a turn already in flight. Not an error:
+   * the visitor is being answered by the delivery that holds the lease, so the
+   * caller should end this turn quietly rather than showing a failure.
+   */
+  | { kind: "duplicate" };
 
 type DeepseekStreamChunk = {
   choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
@@ -56,6 +73,13 @@ export async function* streamChat(
   signal?: AbortSignal,
   sessionId?: string,
   startNewSession = false,
+  /**
+   * Opaque turn id, generated once per turn by the caller and reused verbatim
+   * when retrying that same turn. The server treats a repeat as a duplicate
+   * delivery rather than a second turn. Omitting it keeps the previous
+   * behaviour: the server generates its own.
+   */
+  requestId?: string,
 ): AsyncGenerator<ChatStreamYield, void, unknown> {
   const sanitized = messages
     .filter((m) => m.role === "user" || m.role === "assistant")
@@ -75,6 +99,7 @@ export async function* streamChat(
         : {}),
       ...(sessionId ? { sessionId } : {}),
       ...(startNewSession ? { startNewSession: true } : {}),
+      ...(requestId ? { requestId } : {}),
     }),
     credentials: "include",
     signal,
@@ -125,12 +150,19 @@ export async function* streamChat(
             ...(typeof parsed.sessionId === "string" && parsed.sessionId.trim()
               ? { sessionId: parsed.sessionId.trim() }
               : {}),
+            ...(typeof parsed.requestId === "string" && parsed.requestId.trim()
+              ? { requestId: parsed.requestId.trim() }
+              : {}),
             ...(isRecord(parsed.capabilities) &&
               typeof parsed.capabilities.actions === "boolean"
               ? { capabilities: { actions: parsed.capabilities.actions } }
               : {}),
           };
           continue;
+        }
+        if (isDuplicateEvent(parsed)) {
+          yield { kind: "duplicate" };
+          return;
         }
         if (isActionEvent(parsed)) {
           yield { kind: "action", action: parsed.action };
@@ -165,6 +197,10 @@ function isMetaEvent(v: unknown): v is ChatMetaEvent {
     (v as { type?: string }).type === "meta" &&
     Array.isArray((v as ChatMetaEvent).sourceCategories)
   );
+}
+
+function isDuplicateEvent(v: unknown): v is ChatDuplicateEvent {
+  return isRecord(v) && v.type === "duplicate";
 }
 
 function isErrorEvent(v: unknown): v is ChatErrorEvent {

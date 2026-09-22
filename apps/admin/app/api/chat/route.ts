@@ -25,8 +25,18 @@
  * any source reach the client — on top of the tenant tool allowlist and
  * persona capabilities. See lib/chatEntitlements.ts.
  */
-import type { BotAction, ChatRequest, Vehicle } from "@lume/types";
-import { createAnonServerClient, createServiceClient } from "@lume/db/server";
+import type {
+  BotAction,
+  ChatRequest,
+  RetrievedChunk,
+  Vehicle,
+} from "@lume/types";
+import { after } from "next/server";
+import {
+  createAnonServerClient,
+  createServiceClient,
+  type ServerSupabaseClient,
+} from "@lume/db/server";
 import {
   getTenantVehicle,
   queryTenantVehicles,
@@ -35,6 +45,7 @@ import {
   resolveTenantPlan,
 } from "@lume/db";
 import {
+  ConversationMemoryConflictError,
   conversationMemoryToolPrompt,
   mergeRememberedMessages,
   parseToolCalls,
@@ -53,7 +64,9 @@ import {
   mergeTrustedVehicleQuery,
   retrieveByKeywords,
   vehicleQueryFromFilters,
+  type VehicleQueryFilters,
 } from "@lume/rag";
+import { createOllamaEmbedder, retrieveHybridContext } from "@lume/rag/server";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
@@ -116,21 +129,50 @@ import {
   visitorPreferenceSystemPrompt,
 } from "@/lib/visitorPreferences";
 import {
+  buildInterpreterContext,
+  isShadowInterpretationEnabled,
+} from "@/lib/chatInterpretationShadow";
+import { runShadowInterpretation } from "@/lib/chatInterpretationRunner.server";
+import { CHAT_INTERPRETATION_SCHEMA_VERSION } from "@/lib/chatInterpretation";
+import {
+  compileChatInterpretation,
+  isContextualInterpretationEnabled,
+} from "@/lib/chatInterpretationExecution";
+import {
+  claimConversationTurn,
   conversationMemoryKey,
   getConversationMemoryStore,
+  isConversationMemoryDegraded,
 } from "@/lib/conversationMemory.server";
 import {
   captureConciergeTranscript,
   captureDebug,
   captureError,
+  recordChatInterpretationShadow,
+  recordConciergeTurn,
   recordModelUsage,
 } from "@/lib/observability";
+import {
+  writeInternalConciergeTrace,
+  type ConciergeTraceSource,
+} from "@/lib/conciergeTrace.server";
 import {
   type DeterministicAnswers,
   hasDeterministicAnswer,
   resolveDeterministicContent,
 } from "@/lib/chatDeterministicAnswer";
 import { shouldGroundSelectedVehicle } from "@/lib/chatGroundingScope";
+import {
+  deterministicSourceCategories,
+  inventoryFilterAction,
+  selectedVehicleDetailAnswer,
+  unsupportedVehicleFactAnswer,
+} from "@/lib/chatAnswers";
+import {
+  resolveCompareOutcome,
+  resolveInventoryOutcome,
+  resolveReferenceOutcome,
+} from "@/lib/chatDeterministicRules";
 import { tenantLiveVehicleCount } from "@/lib/tenantInventoryCount";
 import {
   compareOrdinalIndexesFromText,
@@ -141,11 +183,9 @@ import {
   isAmbiguousMakeSwitchRequest,
   isOrdinalVehicleActionRequest,
   isOrdinalVehicleReference,
-  isOutOfRangeOrdinalReference,
   isPresentationRequest,
   isSelectedVehicleActionRequest,
   isSelectedVehicleDetailRequest,
-  isTruncatedLastOrdinalReference,
   isUnsupportedVehicleFactRequest,
   normalizeConversationInventoryState,
   ordinalResultSetVehicleId,
@@ -154,7 +194,6 @@ import {
   selectedResultSetVehicleId,
   setConversationResultSet,
   transitionInventoryState,
-  vehicleSatisfiesActiveFilters,
   type ConversationInventoryState,
 } from "@/lib/chatConversationState";
 
@@ -169,6 +208,7 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const turnStartedAtMs = Date.now();
   if (!isAllowedOrigin(request)) {
     return json({ error: "Forbidden origin" }, 403);
   }
@@ -192,6 +232,14 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return json({ error: "Invalid JSON" }, 400, request);
   }
+
+  // One id per turn. The browser generates it so a retried delivery of the
+  // SAME turn carries the SAME id and is recognised as a duplicate rather than
+  // appended twice; a server-generated id could never do that. It is opaque
+  // and namespaced by the conversation key, so it grants nothing on its own —
+  // and a malformed or missing one simply falls back.
+  const clientRequestId = normalizeClientRequestId(body.requestId);
+  const requestId = clientRequestId ?? crypto.randomUUID();
 
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return json({ error: "messages must be a non-empty array" }, 400, request);
@@ -277,6 +325,16 @@ export async function POST(request: Request): Promise<Response> {
   );
   const enabledToolNames = enabledTools.map((tool) => tool.name);
   const toolRequestFields = buildToolRequestFields(toToolSpecs(enabledTools));
+  const planClampedModelId =
+    isPremiumConciergeModel(botRuntimeConfig.modelId) &&
+    !tenantPlan.entitlements["chat.premium_models"]
+      ? DEFAULT_CONCIERGE_MODEL_ID
+      : botRuntimeConfig.modelId;
+  const chatProvider = resolveChatProvider(planClampedModelId);
+  const contextualInterpretationEnabled = isContextualInterpretationEnabled(
+    tenant.slug,
+    planClampedModelId,
+  );
   const tenantName = tenant.name ?? tenant.slug;
   const memoryStore = getConversationMemoryStore();
   // Public visitors need the same deterministic continuity as signed-in
@@ -292,6 +350,38 @@ export async function POST(request: Request): Promise<Response> {
     tenant.tenantId,
     visitor ? visitor.id : `anonymous:${anonymousConversationId!}`,
   );
+  // Take the turn's in-flight lease before doing anything expensive. Only a
+  // client-supplied id can be duplicated — a server-generated one is unique by
+  // construction — so there is nothing to claim without one, and skipping it
+  // keeps the old behaviour and one round trip for legacy callers.
+  const turnClaim =
+    memoryKey && clientRequestId
+      ? await claimConversationTurn(memoryKey, clientRequestId)
+      : null;
+  if (turnClaim && !turnClaim.granted) {
+    // Another delivery of this exact turn is already running. Answering it
+    // again would pay for a second generation and could emit a second set of
+    // actions. The response deliberately carries no assistant text: the
+    // delivery that holds the lease is producing it.
+    captureDebug("api/chat/duplicate-turn", {
+      tenantId: tenant.tenantId,
+      claimScope: turnClaim.scope,
+    });
+    recordConciergeTurn({
+      surface: "public",
+      requestId,
+      tenantId: tenant.tenantId,
+      conversationId: anonymousConversationId ?? null,
+      route: "duplicate",
+      clientRequestId: true,
+      // No model was called. That is the point of the lease.
+      model: null,
+      memoryDegraded: isConversationMemoryDegraded(),
+      timingsMs: { total: Date.now() - turnStartedAtMs },
+    });
+    return duplicateTurnResponse(request, quotaHeaders);
+  }
+
   const remembered = memoryKey
     ? await memoryStore.get(memoryKey).catch((error: unknown) => {
         captureError("api/chat/memory-read", error, {
@@ -300,6 +390,47 @@ export async function POST(request: Request): Promise<Response> {
         return null;
       })
     : null;
+  // The version this turn read. Committing against it makes a late turn lose
+  // to the newer one that already landed, instead of overwriting it.
+  const expectedStateVersion = remembered?.stateVersion ?? 0;
+  // Only true when a CONFIGURED shared store has failed. A deployment with no
+  // shared store at all is not degraded — it never promised cross-instance
+  // continuity in the first place.
+  const memoryDegraded = isConversationMemoryDegraded();
+  /**
+   * One writer for every response path.
+   *
+   * A conflict is the expected outcome when two turns of one conversation
+   * race: the newer turn's state stands and this turn's write is dropped
+   * rather than clobbering it. That costs this turn's transcript entry, which
+   * is the cheaper loss.
+   */
+  const persistTurnMemory = async (
+    update: Parameters<typeof memoryStore.append>[1],
+  ): Promise<"committed" | "conflict" | "skipped" | "failed"> => {
+    if (!memoryKey) return "skipped";
+    try {
+      await memoryStore.append(memoryKey, {
+        ...update,
+        requestId,
+        expectedStateVersion,
+      });
+      return "committed";
+    } catch (error: unknown) {
+      if (error instanceof ConversationMemoryConflictError) {
+        captureDebug("api/chat/memory-conflict", {
+          tenantId: tenant.tenantId,
+          expectedStateVersion,
+          actualStateVersion: error.actualStateVersion,
+        });
+        return "conflict";
+      }
+      captureError("api/chat/memory-write", error, {
+        tenantId: tenant.tenantId,
+      });
+      return "failed";
+    }
+  };
   let conversationState: ConversationInventoryState =
     normalizeConversationInventoryState(remembered?.conversationState);
   const conversationStateBefore = conversationState;
@@ -349,7 +480,7 @@ export async function POST(request: Request): Promise<Response> {
   // instead of honoring the reset (live-reproduced 2026-07-23, session
   // 2c19e8d4 turn 4: Jeep detail text duplicated, on a full-reset turn).
   const scopeResetRequested = hasScopeResetIntent(lastUser.content);
-  const fullInventoryResetRequested = hasFullInventoryResetIntent(
+  let fullInventoryResetRequested = hasFullInventoryResetIntent(
     lastUser.content,
   );
   const turnNowMs = Date.now();
@@ -364,7 +495,6 @@ export async function POST(request: Request): Promise<Response> {
       rememberedHistoryVehicleId ??
       historyVehicleId);
 
-  let assembled;
   const groundedVehicleIds = new Set<string>();
   let groundedVehicles: Vehicle[] = [];
   let groundedInventoryFilters: ReturnType<
@@ -391,35 +521,32 @@ export async function POST(request: Request): Promise<Response> {
   let extractedInventoryFilters: ReturnType<typeof extractVehicleFilters> = {};
   let stateRules: string[] = [];
   let selectedVehicleId: string | null = null;
+  let deterministicUserText = lastUser.content;
+  let activeInterpretationResult: Awaited<
+    ReturnType<typeof runShadowInterpretation>
+  > | null = null;
+  let activeInterpretationApplied = false;
+  let interpretedClearFilters: readonly (keyof VehicleQueryFilters)[] = [];
   let chatLoyaltyContext: Awaited<ReturnType<typeof loadChatLoyaltyContext>> =
     null;
   let visitorPreferenceContext: Awaited<
     ReturnType<typeof loadVisitorPreferenceContext>
   > = null;
+  // Deferred model-prompt inputs. Computed on the deterministic pass (they
+  // depend on state that only exists there) but consumed only if this turn
+  // actually reaches the model.
+  let selectedVehicleChunk: RetrievedChunk | null = null;
+  let groundSelectedVehicleChunk = false;
   try {
-    // Load the bounded tenant vocabulary for every turn. A visitor can ask
-    // for a model without naming its make ("show me 911s"), which cannot be
-    // recognized reliably without knowing this tenant's actual catalog.
-    const [
-      chunkResult,
-      loadedLoyaltyContext,
-      loadedPreferenceContext,
-      selectedVehicleResult,
-      facetResult,
-    ] = await Promise.all([
-      supabase
-        .from("rag_chunks")
-        .select("text, category")
-        .eq("tenant_id", tenant.tenantId),
-      visitor
-        ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
-        : Promise.resolve(null),
-      visitor
-        ? loadVisitorPreferenceContext(supabase, {
-            tenantId: tenant.tenantId,
-            visitorId: visitor.id,
-          })
-        : Promise.resolve(null),
+    // Only the reads a deterministic rule can actually need happen here. The
+    // document corpus, loyalty context and visitor preferences feed the model
+    // system prompt and nothing else (see loadModelPromptContext below), so
+    // fetching them for an ordinal, a "show me", or a reset was pure waste on
+    // the highest-frequency turns. They are loaded lazily on the model path.
+    //
+    // The facet RPC stays unconditional: it is the bounded tenant vocabulary
+    // that filter extraction needs to recognize a make/model this turn.
+    const [selectedVehicleResult, facetResult] = await Promise.all([
       selectedVehicleCandidate
         ? getTenantVehicle(supabase, tenant.tenantId, selectedVehicleCandidate)
         : Promise.resolve(null),
@@ -435,24 +562,12 @@ export async function POST(request: Request): Promise<Response> {
         p_state: null,
       }),
     ]);
-    chatLoyaltyContext = loadedLoyaltyContext;
-    visitorPreferenceContext = loadedPreferenceContext;
-    const { data: chunkRows, error: chunkErr } = chunkResult;
-    if (chunkErr)
-      throw new Error(`rag_chunks query failed: ${chunkErr.message}`);
-
-    const contextChunks = retrieveByKeywords(
-      chunkRows ?? [],
-      lastUser.content,
-      7,
-    );
     const unsupportedVehicleFactRequest = isUnsupportedVehicleFactRequest(
       lastUser.content,
     );
     const selectedVehicleDetailRequest = isSelectedVehicleDetailRequest(
       lastUser.content,
     );
-    let selectedVehicleChunk: (typeof contextChunks)[number] | null = null;
     if (unsupportedVehicleFactRequest) {
       deterministicUnsupportedFactAnswer = unsupportedVehicleFactAnswer(
         lastUser.content,
@@ -491,12 +606,11 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
     const vocabulary = vehicleFilterVocabulary(facetResult.data);
-    const extractedFilters =
+    let extractedFilters =
       unsupportedVehicleFactRequest || selectedVehicleDetailRequest
         ? {}
         : extractVehicleFilters(lastUser.content, [], vocabulary);
-    extractedInventoryFilters = extractedFilters;
-    const hasInventoryIntent =
+    let hasInventoryIntent =
       !unsupportedVehicleFactRequest &&
       !selectedVehicleDetailRequest &&
       (isVehicleQuery(lastUser.content, vocabulary) ||
@@ -508,6 +622,73 @@ export async function POST(request: Request): Promise<Response> {
             isPresentationRequest(lastUser.content)),
         ) ||
         hasScopeResetIntent(lastUser.content));
+
+    // Phase 3 active canary: ask the bounded interpreter only when the
+    // established deterministic vocabulary found no inventory intent at all.
+    // Accepted plans are compiled back into this same deterministic pipeline;
+    // malformed, unsupported or mixed plans fall through unchanged.
+    if (
+      contextualInterpretationEnabled &&
+      chatProvider &&
+      !hasInventoryIntent &&
+      !unsupportedVehicleFactRequest &&
+      !selectedVehicleDetailRequest &&
+      !deterministicClarifier
+    ) {
+      activeInterpretationResult = await runShadowInterpretation({
+        provider: chatProvider,
+        userMessage: lastUser.content,
+        context: buildInterpreterContext({
+          state: conversationState,
+          deterministicFilters: extractedFilters,
+        }),
+        deterministic: {
+          kind: "unsupported",
+          filters: {},
+          hasReference: false,
+        },
+      });
+      recordChatInterpretationShadow({
+        mode: "active",
+        requestId,
+        tenantId: tenant.tenantId,
+        provider: chatProvider.profile.provider,
+        modelId: chatProvider.profile.id,
+        schemaVersion: CHAT_INTERPRETATION_SCHEMA_VERSION,
+        outcome: activeInterpretationResult.outcome,
+        durationMs: activeInterpretationResult.durationMs,
+        usage: activeInterpretationResult.usage,
+        comparison: activeInterpretationResult.comparison,
+      });
+      recordModelUsage({
+        route: "api/chat/interpretation",
+        tenantId: tenant.tenantId,
+        provider: chatProvider.profile.provider,
+        requestedModelId: botRuntimeConfig.modelId,
+        effectiveModelId: chatProvider.profile.id,
+        clamped: planClampedModelId !== botRuntimeConfig.modelId,
+        fellBack: chatProvider.fellBack,
+      });
+      const compiled = activeInterpretationResult.candidate
+        ? compileChatInterpretation(
+            activeInterpretationResult.candidate,
+            lastUser.content,
+          )
+        : null;
+      if (compiled) {
+        activeInterpretationApplied = true;
+        deterministicUserText = compiled.userText;
+        extractedFilters = compiled.filters;
+        interpretedClearFilters = compiled.clearFilters;
+        hasInventoryIntent = compiled.hasInventoryIntent;
+        deterministicMakeSwitchClarifier = compiled.clarification;
+        fullInventoryResetRequested = hasFullInventoryResetIntent(
+          deterministicUserText,
+        );
+        stateRules.push(compiled.rule);
+      }
+    }
+    extractedInventoryFilters = extractedFilters;
     // Inject the open vehicle only when the turn is plausibly still about it.
     // pagePath keeps pointing at a vehicle for the rest of the session, so
     // without this the first and highest-scored chunk on "show me your SUVs"
@@ -520,35 +701,40 @@ export async function POST(request: Request): Promise<Response> {
         extractedFilters,
         activeFilters: conversationState.activeFilters,
         isSelectedVehicleDetailRequest: selectedVehicleDetailRequest,
-        isOrdinalReference: isOrdinalVehicleReference(lastUser.content),
-        isSelectedVehicleAction: isSelectedVehicleActionRequest(lastUser.content),
+        isOrdinalReference: isOrdinalVehicleReference(deterministicUserText),
+        isSelectedVehicleAction: isSelectedVehicleActionRequest(
+          deterministicUserText,
+        ),
       })
     ) {
-      contextChunks.unshift(selectedVehicleChunk);
+      groundSelectedVehicleChunk = true;
     }
 
     const stateTransition = transitionInventoryState(
       conversationState,
-      lastUser.content,
+      deterministicUserText,
       extractedFilters,
       hasInventoryIntent,
-      { nowMs: turnNowMs },
+      { nowMs: turnNowMs, clearFilters: interpretedClearFilters },
     );
     conversationState = stateTransition.state;
-    stateRules = stateTransition.rules;
+    stateRules = [...stateRules, ...stateTransition.rules];
     statePresentationRequest = stateTransition.useStoredResultSet;
     stateOrdinalVehicleId = ordinalResultSetVehicleId(
-      lastUser.content,
+      deterministicUserText,
       conversationState.resultSet,
     );
     stateSelectedVehicleId = selectedResultSetVehicleId(
-      lastUser.content,
+      deterministicUserText,
       conversationState,
     );
     const stateReferencedVehicleId =
       stateOrdinalVehicleId ?? stateSelectedVehicleId;
 
-    if (isAmbiguousMakeSwitchRequest(lastUser.content, extractedFilters)) {
+    if (
+      !deterministicMakeSwitchClarifier &&
+      isAmbiguousMakeSwitchRequest(deterministicUserText, extractedFilters)
+    ) {
       // Ambiguous make switch: the reset already cleared the scope in state.
       // Ask which make — do NOT query, and do NOT let the model volunteer the
       // old make's grounded results underneath its own clarifying question.
@@ -560,45 +746,43 @@ export async function POST(request: Request): Promise<Response> {
     // from the stored, verified list — never from the model improvising.
     const compareIndexes = stateReferencedVehicleId
       ? null
-      : compareOrdinalIndexesFromText(lastUser.content);
+      : compareOrdinalIndexesFromText(deterministicUserText);
     if (compareIndexes) {
       const orderedIds = conversationState.resultSet?.orderedIds ?? [];
-      if (orderedIds.length === 0) {
-        deterministicCompareUnavailableAnswer =
-          "I don’t have a current result list to compare from yet — tell me what you’d like to search for first.";
-      } else if (compareIndexes.some((index) => index >= orderedIds.length)) {
-        deterministicCompareUnavailableAnswer = `The current list has ${orderedIds.length} results — please compare numbers between 1 and ${orderedIds.length}.`;
+      // Fetch only when the indexes are in range; resolveCompareOutcome
+      // rejects the out-of-range cases without needing the vehicles.
+      const inRange =
+        orderedIds.length > 0 &&
+        !compareIndexes.some((index) => index >= orderedIds.length);
+      const fetched = inRange
+        ? await Promise.all(
+            compareIndexes.map((index) =>
+              getTenantVehicle(supabase, tenant.tenantId, orderedIds[index]!),
+            ),
+          )
+        : [];
+      const outcome = resolveCompareOutcome({
+        compareIndexes,
+        orderedIds,
+        fetched,
+        activeFilters: conversationState.activeFilters,
+        memoryDegraded,
+      });
+      if (outcome.kind === "compared") {
+        deterministicCompareAnswer = outcome.answer;
+        for (const id of outcome.groundedVehicleIds) groundedVehicleIds.add(id);
       } else {
-        const compareIds = compareIndexes.map((index) => orderedIds[index]!);
-        const compared = (
-          await Promise.all(
-            compareIds.map((id) =>
-              getTenantVehicle(supabase, tenant.tenantId, id),
-            ),
-          )
-        ).filter((vehicle): vehicle is Vehicle => Boolean(vehicle));
-        if (
-          compared.length === compareIds.length &&
-          compared.every((vehicle) =>
-            vehicleSatisfiesActiveFilters(
-              vehicle,
-              conversationState.activeFilters,
-            ),
-          )
-        ) {
-          deterministicCompareAnswer = compareVehiclesAnswer(
-            compareIndexes,
-            compared,
-          );
-          for (const vehicle of compared) groundedVehicleIds.add(vehicle.id);
-        } else {
-          deterministicCompareUnavailableAnswer =
-            "Those results no longer satisfy your active filters, so I haven’t compared them. Would you like to relax a constraint or see the current matches?";
-        }
+        deterministicCompareUnavailableAnswer = outcome.answer;
       }
     }
 
-    if (stateTransition.useStoredResultSet) {
+    if (stateTransition.useStoredResultSet && memoryDegraded) {
+      // "show me" re-presents a stored list. During an outage this process
+      // cannot know the list is this visitor's, so it must not be shown.
+      statePresentationRequest = false;
+      deterministicOrdinalUnavailableAnswer =
+        "I’ve lost the thread of which results I showed you, so I can’t bring that list back. Tell me what you’d like to see and I’ll search again.";
+    } else if (stateTransition.useStoredResultSet) {
       filters = conversationState.activeFilters;
       groundedInventoryFilters = filters;
       for (const id of conversationState.resultSet?.orderedIds ?? [])
@@ -612,53 +796,49 @@ export async function POST(request: Request): Promise<Response> {
       deterministicInventoryAction = inventoryFilterAction(filters);
     }
 
-    if (stateReferencedVehicleId) {
-      const selected = await getTenantVehicle(
-        supabase,
-        tenant.tenantId,
-        stateReferencedVehicleId,
+    const referenceOutcome = resolveReferenceOutcome({
+      userText: deterministicUserText,
+      referencedVehicleId: stateReferencedVehicleId,
+      fetched: stateReferencedVehicleId
+        ? await getTenantVehicle(
+            supabase,
+            tenant.tenantId,
+            stateReferencedVehicleId,
+          )
+        : null,
+      activeFilters: conversationState.activeFilters,
+      resultSet: conversationState.resultSet,
+      hasOrdinalOrSelectionPhrase:
+        isOrdinalVehicleReference(deterministicUserText) ||
+        isSelectedVehicleActionRequest(deterministicUserText),
+      attemptedZeroResult: conversationState.attemptedZeroResult,
+      memoryDegraded,
+    });
+    if (referenceOutcome.kind === "resolved") {
+      const selected = referenceOutcome.vehicle;
+      selectedVehicleId = selected.id;
+      groundedVehicleIds.add(selected.id);
+      groundedVehicles = [selected];
+      conversationState = selectConversationVehicle(
+        conversationState,
+        selected.id,
       );
-      if (
-        selected &&
-        vehicleSatisfiesActiveFilters(selected, conversationState.activeFilters)
-      ) {
-        selectedVehicleId = selected.id;
-        groundedVehicleIds.add(selected.id);
-        groundedVehicles = [selected];
-        conversationState = selectConversationVehicle(
-          conversationState,
-          selected.id,
-        );
-        if (
-          !isOrdinalVehicleActionRequest(lastUser.content) &&
-          !isSelectedVehicleActionRequest(lastUser.content)
-        ) {
-          deterministicOrdinalReferenceAnswer = ordinalVehicleReferenceAnswer(
-            lastUser.content,
-            selected,
-          );
-        }
-      } else {
+      deterministicOrdinalReferenceAnswer = referenceOutcome.answer;
+    } else if (referenceOutcome.kind === "unavailable") {
+      if (memoryDegraded) {
+        // The refusal above only covers the prose. stateActions below builds a
+        // navigate-target straight from these ids, so clearing them is what
+        // actually stops a stale position becoming a navigation.
         stateOrdinalVehicleId = null;
         stateSelectedVehicleId = null;
-        deterministicOrdinalUnavailableAnswer =
-          "That result no longer satisfies your active filters, so I haven’t opened it. Would you like to relax a constraint or see the current matches?";
       }
-    } else if (
-      isOrdinalVehicleReference(lastUser.content) ||
-      isSelectedVehicleActionRequest(lastUser.content)
-    ) {
-      deterministicOrdinalUnavailableAnswer = isTruncatedLastOrdinalReference(
-        lastUser.content,
-        conversationState.resultSet,
-      )
-        ? `There are ${conversationState.resultSet?.totalCount ?? "more"} matching vehicles, but I only have the current result page safely anchored here. Please choose first, second, or third—or narrow the search.`
-        : isOutOfRangeOrdinalReference(
-              lastUser.content,
-              conversationState.resultSet,
-            )
-          ? `The current list has ${conversationState.resultSet?.orderedIds.length ?? 0} results — please pick a number between 1 and ${conversationState.resultSet?.orderedIds.length ?? 0}.`
-          : "I don’t have a current result list to safely resolve that reference. Please tell me what you’d like to search for.";
+      if (stateReferencedVehicleId) {
+        // The id resolved but no longer satisfies the filters: forget it, so a
+        // later navigation cannot act on a vehicle the visitor filtered away.
+        stateOrdinalVehicleId = null;
+        stateSelectedVehicleId = null;
+      }
+      deterministicOrdinalUnavailableAnswer = referenceOutcome.answer;
     }
 
     if (stateTransition.shouldQuery && !deterministicMakeSwitchClarifier) {
@@ -675,7 +855,17 @@ export async function POST(request: Request): Promise<Response> {
       groundedInventoryFilters = filters;
       for (const vehicle of matchedVehicles) groundedVehicleIds.add(vehicle.id);
       totalMatched = match.totalCount ?? matchedVehicles.length;
-      if (totalMatched === 0 && conversationState.resultSet) {
+
+      const inventoryOutcome = resolveInventoryOutcome({
+        userText: deterministicUserText,
+        filters,
+        matchedVehicles,
+        totalMatched,
+        hasPriorResultSet: conversationState.resultSet !== null,
+        fullInventoryResetRequested,
+      });
+
+      if (inventoryOutcome.rollBackToPreviousFilters) {
         // Roll back to the filters that were active before this turn — a
         // zero-yield refinement must not compound into the next turn, and the
         // public inventory link should keep pointing at the last filters that
@@ -685,7 +875,6 @@ export async function POST(request: Request): Promise<Response> {
           conversationStateBefore.activeFilters,
         );
         groundedInventoryFilters = conversationStateBefore.activeFilters;
-        deterministicZeroResultAnswer = zeroResultAnswer(filters);
       } else {
         conversationState = setConversationResultSet(
           conversationState,
@@ -693,35 +882,421 @@ export async function POST(request: Request): Promise<Response> {
           totalMatched,
         );
       }
-      deterministicAvailabilityAnswer = availabilityAnswerFromGroundedInventory(
-        lastUser.content,
-        filters,
-        matchedVehicles,
-        totalMatched,
-      );
-      if (fullInventoryResetRequested) {
-        // A full reset changes the public inventory UI even when the filter
-        // object is empty. Previously this action was left to the model, so
-        // the assistant could claim "all filters cleared" while emitting no
-        // filter_inventory action at all after long conversations.
-        deterministicInventoryAnswer = inventoryResultAnswer(
-          matchedVehicles,
-          totalMatched,
-        );
-        deterministicInventoryAction = inventoryFilterAction(filters);
-      } else if (
-        !deterministicAvailabilityAnswer &&
-        totalMatched > 0 &&
-        (isDirectInventoryPresentationRequest(lastUser.content, filters) ||
-          isInventoryRecommendationRequest(lastUser.content))
-      ) {
-        deterministicInventoryAnswer = isInventoryRecommendationRequest(
-          lastUser.content,
-        )
-          ? inventoryRecommendationAnswer(matchedVehicles, totalMatched)
-          : inventoryResultAnswer(matchedVehicles, totalMatched);
-        deterministicInventoryAction = inventoryFilterAction(filters);
+
+      deterministicZeroResultAnswer = inventoryOutcome.zeroResult;
+      deterministicAvailabilityAnswer = inventoryOutcome.availability;
+      deterministicInventoryAnswer = inventoryOutcome.inventory;
+      if (inventoryOutcome.filterAction) {
+        deterministicInventoryAction = inventoryOutcome.filterAction;
       }
+    }
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "state resolution failure";
+    captureError("api/chat/state-build", err, {
+      tenantId: tenant.tenantId,
+      detail: message,
+    });
+    return json(
+      { error: "Failed to build context" },
+      500,
+      request,
+      quotaHeaders,
+    );
+  }
+
+  const stateResolvedAtMs = Date.now();
+
+  const stateActions: BotAction[] = [
+    ...((stateOrdinalVehicleId &&
+      isOrdinalVehicleActionRequest(deterministicUserText)) ||
+    stateSelectedVehicleId
+      ? [
+          {
+            type: "navigate-target",
+            targetKey: "vehicle-detail",
+            params: {
+              vehicleId: stateOrdinalVehicleId ?? stateSelectedVehicleId!,
+            },
+          } satisfies BotAction,
+        ]
+      : []),
+    ...(deterministicInventoryAction ? [deterministicInventoryAction] : []),
+  ];
+  const deterministicActions = chatActionsEnabled
+    ? [
+        ...stateActions,
+        ...(deterministicOrdinalReferenceAnswer ||
+        deterministicOrdinalUnavailableAnswer ||
+        deterministicUnsupportedFactAnswer ||
+        deterministicMakeSwitchClarifier ||
+        deterministicCompareAnswer ||
+        deterministicCompareUnavailableAnswer
+          ? []
+          : resolveDeterministicConciergeNavigation({
+              messages: modelMessages,
+              targets: conciergeTargets,
+              selectedVehicleId,
+              groundedVehicles,
+              inventoryFilters: groundedInventoryFilters,
+              capabilities: persona.capabilities,
+            })),
+      ]
+    : [];
+  const hasDeterministicActions = deterministicActions.length > 0;
+  // Action *types* only. Params carry vehicle ids, which belong in the
+  // debug-gated line below, not in always-on telemetry.
+  const droppedActionTypes: string[] = [];
+  const filterConversationActions = (
+    actions: readonly BotAction[],
+  ): BotAction[] => {
+    const decision = filterActionsByConversationStateWithDiagnostics(
+      actions,
+      conversationState,
+      stateOrdinalVehicleId || stateSelectedVehicleId
+        ? [stateOrdinalVehicleId ?? stateSelectedVehicleId!]
+        : [],
+    );
+    if (decision.dropped.length > 0) {
+      for (const dropped of decision.dropped) {
+        droppedActionTypes.push(
+          typeof (dropped as { type?: unknown }).type === "string"
+            ? (dropped as { type: string }).type
+            : "unknown",
+        );
+      }
+      captureDebug("api/chat/actions", {
+        tenantId: tenant.tenantId,
+        actionsDropped: decision.dropped,
+      });
+    }
+    return decision.allowed;
+  };
+  const inventoryQueryStatus = (): "not_run" | "success" | "empty" =>
+    matchedVehicles === undefined
+      ? "not_run"
+      : (totalMatched ?? matchedVehicles.length) === 0
+        ? "empty"
+        : "success";
+  // One stable id per turn's log lines (transcript + conversation-state +
+  // actions debug) so independent anonymous sessions can be distinguished
+  // during state-isolation investigations.
+  const transcriptSessionId =
+    visitorTurn?.sessionId ?? anonymousConversationId ?? "unknown";
+  captureDebug("api/chat/conversation-state", {
+    tenantId: tenant.tenantId,
+    conversationSessionId: transcriptSessionId,
+    extractedFilters: extractedInventoryFilters,
+    activeFiltersBefore: conversationStateBefore.activeFilters,
+    activeFiltersAfter: conversationState.activeFilters,
+    lastInventoryActivityAtBefore:
+      conversationStateBefore.lastInventoryActivityAt,
+    lastInventoryActivityAtAfter: conversationState.lastInventoryActivityAt,
+    resultSetBefore: conversationStateBefore.resultSet
+      ? {
+          totalCount: conversationStateBefore.resultSet.totalCount,
+          orderedIds: conversationStateBefore.resultSet.orderedIds,
+        }
+      : null,
+    resultSetAfter: conversationState.resultSet
+      ? {
+          totalCount: conversationState.resultSet.totalCount,
+          orderedIds: conversationState.resultSet.orderedIds,
+        }
+      : null,
+    deterministicActions: deterministicActions.map((action) => ({
+      type: action.type,
+      vehicleId:
+        action.type === "navigate-target"
+          ? action.params?.vehicleId
+          : undefined,
+    })),
+    rules: stateRules,
+  });
+  const cors = corsHeadersFor(request);
+  // Source categories describe what actually grounded THIS answer, so they
+  // are built per path. A deterministic answer is rendered from verified
+  // inventory rows and never from the document corpus — which is exactly why
+  // the corpus is no longer fetched for those turns.
+  const buildSseHeaders = (sourceCategories: readonly string[]) =>
+    new Headers({
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Source-Categories": sourceCategories.join(","),
+      ...quotaHeaders,
+      ...cors,
+    });
+  const buildMetaEvent = (
+    sourceCategories: readonly string[],
+    sourceHandles: readonly {
+      handle: string;
+      title: string;
+      revision: number | null;
+      publishedAt: string | null;
+    }[] = [],
+  ) =>
+    sseEvent({
+      type: "meta",
+      sourceCategories,
+      sourceHandles,
+      botName: persona.name,
+      // Capability level for client display only — enforcement is the
+      // server-side plan gate above, never this hint.
+      capabilities: { actions: chatActionsEnabled },
+      sessionId: visitorTurn?.sessionId ?? anonymousConversationId ?? undefined,
+      // Lets the browser tie this stream to the turn it started, so a
+      // superseded stream's actions can be recognised and dropped.
+      requestId,
+    });
+
+  // Precedence lives in lib/chatDeterministicAnswer.ts, where it is an ordered
+  // array with pairwise tests. The guard and the selection below read that one
+  // definition, so they cannot drift apart the way two hand-written
+  // expressions over the same twelve variables could.
+  const deterministicAnswers: DeterministicAnswers = {
+    clarifier: deterministicClarifier,
+    makeSwitchClarifier: deterministicMakeSwitchClarifier,
+    compare: deterministicCompareAnswer,
+    compareUnavailable: deterministicCompareUnavailableAnswer,
+    zeroResult: deterministicZeroResultAnswer,
+    ordinalUnavailable: deterministicOrdinalUnavailableAnswer,
+    ordinalReference: deterministicOrdinalReferenceAnswer,
+    selectedVehicle: deterministicSelectedVehicleAnswer,
+    selectedVehicleUnavailable: deterministicSelectedVehicleUnavailableAnswer,
+    unsupportedFact: deterministicUnsupportedFactAnswer,
+    availability: deterministicAvailabilityAnswer,
+    inventory: deterministicInventoryAnswer,
+  };
+  const deterministicGuardContext = {
+    immediateSiteNavigation: isImmediateSiteNavigation(deterministicActions),
+    statePresentationRequest,
+  };
+
+  if (hasDeterministicAnswer(deterministicAnswers, deterministicGuardContext)) {
+    const sourceCategories = deterministicSourceCategories({
+      queriedInventory: matchedVehicles !== undefined,
+      groundedVehicleCount: groundedVehicleIds.size,
+    });
+    const sseHeaders = buildSseHeaders(sourceCategories);
+    const metaEvent = buildMetaEvent(sourceCategories);
+    const actions = prepareBotActionsForClient(
+      filterGroundedVehicleActions(
+        filterConversationActions(
+          groundLeadCaptureActions(
+            filterPlanAllowedActions(
+              chatActionsEnabled,
+              deterministicActions,
+              persona.capabilities,
+            ),
+            modelMessages,
+          ),
+        ),
+        conciergeTargets,
+        groundedVehicleIds,
+      ),
+      conciergeTargets,
+      actionAttribution,
+    );
+    const actionAcknowledgement = actionOnlyAcknowledgement(actions);
+    const visibleContent = resolveDeterministicContent(deterministicAnswers, {
+      ...deterministicGuardContext,
+      actionAcknowledgement,
+    });
+    captureDebug("api/chat/actions", {
+      tenantId: tenant.tenantId,
+      actionsEmitted: actionDebugSummary(actions),
+    });
+    captureConciergeTranscript({
+      sessionId: transcriptSessionId,
+      tenantId: tenant.tenantId,
+      turn: conversationState.turn,
+      userText: lastUser.content,
+      assistantText: visibleContent,
+      source: activeInterpretationApplied ? "interpreted" : "deterministic",
+      actions: actionDebugSummary(actions),
+    });
+    queueInternalConciergeTrace({
+      client: supabase,
+      tenantId: tenant.tenantId,
+      requestId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      source: activeInterpretationApplied ? "interpreted" : "deterministic",
+      userMessage: lastUser.content,
+      assistantResponse: visibleContent,
+      stateBefore: conversationStateBefore,
+      stateAfter: conversationState,
+      actions,
+      retrieval: { sourceCategories, totalMatched: totalMatched ?? null },
+      model: activeInterpretationResult && chatProvider
+        ? { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id }
+        : {},
+    });
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        // This path knows its whole answer before it streams anything, so it
+        // can commit first and close the stale-action race at the source: if
+        // a newer turn already owns the conversation, this turn's actions are
+        // never emitted at all. The model paths cannot do this — their prose
+        // arrives token by token, and buffering it to commit first would
+        // delay the visitor's first word by the whole generation.
+        const persisted = visibleContent
+          ? await persistTurnMemory({
+              messages: [
+                lastUser,
+                { role: "assistant", content: visibleContent },
+              ],
+              conversationState,
+            })
+          : "skipped";
+        const supersededByNewerTurn = persisted === "conflict";
+
+        controller.enqueue(encoder.encode(metaEvent));
+        if (!supersededByNewerTurn) {
+          for (const action of actions) {
+            controller.enqueue(
+              encoder.encode(sseEvent({ type: "action", action })),
+            );
+          }
+        }
+        if (visibleContent) {
+          controller.enqueue(
+            encoder.encode(
+              sseEvent({ choices: [{ delta: { content: visibleContent } }] }),
+            ),
+          );
+        }
+        if (visitor && visitorTurn && visibleContent) {
+          await completeVisitorPreferenceTurn(supabase, {
+            tenantId: tenant.tenantId,
+            visitorId: visitor.id,
+            sessionId: visitorTurn.sessionId,
+            assistantContent: visibleContent,
+          });
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    });
+    recordConciergeTurn({
+      surface: "public",
+      requestId,
+      tenantId: tenant.tenantId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      route: activeInterpretationApplied ? "interpreted" : "deterministic",
+      clientRequestId: clientRequestId !== null,
+      ruleCodes: stateRules,
+      clarification: Boolean(
+        deterministicClarifier || deterministicMakeSwitchClarifier,
+      ),
+      query: {
+        status: inventoryQueryStatus(),
+        totalCount: totalMatched ?? null,
+      },
+      actions: {
+        emitted: actions.map((action) => action.type),
+        dropped: droppedActionTypes,
+      },
+      model:
+        activeInterpretationResult && chatProvider
+          ? {
+              provider: chatProvider.profile.provider,
+              requestedModelId: botRuntimeConfig.modelId,
+              effectiveModelId: chatProvider.profile.id,
+              clamped: planClampedModelId !== botRuntimeConfig.modelId,
+              fellBack: chatProvider.fellBack,
+              calls: 1,
+            }
+          : null,
+      usage:
+        activeInterpretationResult?.usage &&
+        (activeInterpretationResult.usage.inputTokens !== null ||
+          activeInterpretationResult.usage.outputTokens !== null)
+          ? { ...activeInterpretationResult!.usage, coversCalls: 1 }
+          : undefined,
+      timingsMs: {
+        state: stateResolvedAtMs - turnStartedAtMs,
+        total: Date.now() - turnStartedAtMs,
+      },
+      memoryDegraded: isConversationMemoryDegraded(),
+    });
+    return new Response(stream, { headers: sseHeaders });
+  }
+
+  // Premium intelligence levels are plan-gated ("chat.premium_models"): a
+  // stored premium selection is clamped to the base model when the tenant's
+  // plan no longer entitles it (e.g. after a downgrade). Selection-time
+  // enforcement lives in the persona save action; this is the runtime gate.
+  if (chatProvider) {
+    // Highest-volume model path in the product; without this, provider
+    // invoices cannot be attributed to a tenant.
+    recordModelUsage({
+      route: "api/chat",
+      tenantId: tenant.tenantId,
+      provider: chatProvider.profile.provider,
+      requestedModelId: botRuntimeConfig.modelId,
+      effectiveModelId: chatProvider.profile.id,
+      clamped: planClampedModelId !== botRuntimeConfig.modelId,
+      fellBack: chatProvider.fellBack,
+    });
+  }
+  if (!chatProvider) {
+    return json(
+      { error: "AI provider is not configured" },
+      503,
+      request,
+      quotaHeaders,
+    );
+  }
+  if (chatProvider.fellBack) {
+    captureError(
+      "api/chat/model-fallback",
+      new Error("Configured concierge model provider is unavailable"),
+      {
+        tenantId: tenant.tenantId,
+        requestedModel: chatProvider.requestedModelId,
+        effectiveModel: chatProvider.profile.id,
+      },
+    );
+  }
+
+  // ── Deferred model-prompt context ────────────────────────────────────────
+  // Everything loaded here feeds the system prompt and nothing else, so it is
+  // fetched only once a turn is known to need the model. An ordinal, a
+  // "show me", a reset, a compare or a selected-vehicle detail answer returns
+  // above and never pays for the corpus, the loyalty read, the preference
+  // read, image descriptions or the inventory count.
+  let assembled: ReturnType<typeof assembleSystemPrompt>;
+  try {
+    const [contextChunks, loadedLoyaltyContext, loadedPreferenceContext] =
+      await Promise.all([
+        loadPublishedKnowledgeContext(
+          supabase,
+          tenant.tenantId,
+          lastUser.content,
+        ),
+        visitor
+          ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
+          : Promise.resolve(null),
+        visitor
+          ? loadVisitorPreferenceContext(supabase, {
+              tenantId: tenant.tenantId,
+              visitorId: visitor.id,
+            })
+          : Promise.resolve(null),
+      ]);
+    chatLoyaltyContext = loadedLoyaltyContext;
+    visitorPreferenceContext = loadedPreferenceContext;
+    // Same ordering as before the split: retrieved chunks, the open vehicle
+    // in front of them when the turn is still about it, image descriptions
+    // appended for the vehicles this turn actually matched.
+    if (groundSelectedVehicleChunk && selectedVehicleChunk) {
+      contextChunks.unshift(selectedVehicleChunk);
+    }
+    if (matchedVehicles !== undefined) {
       const matchedIds = matchedVehicles
         .slice(0, 20)
         .map((vehicle) => vehicle.id);
@@ -788,273 +1363,70 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const stateActions: BotAction[] = [
-    ...((stateOrdinalVehicleId &&
-      isOrdinalVehicleActionRequest(lastUser.content)) ||
-    stateSelectedVehicleId
-      ? [
-          {
-            type: "navigate-target",
-            targetKey: "vehicle-detail",
-            params: {
-              vehicleId: stateOrdinalVehicleId ?? stateSelectedVehicleId!,
-            },
-          } satisfies BotAction,
-        ]
-      : []),
-    ...(deterministicInventoryAction ? [deterministicInventoryAction] : []),
-  ];
-  const deterministicActions = chatActionsEnabled
-    ? [
-        ...stateActions,
-        ...(deterministicOrdinalReferenceAnswer ||
-        deterministicOrdinalUnavailableAnswer ||
-        deterministicUnsupportedFactAnswer ||
-        deterministicMakeSwitchClarifier ||
-        deterministicCompareAnswer ||
-        deterministicCompareUnavailableAnswer
-          ? []
-          : resolveDeterministicConciergeNavigation({
-              messages: modelMessages,
-              targets: conciergeTargets,
-              selectedVehicleId,
-              groundedVehicles,
-              inventoryFilters: groundedInventoryFilters,
-              capabilities: persona.capabilities,
-            })),
-      ]
-    : [];
-  const hasDeterministicActions = deterministicActions.length > 0;
-  const filterConversationActions = (
-    actions: readonly BotAction[],
-  ): BotAction[] => {
-    const decision = filterActionsByConversationStateWithDiagnostics(
-      actions,
-      conversationState,
-      stateOrdinalVehicleId || stateSelectedVehicleId
-        ? [stateOrdinalVehicleId ?? stateSelectedVehicleId!]
-        : [],
-    );
-    if (decision.dropped.length > 0) {
-      captureDebug("api/chat/actions", {
-        tenantId: tenant.tenantId,
-        actionsDropped: decision.dropped,
-      });
-    }
-    return decision.allowed;
-  };
-  // One stable id per turn's log lines (transcript + conversation-state +
-  // actions debug) so independent anonymous sessions can be distinguished
-  // during state-isolation investigations.
-  const transcriptSessionId =
-    visitorTurn?.sessionId ?? anonymousConversationId ?? "unknown";
-  captureDebug("api/chat/conversation-state", {
-    tenantId: tenant.tenantId,
-    conversationSessionId: transcriptSessionId,
-    extractedFilters: extractedInventoryFilters,
-    activeFiltersBefore: conversationStateBefore.activeFilters,
-    activeFiltersAfter: conversationState.activeFilters,
-    lastInventoryActivityAtBefore:
-      conversationStateBefore.lastInventoryActivityAt,
-    lastInventoryActivityAtAfter: conversationState.lastInventoryActivityAt,
-    resultSetBefore: conversationStateBefore.resultSet
-      ? {
-          totalCount: conversationStateBefore.resultSet.totalCount,
-          orderedIds: conversationStateBefore.resultSet.orderedIds,
-        }
-      : null,
-    resultSetAfter: conversationState.resultSet
-      ? {
-          totalCount: conversationState.resultSet.totalCount,
-          orderedIds: conversationState.resultSet.orderedIds,
-        }
-      : null,
-    deterministicActions: deterministicActions.map((action) => ({
-      type: action.type,
-      vehicleId:
-        action.type === "navigate-target"
-          ? action.params?.vehicleId
-          : undefined,
-    })),
-    rules: stateRules,
-  });
-  const cors = corsHeadersFor(request);
-  const sseHeaders = new Headers({
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-    "X-Source-Categories": assembled.sourceCategories.join(","),
-    ...quotaHeaders,
-    ...cors,
-  });
-  const metaEvent = sseEvent({
-    type: "meta",
-    sourceCategories: assembled.sourceCategories,
-    botName: persona.name,
-    // Capability level for client display only — enforcement is the
-    // server-side plan gate above, never this hint.
-    capabilities: { actions: chatActionsEnabled },
-    sessionId: visitorTurn?.sessionId ?? anonymousConversationId ?? undefined,
-  });
-
-  // Precedence lives in lib/chatDeterministicAnswer.ts, where it is an ordered
-  // array with pairwise tests. The guard and the selection below read that one
-  // definition, so they cannot drift apart the way two hand-written
-  // expressions over the same twelve variables could.
-  const deterministicAnswers: DeterministicAnswers = {
-    clarifier: deterministicClarifier,
-    makeSwitchClarifier: deterministicMakeSwitchClarifier,
-    compare: deterministicCompareAnswer,
-    compareUnavailable: deterministicCompareUnavailableAnswer,
-    zeroResult: deterministicZeroResultAnswer,
-    ordinalUnavailable: deterministicOrdinalUnavailableAnswer,
-    ordinalReference: deterministicOrdinalReferenceAnswer,
-    selectedVehicle: deterministicSelectedVehicleAnswer,
-    selectedVehicleUnavailable: deterministicSelectedVehicleUnavailableAnswer,
-    unsupportedFact: deterministicUnsupportedFactAnswer,
-    availability: deterministicAvailabilityAnswer,
-    inventory: deterministicInventoryAnswer,
-  };
-  const deterministicGuardContext = {
-    immediateSiteNavigation: isImmediateSiteNavigation(deterministicActions),
-    statePresentationRequest,
-  };
-
-  if (hasDeterministicAnswer(deterministicAnswers, deterministicGuardContext)) {
-    const actions = prepareBotActionsForClient(
-      filterGroundedVehicleActions(
-        filterConversationActions(
-          groundLeadCaptureActions(
-            filterPlanAllowedActions(
-              chatActionsEnabled,
-              deterministicActions,
-              persona.capabilities,
-            ),
-            modelMessages,
-          ),
-        ),
-        conciergeTargets,
-        groundedVehicleIds,
-      ),
-      conciergeTargets,
-      actionAttribution,
-    );
-    const actionAcknowledgement = actionOnlyAcknowledgement(actions);
-    const visibleContent = resolveDeterministicContent(deterministicAnswers, {
-      ...deterministicGuardContext,
-      actionAcknowledgement,
-    });
-    captureDebug("api/chat/actions", {
-      tenantId: tenant.tenantId,
-      actionsEmitted: actionDebugSummary(actions),
-    });
-    captureConciergeTranscript({
-      sessionId: transcriptSessionId,
-      tenantId: tenant.tenantId,
-      turn: conversationState.turn,
-      userText: lastUser.content,
-      assistantText: visibleContent,
-      source: "deterministic",
-      actions: actionDebugSummary(actions),
-    });
-    const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        controller.enqueue(encoder.encode(metaEvent));
-        for (const action of actions) {
-          controller.enqueue(
-            encoder.encode(sseEvent({ type: "action", action })),
-          );
-        }
-        if (visibleContent) {
-          controller.enqueue(
-            encoder.encode(
-              sseEvent({ choices: [{ delta: { content: visibleContent } }] }),
-            ),
-          );
-        }
-        if (visitor && visitorTurn && visibleContent) {
-          await completeVisitorPreferenceTurn(supabase, {
-            tenantId: tenant.tenantId,
-            visitorId: visitor.id,
-            sessionId: visitorTurn.sessionId,
-            assistantContent: visibleContent,
-          });
-        }
-        if (memoryKey && visibleContent) {
-          await memoryStore
-            .append(memoryKey, {
-              messages: [
-                lastUser,
-                { role: "assistant", content: visibleContent },
-              ],
-              conversationState,
-            })
-            .catch((error: unknown) => {
-              captureError("api/chat/memory-write", error, {
-                tenantId: tenant.tenantId,
-              });
-            });
-        }
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        controller.close();
-      },
-    });
-    return new Response(stream, { headers: sseHeaders });
-  }
-
-  // Premium intelligence levels are plan-gated ("chat.premium_models"): a
-  // stored premium selection is clamped to the base model when the tenant's
-  // plan no longer entitles it (e.g. after a downgrade). Selection-time
-  // enforcement lives in the persona save action; this is the runtime gate.
-  const planClampedModelId =
-    isPremiumConciergeModel(botRuntimeConfig.modelId) &&
-    !tenantPlan.entitlements["chat.premium_models"]
-      ? DEFAULT_CONCIERGE_MODEL_ID
-      : botRuntimeConfig.modelId;
-  const chatProvider = resolveChatProvider(planClampedModelId);
-  if (chatProvider) {
-    // Highest-volume model path in the product; without this, provider
-    // invoices cannot be attributed to a tenant.
-    recordModelUsage({
-      route: "api/chat",
-      tenantId: tenant.tenantId,
-      provider: chatProvider.profile.provider,
-      requestedModelId: botRuntimeConfig.modelId,
-      effectiveModelId: chatProvider.profile.id,
-      clamped: planClampedModelId !== botRuntimeConfig.modelId,
-      fellBack: chatProvider.fellBack,
-    });
-  }
-  if (!chatProvider) {
-    return json(
-      { error: "AI provider is not configured" },
-      503,
-      request,
-      quotaHeaders,
-    );
-  }
-  if (chatProvider.fellBack) {
-    captureError(
-      "api/chat/model-fallback",
-      new Error("Configured concierge model provider is unavailable"),
-      {
-        tenantId: tenant.tenantId,
-        requestedModel: chatProvider.requestedModelId,
-        effectiveModel: chatProvider.profile.id,
-      },
-    );
-  }
+  const contextLoadedAtMs = Date.now();
+  const sseHeaders = buildSseHeaders(assembled.sourceCategories);
+  const metaEvent = buildMetaEvent(
+    assembled.sourceCategories,
+    assembled.sourceHandles,
+  );
 
   const systemMessage = {
     role: "system" as const,
     content: `${assembled.prompt}${loyaltySystemPrompt(chatLoyaltyContext)}${visitorPreferenceSystemPrompt(visitorPreferenceContext)}${conversationMemoryToolPrompt(remembered?.toolResults ?? [])}${conciergeTargetSystemPrompt(!chatActionsEnabled || persona.capabilities.navigate === false ? [] : conciergeTargets)}\n${actionSystemPrompt(chatActionsEnabled ? persona.capabilities : CHAT_ACTIONS_DISABLED_CAPABILITIES, enabledToolNames)}`,
   };
 
+  // ── Phase 3 shadow interpretation (default OFF) ───────────────────────────
+  // Reaching here means the deterministic layer could NOT resolve this turn,
+  // which is exactly the population the contextual interpreter exists to
+  // improve. The candidate plan is generated, compared and discarded: it
+  // cannot execute an action, touch memory, or change one byte of the
+  // response. `after()` starts the observation once the response lifecycle is
+  // complete, so a slow or timed-out experiment cannot add latency to the
+  // visitor. It is still lifecycle-managed by Next/Vercel rather than an
+  // unawaited promise that a serverless instance may discard.
+  const shadowInterpretationScheduled =
+    !contextualInterpretationEnabled &&
+    isShadowInterpretationEnabled(tenant.slug);
+  if (shadowInterpretationScheduled) {
+    const shadowInput = {
+      provider: chatProvider,
+      userMessage: lastUser.content,
+      context: buildInterpreterContext({
+        state: conversationState,
+        deterministicFilters: extractedInventoryFilters,
+      }),
+      deterministic: {
+        // The deterministic layer got far enough to extract filters but not
+        // far enough to answer, which is the disagreement worth measuring.
+        kind: statePresentationRequest
+          ? ("present" as const)
+          : ("search" as const),
+        filters: conversationState.activeFilters,
+        hasReference: Boolean(stateOrdinalVehicleId ?? stateSelectedVehicleId),
+      },
+    };
+    after(async () => {
+      const result = await runShadowInterpretation(shadowInput);
+      recordChatInterpretationShadow({
+        mode: "shadow",
+        requestId,
+        tenantId: tenant.tenantId,
+        provider: chatProvider.profile.provider,
+        modelId: chatProvider.profile.id,
+        schemaVersion: CHAT_INTERPRETATION_SCHEMA_VERSION,
+        outcome: result.outcome,
+        durationMs: result.durationMs,
+        usage: result.usage,
+        comparison: result.comparison,
+      });
+    });
+  }
+
   // ── Phase 1: non-streaming call with tools ────────────────────────────────
   // parseToolCalls expects the non-streamed message.tool_calls shape; if the
   // model answers in prose we re-emit its content as SSE below, so the client
   // contract is identical either way.
+  const modelStartedAtMs = Date.now();
   const phase1 = await fetch(chatProvider.apiUrl, {
     method: "POST",
     headers: {
@@ -1092,10 +1464,20 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   let phase1Message: ProviderAssistantMessage;
+  let providerUsage: {
+    inputTokens: number | null;
+    outputTokens: number | null;
+  } | null = null;
   try {
     const parsed = (await phase1.json()) as ProviderCompletion;
     const message = parsed.choices?.[0]?.message;
     if (!message) throw new Error("no choices in completion");
+    providerUsage = parsed.usage
+      ? {
+          inputTokens: parsed.usage.prompt_tokens ?? null,
+          outputTokens: parsed.usage.completion_tokens ?? null,
+        }
+      : null;
     phase1Message = normalizeProviderAssistantMessage(
       chatProvider.profile,
       message,
@@ -1114,6 +1496,89 @@ export async function POST(request: Request): Promise<Response> {
       quotaHeaders,
     );
   }
+
+  const modelCompletedAtMs = Date.now();
+  /**
+   * Both model paths report through here so their fields cannot drift.
+   *
+   * `total` is server time until the response begins streaming, not until the
+   * last token: the handler returns a ReadableStream, so full-completion
+   * duration is not observable at this point. Reporting it as total would
+   * understate latency without saying so.
+   */
+  const recordModelTurn = (input: {
+    route: "model" | "tool";
+    emitted: readonly BotAction[];
+    calls: number;
+  }): void => {
+    const interpretationUsage = activeInterpretationResult?.usage;
+    const interpretationHasUsage = Boolean(
+      interpretationUsage &&
+      (interpretationUsage.inputTokens !== null ||
+        interpretationUsage.outputTokens !== null),
+    );
+    const phaseOneHasUsage = Boolean(providerUsage);
+    const inputTokens =
+      interpretationHasUsage || phaseOneHasUsage
+        ? (interpretationUsage?.inputTokens ?? 0) +
+          (providerUsage?.inputTokens ?? 0)
+        : null;
+    const outputTokens =
+      interpretationHasUsage || phaseOneHasUsage
+        ? (interpretationUsage?.outputTokens ?? 0) +
+          (providerUsage?.outputTokens ?? 0)
+        : null;
+    const interpretationCalls = activeInterpretationResult ? 1 : 0;
+    const calls = input.calls + interpretationCalls;
+    const coversCalls =
+      (interpretationHasUsage ? 1 : 0) + (phaseOneHasUsage ? 1 : 0);
+    recordConciergeTurn({
+      surface: "public",
+      requestId,
+      tenantId: tenant.tenantId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      route: input.route,
+      clientRequestId: clientRequestId !== null,
+      ruleCodes: stateRules,
+      query: {
+        status: inventoryQueryStatus(),
+        totalCount: totalMatched ?? null,
+      },
+      actions: {
+        emitted: input.emitted.map((action) => action.type),
+        dropped: droppedActionTypes,
+      },
+      model: {
+        provider: chatProvider.profile.provider,
+        requestedModelId: botRuntimeConfig.modelId,
+        effectiveModelId: chatProvider.profile.id,
+        clamped: planClampedModelId !== botRuntimeConfig.modelId,
+        fellBack: chatProvider.fellBack,
+        calls,
+      },
+      // Counted apart from the turn's own calls: an experiment's spend must
+      // never be mistaken for the product's cost per answer.
+      // The scheduled call is counted even if it later times out or returns a
+      // malformed plan. Its detailed outcome is emitted by the after() task.
+      shadowModelCalls: shadowInterpretationScheduled ? 1 : 0,
+      // Phase 2 streams without stream_options.include_usage, so only the
+      // phase-1 block is ever present. Absent => "unknown", never 0; present
+      // on a two-call turn => "provider_partial", because reporting one call's
+      // tokens as the turn's total is an undercount of real spend.
+      usage:
+        inputTokens !== null || outputTokens !== null
+          ? { inputTokens, outputTokens, coversCalls }
+          : undefined,
+      timingsMs: {
+        state: stateResolvedAtMs - turnStartedAtMs,
+        context: contextLoadedAtMs - stateResolvedAtMs,
+        model: modelCompletedAtMs - modelStartedAtMs,
+        total: Date.now() - turnStartedAtMs,
+      },
+      memoryDegraded: isConversationMemoryDegraded(),
+    });
+  };
 
   // ── No tools requested: re-emit the prose as SSE ──────────────────────────
   if (phase1Message.toolCalls.length === 0) {
@@ -1158,6 +1623,21 @@ export async function POST(request: Request): Promise<Response> {
       source: "model",
       actions: actionDebugSummary(actions),
     });
+    queueInternalConciergeTrace({
+      client: supabase,
+      tenantId: tenant.tenantId,
+      requestId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      source: "model",
+      userMessage: lastUser.content,
+      assistantResponse: visibleContent,
+      stateBefore: conversationStateBefore,
+      stateAfter: conversationState,
+      actions,
+      retrieval: { sourceCategories: assembled.sourceCategories, totalMatched: totalMatched ?? null },
+      model: { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id },
+    });
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -1183,24 +1663,19 @@ export async function POST(request: Request): Promise<Response> {
           });
         }
         if (memoryKey && visibleContent) {
-          await memoryStore
-            .append(memoryKey, {
-              messages: [
-                lastUser,
-                { role: "assistant", content: visibleContent },
-              ],
-              conversationState,
-            })
-            .catch((error: unknown) => {
-              captureError("api/chat/memory-write", error, {
-                tenantId: tenant.tenantId,
-              });
-            });
+          await persistTurnMemory({
+            messages: [
+              lastUser,
+              { role: "assistant", content: visibleContent },
+            ],
+            conversationState,
+          });
         }
         controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
         controller.close();
       },
     });
+    recordModelTurn({ route: "model", emitted: actions, calls: 1 });
     return new Response(stream, { headers: sseHeaders });
   }
 
@@ -1461,23 +1936,17 @@ export async function POST(request: Request): Promise<Response> {
           });
         }
         if (streamCompletionObserved && memoryKey && assistantContent.trim()) {
-          await memoryStore
-            .append(memoryKey, {
-              messages: [
-                lastUser,
-                { role: "assistant", content: assistantContent },
-              ],
-              conversationState,
-              toolResults: turn.steps.map((step) => ({
-                name: step.call.name,
-                result: step.result,
-              })),
-            })
-            .catch((error: unknown) => {
-              captureError("api/chat/memory-write", error, {
-                tenantId: tenant.tenantId,
-              });
-            });
+          await persistTurnMemory({
+            messages: [
+              lastUser,
+              { role: "assistant", content: assistantContent },
+            ],
+            conversationState,
+            toolResults: turn.steps.map((step) => ({
+              name: step.call.name,
+              result: step.result,
+            })),
+          });
         }
         if (streamCompletionObserved) {
           captureConciergeTranscript({
@@ -1493,7 +1962,30 @@ export async function POST(request: Request): Promise<Response> {
               result: step.result,
             })),
           });
+          queueInternalConciergeTrace({
+            client: supabase,
+            tenantId: tenant.tenantId,
+            requestId,
+            conversationId: transcriptSessionId,
+            turn: conversationState.turn,
+            source: "tool",
+            userMessage: lastUser.content,
+            assistantResponse: assistantContent,
+            stateBefore: conversationStateBefore,
+            stateAfter: conversationState,
+            actions: emittedActions,
+            toolSummary: turn.steps.map((step) => ({
+              name: step.call.name,
+              result: step.result,
+            })),
+            retrieval: { totalMatched: totalMatched ?? null },
+            model: { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id },
+          });
         }
+        // Emitted here rather than beside the return: emittedActions is
+        // built inside the stream, and a turn's action list is only final
+        // once the follow-up stream has finished.
+        recordModelTurn({ route: "tool", emitted: emittedActions, calls: 2 });
         reader.releaseLock();
         controller.close();
       }
@@ -1501,6 +1993,43 @@ export async function POST(request: Request): Promise<Response> {
   });
 
   return new Response(stream, { headers: sseHeaders });
+}
+
+function queueInternalConciergeTrace(input: {
+  client: ServerSupabaseClient;
+  tenantId: string;
+  requestId: string;
+  conversationId: string;
+  turn: number;
+  source: ConciergeTraceSource;
+  userMessage: string;
+  assistantResponse: string;
+  stateBefore: ConversationInventoryState;
+  stateAfter: ConversationInventoryState;
+  actions: readonly BotAction[];
+  toolSummary?: readonly unknown[];
+  retrieval?: Record<string, unknown>;
+  model?: Record<string, unknown>;
+}): void {
+  // `after` keeps the database write off the visitor's response path. The
+  // helper checks all explicit internal-test gates again before it writes.
+  after(async () => {
+    await writeInternalConciergeTrace(input.client, {
+      tenantId: input.tenantId,
+      requestId: input.requestId,
+      conversationId: input.conversationId,
+      turn: input.turn,
+      source: input.source,
+      userMessage: input.userMessage,
+      assistantResponse: input.assistantResponse,
+      stateBefore: input.stateBefore as unknown as Record<string, unknown>,
+      stateAfter: input.stateAfter as unknown as Record<string, unknown>,
+      actions: input.actions,
+      toolSummary: input.toolSummary,
+      retrieval: input.retrieval,
+      model: input.model,
+    });
+  });
 }
 
 function vehicleFilterVocabulary(value: unknown): {
@@ -1519,6 +2048,39 @@ function vehicleFilterVocabulary(value: unknown): {
   };
 }
 
+async function loadPublishedKnowledgeContext(
+  client: ReturnType<typeof createServiceClient>,
+  tenantId: Parameters<typeof retrieveHybridContext>[0]["tenantId"],
+  query: string,
+): Promise<RetrievedChunk[]> {
+  try {
+    return await retrieveHybridContext({
+      client,
+      tenantId,
+      query,
+      embed: process.env.OLLAMA_HOST ? createOllamaEmbedder() : null,
+      topK: 7,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    // Code-first deployments must remain available until migration 087 is
+    // applied. Do not turn arbitrary DB failures into a whole-corpus read.
+    if (
+      !/hybrid_rag_chunks_for_tenant|schema cache|could not find/i.test(message)
+    ) {
+      throw error;
+    }
+    const legacy = await client
+      .from("rag_chunks")
+      .select("text, category")
+      .eq("tenant_id", tenantId);
+    if (legacy.error) {
+      throw new Error(`rag_chunks query failed: ${legacy.error.message}`);
+    }
+    return retrieveByKeywords(legacy.data ?? [], query, 7);
+  }
+}
+
 function previousAssistantContentForLastUser(
   messages: readonly MemoryMessage[],
 ): string | null {
@@ -1530,320 +2092,30 @@ function previousAssistantContentForLastUser(
   return null;
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Accept a client turn id only in the exact opaque shape we expect.
+ *
+ * Anything else is ignored rather than rejected: a malformed id is a client
+ * bug, not an attack surface, and failing the whole turn over it would be
+ * worse than falling back to a server id.
+ */
+function normalizeClientRequestId(value: unknown): string | null {
+  return typeof value === "string" && UUID_PATTERN.test(value.trim())
+    ? value.trim().toLowerCase()
+    : null;
+}
+
 function resolveAnonymousConversationId(
   requested: string | undefined,
   startNewSession: boolean,
 ): string {
-  if (
-    !startNewSession &&
-    requested &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      requested,
-    )
-  ) {
+  if (!startNewSession && requested && UUID_PATTERN.test(requested)) {
     return requested;
   }
   return crypto.randomUUID();
-}
-
-/** Answer direct availability questions from the verified inventory match set. */
-function availabilityAnswerFromGroundedInventory(
-  userText: string,
-  filters: ReturnType<typeof extractVehicleFilters>,
-  vehicles: readonly Vehicle[],
-  totalMatched: number,
-): string | null {
-  const isAvailabilityQuestion =
-    /\b(?:do you have|you have|have any|are there|is there|any)\b/i.test(
-      userText,
-    );
-  if (!isAvailabilityQuestion || (!filters.make && !filters.model)) return null;
-
-  const requested =
-    [filters.year, filters.make, filters.model]
-      .filter((value): value is string | number => value !== undefined)
-      .join(" ") || "matching vehicles";
-
-  if (totalMatched === 0)
-    return `No — there are no ${requested} vehicles in inventory right now.`;
-
-  const count = `${totalMatched} matching ${requested} vehicle${totalMatched === 1 ? "" : "s"}`;
-  const examples = vehicles.slice(0, 3).map((vehicle) => {
-    const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
-      .filter(Boolean)
-      .join(" ");
-    return `${label} — Est. $${vehicle.price.toLocaleString()}.`;
-  });
-  return `Yes — ${count} ${totalMatched === 1 ? "is" : "are"} available.${examples.length ? ` ${examples.join(" ")}` : ""}`;
-}
-
-function isDirectInventoryPresentationRequest(
-  userText: string,
-  filters: ReturnType<typeof extractVehicleFilters>,
-): boolean {
-  if (Object.keys(filters).length === 0) return false;
-  // Make/model availability has its own deterministic phrasing above. Broad
-  // constrained availability ("do you have cars under 20k?") still belongs
-  // on this deterministic result/action path; otherwise UI synchronization
-  // is again left to optional model tool behavior.
-  if (
-    /\b(?:do you have|you have|have any|are there|is there)\b/i.test(
-      userText,
-    ) &&
-    (filters.make || filters.model)
-  )
-    return false;
-  return /\b(?:show|find|browse|list|inventory|under|over|between|budget|looking|need|want|cars?|vehicles?|cheapest|least\s+expensive|most\s+expensive|lowest|highest)\b/i.test(
-    userText,
-  );
-}
-
-function inventoryResultAnswer(
-  vehicles: readonly Vehicle[],
-  totalMatched: number,
-): string {
-  const examples = vehicles.slice(0, 3).map((vehicle, index) => {
-    const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
-      .filter(Boolean)
-      .join(" ");
-    return `${index + 1}. ${label} — Est. $${vehicle.price.toLocaleString()}`;
-  });
-  return `${totalMatched.toLocaleString()} matching vehicle${totalMatched === 1 ? "" : "s"} found.${examples.length ? ` ${examples.join(" · ")}.` : ""}`;
-}
-
-/** Recommendation language must not make the model invent market or condition claims. */
-function isInventoryRecommendationRequest(userText: string): boolean {
-  return /\b(?:recommend(?:ation)?|suggest(?:ion)?|help\s+me\s+choose|which\s+(?:one|vehicle|car)\s+(?:should|would)|best\s+(?:one|vehicle|car|bmw|toyota|suv|sedan))\b/i.test(
-    userText,
-  );
-}
-
-function inventoryRecommendationAnswer(
-  vehicles: readonly Vehicle[],
-  totalMatched: number,
-): string {
-  const examples = vehicles.slice(0, 3).map((vehicle, index) => {
-    const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
-      .filter(Boolean)
-      .join(" ");
-    const details = [
-      `Est. $${vehicle.price.toLocaleString()}`,
-      vehicle.mileage === null
-        ? null
-        : `${vehicle.mileage.toLocaleString()} mi`,
-      vehicle.bodyStyle || null,
-      vehicle.drivetrain || null,
-    ].filter((value): value is string => Boolean(value));
-    return `${index + 1}. ${label} — ${details.join(" · ")}`;
-  });
-  return `${totalMatched} verified matching vehicle${totalMatched === 1 ? "" : "s"} are available. ${examples.join(" · ")}. Tell me your budget, preferred body style, or mileage target and I’ll narrow the list.`;
-}
-
-/** A non-navigational ordinal follow-up is answered from the stored result, never a fresh query. */
-function ordinalVehicleReferenceAnswer(
-  userText: string,
-  vehicle: Vehicle,
-): string {
-  const ordinal =
-    /\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|last|\d{1,2}(?:st|nd|rd|th))\s+(?:one|vehicle|car|listing)\b/i
-      .exec(userText)?.[1]
-      ?.toLowerCase() ?? "selected";
-  const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
-    .filter(Boolean)
-    .join(" ");
-  const details = [
-    vehicle.mileage !== null ? `${vehicle.mileage.toLocaleString()} mi` : null,
-    vehicle.drivetrain || null,
-    vehicle.sellerCity && vehicle.sellerState
-      ? `${vehicle.sellerCity}, ${vehicle.sellerState}`
-      : null,
-  ].filter((value): value is string => Boolean(value));
-  return `The ${ordinal} result is ${label} — Est. $${vehicle.price.toLocaleString()}${details.length ? ` · ${details.join(" · ")}` : ""}.`;
-}
-
-const ORDINAL_POSITION_WORDS = [
-  "First",
-  "Second",
-  "Third",
-  "Fourth",
-  "Fifth",
-  "Sixth",
-  "Seventh",
-  "Eighth",
-  "Ninth",
-  "Tenth",
-] as const;
-
-function ordinalPositionLabel(index: number): string {
-  return ORDINAL_POSITION_WORDS[index] ?? `#${index + 1}`;
-}
-
-/** Deterministic comparison of result-set positions — real fields only. */
-function compareVehiclesAnswer(indexes: number[], vehicles: Vehicle[]): string {
-  const lines = vehicles.map((vehicle, position) => {
-    const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
-      .filter(Boolean)
-      .join(" ");
-    const mileage =
-      vehicle.mileage === null
-        ? "mileage not listed"
-        : `${vehicle.mileage.toLocaleString()} mi`;
-    return `${ordinalPositionLabel(indexes[position]!)}: ${label} — Est. $${vehicle.price.toLocaleString()} · ${mileage} · ${vehicle.drivetrain || "drivetrain not listed"}`;
-  });
-  const byPrice = [...vehicles].sort((a, b) => a.price - b.price);
-  const cheapest = byPrice[0]!;
-  const priciest = byPrice[byPrice.length - 1]!;
-  const cheapestLabel = [
-    cheapest.year,
-    cheapest.make,
-    cheapest.model,
-    cheapest.trim,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  const verdict =
-    priciest.price > cheapest.price
-      ? `\nThe ${cheapestLabel} is the lower-priced by $${(priciest.price - cheapest.price).toLocaleString()}.`
-      : "";
-  return `Here’s the comparison:\n${lines.map((line) => `• ${line}`).join("\n")}${verdict}`;
-}
-
-function selectedVehicleDetailAnswer(
-  userText: string,
-  vehicle: Vehicle,
-): string {
-  const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
-    .filter(Boolean)
-    .join(" ");
-  const requestedDrivetrain = /\b(?:awd|fwd|rwd)\b/i
-    .exec(userText)?.[0]
-    ?.toUpperCase();
-  if (requestedDrivetrain) {
-    const listed = vehicle.drivetrain || "not listed";
-    return listed.toUpperCase() === requestedDrivetrain
-      ? `Yes — ${label} is listed as ${listed}.`
-      : `No — ${label} is listed as ${listed}.`;
-  }
-  if (/\bhow\s+many\s+(?:miles|mileage)\b/i.test(userText)) {
-    return vehicle.mileage === null
-      ? `${label} does not have mileage listed in the current inventory data.`
-      : `${label} is listed with ${vehicle.mileage.toLocaleString()} miles.`;
-  }
-  const details = [
-    `Est. $${vehicle.price.toLocaleString()}`,
-    vehicle.mileage === null ? null : `${vehicle.mileage.toLocaleString()} mi`,
-    vehicle.drivetrain || null,
-    vehicle.fuelType || null,
-    vehicle.sellerCity && vehicle.sellerState
-      ? `${vehicle.sellerCity}, ${vehicle.sellerState}`
-      : null,
-  ].filter((value): value is string => Boolean(value));
-  return `${label} — ${details.join(" · ")}.`;
-}
-
-function unsupportedVehicleFactAnswer(
-  userText: string,
-  vehicle: Vehicle | null,
-): string {
-  const rawTopic =
-    /\b(?:reliab(?:le|ility)|accident|carfax|history|condition|maintenance|service\s+records?|heated\s+seats?|ventilated\s+seats?|options?|features?)\b/i
-      .exec(userText)?.[0]
-      ?.toLowerCase();
-  const topic = rawTopic?.startsWith("reliab")
-    ? "reliability"
-    : (rawTopic ?? "that detail");
-  const label = vehicle
-    ? [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
-        .filter(Boolean)
-        .join(" ")
-    : null;
-  return `I don’t have verified ${topic} information${label ? ` for ${label}` : " in the current inventory data"}, so I won’t guess. I can help with the listed price, mileage, drivetrain, fuel type, and location—or you can contact the seller to confirm it.`;
-}
-
-function inventoryFilterAction(
-  filters: ReturnType<typeof extractVehicleFilters>,
-): BotAction {
-  return {
-    type: "filter_inventory",
-    ...(filters.make ? { make: filters.make } : {}),
-    ...(filters.model ? { model: filters.model } : {}),
-    ...(filters.bodyStyle ? { bodyStyle: filters.bodyStyle } : {}),
-    ...(filters.stockType ? { stockType: filters.stockType } : {}),
-    ...(filters.fuelType ? { fuelType: filters.fuelType } : {}),
-    ...(filters.drivetrain ? { drivetrain: filters.drivetrain } : {}),
-    ...(filters.sellerState ? { sellerState: filters.sellerState } : {}),
-    ...(filters.sellerCity ? { sellerCity: filters.sellerCity } : {}),
-    ...(filters.year !== undefined
-      ? { yearMin: filters.year, yearMax: filters.year }
-      : {}),
-    ...(filters.year === undefined && filters.yearMin !== undefined
-      ? { yearMin: filters.yearMin }
-      : {}),
-    ...(filters.year === undefined && filters.yearMax !== undefined
-      ? { yearMax: filters.yearMax }
-      : {}),
-    ...(filters.mileageMax !== undefined
-      ? { mileageMax: filters.mileageMax }
-      : {}),
-    ...(filters.priceMin !== undefined ? { priceMin: filters.priceMin } : {}),
-    ...(filters.priceMax !== undefined ? { priceMax: filters.priceMax } : {}),
-    ...(filters.sort ? { sort: filters.sort } : {}),
-  };
-}
-
-/** Keep a refinement honest without silently widening to all inventory. */
-function zeroResultAnswer(
-  filters: ReturnType<typeof extractVehicleFilters>,
-): string {
-  // Every active facet must appear, so a refinement that eliminated the last
-  // match is named. Omitting e.g. drivetrain made "no BMW SUV under $70k" read
-  // as if none exist, when one does and is only excluded by the AWD filter.
-  const yearLabel =
-    filters.year !== undefined
-      ? String(filters.year)
-      : filters.yearMin !== undefined && filters.yearMax !== undefined
-        ? `${filters.yearMin}–${filters.yearMax}`
-        : filters.yearMin !== undefined
-          ? `${filters.yearMin} or newer`
-          : filters.yearMax !== undefined
-            ? `${filters.yearMax} or older`
-            : undefined;
-  const mileageLabel =
-    filters.mileageMax !== undefined
-      ? `under ${filters.mileageMax.toLocaleString()} miles`
-      : undefined;
-  const location = [filters.sellerCity, filters.sellerState]
-    .filter(Boolean)
-    .join(", ");
-  const locationLabel = location ? `in ${location}` : undefined;
-  const constraints = [
-    yearLabel,
-    filters.stockType,
-    filters.drivetrain,
-    filters.fuelType,
-    filters.make,
-    filters.model,
-    filters.bodyStyle,
-    mileageLabel,
-    priceConstraintLabel(filters),
-    locationLabel,
-  ].filter((value): value is string => Boolean(value));
-  const description =
-    constraints.length > 0 ? constraints.join(" ") : "that refinement";
-  return `Nothing matches ${description} right now. I’ve kept your previous results in place rather than widening the search—would you like to relax a constraint?`;
-}
-
-function priceConstraintLabel(
-  filters: ReturnType<typeof extractVehicleFilters>,
-): string | undefined {
-  if (filters.priceMin !== undefined && filters.priceMax !== undefined) {
-    return `between $${filters.priceMin.toLocaleString()} and $${filters.priceMax.toLocaleString()}`;
-  }
-  if (filters.priceMax !== undefined)
-    return `under $${filters.priceMax.toLocaleString()}`;
-  if (filters.priceMin !== undefined)
-    return `over $${filters.priceMin.toLocaleString()}`;
-  return undefined;
 }
 
 function actionDebugSummary(
@@ -1892,6 +2164,42 @@ function sseEvent(payload: unknown): string {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
+/**
+ * The answer to a duplicate delivery of a turn already in flight.
+ *
+ * A 200 with an explicit `duplicate` event rather than an error status: this
+ * is an expected outcome of a retry, not a failure, and surfacing it as 409 or
+ * 429 would have every existing client render "chat failed" for something the
+ * visitor is already being answered. It carries no assistant text and no
+ * actions, so a client that ignores the event simply sees an empty turn rather
+ * than a second copy of the reply.
+ *
+ * It says nothing about who holds the lease — only that this delivery is a
+ * duplicate of itself, which the caller already knows.
+ */
+function duplicateTurnResponse(
+  request: Request,
+  quotaHeaders: Record<string, string>,
+): Response {
+  const stream = new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder();
+      controller.enqueue(encoder.encode(sseEvent({ type: "duplicate" })));
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    headers: new Headers({
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      ...quotaHeaders,
+      ...corsHeadersFor(request),
+    }),
+  });
+}
+
 type ProviderMessage = {
   content?: string | null;
   reasoning_content?: string | null;
@@ -1900,4 +2208,13 @@ type ProviderMessage = {
 
 type ProviderCompletion = {
   choices?: Array<{ message?: ProviderMessage }>;
+  /**
+   * OpenAI-compatible usage block. Absent on some providers and on the
+   * streamed phase-2 call (which would need stream_options.include_usage),
+   * in which case telemetry reports "unknown" rather than zero.
+   */
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
 };

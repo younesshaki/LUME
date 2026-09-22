@@ -17,8 +17,8 @@
  *   SEED_TENANT_NAME="LUME"
  *
  * Idempotent: re-running with the same slug upserts the tenant, refreshes
- * the membership, replaces vehicles, and re-imports RAG chunks (deleted +
- * re-inserted, since embeddings are tied to the file).
+ * the membership, replaces vehicles, and updates only its own content-addressed
+ * seed knowledge. Editor-authored knowledge is never removed.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -64,11 +64,7 @@ async function main() {
 
   // ─── 1. Upsert tenant ─────────────────────────────────────────────────────
   console.log(`→ Upserting tenant slug="${slug}" name="${name}"`);
-  const { data: tenant, error: tenantErr } = await supabase
-    .from("tenants")
-    .upsert({ slug, name, status: "active" }, { onConflict: "slug" })
-    .select("id, slug, name")
-    .single();
+  const { data: tenant, error: tenantErr } = await supabase.from("tenants").upsert({ slug, name, status: "active" }, { onConflict: "slug" }).select("id, slug, name").single();
   if (tenantErr || !tenant) throw new Error(tenantErr?.message ?? "tenant upsert failed");
   console.log(`  ✓ tenant id=${tenant.id}`);
 
@@ -84,26 +80,20 @@ async function main() {
         perPage: 200,
       });
       if (error) throw new Error(error.message);
-      const match = data.users.find(
-        (u) => u.email?.toLowerCase() === ownerEmail.toLowerCase()
-      );
+      const match = data.users.find((u) => u.email?.toLowerCase() === ownerEmail.toLowerCase());
       if (match) userId = match.id;
       if (!data.users.length || data.users.length < 200) break;
       page++;
     }
     if (!userId) {
-      console.error(
-        `✖ No auth user with email ${ownerEmail}. Create the user first in Supabase Studio, then re-run.`
-      );
+      console.error(`✖ No auth user with email ${ownerEmail}. Create the user first in Supabase Studio, then re-run.`);
       process.exit(1);
     }
   }
   console.log(`  ✓ owner user id=${userId}`);
 
   // ─── 3. Owner membership ──────────────────────────────────────────────────
-  const { error: memberErr } = await supabase
-    .from("tenant_members")
-    .upsert({ tenant_id: tenant.id, user_id: userId!, role: "owner" });
+  const { error: memberErr } = await supabase.from("tenant_members").upsert({ tenant_id: tenant.id, user_id: userId!, role: "owner" });
   if (memberErr) throw new Error(memberErr.message);
   console.log("  ✓ tenant_members upserted (role=owner)");
 
@@ -116,11 +106,7 @@ async function main() {
   console.log("\n✓ Done.");
 }
 
-async function seedVehicles(
-  supabase: SeedSupabaseClient,
-  tenantId: string,
-  r2Base: string
-) {
+async function seedVehicles(supabase: SeedSupabaseClient, tenantId: string, r2Base: string) {
   console.log(`\n→ Fetching vehicles CSV from R2`);
   const csvUrl = `${r2Base.replace(/\/$/, "")}/${CSV_KEY}`;
   const res = await fetch(csvUrl);
@@ -131,10 +117,7 @@ async function seedVehicles(
 
   // Wipe existing rows for this tenant so re-runs stay clean.
   console.log("→ Clearing existing vehicles for tenant");
-  const { error: delErr } = await supabase
-    .from("vehicles")
-    .delete()
-    .eq("tenant_id", tenantId);
+  const { error: delErr } = await supabase.from("vehicles").delete().eq("tenant_id", tenantId);
   if (delErr) throw new Error(delErr.message);
 
   const inserts = rows
@@ -146,12 +129,12 @@ async function seedVehicles(
       year: parseInt(r.year) || 0,
       make: r.make,
       model: r.model,
-      trim: r.trim !== "[PREMIUM]" ? r.trim ?? "" : "",
+      trim: r.trim !== "[PREMIUM]" ? (r.trim ?? "") : "",
       price: generatePrice(r.make, parseInt(r.year) || 2020, parseMileage(r), r._primaryKey),
       mileage: parseMileage(r),
       body_style: r.bodyStyle ?? "",
-      exterior_color: r.exteriorColor !== "[PREMIUM]" ? r.exteriorColor ?? "" : "",
-      interior_color: r.interiorColor !== "[PREMIUM]" ? r.interiorColor ?? "" : "",
+      exterior_color: r.exteriorColor !== "[PREMIUM]" ? (r.exteriorColor ?? "") : "",
+      interior_color: r.interiorColor !== "[PREMIUM]" ? (r.interiorColor ?? "") : "",
       drivetrain: r.drivetrain ? normalizeDrivetrain(r.drivetrain) : "",
       fuel_type: r.fuelType ? normalizeFuelType(r.fuelType) : "",
       image_src: "",
@@ -171,14 +154,8 @@ async function seedVehicles(
   console.log("");
 }
 
-async function seedRagChunks(
-  supabase: SeedSupabaseClient,
-  tenantId: string
-) {
-  const embeddingsPath = resolve(
-    process.cwd(),
-    "src/lib/knowledge/embeddings.json"
-  );
+async function seedRagChunks(supabase: SeedSupabaseClient, tenantId: string) {
+  const embeddingsPath = resolve(process.cwd(), "src/lib/knowledge/embeddings.json");
   console.log(`\n→ Reading ${embeddingsPath}`);
   let raw: string;
   try {
@@ -190,10 +167,8 @@ async function seedRagChunks(
   const chunks: EmbeddedChunk[] = JSON.parse(raw);
   console.log(`  ✓ ${chunks.length} chunks (dim=${chunks[0]?.embedding.length ?? "?"})`);
 
-  // Clear and reseed.
-  console.log("→ Clearing existing rag_chunks + rag_documents for tenant");
-  await supabase.from("rag_chunks").delete().eq("tenant_id", tenantId);
-  await supabase.from("rag_documents").delete().eq("tenant_id", tenantId);
+  // Seed rows are content-addressed and updated in place. Never clear a
+  // tenant's knowledge corpus: it may contain editor-authored documents.
 
   // Group chunks by category → one document per category.
   const byCategory = new Map<string, EmbeddedChunk[]>();
@@ -205,30 +180,46 @@ async function seedRagChunks(
   }
 
   for (const [category, items] of byCategory) {
-    const { data: doc, error: docErr } = await supabase
-      .from("rag_documents")
-      .insert({
-        tenant_id: tenantId,
-        title: `Seed: ${category}`,
-        category,
-        source: "seed:embeddings.json",
-      })
-      .select("id")
-      .single();
+    const source = `seed:embeddings.json:${category}`;
+    const documentPayload = {
+      tenant_id: tenantId,
+      title: `Seed: ${category}`,
+      category,
+      source,
+      content: items.map((item) => item.text).join("\n\n"),
+      status: "published",
+      visibility: "public",
+      revision: 1,
+      published_revision: 1,
+      embedding_status: "indexed",
+      embedding_model: "nomic-embed-text",
+      published_at: new Date().toISOString(),
+      indexed_at: new Date().toISOString(),
+    };
+    const { data: existing, error: existingError } = await supabase.from("rag_documents").select("id").eq("tenant_id", tenantId).eq("source", source).maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+    const documentQuery = existing ? supabase.from("rag_documents").update(documentPayload).eq("id", existing.id) : supabase.from("rag_documents").insert(documentPayload);
+    const { data: doc, error: docErr } = await documentQuery.select("id").single();
     if (docErr || !doc) throw new Error(docErr?.message ?? "doc insert failed");
 
-    const inserts = items.map((c) => ({
+    const inserts = items.map((c, chunkIndex) => ({
       tenant_id: tenantId,
       document_id: doc.id,
       external_id: c.id,
       text: c.text,
       category,
       embedding: c.embedding,
+      revision: 1,
+      chunk_index: chunkIndex,
+      content_hash: c.id,
+      embedding_model: "nomic-embed-text",
     }));
 
     for (let i = 0; i < inserts.length; i += 100) {
       const batch = inserts.slice(i, i + 100);
-      const { error } = await supabase.from("rag_chunks").insert(batch);
+      const { error } = await supabase.from("rag_chunks").upsert(batch, {
+        onConflict: "document_id,external_id",
+      });
       if (error) throw new Error(`rag_chunks insert failed: ${error.message}`);
     }
     console.log(`  ✓ ${category}: ${items.length} chunks`);
@@ -269,7 +260,9 @@ function parseCSV(text: string): Record<string, string>[] {
     if (!line) continue;
     const values = parseCSVLine(line);
     const row: Record<string, string> = {};
-    headers.forEach((h, idx) => { row[h] = values[idx] ?? ""; });
+    headers.forEach((h, idx) => {
+      row[h] = values[idx] ?? "";
+    });
     rows.push(row);
   }
   return rows;
@@ -302,9 +295,21 @@ function normalizeFuelType(raw: string): string {
 }
 
 const PRICE_TIERS: { makes: string[]; min: number; max: number }[] = [
-  { makes: ["Ferrari", "Lamborghini", "Rolls-Royce", "Maserati"], min: 180000, max: 650000 },
-  { makes: ["Porsche", "Mercedes-Benz", "BMW", "Audi", "Lexus", "Land Rover", "Jaguar", "Genesis", "Cadillac", "Lincoln"], min: 55000, max: 185000 },
-  { makes: ["Tesla", "Polestar", "Acura", "INFINITI", "Volvo", "Buick"], min: 32000, max: 85000 },
+  {
+    makes: ["Ferrari", "Lamborghini", "Rolls-Royce", "Maserati"],
+    min: 180000,
+    max: 650000,
+  },
+  {
+    makes: ["Porsche", "Mercedes-Benz", "BMW", "Audi", "Lexus", "Land Rover", "Jaguar", "Genesis", "Cadillac", "Lincoln"],
+    min: 55000,
+    max: 185000,
+  },
+  {
+    makes: ["Tesla", "Polestar", "Acura", "INFINITI", "Volvo", "Buick"],
+    min: 32000,
+    max: 85000,
+  },
 ];
 const PRICE_DEFAULT = { min: 18000, max: 58000 };
 

@@ -1,0 +1,7 @@
+[
+  { "id": "brand-voice", "query": "What tone should LUME use in its copy?", "expectedContains": "premium, not playful" },
+  { "id": "access-booking", "query": "Can the public book a stay?", "expectedContains": "no booking system" },
+  { "id": "location", "query": "Where is LUME located?", "expectedContains": "Monaco" },
+  { "id": "red-bull", "query": "Which product collaboration is live?", "expectedContains": "Red Bull" },
+  { "id": "showcase", "query": "How does the cinematic product experience work?", "expectedContains": "full-screen product experience" }
+]
