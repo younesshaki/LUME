@@ -24,12 +24,16 @@ describe("LUME PostHog browser telemetry", () => {
     expect(capture).not.toHaveBeenCalled();
   });
 
-  it("initializes with autocapture and replay enabled, while masking replay text", async () => {
+  it("initializes with autocapture and unmasked replay, then records the full training transcript", async () => {
     vi.stubEnv("VITE_POSTHOG_ENABLED", "1");
     vi.stubEnv("VITE_POSTHOG_PROJECT_TOKEN", "phc_test");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://posthog.test");
     vi.stubEnv("VITE_POSTHOG_SESSION_REPLAY", "1");
-    const { captureLumeEvent, initializeLumePostHog } = await import("./posthog");
+    const {
+      captureLumeConciergeTranscript,
+      captureLumeEvent,
+      initializeLumePostHog,
+    } = await import("./posthog");
 
     initializeLumePostHog();
     captureLumeEvent("lume_concierge_turn_completed", {
@@ -46,14 +50,37 @@ describe("LUME PostHog browser telemetry", () => {
         capture_pageleave: true,
         disable_session_recording: false,
         session_recording: expect.objectContaining({
-          maskAllInputs: true,
-          maskTextSelector: "*",
+          maskAllInputs: false,
         }),
       }),
     );
     expect(capture).toHaveBeenCalledWith("lume_concierge_turn_completed", {
       duration_ms: 42,
       response_started: true,
+    });
+    captureLumeConciergeTranscript({
+      turnId: "turn-1",
+      conversationId: "conversation-1",
+      userMessage: "show me BMWs",
+      assistantResponse: "Here are BMWs.",
+      history: [
+        { role: "user", content: "show me BMWs" },
+        { role: "assistant", content: "Here are BMWs." },
+      ],
+      sourceCategories: ["vehicles"],
+      actionTypes: ["filter_inventory"],
+    });
+    expect(capture).toHaveBeenLastCalledWith("lume_concierge_transcript", {
+      turn_id: "turn-1",
+      conversation_id: "conversation-1",
+      user_message: "show me BMWs",
+      assistant_response: "Here are BMWs.",
+      conversation_history_json: JSON.stringify([
+        { role: "user", content: "show me BMWs" },
+        { role: "assistant", content: "Here are BMWs." },
+      ]),
+      source_categories_json: JSON.stringify(["vehicles"]),
+      action_types_json: JSON.stringify(["filter_inventory"]),
     });
   });
 });

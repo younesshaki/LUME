@@ -2,38 +2,28 @@
 
 ## Purpose
 
-LUME uses two deliberately separate data paths for concierge improvement:
+LUME uses two complementary data paths for concierge improvement:
 
-1. **PostHog** records small operational and UX events: chat opened, a turn
-   starts/completes/fails, a response rating, and whether a vetted action was
-   dispatched or suppressed as stale.
+1. **PostHog** records browser replay, autocapture, operational events and the
+   full user/assistant conversation window for model training.
 2. **`public.concierge_traces`** is LUME-owned, tenant-scoped storage for the
    exact visitor message and final assistant answer needed to investigate an
    incorrect response and later build evaluation/training datasets.
 
-Raw prompts, raw assistant answers, tool-result payloads, lead details, email
-addresses, phone numbers and action arguments must never be sent to PostHog.
+During LUME's current internal training phase, raw prompts, raw assistant
+answers, conversation windows, action payloads, tool-result payloads, state,
+retrieval and model metadata are intentionally captured in PostHog and LUME's
+service-role-only `concierge_traces` table.
 
-## Internal full-fidelity mode
+## Full-fidelity training capture
 
-The database trace store is off by default. It writes raw conversation text
-only if **all three** configuration gates are deliberate:
-
-```text
-LUME_INTERNAL_TESTING=1
-LUME_CONCIERGE_TRACE_MODE=internal_full
-LUME_INTERNAL_TRACE_TENANT_IDS=<exact comma-separated tenant UUIDs>
-```
-
-The third gate is an exact UUID allowlist, not a tenant slug or wildcard. A
-missing, malformed or non-listed tenant fails closed. The table has RLS enabled
-with no `anon` or `authenticated` grants/policies; trusted server code writes
-with the Supabase service role only. Migration 088 creates the table but has
-not been applied by this change.
-
-For a future external tenant, leave these variables disabled. Consent and
-retention controls must be added before turning raw traces on for anyone other
-than LUME's explicit internal test tenants.
+Each finished turn creates two PostHog events: `lume_concierge_transcript` in
+the browser (which is correlated with that browser's replay) and
+`lume_concierge_training_trace` on the trusted server. Together with the
+service-role-only `concierge_traces` table, they preserve the complete
+conversation window, exact response, state before/after, emitted actions, tool
+outcomes, retrieval context and model metadata. The work is scheduled after
+the visitor response and never uses a browser Supabase client.
 
 ## PostHog configuration
 
@@ -53,10 +43,9 @@ POSTHOG_PROJECT_TOKEN=<same PostHog project API key>
 POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-LUME enables PostHog autocapture, page analytics, and session replay. Replay
-still sets `maskAllInputs: true` and
-`maskTextSelector: "*"`; it is useful for layout/click reproduction but cannot
-become a backdoor for transcript capture.
+LUME enables PostHog autocapture, page analytics, session replay and unmasked
+chat capture. Text and non-password input content is visible in replay, and
+each completed chat turn is also stored as a searchable custom PostHog event.
 
 
 ## Event taxonomy
@@ -69,6 +58,7 @@ Public browser events:
 - `lume_concierge_turn_completed`
 - `lume_concierge_turn_failed`
 - `lume_concierge_turn_aborted`
+- `lume_concierge_transcript`
 - `lume_concierge_action_dispatched`
 - `lume_concierge_action_suppressed`
 - `lume_concierge_response_rated`
@@ -79,23 +69,23 @@ Admin server events:
 - `lume_admin_concierge_turn_started`
 - `lume_admin_concierge_intent_resolved`
 
-Internal trace completion event:
+Server training events:
 
 - `lume_concierge_trace_recorded`
+- `lume_concierge_training_trace`
 
-All properties are scalar operational metadata only. `turn_id` is an opaque
-per-turn UUID for correlation, never an account, visitor or lead identifier.
+The transcript events intentionally include raw content and structured context.
+`turn_id` is an opaque per-turn UUID for correlation, never an account, visitor
+or lead identifier.
 
 ## Rollout and verification
 
-1. Apply migration 088 to the explicitly approved environment only.
+1. Migration 088 must be present in the target environment.
 2. Configure the browser variables on the public Vercel project and server
    variables on `lume-admin`; do not put a secret or model-provider key in a
    `VITE_*`/`NEXT_PUBLIC_*` variable.
-3. Initially enable internal full traces only for LUME's test tenant UUID.
-4. Send a concierge turn and verify exactly one `concierge_traces` row exists
-   for its request ID, while PostHog shows lifecycle events but no message text.
-5. Test an ordinal/navigation action and an aborted turn: PostHog should show
+3. Send a concierge turn and verify exactly one `concierge_traces` row exists
+   for its request ID and PostHog contains both transcript events with message
+   text.
+4. Test an ordinal/navigation action and an aborted turn: PostHog should show
    dispatch/suppression, and only the active turn may mutate the page.
-6. Before onboarding external dealers, keep raw trace gates off and review
-   consent, retention, access and deletion workflows.

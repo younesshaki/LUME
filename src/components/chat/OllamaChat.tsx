@@ -16,7 +16,10 @@ import {
 } from "@/lib/chatTurnSequencer";
 import { publicTenantSlug } from "@/lib/publicTenant";
 import { botActionBus } from "@/lib/botActionBus";
-import { captureLumeEvent } from "@/lib/posthog";
+import {
+  captureLumeConciergeTranscript,
+  captureLumeEvent,
+} from "@/lib/posthog";
 import { EncryptedText } from "@/components/ui/encrypted-text";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
@@ -259,6 +262,9 @@ export function OllamaChat() {
     const assistantMessageId = createMessage("assistant", "").id;
     streamingMessageIdRef.current = assistantMessageId;
     let sourceCategories: string[] = [];
+    let turnConversationId = sessionId;
+    const receivedActionTypes: string[] = [];
+    let assistantContent = "";
     let assistantInserted = false;
     let turnThinkingSteps: string[] = [];
     let duplicateTurn = false;
@@ -280,6 +286,7 @@ export function OllamaChat() {
           sourceCategories = event.sourceCategories;
           setStartNewSession(false);
           if (event.sessionId && event.sessionId !== sessionId) {
+            turnConversationId = event.sessionId;
             setSessionId(event.sessionId);
             try {
               localStorage.setItem(CHAT_SESSION_STORAGE_KEY, event.sessionId);
@@ -314,6 +321,7 @@ export function OllamaChat() {
           continue;
         }
         if (event.kind === "action") {
+          receivedActionTypes.push(event.action.type);
           // Only the current turn may touch the page. A superseded or aborted
           // stream's actions are valid answers to a question that is no longer
           // on screen, and applying one would navigate, refilter or open a
@@ -349,6 +357,7 @@ export function OllamaChat() {
           continue;
         }
         if (event.kind === "delta") {
+          assistantContent += event.text;
           if (!assistantInserted) {
             setIsRetrieving(false);
             setIsSending(true);
@@ -386,6 +395,20 @@ export function OllamaChat() {
         turn_id: turnRequestId,
         response_started: assistantInserted,
         duration_ms: Math.round(performance.now() - turnStartedAt),
+      });
+
+      const completedAssistantContent = assistantContent.trim();
+      captureLumeConciergeTranscript({
+        turnId: turnRequestId,
+        conversationId: turnConversationId,
+        userMessage: trimmedInput,
+        assistantResponse: completedAssistantContent,
+        history: [
+          ...nextApiMessages,
+          { role: "assistant", content: completedAssistantContent },
+        ],
+        sourceCategories,
+        actionTypes: receivedActionTypes,
       });
 
       setMessages((prev) =>
