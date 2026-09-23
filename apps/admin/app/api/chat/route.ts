@@ -95,6 +95,7 @@ import {
   conciergeTargetSystemPrompt,
   filterGroundedVehicleActions,
   groundLeadCaptureActions,
+  keepFirstInventoryFilterAction,
   loadConciergeTargets,
   prepareBotActionsForClient,
   vehicleIdFromPublicPagePath,
@@ -1091,23 +1092,25 @@ export async function POST(request: Request): Promise<Response> {
     });
     const sseHeaders = buildSseHeaders(sourceCategories);
     const metaEvent = buildMetaEvent(sourceCategories);
-    const actions = prepareBotActionsForClient(
-      filterGroundedVehicleActions(
-        filterConversationActions(
-          groundLeadCaptureActions(
-            filterPlanAllowedActions(
-              chatActionsEnabled,
-              deterministicActions,
-              persona.capabilities,
+    const actions = keepFirstInventoryFilterAction(
+      prepareBotActionsForClient(
+        filterGroundedVehicleActions(
+          filterConversationActions(
+            groundLeadCaptureActions(
+              filterPlanAllowedActions(
+                chatActionsEnabled,
+                deterministicActions,
+                persona.capabilities,
+              ),
+              modelMessages,
             ),
-            modelMessages,
           ),
+          conciergeTargets,
+          groundedVehicleIds,
         ),
         conciergeTargets,
-        groundedVehicleIds,
+        actionAttribution,
       ),
-      conciergeTargets,
-      actionAttribution,
     );
     const actionAcknowledgement = actionOnlyAcknowledgement(actions);
     const visibleContent = resolveDeterministicContent(deterministicAnswers, {
@@ -1601,23 +1604,25 @@ export async function POST(request: Request): Promise<Response> {
           extractInlineActions(content),
           modelMessages,
         );
-    const actions = prepareBotActionsForClient(
-      filterGroundedVehicleActions(
-        filterConversationActions(
-          groundLeadCaptureActions(
-            filterPlanAllowedActions(
-              chatActionsEnabled,
-              modelActions,
-              persona.capabilities,
+    const actions = keepFirstInventoryFilterAction(
+      prepareBotActionsForClient(
+        filterGroundedVehicleActions(
+          filterConversationActions(
+            groundLeadCaptureActions(
+              filterPlanAllowedActions(
+                chatActionsEnabled,
+                modelActions,
+                persona.capabilities,
+              ),
+              modelMessages,
             ),
-            modelMessages,
           ),
+          conciergeTargets,
+          groundedVehicleIds,
         ),
         conciergeTargets,
-        groundedVehicleIds,
+        actionAttribution,
       ),
-      conciergeTargets,
-      actionAttribution,
     );
     const visibleContent =
       filteredContent || actionOnlyAcknowledgement(actions);
@@ -1785,10 +1790,11 @@ export async function POST(request: Request): Promise<Response> {
       }
       const seenActionFingerprints = new Set<string>();
       const emittedActions: BotAction[] = [];
+      let inventoryFilterActionEmitted = false;
       const initialActions = hasDeterministicActions
         ? deterministicActions
         : filterModelNavigationActionsByUserIntent(turn.actions, modelMessages);
-      for (const action of prepareBotActionsForClient(
+      const preparedInitialActions = prepareBotActionsForClient(
         filterGroundedVehicleActions(
           filterConversationActions(
             groundLeadCaptureActions(
@@ -1806,7 +1812,11 @@ export async function POST(request: Request): Promise<Response> {
         conciergeTargets,
         actionAttribution,
         seenActionFingerprints,
-      )) {
+      );
+      for (const action of keepFirstInventoryFilterAction(preparedInitialActions)) {
+        if (action.type === "filter_inventory") {
+          inventoryFilterActionEmitted = true;
+        }
         controller.enqueue(
           encoder.encode(sseEvent({ type: "action", action })),
         );
@@ -1826,7 +1836,7 @@ export async function POST(request: Request): Promise<Response> {
 
       const emitActions = (actions: readonly BotAction[]) => {
         if (hasDeterministicActions) return;
-        for (const action of prepareBotActionsForClient(
+        const preparedActions = prepareBotActionsForClient(
           filterGroundedVehicleActions(
             filterConversationActions(
               groundLeadCaptureActions(
@@ -1847,7 +1857,14 @@ export async function POST(request: Request): Promise<Response> {
           conciergeTargets,
           actionAttribution,
           seenActionFingerprints,
+        );
+        for (const action of keepFirstInventoryFilterAction(
+          preparedActions,
+          inventoryFilterActionEmitted,
         )) {
+          if (action.type === "filter_inventory") {
+            inventoryFilterActionEmitted = true;
+          }
           controller.enqueue(
             encoder.encode(sseEvent({ type: "action", action })),
           );

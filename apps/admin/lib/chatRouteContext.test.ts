@@ -261,6 +261,25 @@ describe("public chat route: deterministic turns commit before they act", () => 
   });
 });
 
+describe("public chat route: one authoritative inventory filter per turn", () => {
+  it("does not let any response path emit a competing filter", () => {
+    // A second filter action makes the last browser event win, even if it
+    // adds a limit or sort that the verified query never used. The pure helper
+    // is covered in conciergeTargets.test.ts; this pins deterministic, prose,
+    // tool and streamed-inline paths to the same rule.
+    expect(route.split("keepFirstInventoryFilterAction(").length - 1).toBe(4);
+
+    // Tool actions are emitted before the phase-two prose stream. The stream
+    // must remember that the trusted action already set the visible filters.
+    const toolStreamStart = at("const emittedActions: BotAction[] = [];");
+    const toolStreamEnd = at("const emitActionOnlyAcknowledgement = () => {");
+    const toolStream = route.slice(toolStreamStart, toolStreamEnd);
+    expect(toolStream.split("keepFirstInventoryFilterAction(").length - 1).toBe(2);
+    expect(toolStream).toContain("let inventoryFilterActionEmitted = false");
+    expect(toolStream).toContain("inventoryFilterActionEmitted = true");
+  });
+});
+
 describe("public chat route: duplicate in-flight turns", () => {
   it("claims the turn before any expensive work", () => {
     // The whole point is to avoid paying for a second generation, so the

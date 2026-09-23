@@ -137,6 +137,32 @@ const starterScenarios = [
     ],
   },
   {
+    name: "tool follow-up cannot replace a budget filter with an unrequested top-20 sort",
+    turns: [
+      {
+        text: "what can I get for a budget between 20k and 45k",
+        expectActionFields: {
+          type: "filter_inventory",
+          priceMin: 20000,
+          priceMax: 45000,
+        },
+      },
+      {
+        // Live reproduction, 2026-09-23: the trusted tool correctly found
+        // the $12k–$24k set, then the model follow-up emitted a second action
+        // with price_asc + limit:20. The browser applies both events, so the
+        // second could contradict the full result set promised in prose.
+        text: "ok how about 12k to 24k",
+        expectActionFields: {
+          type: "filter_inventory",
+          priceMin: 12000,
+          priceMax: 24000,
+        },
+        rejectActionFields: { type: "filter_inventory", limit: 20 },
+      },
+    ],
+  },
+  {
     name: "SOFT GAP (open at handoff): unsupported-sounding market claims on free-form prose",
     turns: [
       "show me SUVs under 40k",

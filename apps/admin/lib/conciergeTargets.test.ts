@@ -5,6 +5,7 @@ import {
   conciergeTargetSystemPrompt,
   filterGroundedVehicleActions,
   groundLeadCaptureActions,
+  keepFirstInventoryFilterAction,
   prepareBotActionsForClient,
   vehicleIdFromPublicPagePath,
 } from "./conciergeTargets";
@@ -29,6 +30,34 @@ describe("concierge target prompt", () => {
 
 describe("concierge action preparation", () => {
   const targets = mergeConciergeTargets([]);
+
+  it("keeps the first inventory filter in a turn and retains other action types", () => {
+    expect(
+      keepFirstInventoryFilterAction([
+        { type: "filter_inventory", priceMin: 12_000, priceMax: 24_000 },
+        {
+          type: "filter_inventory",
+          priceMin: 12_000,
+          priceMax: 24_000,
+          sort: "price_asc",
+          limit: 20,
+        },
+        { type: "navigate-target", targetKey: "inventory" },
+      ]),
+    ).toEqual([
+      { type: "filter_inventory", priceMin: 12_000, priceMax: 24_000 },
+      { type: "navigate-target", targetKey: "inventory" },
+    ]);
+  });
+
+  it("drops a follow-up inventory filter after a trusted tool filter was sent", () => {
+    expect(
+      keepFirstInventoryFilterAction(
+        [{ type: "filter_inventory", priceMax: 24_000, limit: 20 }],
+        true,
+      ),
+    ).toEqual([]);
+  });
 
   it("resolves only enabled registry keys and overwrites untrusted descriptors", () => {
     const [action] = prepareBotActionsForClient(

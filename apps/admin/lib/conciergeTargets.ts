@@ -280,6 +280,29 @@ export function filterGroundedVehicleActions(
 }
 
 /**
+ * An inventory filter replaces the complete visible search state. Emitting two
+ * different filters in one turn makes the last SSE event win in the browser,
+ * which can contradict the trusted query and the answer the visitor just saw.
+ *
+ * Tool actions are emitted before the model's follow-up prose. Once that
+ * trusted action has been sent, a model-authored inline filter is redundant at
+ * best and may add an unrequested sort or limit. Keep the first filter for the
+ * turn and continue to allow other safe action types afterwards.
+ */
+export function keepFirstInventoryFilterAction(
+  actions: readonly BotAction[],
+  inventoryFilterAlreadyEmitted = false,
+): BotAction[] {
+  let emitted = inventoryFilterAlreadyEmitted;
+  return actions.filter((action) => {
+    if (action.type !== "filter_inventory") return true;
+    if (emitted) return false;
+    emitted = true;
+    return true;
+  });
+}
+
+/**
  * Direct lead capture is allowed only for contact details the visitor actually
  * supplied. The model may format those values, but it cannot invent a person
  * or silently attach fabricated contact fields to an operational lead.
