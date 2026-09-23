@@ -69,6 +69,7 @@ import {
 } from "@lume/rag";
 import { createOllamaEmbedder, retrieveHybridContext } from "@lume/rag/server";
 import { getTenantFromRequestCached } from "@/lib/tenant";
+import { settle, unwrapSettled } from "@/lib/settled";
 import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import {
@@ -2123,27 +2124,6 @@ async function loadPublishedKnowledgeContext(
     }
     return retrieveByKeywords(legacy.data ?? [], query, 7);
   }
-}
-
-type Settled<T> = { ok: true; value: T } | { ok: false; error: unknown };
-
-/**
- * Start a read now and hold its outcome, so it can run alongside other work
- * without an early rejection ever going unhandled. Paired with unwrapSettled
- * at the point the result is actually needed.
- */
-function settle<T>(work: PromiseLike<T>): Promise<Settled<T>> {
-  return Promise.resolve(work).then(
-    (value): Settled<T> => ({ ok: true, value }),
-    (error: unknown): Settled<T> => ({ ok: false, error }),
-  );
-}
-
-/** Resolve a settled read, re-throwing its original error where it is used. */
-async function unwrapSettled<T>(settled: Promise<Settled<T>>): Promise<T> {
-  const outcome = await settled;
-  if (outcome.ok) return outcome.value;
-  throw outcome.error;
 }
 
 function previousAssistantContentForLastUser(
