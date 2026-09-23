@@ -41,7 +41,9 @@ trip is similar. The absolute numbers are indicative. The count of serial
 round trips transfers exactly.
 
 **Browser:** `e2e/concierge/action-latency.spec.ts` runs against a production
-build (`vite build` + `vite preview`) with every backend stubbed. It times
+build (`vite build` + `vite preview`) with every backend stubbed, including
+the detail page's price-signal request. A catch-all route records any `/api`
+request no stub answers, and each test fails if one escapes. It times
 from the chat response arriving to the destination page being mounted and
 requesting its data. It runs twice: unthrottled, and on a mobile-like profile
 (`CONCIERGE_NETWORK=4g`: 100 ms latency, 9 Mbps).
@@ -68,19 +70,29 @@ Server, production-shaped (quota included), p50 / p95 in ms:
 
 | Stage | Before | After |
 |---|---|---|
-| 2. API entry → facet vocabulary ready | 431 / 485 | **95 / 102** |
-| 2. API entry → state resolved (inventory query starts) | 439 / 493 | **188 / 273** |
-| 3. Inventory query start → grounded result | 88 / 103 | 85 / 110 *(one round trip; ~1 ms is database time)* |
-| 4. API entry → first SSE byte | 526 / 591 | **275 / 385** |
-| 5. API entry → first safe action event | 526 / 591 | **276 / 385** |
-| 7. Full deterministic turn (`[DONE]`) | 526 / 591 | **276 / 385** |
-| Serial round-trip waves | 6 | **2–3** |
-| Upstream calls per turn | 8 | 7 |
-| 8. Model path: API entry → model request sent | 545 / 612 | **286 / 307** |
+| 2. API entry → facet vocabulary ready | 431 / 485 | **267 / 311** |
+| 2. API entry → state resolved (inventory query starts) | 439 / 493 | **274 / 324** |
+| 3. Inventory query start → grounded result | 88 / 103 | 89 / 98 *(one round trip; ~1 ms is database time)* |
+| 4. API entry → first SSE byte | 526 / 591 | **365 / 438** |
+| 5. API entry → first safe action event | 526 / 591 | **365 / 438** |
+| 7. Full deterministic turn (`[DONE]`) | 526 / 591 | **365 / 439** |
+| Serial round-trip waves | 6 | **4** (5 when the 30 s tenant cache refreshes) |
+| Upstream calls per turn | 8 | 7 (8 on a tenant-cache refresh) |
+| 8. Model path: API entry → model request sent | 545 / 612 | **454 / 461** |
 
 Rows 4, 5 and 7 are equal because a deterministic turn is sent as a single
-chunk. Per canonical step, the after-change p50 is 263–275 ms and p95 is
-276–385 ms. The higher p95 on the first step is one slow sample.
+chunk. Per canonical step, the after-change p50 is 360–370 ms and p95 is
+387–463 ms (19 warm journeys).
+
+**Why this is slower than the first version of this branch.** The first
+version started the tenant reads *alongside* the quota check and reached
+~270 ms p50 with 2–3 waves. Review rejected that: a caller whose quota is
+refused could still make seven database reads per request, turning rejected
+traffic into database load. The quota check (two dependent round trips) now
+runs alone, and nothing speculative starts until it approves the turn. That
+costs about 90 ms per approved turn. It is the right trade for a public
+endpoint, and §6 items 1 and 2 recover it without reopening the
+amplification.
 
 Browser (production build), action → destination mounted, in ms:
 
@@ -93,25 +105,31 @@ Stage 1 (browser submit → request begins) is 0.2–0.5 ms, before and after.
 
 **Targets.** The browser target (under 250 ms to apply an action) is now met
 with a wide margin. The server target (under 750 ms p95 for a deterministic
-turn) was already met, and the gain is about 50%. The remaining server time is
-two or three transatlantic round trips; §6 item 1 is the change that removes
-most of what's left.
+turn) was already met, and the gain is about 30% at p50 (526 → 365 ms) and
+26% at p95. The remaining server time is four transatlantic round trips; §6
+item 1 is the change that removes most of what's left.
 
 ## 4. Changes, and why each is safe
 
 **`perf(concierge): overlap independent reads on the public chat path`**
 (`apps/admin/app/api/chat/route.ts`, `apps/admin/lib/tenant.ts`)
 
-- **Tenant-only reads now start together:** the facet RPC, the tenant
-  config reads (persona, runtime config, visitor, targets, plan) and the
-  quota check. Each read is wrapped with `settle()` and re-thrown by
-  `unwrapSettled()` at the exact point the old code awaited it. So:
-  - A quota refusal still returns 429 before any read result is used.
+- **Quota first, alone.** `checkPublicApiQuota()` runs right after tenant
+  resolution, and a refusal returns its existing 429 before any other
+  database work has started. A refused caller costs the tenant lookup (often
+  cached) plus the quota check, nothing more.
+- **Then every tenant-only read starts together:** the facet RPC, the early
+  vehicle read, and the tenant config reads (persona, runtime config,
+  visitor, targets, plan). Before, these were three sequential waves; now
+  they are one. The facet and early-vehicle reads are consumed later, after
+  conversation memory, so each is wrapped with `settle()` and re-thrown by
+  `unwrapSettled()` at the exact point the old code awaited it:
   - A failed facet read still lands in the same `state-build` 500.
   - No early rejection goes unhandled.
 
-  These reads have no side effects. On a refused or duplicate turn their
-  results are thrown away, which costs one small read each.
+  The config reads are awaited directly with `Promise.all`, as before. None
+  of these reads has side effects; on a duplicate delivery their results are
+  thrown away.
 - **Early vehicle read.** When the visitor is on a vehicle page and didn't ask
   to reset scope, that vehicle's row is read in the first wave. That page
   always wins the candidate order, and the early result is reused only when
@@ -143,7 +161,8 @@ most of what's left.
 ## 5. Proof the buyer journey is unchanged
 
 Every benchmark journey asserts the canonical sequence. It passed on all 15
-journeys before the change and all 20 after:
+journeys before the change, and on all 20 journeys of each run after it
+(the first version, and the final quota-first version):
 
 1. "Do you have any Ferraris?" → `filter_inventory` with `make: "Ferrari"`
    and **no** `model`.
@@ -156,7 +175,8 @@ journeys before the change and all 20 after:
 
 Every action payload (minus the per-session attribution id), every reply text
 and every result-id list was fingerprinted before and after. The set of
-distinct outcomes for each step is **identical**. The model scenario confirmed
+distinct outcomes for each step is **identical**, including for the final
+quota-first ordering. The model scenario confirmed
 the fallback path still assembles context and reaches the provider.
 
 Gates: see the handoff report.
@@ -166,21 +186,22 @@ Gates: see the handoff report.
 1. **Move the admin (and public) functions next to the database.** This is
    the biggest remaining gain. Setting the function region to `dub1`
    (Dublin, next to eu-west-1) turns each round trip from about 80 ms into a
-   few ms. The critical path is now 2–3 round trips, so a deterministic turn
-   would drop from about 275 ms to well under 100 ms of server time. It's a
+   few ms. The critical path is now 4 round trips, so a deterministic turn
+   would drop from about 365 ms to well under 100 ms of server time. It's a
    production project setting (`regions` in `apps/admin/vercel.json`, or the
    dashboard). It also moves execution away from US visitors, but the edge
    (`cdg1`) is already in Europe for current traffic. Owner: infrastructure.
-2. **Make quota one round trip.** Quota is now the longest leg of the first
-   wave: an uncached subscription read, then the reservation RPC. There are
+2. **Make quota one round trip.** Quota is now a fully serial leg of every
+   approved turn: an uncached subscription read, then the reservation RPC,
+   before anything else may start. There are
    two options:
    - Fold the subscription lookup into the reservation RPC. This needs a
      migration.
    - Cache the operational subscription for a short time. This changes how
      fast a billing change takes effect.
 
-   Either saves about one round trip (~85 ms here). Billing semantics are out
-   of scope for this lane.
+   Either saves about one round trip (~85 ms here) on every turn, refused or
+   approved. Billing semantics are out of scope for this lane.
 3. **Stream the first model call.** Model time to first text includes a
    whole non-streamed tool-deciding call. Streaming it would change how tool
    calls are parsed. That's a provider and behaviour change, and it can't be
@@ -205,7 +226,8 @@ Gates: see the handoff report.
 ## 7. Files likely to overlap with the correctness lane
 
 - `apps/admin/app/api/chat/route.ts`:
-  - The setup block from tenant resolution through `unwrapSettled(tenantConfigRead)`.
+  - The setup block from tenant resolution through the config-read
+    `Promise.all` (quota first, then the concurrent tenant reads).
   - The `Promise.all` that awaits the selected vehicle and the facets.
   - The model-context `Promise.all` in the `assembled` try block.
 
