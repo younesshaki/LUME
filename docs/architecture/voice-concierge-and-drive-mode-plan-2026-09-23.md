@@ -1,25 +1,26 @@
-# Voice Concierge and Drive Mode — Implementation Plan
+# Voice Input and Drive Mode — Implementation Plan
 
-- **Date:** 2026-09-23
+- **Date:** 2026-09-23 (revised same day: voice **input only**)
 - **Status:** proposed; not started. Written against `origin/main` @ `2e89ece`.
-- **Scope:** voice input and output for the public concierge and the admin
-  concierge, plus **Drive mode** — the public concierge taking the wheel and
-  browsing the dealership site for the visitor.
-- **Out of scope:** new LLM providers for text, RAG changes, a 3D avatar
-  (see `docs/parked/concierge-robot.md`), native mobile.
+- **Scope:** speaking to the public concierge and the admin concierge, plus
+  **Drive mode** — the public concierge taking the wheel and browsing the
+  dealership site for the visitor.
+- **Decided out of scope:** voice **output**. The concierge answers in text, as
+  it does today. Also out: new text LLM providers, RAG changes, a 3D avatar
+  (`docs/parked/concierge-robot.md`), native mobile.
 
 ## 1. The decision in one paragraph
 
-Voice is a new **input and output channel** onto the concierge that already
-exists. It is not a new brain. The spoken sentence becomes text, the text goes
-through the same `/api/chat` pipeline that is live today (deterministic rules
-first, grounding, entitlements, turn sequencing, the duplicate-turn lease,
-telemetry), and the reply comes back as text that we also speak. "Taking the
-wheel" is a separate capability, **Drive mode**, which lets the server return a
-short, fully grounded *tour* — a sequence of steps built only from actions we
-already trust — that the browser plays back while the concierge narrates it.
+Voice is a new **way to type**. It is not a new brain. The spoken sentence
+becomes text, that text is sent as an ordinary chat message through the same
+`/api/chat` pipeline that is live today (deterministic rules first, grounding,
+entitlements, turn sequencing, the duplicate-turn lease, telemetry), and the
+reply appears as text exactly as it does now. "Taking the wheel" is a separate
+capability, **Drive mode**, which lets the server return a short, fully grounded
+*tour* — a sequence of steps built only from actions we already trust — that
+the browser plays back step by step, with an on-screen caption for each step.
 Every guarantee the concierge has today survives, because neither voice nor
-Drive mode is allowed to decide anything the text concierge could not.
+Drive mode can decide anything the text concierge could not.
 
 ## 2. What exists today (verified on `main`)
 
@@ -46,11 +47,10 @@ Drive mode is allowed to decide anything the text concierge could not.
    union but has **no consumer** in the app. `highlight-vehicle` does not
    highlight anything; it navigates to the detail page.
 3. **There is nothing to point at.** The vehicle detail page exposes one stable
-   anchor (`vehicle-inquiry-title`). A narrated tour needs named sections:
+   anchor (`vehicle-inquiry-title`). A guided tour needs named sections:
    gallery, price, key specs, features, finance, inquiry.
 4. **Actions fire all at once.** A turn's actions are dispatched as they arrive.
-   There is no sequencing, pacing, or narration sync — the core of "taking the
-   wheel".
+   There is no sequencing or pacing — the core of "taking the wheel".
 5. **No voice code exists anywhere**, and the `ai` package is not installed.
 
 ## 3. Architecture
@@ -58,57 +58,51 @@ Drive mode is allowed to decide anything the text concierge could not.
 ### 3.1 Why not a speech-to-speech "realtime agent"
 
 The Gateway lists nine realtime voice models (for example
-`openai/gpt-realtime-2.1`, `google/gemini-3.8-live`). They are impressive, and
-they are the wrong brain for LUME. A realtime agent decides for itself what to
-say and which tools to call, turn by turn, in audio. That hands the steering
-wheel to the model — exactly what the deterministic-first design exists to
-prevent. The documented failure class ("open the 3rd one" opened the 4th car)
-would come back, now with no transcript in the middle to ground against.
+`openai/gpt-realtime-2.1`, `google/gemini-3.8-live`). They decide for
+themselves what to do and which tools to call, turn by turn. That hands the
+steering wheel to the model — exactly what the deterministic-first design
+exists to prevent — and the documented failure class ("open the 3rd one"
+opened the 4th car) would come back. With input-only voice they are also
+unnecessary: we only need speech turned into text.
 
-A realtime model could be revisited later purely as a *transport* (low-latency
-audio in and out) wrapped around the existing pipeline. It must never be the
-thing choosing actions.
-
-### 3.2 The cascaded design
+### 3.2 The design
 
 ```text
-Visitor speaks
-  → browser mic (AudioWorklet, 16 kHz PCM) + voice-activity detection
+Visitor holds the mic button and speaks
+  → browser mic (AudioWorklet, 16 kHz PCM)
   → WebSocket /api/voice/stream  (auth, entitlement, quota, 30 s cap)
       → experimental_streamTranscribe via AI Gateway, with tenant keyterms
-      ← interim + final transcript
-  → final transcript shown in the chat as the visitor's message
-  → existing streamChat(messages, …, requestId)          ← unchanged pipeline
-      ← meta, text deltas, actions, and new: speech tokens, tour
-  → Drive mode executor plays the tour, step by step
-  → sentence-by-sentence speech via POST /api/voice/speech
-  → speaker
-Visitor speaks again mid-reply → audio stops, tour yields, new turn supersedes
+      ← interim transcript (shown live in the input box) + final transcript
+  → final transcript sent as the visitor's chat message
+  → existing streamChat(messages, …, requestId)        ← unchanged pipeline
+      ← meta, text deltas, actions, and new: tour
+  → reply appears as text; Drive mode executor plays any tour
+Visitor speaks again mid-turn → the new turn supersedes the old one
 ```
 
 Three properties matter:
 
-- **The transcript is a normal chat message.** Everything downstream is the
-  code that is already tested. Voice adds no new decision path.
+- **The transcript is a normal chat message.** Everything downstream is code
+  that is already tested. Voice adds no new decision path.
 - **The server mediates audio.** Provider keys stay server-side, and we can
   enforce entitlement, quota, rate limits and a maximum utterance length, and
   inject tenant vocabulary. Audio passes through and is **never stored**.
-- **Speech output is sentence-chunked.** The AI SDK's speech API returns whole
-  audio per call (no streaming as of the current docs), so first-word latency
-  depends on synthesising the first sentence alone, not the whole reply.
+- **The visitor sees what was heard before it matters.** The live transcript
+  fills the input box while they speak, so a mis-hearing is visible
+  immediately.
 
 ### 3.3 Provider path
 
 The AI SDK documents **streaming transcription through the AI Gateway**
 (`experimental_streamTranscribe`, experimental), which LUME already uses for
-text. Models the Gateway lists today (2026-09-23; re-check at spike time):
+text. Speech-to-text models the Gateway lists today (2026-09-23; re-check at
+spike time):
 
-| Use | Candidates | Price (Gateway list) | Why it's a candidate |
-|---|---|---|---|
-| Speech-to-text, streaming | `spacexai/grok-stt` | ~$0.0017/min | **Supports `keyterm` boosting**, interim results, endpointing |
-| | `openai/gpt-realtime-whisper` | ~$0.017/min | Low-delay streaming mode |
-| | `google/gemini-3.5-transcribe-live` | ~$0.009/min | Live transcription |
-| Text-to-speech | `openai/tts-1`, `fish-audio/s2.1-pro`, `spacexai/grok-tts` | ~$15 per 1M characters | Several voices; tts-1-hd at 2× |
+| Candidate | Price (Gateway list) | Why it's a candidate |
+|---|---|---|
+| `spacexai/grok-stt` | ~$0.0017/min | **Supports `keyterm` boosting**, interim results, endpointing |
+| `openai/gpt-realtime-whisper` | ~$0.017/min | Low-delay streaming mode |
+| `google/gemini-3.5-transcribe-live` | ~$0.009/min | Live transcription |
 
 **Keyterm boosting is the most important selection criterion.** The July
 2026 handoff deprioritised voice precisely because speech-to-text gets makes,
@@ -128,40 +122,34 @@ checked. Do it in the spike after `npm i -g vercel@latest`.
   support WebSockets on Fluid Compute; in Next.js this is
   `experimental_upgradeWebSocket()` from `@vercel/functions`. Verify against
   the installed version before building.
-- **Fallback:** chunked `POST` of short audio segments to a batch transcription
-  route. Slower, simpler, and a safe plan B if WebSockets misbehave.
+- **Fallback:** record the utterance in the browser and `POST` it whole to a
+  batch transcription route when the button is released. Slower (no live
+  transcript), simpler, and a safe plan B if WebSockets misbehave. With
+  push-to-talk and short utterances the latency difference is modest, so this
+  fallback is a genuinely viable first version.
 - **Not recommended:** the browser's built-in `SpeechRecognition`. Firefox
   lacks it, Safari is inconsistent, Chrome sends audio to Google outside our
   control, and it offers no keyterm boosting.
-
-### 3.5 Speaking only what LUME said
-
-A text-to-speech endpoint that accepts arbitrary text is a free, billed TTS
-service for anyone who finds it. So the chat route emits a `speech` SSE event
-per sentence, carrying the sentence and an HMAC token over
-`(tenant, turnId, sha256(sentence))`. `/api/voice/speech` verifies the token
-before synthesising. It is stateless, so it needs no shared store, and it
-caches by hash — templated answers repeat, and a repeated sentence should
-cost nothing.
 
 ## 4. Drive mode — the concierge takes the wheel
 
 ### 4.1 What the visitor experiences
 
-> "Show me your SUVs under forty grand."
+> *Visitor says:* "Show me your SUVs under forty grand."
 >
-> The inventory filters. *"I found nine. Let me show you the top three."* The
-> first card is softly spotlit. *"A 2022 BMW X5, sixty-two thousand miles… "*
-> The second card is spotlit, then the third. *"Want me to open the X5?"*
+> The inventory filters. A caption reads *"Nine SUVs under $40,000. Here are
+> the top three."* The first card is softly spotlit with its facts beneath it —
+> *"2022 BMW X5 · 62,000 miles · $38,900"* — then the second, then the third.
+> The chat offers: *"Want me to open the X5?"*
 >
-> "Yes, show me."
+> *Visitor says:* "Yes, show me."
 >
 > The detail page opens. The gallery advances. The price is spotlit, then the
-> key specs, then the finance calculator. *"If you'd like, I can book a test
-> drive."*
+> key specs, then the finance calculator, each with a one-line caption. The
+> chat ends with *"I can book a test drive if you'd like."*
 
-At any moment the visitor can say "stop", tap anything, or scroll — and the
-concierge lets go immediately.
+At any moment the visitor can tap anything, scroll, press the Stop bar, or say
+"stop" — and the concierge lets go immediately.
 
 ### 4.2 The tour contract
 
@@ -176,17 +164,15 @@ type BotTourAction = {
 };
 
 type BotTourStep =
-  | { kind: "act"; action: TourSafeAction; say?: SpokenLine }   // existing actions
-  | { kind: "spotlight"; anchor: ConciergeAnchorId; say?: SpokenLine }
-  | { kind: "gallery"; vehicleId: string; imageIndex: number; say?: SpokenLine }
+  | { kind: "act"; action: TourSafeAction; caption?: string }   // existing actions
+  | { kind: "spotlight"; anchor: ConciergeAnchorId; caption?: string }
+  | { kind: "gallery"; vehicleId: string; imageIndex: number; caption?: string }
   | { kind: "pause"; ms: number };                              // ≤ 1500
 
 // Never a tour step: capture_lead, schedule_*, or another tour.
 type TourSafeAction =
   | BotInventoryFilterAction | BotNavigateTargetAction
   | BotHighlightVehicleAction | BotCompareVehiclesAction;
-
-type SpokenLine = { text: string; speechToken: string };
 ```
 
 Rules — enforced on the server, then **again** in the browser:
@@ -195,12 +181,12 @@ Rules — enforced on the server, then **again** in the browser:
   set, tenant-scoped, live status).
 - Anchors come from a **closed allowlist** (`packages/types/src/conciergeAnchors.ts`),
   never a CSS selector. Same principle as the concierge target registry: the
-  server names a registered thing, it never points at arbitrary DOM.
+  server names a registered thing; it never points at arbitrary DOM.
 - No step can submit a lead, book an appointment, or mutate data. A tour can
   *open* the lead form as its final step. Submitting stays the visitor's act.
-- Narration facts (price, mileage, count) are **rendered from database rows**,
-  like the existing deterministic answers. A model never writes a number that
-  is spoken.
+- Captions that state facts (price, mileage, count) are **rendered from
+  database rows**, like the existing deterministic answers. A model never
+  writes a number that appears in a caption.
 
 ### 4.3 Who writes the tour
 
@@ -231,15 +217,17 @@ A new state machine, `src/lib/conciergeDriver.ts`:
   mechanism in `conciergeTargetRuntime.ts`. A spotlight waits (with a timeout)
   for its anchor to register and become visible. A missing anchor skips the
   step; it does not guess.
-- **Paces to the narration.** Run the step, speak its line, advance when the
-  line ends (or after a reading-time estimate in text mode).
+- **Paces for reading.** Run the step, show its caption, and advance after a
+  reading-time estimate (words per minute, clamped to a minimum and maximum
+  dwell). A "Next" control and the spoken word "next" skip ahead.
 - **Yields instantly.** Any pointer, wheel, touch or key event outside the chat
-  panel ends the tour and stops audio, with a quiet "You're in control". A
-  visible *"LUME is showing you around — Stop"* bar stays up while it drives.
+  panel ends the tour with a quiet "You're in control". A visible
+  *"LUME is showing you around — Stop"* bar stays up while it drives.
 - **Respects reduced motion.** No smooth scrolling, shorter dwell, spotlight
   without animation.
-- **Local voice commands.** "Stop", "pause", "next", "go back" are handled in
-  the browser during a tour. They are instant, free, and never reach the server.
+- **Local voice commands.** "Stop", "pause", "next", "go back" spoken during a
+  tour are handled in the browser. They are instant, free, and never reach the
+  concierge.
 
 ### 4.5 Anchors to add
 
@@ -255,8 +243,7 @@ Implement the dormant `scroll-to` consumer against the same allowlist while
 this is being built.
 
 **Drive mode does not depend on voice.** "Show me around" typed into the chat
-should drive the site too, narrated as text. Build it so; it ships and demos
-independently.
+drives the site too. Build it so; it ships and demos independently.
 
 ## 5. Safety and trust rules specific to voice
 
@@ -276,8 +263,8 @@ independently.
 4. **Audio is never stored and never sent to PostHog.** Transcripts follow the
    existing training-capture policy, so the **SD-004 revisit condition now also
    covers voice**: when the first real dealership onboards, voice transcripts
-   stop being the owner's data. Add SD-006 for audio sent to a US processor
-   through the Gateway.
+   stop being the owner's data. Add SD-006 for visitor audio sent to a US
+   processor through the Gateway.
 5. **Microphone use is explained on first use.** A short line before the
    browser prompt: what is sent, that audio is not kept.
 6. **Cost abuse is capped.** 30-second utterance limit, per-session and per-IP
@@ -290,31 +277,31 @@ independently.
 
 | Stage | Target |
 |---|---|
-| End of speech → final transcript | 300–500 ms (streaming + endpointing) |
+| Button released → final transcript | 300–500 ms streaming; ~0.8–1.5 s with the batch fallback |
 | Deterministic turn, server | ≤ 750 ms p95 (existing target) |
-| First sentence synthesised | 200–400 ms |
-| **Speech end → first spoken word, deterministic turn** | **~1.2–1.7 s** |
-| Same, model turn | ~2.5–4 s — play a short earcon and show "thinking"; do not speak filler |
+| **Button released → reply visible, deterministic turn** | **~1–1.3 s** (streaming) |
+| Same, model turn | ~2–3.5 s, with the existing "thinking" indicator |
 
-**Cost per 10-turn voice conversation** (8 s of speech and a ~250-character
-reply per turn, Gateway list prices):
+**Cost per 10-turn voice conversation** (8 s of speech per turn, Gateway list
+prices), on top of today's text cost:
 
-| | Low (grok-stt + tts-1) | High (gpt-realtime-whisper + tts-1-hd) |
-|---|---|---|
-| Speech-to-text | ~$0.002 | ~$0.023 |
-| Text-to-speech | ~$0.038 | ~$0.075 |
-| **Total, on top of today's text cost** | **~$0.04** | **~$0.10** |
+| Model | Cost |
+|---|---|
+| `spacexai/grok-stt` | ~$0.002 |
+| `google/gemini-3.5-transcribe-live` | ~$0.012 |
+| `openai/gpt-realtime-whisper` | ~$0.023 |
 
-Speech output dominates. Roughly $40–100 per 1,000 voice conversations — fine
-at $300–700 per month per tenant, *if* it is capped. Sentence caching cuts it
-further, because deterministic answers repeat.
+That is roughly **$2–23 per 1,000 voice conversations** — small next to the
+model cost of the replies. Dropping voice output removed about 80–95% of the
+cost in the original plan. It should still be capped, because an uncapped
+microphone is an open meter.
 
 ## 7. Plans and entitlements
 
 - Add `chat.voice` to `PLAN_FEATURES` (recommend Pro and Ultra, matching
   `chat.actions`, since Drive mode needs actions).
 - The `meta` event gains `capabilities.voice`. The mic button renders only when
-  it is true. Enforcement stays server-side in both voice routes.
+  it is true. Enforcement stays server-side in the voice route.
 - Rollout flags mirror the shadow-interpreter pattern: `CONCIERGE_VOICE_ENABLED`
   plus a tenant allowlist, so enabling an environment cannot switch voice on for
   every tenant at once.
@@ -322,15 +309,16 @@ further, because deterministic answers repeat.
 ## 8. Telemetry and evaluation
 
 **Telemetry.** Extend `recordConciergeTurn` with `inputMode: "text" | "voice"`,
-speech-to-text latency and provider, speech latency, tour steps run versus
-yielded, and takeover events. PostHog gets operational
+speech-to-text latency and model, transcript confidence band, tour steps run
+versus yielded, and takeover events. PostHog gets operational
 `lume_concierge_voice_*` and `lume_concierge_tour_*` events. **No audio ever.**
 
 **Evaluation gate.** Build a voice gold set from the existing
 `apps/admin/lib/chatInterpretationGoldSet.ts`:
 
-1. Synthesise each phrase in 2–3 voices and accents, clean and with background
-   noise; add a small set of real recordings.
+1. Generate audio for each phrase in 2–3 synthetic voices and accents, clean
+   and with background noise, plus a small set of real recordings. (Synthetic
+   voices are used only to *produce test audio*; nothing is spoken to visitors.)
 2. Run audio → speech-to-text (with and without keyterms) → the existing
    pipeline.
 3. Report, **with denominators**: entity accuracy (makes, models, numbers,
@@ -340,10 +328,10 @@ yielded, and takeover events. PostHog gets operational
 
 **Tests.**
 
-- Unit: driver state machine, anchor allowlist, tour grounding, HMAC speech
-  tokens, sentence chunker, local voice commands.
-- Route contract: tours contain no lead or booking steps; speech endpoint
-  refuses untokened text; voice routes enforce entitlement and quota.
+- Unit: driver state machine, anchor allowlist, tour grounding, reading-time
+  pacing, local voice commands, keyterm selection from facets.
+- Route contract: tours contain no lead or booking steps; the voice route
+  enforces entitlement, quota and the utterance cap.
 - Browser: extend `e2e/concierge/` with mocked SSE tours — a tour plays in
   order; a scroll or tap yields; a superseded turn stops its tour; reduced
   motion. Chromium's `--use-fake-device-for-media-stream` and
@@ -356,13 +344,13 @@ Estimates are full-time-equivalent weeks, solo with AI assistance.
 
 | Phase | What | Weeks |
 |---|---|---|
-| **V0 — Foundations and spike** | Permissions-Policy fix. Install `ai` (and `@vercel/functions`) with approval. Benchmark 2–3 speech-to-text models on synthetic gold-set audio with and without keyterms; pick a voice for speech output; prove the WebSocket route on a preview. Output: a decision record. | 1–1.5 |
-| **V1 — Voice in, voice out (public)** | Push-to-talk mic in the chat, streaming transcript, sentence speech with tokens, barge-in, captions, contact confirm card, entitlement, quota, rate limits, telemetry. Behind flag and allowlist. | 2–3 |
-| **V2 — Drive mode** | Anchor registry and anchors on inventory and vehicle detail; `scroll-to`, spotlight and gallery consumers; the `tour` action; `chatTours.ts` templates; executor with take-back-control; browser tests. Works for typed requests too. | 3–5 |
-| **V3 — Admin voice** | Push-to-talk in the Ask LUME panel; navigation, search and proposals by voice; writes stay click-only. | 1–2 |
-| **V4 — Optional** | Hands-free (always-listening with VAD), per-tenant persona voice (a `bot_personas` column and migration), more languages only if the product claims them. | — |
+| **V0 — Foundations and spike** | Permissions-Policy fix. Install `ai` (and `@vercel/functions` if streaming) with approval. Benchmark 2–3 speech-to-text models on gold-set audio with and without keyterms; prove the WebSocket route on a preview, or choose the batch fallback. Output: a decision record. | 1 |
+| **V1 — Voice input (public)** | Push-to-talk mic in the chat, live transcript in the input box, contact confirm card, entitlement, quota, rate limits, telemetry. Behind flag and allowlist. | 1.5–2.5 |
+| **V2 — Drive mode** | Anchor registry and anchors on inventory and vehicle detail; `scroll-to`, spotlight and gallery consumers; the `tour` action; `chatTours.ts` templates; executor with captions and take-back-control; browser tests. Works for typed requests too. | 3–5 |
+| **V3 — Admin voice input** | Push-to-talk in the Ask LUME panel; navigation, search and proposals by voice; writes stay click-only. | 1 |
+| **V4 — Optional** | Hands-free (always-listening with voice-activity detection), more languages only if the product claims them, and voice output if it is ever wanted. | — |
 
-**Core path: roughly 7–11 weeks.** V1 and V2 touch disjoint files (voice in
+**Core path: roughly 6.5–9.5 weeks.** V1 and V2 touch disjoint files (voice in
 `src/lib/voice/*` and the chat panel; Drive mode in `App.tsx` consumers,
 `conciergeDriver.ts` and `chatTours.ts`), so they fit the existing two-lane
 Claude/Codex workflow and can run in parallel after V0.
@@ -371,12 +359,11 @@ Claude/Codex workflow and can run in parallel after V0.
 
 New:
 
-- `apps/admin/app/api/voice/stream/route.ts` — WebSocket speech-to-text
-- `apps/admin/app/api/voice/speech/route.ts` — tokened text-to-speech
-- `apps/admin/lib/voice/` — keyterms from facets, speech tokens, voice quota
+- `apps/admin/app/api/voice/stream/route.ts` — speech-to-text (WebSocket, or batch `POST` for the fallback)
+- `apps/admin/lib/voice/` — keyterms from facets, voice quota
 - `apps/admin/lib/chatTours.ts` (+ tests) — tour templates
 - `packages/types/src/conciergeAnchors.ts` — anchor allowlist
-- `src/lib/voice/` — mic worklet, VAD, transcript client, audio queue
+- `src/lib/voice/` — mic capture, transcript client, local voice commands
 - `src/lib/conciergeDriver.ts` (+ tests) — tour executor
 - `src/lib/useConciergeAnchor.ts` — anchor registration
 - `e2e/concierge/voice-drive.spec.ts`
@@ -386,9 +373,9 @@ Changed:
 - `vercel.json` — `microphone=()` → `microphone=(self)`
 - `packages/types/src/bot-actions.ts` — `tour` action, step types
 - `packages/types/src/plans.ts` — `chat.voice`
-- `apps/admin/app/api/chat/route.ts` — tours, `speech` events, voice capability in `meta`
+- `apps/admin/app/api/chat/route.ts` — tours, voice capability in `meta`
 - `src/App.tsx` — `tour` and `scroll-to` consumers
-- `src/components/chat/OllamaChat.tsx` — mic, voice state, captions, driving bar
+- `src/components/chat/OllamaChat.tsx` — mic button, live transcript, driving bar
 - Vehicle detail and inventory components — register anchors
 - `apps/admin/components/admin-concierge-panel.tsx` — push-to-talk
 - `apps/admin/lib/observability.ts` — voice and tour fields
@@ -398,34 +385,38 @@ Changed:
 
 | Risk | Mitigation |
 |---|---|
-| Speech-to-text mis-hears makes, trims, numbers, ordinals (the July reason for deferring) | Keyterms from tenant facets; low-confidence echo-back; gold-set gate before wider rollout |
+| Speech-to-text mis-hears makes, trims, numbers, ordinals (the July reason for deferring) | Keyterms from tenant facets; live transcript the visitor can see; low-confidence echo-back; gold-set gate before wider rollout |
 | The concierge fights the visitor for control | Yield on any input, visible Stop, local "stop" command, tours capped at six steps |
-| Mobile audio autoplay rules (especially iOS) | One `AudioContext` unlocked by the mic tap; audio queue |
-| Cost abuse of voice routes | Entitlement, quota, rate limits, utterance cap, tokened speech |
-| Hallucinated tours | Closed step set, server grounding, anchors from an allowlist, templated narration |
-| Multi-instance memory | Upstash is still unprovisioned in every environment. Barge-in makes superseded turns more frequent, which raises the value of provisioning it. |
-| New dependencies and experimental APIs | `experimental_streamTranscribe` may change; pin the version and keep the chunked-POST fallback |
-| The cinematic site plus audio on low-end phones | Spike on a mid-range Android device in V0 |
+| Microphone permission friction, especially iOS Safari | Ask only on the first mic tap, with a one-line explanation; text input always remains |
+| Cost abuse of the voice route | Entitlement, quota, rate limits, 30-second cap |
+| Hallucinated tours | Closed step set, server grounding, anchors from an allowlist, templated captions |
+| Multi-instance memory | Upstash is still unprovisioned in every environment. Voice makes rapid follow-up turns more common, which raises the value of provisioning it. |
+| New dependencies and experimental APIs | `experimental_streamTranscribe` may change; pin the version and keep the batch fallback |
 
 ## 12. Decisions needed from the owner
 
+Already decided: **voice input only; no voice output.**
+
 1. **Push-to-talk first** (recommended) or hands-free from the start.
-2. **Providers**, after the V0 benchmark. All current candidates are US
-   processors reached through the Gateway.
-3. **`chat.voice` on Pro and Ultra** (recommended) or all plans.
-4. **A per-tenant voice budget** (seconds per month).
-5. **Drive mode for typed requests too** (recommended — it ships and demos
+2. **Speech-to-text model**, after the V0 benchmark. All current candidates are
+   US processors reached through the Gateway.
+3. **Streaming with a live transcript, or the simpler batch version first.**
+   Recommended: let the V0 spike decide; batch is an acceptable first release.
+4. **`chat.voice` on Pro and Ultra** (recommended) or all plans.
+5. **A per-tenant voice budget** (seconds per month).
+6. **Drive mode for typed requests too** (recommended — it ships and demos
    without voice).
-6. **English only** for the first release (recommended — it is all the product
+7. **English only** for the first release (recommended — it is all the product
    claims today).
 
 ## 13. Why this is worth it now
 
 The July deferral was about risk (speech-to-text errors on exactly the
 entities the concierge relies on) and opportunity cost before the first
-customer. The risk is now addressable — keyterm boosting through the Gateway
-and a gold set to measure it — and it is gated, not assumed away. The
-opportunity-cost argument is a product call. One thing works in favour: a
-concierge that listens, answers aloud and walks a visitor through the lot is
-the most demonstrable thing LUME could show, which suits a plan built on online
-content and demos.
+customer. The risk is now addressable — keyterm boosting through the Gateway,
+a live transcript the visitor can see, and a gold set to measure it — and it is
+gated, not assumed away. Input-only voice also keeps the cost to a few dollars
+per thousand conversations. The opportunity-cost argument is a product call.
+One thing works in favour: a concierge you can talk to that then walks you
+through the lot is the most demonstrable thing LUME could show, which suits a
+plan built on online content and demos.
