@@ -16,7 +16,7 @@ const route = readFileSync(
  * Source-ordering assertions, for the reason chatRouteContext.test.ts gives:
  * the root vitest config cannot import this Next.js route. What these pin is
  * that the latency work (reads overlapped instead of chained) did not move
- * any decision: the quota still gates the answer, a failed read still fails
+ * any decision: the quota is decided before any tenant read starts, a failed read still fails
  * the turn where it did, and the model-only context stays off the
  * deterministic path. The measured effect lives in apps/admin/bench.
  */
@@ -26,27 +26,60 @@ const at = (needle: string, from = 0) => {
   return index;
 };
 
-const QUOTA_AWAIT = "const quota = await checkPublicApiQuota(";
 const QUOTA_REFUSAL = "if (!quota.allowed) {";
-const FACETS_START = 'supabase.rpc("vehicle_facets_v2"';
-const CONFIG_START = "const tenantConfigRead = settle(";
-const CONFIG_UNWRAP = "await unwrapSettled(tenantConfigRead)";
+const FACETS_START_TEXT = 'supabase.rpc("vehicle_facets_v2"';
+const FACETS_START = FACETS_START_TEXT;
+const CONFIG_AWAIT = "] =\n    await Promise.all([\n      loadActivePersona(";
+const CONFIG_READS = [
+  "loadActivePersona(supabase, tenant.tenantId)",
+  "loadTenantBotRuntimeConfig(supabase, tenant.tenantId)",
+  "resolveVisitor(request, tenant.tenantId, supabase)",
+  "loadConciergeTargets(supabase, tenant.tenantId)",
+  "resolveTenantPlan(supabase, tenant.tenantId)",
+];
+const SPECULATIVE_READS = [
+  FACETS_START_TEXT,
+  "getTenantVehicle(supabase, tenant.tenantId, earlySelectedVehicleId)",
+  ...CONFIG_READS,
+];
 const FACETS_UNWRAP = "unwrapSettled(facetRead)";
 const STATE_TRY = "// Only the reads a deterministic rule can actually need happen here.";
 const STATE_FAILURE = 'captureError("api/chat/state-build"';
 const DETERMINISTIC_RETURN = "return new Response(stream, { headers: sseHeaders });";
 
 describe("public chat route: overlapped reads keep the same decisions", () => {
-  it("starts the tenant-only reads before waiting on the quota", () => {
-    expect(at(FACETS_START)).toBeLessThan(at(QUOTA_AWAIT));
-    expect(at(CONFIG_START)).toBeLessThan(at(QUOTA_AWAIT));
+  it("refuses on quota before any speculative read is started", () => {
+    // Not merely before a result is consumed: a quota-denied caller must not
+    // be able to turn rejected traffic into database work. Every tenant read
+    // is written after the refusal's return, so none can have started.
+    const refusal = at(QUOTA_REFUSAL);
+    const refusalReturn = at("return json(quotaExceededPayload(quota), 429, request);");
+    expect(refusalReturn).toBeGreaterThan(refusal);
+    for (const read of SPECULATIVE_READS) {
+      expect(at(read), read).toBeGreaterThan(refusalReturn);
+    }
   });
 
-  it("still refuses on quota before any read result is used", () => {
-    // A refused turn must answer 429 exactly as before, whatever the
-    // overlapped reads returned — including if one of them failed.
-    expect(at(QUOTA_REFUSAL)).toBeLessThan(at(CONFIG_UNWRAP));
-    expect(at(QUOTA_REFUSAL)).toBeLessThan(at(FACETS_UNWRAP));
+  it("issues nothing against the database before the quota decision but the quota check", () => {
+    const beforeRefusal = route.slice(
+      at("const supabase = createServiceClient();"),
+      at(QUOTA_REFUSAL),
+    );
+    for (const pattern of ["supabase.rpc(", "supabase.from(", "getTenantVehicle(", "settle("]) {
+      expect(beforeRefusal, pattern).not.toContain(pattern);
+    }
+    expect(beforeRefusal).toContain("checkPublicApiQuota(");
+  });
+
+  it("starts every approved-turn tenant read before waiting on any of them", () => {
+    // Approved turns keep the overlap: facets and the early vehicle read are
+    // in flight while the config reads are awaited, all in one wave.
+    const configAwait = at(CONFIG_AWAIT);
+    expect(at(FACETS_START)).toBeLessThan(configAwait);
+    expect(at("const earlySelectedVehicleRead")).toBeLessThan(configAwait);
+    for (const read of CONFIG_READS) {
+      expect(at(read, configAwait), read).toBeGreaterThan(configAwait);
+    }
   });
 
   it("surfaces a failed facet read inside the state-build guard, as before", () => {

@@ -297,13 +297,26 @@ export async function POST(request: Request): Promise<Response> {
   // in-memory scoring (~thousands of chunks), swap retrieveByKeywords()
   // for retrieveContext() from @lume/rag/server + an embedder.
   const supabase = createServiceClient();
-  // Every read below depends only on the tenant, so they start together
-  // rather than one round trip after another. Each is settled so an early
-  // failure cannot surface as an unhandled rejection, and is re-thrown at the
-  // exact point the sequential code used to await it — the quota decision
-  // still gates the answer, and a failed read fails the turn where it always
-  // did. The reads are side-effect free; on a quota refusal or a duplicate
-  // delivery their results are simply discarded.
+  // The quota decision comes first and alone: a refused caller must cost one
+  // quota check, not the tenant reads below. Nothing speculative starts until
+  // it has approved the turn.
+  const quota = await checkPublicApiQuota(
+    tenant.tenantId,
+    "chat_requests",
+    supabase,
+  );
+  if (!quota.allowed) {
+    return json(quotaExceededPayload(quota), 429, request);
+  }
+  const quotaHeaders = quotaResponseHeaders(quota);
+
+  // Once approved, every read that depends only on the tenant starts together
+  // rather than one round trip after another. The facet and early-vehicle
+  // reads are consumed later, after conversation memory, so they are settled:
+  // an early failure cannot surface as an unhandled rejection, and it is
+  // re-thrown at the exact point the sequential code used to await it — a
+  // failed read still fails the turn where it always did. The reads are
+  // side-effect free; on a duplicate delivery their results are discarded.
   //
   // The facet RPC is the bounded tenant vocabulary filter extraction needs to
   // recognize a make/model this turn. Extraction vocabulary must be
@@ -328,30 +341,17 @@ export async function POST(request: Request): Promise<Response> {
   const earlySelectedVehicleRead = earlySelectedVehicleId
     ? settle(getTenantVehicle(supabase, tenant.tenantId, earlySelectedVehicleId))
     : null;
+
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.
-  const tenantConfigRead = settle(
-    Promise.all([
+  const [persona, botRuntimeConfig, visitor, targetRegistry, tenantPlan] =
+    await Promise.all([
       loadActivePersona(supabase, tenant.tenantId),
       loadTenantBotRuntimeConfig(supabase, tenant.tenantId),
       resolveVisitor(request, tenant.tenantId, supabase).catch(() => null),
       loadConciergeTargets(supabase, tenant.tenantId),
       resolveTenantPlan(supabase, tenant.tenantId),
-    ]),
-  );
-
-  const quota = await checkPublicApiQuota(
-    tenant.tenantId,
-    "chat_requests",
-    supabase,
-  );
-  if (!quota.allowed) {
-    return json(quotaExceededPayload(quota), 429, request);
-  }
-  const quotaHeaders = quotaResponseHeaders(quota);
-
-  const [persona, botRuntimeConfig, visitor, targetRegistry, tenantPlan] =
-    await unwrapSettled(tenantConfigRead);
+    ]);
   const conciergeTargets = targetRegistry.targets;
   // Plan entitlement "chat.actions" (Basic = informational concierge only)
   // gates tools and BotActions below, on top of the tenant's own allowlist
