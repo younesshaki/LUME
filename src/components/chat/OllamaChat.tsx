@@ -16,6 +16,7 @@ import {
 } from "@/lib/chatTurnSequencer";
 import { publicTenantSlug } from "@/lib/publicTenant";
 import { botActionBus } from "@/lib/botActionBus";
+import { preloadConciergeDestinationModules } from "@/app-shell/routeModules";
 import {
   captureLumeConciergeTranscript,
   captureLumeEvent,
@@ -498,6 +499,7 @@ export function OllamaChat() {
             onClick={() => {
               chatSounds.open();
               setIsOpen(true);
+              preloadConciergeDestinationModules();
               captureLumeEvent("lume_concierge_opened");
             }}
           >
