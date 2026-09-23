@@ -68,7 +68,7 @@ import {
   type VehicleQueryFilters,
 } from "@lume/rag";
 import { createOllamaEmbedder, retrieveHybridContext } from "@lume/rag/server";
-import { getTenantFromRequest } from "@/lib/tenant";
+import { getTenantFromRequestCached } from "@/lib/tenant";
 import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import {
@@ -284,8 +284,9 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "no user message found" }, 400, request);
   }
 
-  // Resolve tenant.
-  const tenant = await getTenantFromRequest(request);
+  // Resolve tenant. Briefly cached per slug for this route only; see
+  // getTenantFromRequestCached for why that is safe.
+  const tenant = await getTenantFromRequestCached(request);
   if (!tenant) {
     return json({ error: "Unknown or inactive tenant" }, 404, request);
   }
@@ -295,6 +296,49 @@ export async function POST(request: Request): Promise<Response> {
   // in-memory scoring (~thousands of chunks), swap retrieveByKeywords()
   // for retrieveContext() from @lume/rag/server + an embedder.
   const supabase = createServiceClient();
+  // Every read below depends only on the tenant, so they start together
+  // rather than one round trip after another. Each is settled so an early
+  // failure cannot surface as an unhandled rejection, and is re-thrown at the
+  // exact point the sequential code used to await it — the quota decision
+  // still gates the answer, and a failed read fails the turn where it always
+  // did. The reads are side-effect free; on a quota refusal or a duplicate
+  // delivery their results are simply discarded.
+  //
+  // The facet RPC is the bounded tenant vocabulary filter extraction needs to
+  // recognize a make/model this turn. Extraction vocabulary must be
+  // tenant-wide, never narrowed by the previous turn's active scope. With BMW
+  // active, p_make:"BMW" excluded "Camry" from the model vocabulary, so the
+  // next explicit "2026 Camry" query extracted only the year and silently
+  // retained BMW. Filters are applied by queryTenantVehicles later; vocabulary
+  // discovery is deliberately scope-independent.
+  const facetRead = settle(
+    supabase.rpc("vehicle_facets_v2", {
+      p_tenant_id: tenant.tenantId,
+      p_make: null,
+      p_state: null,
+    }),
+  );
+  // The open vehicle page always wins the selected-vehicle candidate order
+  // below, unless the visitor asked to reset scope, so when it is present its
+  // row can be read now instead of after conversation memory.
+  const earlySelectedVehicleId = hasScopeResetIntent(lastUser.content)
+    ? null
+    : vehicleIdFromPublicPagePath(body.pagePath);
+  const earlySelectedVehicleRead = earlySelectedVehicleId
+    ? settle(getTenantVehicle(supabase, tenant.tenantId, earlySelectedVehicleId))
+    : null;
+  // Persona (admin-configured voice + capabilities); degrades to the default
+  // persona — chat never fails because persona storage is missing.
+  const tenantConfigRead = settle(
+    Promise.all([
+      loadActivePersona(supabase, tenant.tenantId),
+      loadTenantBotRuntimeConfig(supabase, tenant.tenantId),
+      resolveVisitor(request, tenant.tenantId, supabase).catch(() => null),
+      loadConciergeTargets(supabase, tenant.tenantId),
+      resolveTenantPlan(supabase, tenant.tenantId),
+    ]),
+  );
+
   const quota = await checkPublicApiQuota(
     tenant.tenantId,
     "chat_requests",
@@ -305,16 +349,8 @@ export async function POST(request: Request): Promise<Response> {
   }
   const quotaHeaders = quotaResponseHeaders(quota);
 
-  // Persona (admin-configured voice + capabilities); degrades to the default
-  // persona — chat never fails because persona storage is missing.
   const [persona, botRuntimeConfig, visitor, targetRegistry, tenantPlan] =
-    await Promise.all([
-      loadActivePersona(supabase, tenant.tenantId),
-      loadTenantBotRuntimeConfig(supabase, tenant.tenantId),
-      resolveVisitor(request, tenant.tenantId, supabase).catch(() => null),
-      loadConciergeTargets(supabase, tenant.tenantId),
-      resolveTenantPlan(supabase, tenant.tenantId),
-    ]);
+    await unwrapSettled(tenantConfigRead);
   const conciergeTargets = targetRegistry.targets;
   // Plan entitlement "chat.actions" (Basic = informational concierge only)
   // gates tools and BotActions below, on top of the tenant's own allowlist
@@ -545,23 +581,15 @@ export async function POST(request: Request): Promise<Response> {
     // fetching them for an ordinal, a "show me", or a reset was pure waste on
     // the highest-frequency turns. They are loaded lazily on the model path.
     //
-    // The facet RPC stays unconditional: it is the bounded tenant vocabulary
-    // that filter extraction needs to recognize a make/model this turn.
+    // The facet RPC stays unconditional (started with the tenant reads above).
     const [selectedVehicleResult, facetResult] = await Promise.all([
       selectedVehicleCandidate
-        ? getTenantVehicle(supabase, tenant.tenantId, selectedVehicleCandidate)
+        ? selectedVehicleCandidate === earlySelectedVehicleId &&
+          earlySelectedVehicleRead
+          ? unwrapSettled(earlySelectedVehicleRead)
+          : getTenantVehicle(supabase, tenant.tenantId, selectedVehicleCandidate)
         : Promise.resolve(null),
-      supabase.rpc("vehicle_facets_v2", {
-        p_tenant_id: tenant.tenantId,
-        // Extraction vocabulary must be tenant-wide, never narrowed by the
-        // previous turn's active scope. With BMW active, p_make:"BMW"
-        // excluded "Camry" from the model vocabulary, so the next explicit
-        // "2026 Camry" query extracted only the year and silently retained
-        // BMW. Filters are applied by queryTenantVehicles later; vocabulary
-        // discovery is deliberately scope-independent.
-        p_make: null,
-        p_state: null,
-      }),
+      unwrapSettled(facetRead),
     ]);
     const unsupportedVehicleFactRequest = isUnsupportedVehicleFactRequest(
       lastUser.content,
@@ -1282,23 +1310,58 @@ export async function POST(request: Request): Promise<Response> {
   // read, image descriptions or the inventory count.
   let assembled: ReturnType<typeof assembleSystemPrompt>;
   try {
-    const [contextChunks, loadedLoyaltyContext, loadedPreferenceContext] =
-      await Promise.all([
-        loadPublishedKnowledgeContext(
-          supabase,
-          tenant.tenantId,
-          lastUser.content,
-        ),
-        visitor
-          ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
-          : Promise.resolve(null),
-        visitor
-          ? loadVisitorPreferenceContext(supabase, {
-              tenantId: tenant.tenantId,
-              visitorId: visitor.id,
-            })
-          : Promise.resolve(null),
-      ]);
+    const matchedIds = (matchedVehicles ?? [])
+      .slice(0, 20)
+      .map((vehicle) => vehicle.id);
+    // All five inputs are independent reads, so they share one round trip
+    // instead of three sequential ones. Assembly below keeps the original
+    // chunk order exactly.
+    const [
+      contextChunks,
+      loadedLoyaltyContext,
+      loadedPreferenceContext,
+      imageDescriptions,
+      totalInventory,
+    ] = await Promise.all([
+      loadPublishedKnowledgeContext(
+        supabase,
+        tenant.tenantId,
+        lastUser.content,
+      ),
+      visitor
+        ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
+        : Promise.resolve(null),
+      visitor
+        ? loadVisitorPreferenceContext(supabase, {
+            tenantId: tenant.tenantId,
+            visitorId: visitor.id,
+          })
+        : Promise.resolve(null),
+      matchedIds.length > 0
+        ? supabase
+            .from("vehicle_images")
+            .select("vehicle_id, ai_description")
+            .eq("tenant_id", tenant.tenantId)
+            .eq("is_primary", true)
+            .eq("ai_description_status", "completed")
+            .in("vehicle_id", matchedIds)
+            .then(({ data }) => data ?? [])
+        : Promise.resolve([]),
+      // Without this the prompt omitted "Total vehicles in full inventory"
+      // entirely, so with a filter active the model could only see TOTAL
+      // MATCHING — and "how many cars do you have?" got answered as "how many
+      // match your filters". Cached per tenant; a failure leaves it undefined
+      // and the line is omitted exactly as before.
+      tenantLiveVehicleCount(tenant.tenantId, async (tenantId) => {
+        const { count, error } = await supabase
+          .from("vehicles")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .neq("status", "archived")
+          .is("sold_at", null);
+        return error ? undefined : (count ?? undefined);
+      }),
+    ]);
     chatLoyaltyContext = loadedLoyaltyContext;
     visitorPreferenceContext = loadedPreferenceContext;
     // Same ordering as before the split: retrieved chunks, the open vehicle
@@ -1308,49 +1371,19 @@ export async function POST(request: Request): Promise<Response> {
       contextChunks.unshift(selectedVehicleChunk);
     }
     if (matchedVehicles !== undefined) {
-      const matchedIds = matchedVehicles
-        .slice(0, 20)
-        .map((vehicle) => vehicle.id);
-      if (matchedIds.length > 0) {
-        const { data: imageDescriptions } = await supabase
-          .from("vehicle_images")
-          .select("vehicle_id, ai_description")
-          .eq("tenant_id", tenant.tenantId)
-          .eq("is_primary", true)
-          .eq("ai_description_status", "completed")
-          .in("vehicle_id", matchedIds);
-        for (const image of imageDescriptions ?? []) {
-          if (!image.ai_description) continue;
-          const vehicle = matchedVehicles.find(
-            (candidate) => candidate.id === image.vehicle_id,
-          );
-          if (vehicle)
-            contextChunks.push({
-              category: "vehicle-image",
-              text: `Primary image for ${vehicle.year} ${vehicle.make} ${vehicle.model}: ${image.ai_description}`,
-              score: 1,
-            });
-        }
+      for (const image of imageDescriptions) {
+        if (!image.ai_description) continue;
+        const vehicle = matchedVehicles.find(
+          (candidate) => candidate.id === image.vehicle_id,
+        );
+        if (vehicle)
+          contextChunks.push({
+            category: "vehicle-image",
+            text: `Primary image for ${vehicle.year} ${vehicle.make} ${vehicle.model}: ${image.ai_description}`,
+            score: 1,
+          });
       }
     }
-
-    // Without this the prompt omitted "Total vehicles in full inventory"
-    // entirely, so with a filter active the model could only see TOTAL
-    // MATCHING — and "how many cars do you have?" got answered as "how many
-    // match your filters". Cached per tenant; a failure leaves it undefined
-    // and the line is omitted exactly as before.
-    const totalInventory = await tenantLiveVehicleCount(
-      tenant.tenantId,
-      async (tenantId) => {
-        const { count, error } = await supabase
-          .from("vehicles")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", tenantId)
-          .neq("status", "archived")
-          .is("sold_at", null);
-        return error ? undefined : (count ?? undefined);
-      },
-    );
 
     assembled = assembleSystemPrompt({
       basePrompt: personaBasePrompt(persona, tenantName),
@@ -2090,6 +2123,27 @@ async function loadPublishedKnowledgeContext(
     }
     return retrieveByKeywords(legacy.data ?? [], query, 7);
   }
+}
+
+type Settled<T> = { ok: true; value: T } | { ok: false; error: unknown };
+
+/**
+ * Start a read now and hold its outcome, so it can run alongside other work
+ * without an early rejection ever going unhandled. Paired with unwrapSettled
+ * at the point the result is actually needed.
+ */
+function settle<T>(work: PromiseLike<T>): Promise<Settled<T>> {
+  return Promise.resolve(work).then(
+    (value): Settled<T> => ({ ok: true, value }),
+    (error: unknown): Settled<T> => ({ ok: false, error }),
+  );
+}
+
+/** Resolve a settled read, re-throwing its original error where it is used. */
+async function unwrapSettled<T>(settled: Promise<Settled<T>>): Promise<T> {
+  const outcome = await settled;
+  if (outcome.ok) return outcome.value;
+  throw outcome.error;
 }
 
 function previousAssistantContentForLastUser(
