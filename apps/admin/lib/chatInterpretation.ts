@@ -37,6 +37,8 @@ export const INTERPRETABLE_FILTER_KEYS = [
   "mileageMax",
   "priceMin",
   "priceMax",
+  "sort",
+  "limit",
 ] as const satisfies readonly (keyof VehicleQueryFilters)[];
 
 export type InterpretableFilterKey = (typeof INTERPRETABLE_FILTER_KEYS)[number];
@@ -127,7 +129,19 @@ const NUMERIC_KEYS: readonly InterpretableFilterKey[] = [
   "mileageMax",
   "priceMin",
   "priceMax",
+  "limit",
 ];
+
+const INTERPRETABLE_SORTS = new Set([
+  "recommended",
+  "created_desc",
+  "price_asc",
+  "price_desc",
+  "year_desc",
+  "year_asc",
+  "mileage_asc",
+  "mileage_desc",
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -205,6 +219,7 @@ function parseSetFilters(
     const text = raw.trim();
     if (text.length > MAX_FILTER_TEXT_LENGTH) return null;
     if (!text) return null;
+    if (key === "sort" && !INTERPRETABLE_SORTS.has(text)) return null;
     out[key] = text;
   }
   return out;
@@ -330,6 +345,7 @@ function validNumericFilter(
   }
   if (key === "mileageMax") return value <= MAX_MILEAGE;
   if (key === "priceMin" || key === "priceMax") return value <= MAX_PRICE;
+  if (key === "limit") return Number.isInteger(value) && value >= 1 && value <= 20;
   return true;
 }
 
@@ -420,7 +436,7 @@ export function buildInterpretationSchemaPrompt(): string {
     "Use reset when the visitor asks for all/whole/entire inventory or explicitly abandons the current filters. Use present only to display the current result set again.",
     "Use reference for an ordinal, last item, selected item, or positional comparison. Use selected_followup only for a question about the already selected vehicle. Use lead_form for a request to start a supported contact/lead form.",
     "Use clarify when the meaning cannot be represented safely; choose the closest bounded clarifyReason. Use unsupported only when no supported intent remains.",
-    `setFilters keys: ${INTERPRETABLE_FILTER_KEYS.join(", ")}. Numbers for year, yearMin, yearMax, mileageMax, priceMin, priceMax; strings otherwise. Include ONLY what this message states.`,
+    `setFilters keys: ${INTERPRETABLE_FILTER_KEYS.join(", ")}. Numbers for year, yearMin, yearMax, mileageMax, priceMin, priceMax and limit (1-20); sort must be one of recommended, created_desc, price_asc, price_desc, year_desc, year_asc, mileage_asc, mileage_desc; strings otherwise. Include ONLY what this message states.`,
     "Normalize common vehicle makes and inventory facets to their conventional display spelling. Convert monetary or mileage suffixes such as 40k to 40000. 'Under', 'up to', 'budget', and 'at most' set a maximum; 'over', 'at least', and 'starting at' set a minimum.",
     "clearFilters lists fields the visitor explicitly dropped, e.g. 'any year', 'not Toyota'.",
     'reference is {"kind":"ordinal","position":N} | {"kind":"last"} | {"kind":"selected"} | {"kind":"compare","positions":[N,M]} | null.',

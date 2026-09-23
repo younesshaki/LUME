@@ -28,6 +28,8 @@ export type VehicleQueryFilters = {
   priceMin?: number;
   priceMax?: number;
   sort?: VehicleSort;
+  /** A visitor-requested, bounded ranked result set (for example, "top 10"). */
+  limit?: number;
 };
 
 export type VehicleFilterVocabulary = {
@@ -37,9 +39,61 @@ export type VehicleFilterVocabulary = {
   cities?: readonly string[];
 };
 
+/** The maximum ranked list the concierge can promise and ground by position. */
+export const MAX_CONCIERGE_RESULT_LIMIT = 20;
+
+/**
+ * The visitor's relationship to the existing inventory scope.
+ *
+ * This is intentionally a small, composable language rather than a growing
+ * catalogue of full-sentence exceptions. The state reducer owns the actual
+ * merge/reset; this classifier only says whether the visitor supplied a new
+ * search, a refinement, a reference, or an explicit reset.
+ */
+export type InventoryQueryScope =
+  | "new_search"
+  | "refinement"
+  | "reference"
+  | "reset";
+
 /** Explicit visitor language that starts a new make/model-agnostic search. */
 export function hasInventoryScopeResetIntent(query: string): boolean {
   return /\b(?:all\s+(?:inventory|vehicles|cars)|in\s+general|regardless\s+of\s+(?:make|brand)|forget\s+(?:about\s+)?[a-z][a-z-]*|(?:not|without|except)\s+(?:talking\s+about\s+)?(?:a\s+)?[a-z][a-z-]*|no\s+(?!more\b|less\b)(?:talking\s+about\s+)?(?:a\s+)?[a-z][a-z-]*)\b/i.test(query);
+}
+
+export function classifyInventoryQueryScope(
+  query: string,
+  filters: VehicleQueryFilters,
+): InventoryQueryScope {
+  if (hasInventoryScopeResetIntent(query)) return "reset";
+  if (Object.keys(filters).length === 0) return "reference";
+
+  // A named make/model is an explicit new topic. The state reducer still
+  // preserves short unnamed refinements such as "only AWD ones".
+  if (filters.make !== undefined || filters.model !== undefined) {
+    return "new_search";
+  }
+
+  const normalized = normalizePhrase(query);
+  const namesBroadInventory = /\b(?:cars?|vehicles?|inventory|stock)\b/.test(
+    normalized,
+  );
+  const explicitlyContinues = /\b(?:same|those|these|them|ones|only|also|still)\b/.test(
+    normalized,
+  );
+  const isBudgetDeclaration = /\b(?:budget|spend|ceiling|afford|available)\b/.test(
+    normalized,
+  );
+
+  // "cars over $100k" and "top 10 most expensive vehicles" are complete,
+  // make-agnostic searches. They must not silently inherit Ferrari, BMW, or
+  // another prior topic. A terse "under $40k" remains a refinement.
+  // A budget declaration such as "I have a $20k budget for cars" is still a
+  // useful refinement of the vehicle currently being discussed. It becomes a
+  // broad search only when the visitor explicitly resets the scope.
+  return namesBroadInventory && !explicitlyContinues && !isBudgetDeclaration
+    ? "new_search"
+    : "refinement";
 }
 
 const US_STATE_NAMES: Record<string, string> = {
@@ -184,6 +238,9 @@ export function extractVehicleFilters(
   const sort = extractVehicleSort(query);
   if (sort) filters.sort = sort;
 
+  const limit = extractResultLimit(query);
+  if (limit !== undefined) filters.limit = limit;
+
   const priceRange = extractPriceRange(query);
   if (priceRange.priceMin !== undefined) filters.priceMin = priceRange.priceMin;
   if (priceRange.priceMax !== undefined) filters.priceMax = priceRange.priceMax;
@@ -194,7 +251,14 @@ export function extractVehicleFilters(
   const models = uniqueTerms([
     ...vehicles.map((vehicle) => vehicle.model),
     ...(vocabulary.models ?? []),
-  ]).sort((left, right) => right.length - left.length);
+  ])
+    // A malformed vocabulary must not turn the make the visitor just named
+    // into a second, impossible model constraint (live: Ferrari + ferrari).
+    .filter(
+      (model) =>
+        !canonicalMake || canonicalMakeFromValue(model) !== canonicalMake,
+    )
+    .sort((left, right) => right.length - left.length);
   // Use the original text for catalog-provided model names. The generic typo
   // corrector can legitimately mistake short models such as "GLC" for a make
   // acronym such as "GMC".
@@ -286,6 +350,7 @@ export function vehicleQueryFromFilters(
     ...(filters.priceMin !== undefined ? { priceMin: filters.priceMin } : {}),
     ...(filters.priceMax !== undefined ? { priceMax: filters.priceMax } : {}),
     ...(filters.sort ? { sort: filters.sort } : {}),
+    ...(filters.limit !== undefined ? { limit: filters.limit } : {}),
   };
 }
 
@@ -415,7 +480,7 @@ export function matchVehicles(
     results = [...results].sort((a, b) => (b.mileage ?? -1) - (a.mileage ?? -1));
   }
 
-  const cap = Object.keys(filters).length > 0 ? 30 : 15;
+  const cap = filters.limit ?? (Object.keys(filters).length > 0 ? 30 : 15);
   return { results: results.slice(0, cap), totalMatched };
 }
 
@@ -693,6 +758,24 @@ function extractVehicleSort(query: string): VehicleSort | undefined {
     return "mileage_desc";
   }
   return undefined;
+}
+
+function extractResultLimit(query: string): number | undefined {
+  const quantity = "(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)";
+  const ranking = "(?:most\\s+expensive|highest\\s+price|priciest|cheapest|least\\s+expensive|lowest\\s+price|newest|latest|most\\s+recent|oldest|lowest\\s+mileage|fewest\\s+miles)";
+  const match = new RegExp(
+    `\\btop\\s+${quantity}\\b|\\b${quantity}\\s+${ranking}\\b`,
+    "i",
+  ).exec(query);
+  const raw = match?.[1] ?? match?.[2];
+  if (!raw) return undefined;
+  const number = /^\d+$/.test(raw)
+    ? Number(raw)
+    : SPOKEN_PRICE_WORD_VALUES[raw.toLowerCase()];
+  if (number === undefined || !Number.isSafeInteger(number) || number < 1) {
+    return undefined;
+  }
+  return Math.min(number, MAX_CONCIERGE_RESULT_LIMIT);
 }
 
 /**

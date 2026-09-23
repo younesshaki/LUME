@@ -61,6 +61,7 @@ import {
   assembleSystemPrompt,
   extractVehicleFilters,
   isVehicleQuery,
+  MAX_CONCIERGE_RESULT_LIMIT,
   mergeTrustedVehicleQuery,
   retrieveByKeywords,
   vehicleQueryFromFilters,
@@ -846,15 +847,25 @@ export async function POST(request: Request): Promise<Response> {
       // ".select(*)" here silently hit PostgREST's row cap on larger tenants
       // and could turn a real make into a false zero-result answer.
       filters = conversationState.activeFilters;
+      const requestedLimit = Math.min(
+        Math.max(1, filters.limit ?? 30),
+        MAX_CONCIERGE_RESULT_LIMIT,
+      );
       const match = await queryTenantVehicles(supabase, tenant.tenantId, {
         ...vehicleQueryFromFilters(filters),
-        limit: 30,
+        // A ranked visitor request ("top 10") is a real bounded result set,
+        // not merely wording for the model. The result snapshot, ordinal
+        // references, and public inventory action all receive this same cap.
+        limit: requestedLimit,
       });
       matchedVehicles = match.vehicles;
       groundedVehicles = matchedVehicles;
       groundedInventoryFilters = filters;
       for (const vehicle of matchedVehicles) groundedVehicleIds.add(vehicle.id);
-      totalMatched = match.totalCount ?? matchedVehicles.length;
+      const catalogMatched = match.totalCount ?? matchedVehicles.length;
+      totalMatched = filters.limit === undefined
+        ? catalogMatched
+        : Math.min(catalogMatched, requestedLimit);
 
       const inventoryOutcome = resolveInventoryOutcome({
         userText: deterministicUserText,

@@ -24,6 +24,8 @@ export type BotInventoryFilterAction = {
   yearMax?: number;
   mileageMax?: number;
   sort?: VehicleSort;
+  /** Bounded ranked result set requested by the visitor (for example, top 10). */
+  limit?: number;
 };
 
 export type BotHighlightVehicleAction = {

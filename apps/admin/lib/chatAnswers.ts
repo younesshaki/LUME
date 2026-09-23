@@ -72,6 +72,7 @@ export function isDirectInventoryPresentationRequest(
 export function inventoryResultAnswer(
   vehicles: readonly Vehicle[],
   totalMatched: number,
+  filters: VehicleFilters = {},
 ): string {
   const examples = vehicles.slice(0, 3).map((vehicle, index) => {
     const label = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
@@ -79,7 +80,10 @@ export function inventoryResultAnswer(
       .join(" ");
     return `${index + 1}. ${label} — Est. $${vehicle.price.toLocaleString()}`;
   });
-  return `${totalMatched.toLocaleString()} matching vehicle${totalMatched === 1 ? "" : "s"} found.${examples.length ? ` ${examples.join(" · ")}.` : ""}`;
+  const rankedPrefix = filters.limit !== undefined
+    ? `Top ${totalMatched.toLocaleString()} matching vehicle${totalMatched === 1 ? "" : "s"}`
+    : `${totalMatched.toLocaleString()} matching vehicle${totalMatched === 1 ? "" : "s"}`;
+  return `${rankedPrefix} found.${examples.length ? ` ${examples.join(" · ")}.` : ""}`;
 }
 
 /** Recommendation language must not make the model invent market or condition claims. */
@@ -259,6 +263,7 @@ export function inventoryFilterAction(
     ...(filters.priceMin !== undefined ? { priceMin: filters.priceMin } : {}),
     ...(filters.priceMax !== undefined ? { priceMax: filters.priceMax } : {}),
     ...(filters.sort ? { sort: filters.sort } : {}),
+    ...(filters.limit !== undefined ? { limit: filters.limit } : {}),
   };
 }
 

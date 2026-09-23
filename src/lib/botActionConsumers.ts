@@ -102,6 +102,19 @@ export function vehicleFiltersFromBotAction(
   };
 }
 
+/** A rank limit is presentation state, not a user-editable inventory facet. */
+export function vehicleResultLimitFromBotAction(
+  action: BotInventoryFilterAction,
+): number | null {
+  const limit = action.limit;
+  return typeof limit === "number" &&
+    Number.isSafeInteger(limit) &&
+    limit >= 1 &&
+    limit <= 20
+    ? limit
+    : null;
+}
+
 /**
  * Carries bot filters in the existing inventory URL state. Unlike a one-shot
  * session value, this survives lazy fallback → published block renderer swaps.
@@ -115,6 +128,7 @@ export function vehicleRouteFromBotAction(
       vehicleFiltersFromBotAction(action),
       action.sort ?? "recommended",
       1,
+      vehicleResultLimitFromBotAction(action),
     ),
   };
 }

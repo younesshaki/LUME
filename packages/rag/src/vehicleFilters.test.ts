@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Vehicle } from "@lume/types";
 import {
+  classifyInventoryQueryScope,
   composeVehicleFilterHistory,
   extractVehicleFilters,
   hasVehicleFilterConstraint,
@@ -105,6 +106,18 @@ describe("vehicle query intent", () => {
       model: "GLC 300",
       sellerCity: "Miami",
     });
+  });
+
+  it("never treats a named make as a duplicate model constraint", () => {
+    // Reproduced from production: a malformed supplier vocabulary containing
+    // "Ferrari" in both lists made the query require make AND model Ferrari,
+    // while the live Ferrari rows have real model names.
+    expect(
+      extractVehicleFilters("Do you have any Ferraris?", [], {
+        makes: ["Ferrari", "BMW"],
+        models: ["Ferrari", "California", "812 GTS"],
+      }),
+    ).toEqual({ make: "Ferrari" });
   });
 
   it("formats a canonical make safely when no catalog vocabulary is available", () => {
@@ -356,6 +369,37 @@ describe("vehicle query intent", () => {
   ] as const)("extracts ranking intent: %s", (query, sort) => {
     expect(extractVehicleFilters(query).sort).toBe(sort);
   });
+
+  it("compiles ranked inventory requests into a bounded sort and limit", () => {
+    expect(extractVehicleFilters("10 most expensive cars")).toMatchObject({
+      sort: "price_desc",
+      limit: 10,
+    });
+    expect(extractVehicleFilters("top ten cheapest vehicles")).toMatchObject({
+      sort: "price_asc",
+      limit: 10,
+    });
+    expect(extractVehicleFilters("top 99 newest cars")).toMatchObject({
+      sort: "year_desc",
+      limit: 20,
+    });
+  });
+
+  it("classifies complete broad searches separately from terse refinements", () => {
+    expect(
+      classifyInventoryQueryScope("cars for more than $100k", {
+        priceMin: 100_000,
+      }),
+    ).toBe("new_search");
+    expect(
+      classifyInventoryQueryScope("under $40k", { priceMax: 40_000 }),
+    ).toBe("refinement");
+    expect(
+      classifyInventoryQueryScope("I have a $20k budget for cars", {
+        priceMax: 20_000,
+      }),
+    ).toBe("refinement");
+  });
 });
 
 describe("vehicle filter grounding", () => {
@@ -392,6 +436,12 @@ describe("vehicle filter grounding", () => {
       make: "BMW",
       yearMin: 2021,
     });
+  });
+
+  it("preserves a ranked result limit in the server query contract", () => {
+    expect(
+      vehicleQueryFromFilters({ sort: "price_desc", limit: 10 }),
+    ).toEqual({ sort: "price_desc", limit: 10 });
   });
 
   it("drops constraints invented by the model while retaining safe controls", () => {

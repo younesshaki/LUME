@@ -10,6 +10,8 @@ export type VehicleUrlState = {
   filters: VehicleFilters;
   sort: VehicleSort;
   page: number;
+  /** Concierge-only bounded ranked list; omitted for ordinary inventory use. */
+  resultLimit: number | null;
 };
 
 const SORT_VALUES: VehicleSort[] = [
@@ -35,9 +37,21 @@ function readSort(value: string | null): VehicleSort {
     : "recommended";
 }
 
+function readResultLimit(value: string | null): number | null {
+  const parsed = readNumber(value, 0);
+  return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= 20
+    ? parsed
+    : null;
+}
+
 export function readVehicleUrlState(): VehicleUrlState {
   if (typeof window === "undefined") {
-    return { filters: DEFAULT_FILTERS, sort: "recommended", page: 1 };
+    return {
+      filters: DEFAULT_FILTERS,
+      sort: "recommended",
+      page: 1,
+      resultLimit: null,
+    };
   }
 
   const hash = window.location.hash;
@@ -64,13 +78,15 @@ export function readVehicleUrlState(): VehicleUrlState {
     },
     sort: readSort(params.get("sort")),
     page: Math.max(1, readNumber(params.get("page"), 1)),
+    resultLimit: readResultLimit(params.get("resultLimit")),
   };
 }
 
 export function encodeVehicleUrlState(
   filters: VehicleFilters,
   sort: VehicleSort,
-  page: number
+  page: number,
+  resultLimit: number | null = null,
 ): string {
   const params = new URLSearchParams();
 
@@ -90,6 +106,7 @@ export function encodeVehicleUrlState(
   if (filters.priceMax > 0) params.set("priceMax", String(filters.priceMax));
   if (sort !== "recommended") params.set("sort", sort);
   if (page > 1) params.set("page", String(page));
+  if (resultLimit !== null) params.set("resultLimit", String(resultLimit));
 
   const encoded = params.toString();
   return encoded ? `#vehicles?${encoded}` : "#vehicles";
@@ -98,9 +115,10 @@ export function encodeVehicleUrlState(
 export function writeVehicleUrlState(
   filters: VehicleFilters,
   sort: VehicleSort,
-  page: number
+  page: number,
+  resultLimit: number | null = null,
 ): string {
-  const hash = encodeVehicleUrlState(filters, sort, page);
+  const hash = encodeVehicleUrlState(filters, sort, page, resultLimit);
   if (typeof window !== "undefined" && window.location.hash !== hash) {
     window.history.replaceState(null, "", hash);
   }

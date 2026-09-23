@@ -71,7 +71,7 @@ type ActionShape = {
 
 const ACTION_SHAPES: Record<string, ActionShape> = {
   filter_inventory: {
-    example: `{"type":"filter_inventory","make":"string","priceMin":0,"priceMax":0,"bodyStyle":"string"}`,
+    example: `{"type":"filter_inventory","make":"string","priceMin":0,"priceMax":0,"bodyStyle":"string","sort":"price_desc","limit":10}`,
     capability: "filterInventory",
   },
   navigate: {

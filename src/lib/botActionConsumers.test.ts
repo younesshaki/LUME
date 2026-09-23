@@ -9,6 +9,7 @@ import {
   storePendingLeadFormPrefill,
   storePendingVehicleComparison,
   vehicleFiltersFromBotAction,
+  vehicleResultLimitFromBotAction,
   vehicleRouteFromBotAction,
 } from "./botActionConsumers";
 
@@ -122,6 +123,21 @@ describe("bot action consumers", () => {
       sort: "price_asc",
     });
     expect(route.inventoryState).toContain("sort=price_asc");
+  });
+
+  it("carries a bounded ranked result set into public inventory state", () => {
+    const action = {
+      type: "filter_inventory" as const,
+      sort: "price_desc" as const,
+      limit: 10,
+    };
+    const route = vehicleRouteFromBotAction(action);
+    expect(vehicleResultLimitFromBotAction(action)).toBe(10);
+    expect(route.inventoryState).toContain("sort=price_desc");
+    expect(route.inventoryState).toContain("resultLimit=10");
+
+    window.history.replaceState({}, "", `/vehicles${route.inventoryState}`);
+    expect(readVehicleUrlState().resultLimit).toBe(10);
   });
 
   it("carries a grounded comparison through navigation exactly once", () => {

@@ -292,7 +292,7 @@ export function resolveInventoryOutcome(input: {
     // A full reset changes the public inventory UI even when the filter object
     // is empty. Leaving this to the model let the assistant claim "all filters
     // cleared" while emitting no filter_inventory action at all.
-    inventory = inventoryResultAnswer(matchedVehicles, totalMatched);
+    inventory = inventoryResultAnswer(matchedVehicles, totalMatched, filters);
     filterAction = inventoryFilterAction(filters);
   } else if (
     !availability &&
@@ -302,7 +302,7 @@ export function resolveInventoryOutcome(input: {
   ) {
     inventory = isInventoryRecommendationRequest(userText)
       ? inventoryRecommendationAnswer(matchedVehicles, totalMatched)
-      : inventoryResultAnswer(matchedVehicles, totalMatched);
+      : inventoryResultAnswer(matchedVehicles, totalMatched, filters);
     filterAction = inventoryFilterAction(filters);
   }
 

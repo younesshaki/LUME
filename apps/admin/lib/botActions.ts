@@ -554,7 +554,8 @@ export function isBotAction(value: unknown): value is BotAction {
         isOptionalNumber(value.yearMin) &&
         isOptionalNumber(value.yearMax) &&
         isOptionalNumber(value.mileageMax) &&
-        isOptionalVehicleSort(value.sort)
+        isOptionalVehicleSort(value.sort) &&
+        isOptionalResultLimit(value.limit)
       );
     case "navigate":
       return typeof value.route === "string";
@@ -599,6 +600,14 @@ function isOptionalString(value: unknown): boolean {
 
 function isOptionalNumber(value: unknown): boolean {
   return value === undefined || typeof value === "number";
+}
+
+function isOptionalResultLimit(value: unknown): boolean {
+  return value === undefined ||
+    (typeof value === "number" &&
+      Number.isSafeInteger(value) &&
+      value >= 1 &&
+      value <= 20);
 }
 
 function isOptionalVehicleSort(value: unknown): boolean {

@@ -40,6 +40,21 @@ describe("contextual interpretation compiler", () => {
     });
   });
 
+  it("preserves validated ranked-list controls in the deterministic query contract", () => {
+    expect(
+      compileChatInterpretation(
+        plan({
+          kind: "search",
+          setFilters: { sort: "price_desc", limit: 10 },
+        }),
+        "show me the ten most expensive cars",
+      ),
+    ).toMatchObject({
+      filters: { sort: "price_desc", limit: 10 },
+      hasInventoryIntent: true,
+    });
+  });
+
   it("preserves explicit semantic filter clears for the state machine", () => {
     expect(
       compileChatInterpretation(

@@ -33,6 +33,7 @@ import {
 import {
   consumePendingVehicleComparison,
   vehicleFiltersFromBotAction,
+  vehicleResultLimitFromBotAction,
 } from "@/lib/botActionConsumers";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
@@ -572,6 +573,10 @@ export default function VehiclesPage({
   const [filters, setFilters] = useState<VehicleFilters>(initialState.filters);
   const [sort, setSort] = useState<VehicleSort>(initialState.sort);
   const [page, setPage] = useState(initialState.page);
+  const [resultLimit, setResultLimit] = useState(initialState.resultLimit);
+  // A ranked concierge request is one explicit ordered list, not a second
+  // page of the whole inventory. Guard manually edited/stale hash state too.
+  const effectivePage = resultLimit === null ? page : 1;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [compareVehicleIds, setCompareVehicleIds] = useState<string[]>(() =>
     readStoredIds(COMPARE_STORAGE_KEY).slice(0, 3),
@@ -583,15 +588,15 @@ export default function VehiclesPage({
   const analyticsFiltersInitializedRef = useRef(false);
   const [loadedQueryKey, setLoadedQueryKey] = useState("");
   const queryKey = useMemo(
-    () => encodeVehicleUrlState(filters, sort, page),
-    [filters, page, sort],
+    () => encodeVehicleUrlState(filters, sort, effectivePage, resultLimit),
+    [effectivePage, filters, resultLimit, sort],
   );
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setTotalCount(null);
-    loadVehicleResults(filters, sort, page, PAGE_SIZE)
+    loadVehicleResults(filters, sort, effectivePage, resultLimit ?? PAGE_SIZE)
       .then((result) => {
         if (cancelled) return;
         setVehicles(result.vehicles);
@@ -613,7 +618,7 @@ export default function VehiclesPage({
     return () => {
       cancelled = true;
     };
-  }, [filters, page, queryKey, sort]);
+  }, [effectivePage, filters, queryKey, resultLimit, sort]);
 
   useEffect(() => {
     if (loading || loadError || inventoryTrackedRef.current) return;
@@ -680,15 +685,21 @@ export default function VehiclesPage({
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      writeVehicleUrlState(filters, sort, page);
+      writeVehicleUrlState(filters, sort, effectivePage, resultLimit);
     }, 180);
     return () => window.clearTimeout(timeout);
-  }, [filters, page, sort]);
+  }, [effectivePage, filters, resultLimit, sort]);
+
+  const visibleTotalCount = totalCount === null
+    ? null
+    : resultLimit === null
+      ? totalCount
+      : Math.min(totalCount, resultLimit);
 
   const totalPages =
-    totalCount === null
+    visibleTotalCount === null
       ? Math.max(1, page)
-      : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+      : Math.max(1, Math.ceil(visibleTotalCount / (resultLimit ?? PAGE_SIZE)));
   const safePage = Math.min(page, totalPages);
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
   const filterChips = useMemo(() => activeFilterChips(filters), [filters]);
@@ -751,6 +762,7 @@ export default function VehiclesPage({
 
   const handleFilterChange = (patch: Partial<VehicleFilters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
+    setResultLimit(null);
     setPage(1);
     restoredScrollRef.current = true;
   };
@@ -758,12 +770,14 @@ export default function VehiclesPage({
   const handleSortChange = (nextSort: VehicleSort) => {
     play(vehiclePageSoundActions.filterChange);
     setSort(nextSort);
+    setResultLimit(null);
     setPage(1);
     restoredScrollRef.current = true;
   };
 
   const handleClear = () => {
     setFilters(DEFAULT_FILTERS);
+    setResultLimit(null);
     setPage(1);
   };
 
@@ -775,7 +789,8 @@ export default function VehiclesPage({
 
   useBotAction("filter_inventory", (action) => {
     setFilters(vehicleFiltersFromBotAction(action));
-    setSort("recommended");
+    setSort(action.sort ?? "recommended");
+    setResultLimit(vehicleResultLimitFromBotAction(action));
     setPage(1);
     setFiltersOpen(false);
     restoredScrollRef.current = true;
@@ -885,9 +900,9 @@ export default function VehiclesPage({
               <DemoNotice />
 
               <div className="vehiclesPage__resultsBar" ref={gridRef}>
-                {!loading && totalCount !== null && (
+                {!loading && visibleTotalCount !== null && (
                   <span className="vehiclesPage__resultCount">
-                    {totalCount} vehicle{totalCount !== 1 ? "s" : ""}
+                    {visibleTotalCount} vehicle{visibleTotalCount !== 1 ? "s" : ""}
                     {activeCount > 0 ? " matching filters" : ""}
                   </span>
                 )}
@@ -897,7 +912,7 @@ export default function VehiclesPage({
                 <div className="vehiclesPage__loading">
                   <span>Loading vehicles...</span>
                 </div>
-              ) : totalCount === 0 ? (
+              ) : visibleTotalCount === 0 ? (
                 <div className="vehiclesPage__empty">
                   <p>No vehicles match your filters.</p>
                   <button
@@ -937,7 +952,7 @@ export default function VehiclesPage({
                     })}
                   </motion.div>
 
-                  {totalCount !== null && (
+                  {visibleTotalCount !== null && (
                     <Pagination
                       page={safePage}
                       totalPages={totalPages}
