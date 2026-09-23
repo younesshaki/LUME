@@ -31,7 +31,7 @@
  * Usage (never part of `npm test`):
  *   LUME_BENCH_ENV_FILE=/abs/path/apps/admin/.env.local \
  *   LUME_BENCH_OUT=/abs/path/results.json \
- *   npx vitest run --config scripts/bench/vitest.config.mts
+ *   npx vitest run --config apps/admin/bench/vitest.config.mts
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -427,7 +427,7 @@ describe.skipIf(!ENV_FILE)("public concierge latency (read-only)", () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    ({ POST } = await import("../../apps/admin/app/api/chat/route"));
+    ({ POST } = await import("../app/api/chat/route"));
   });
 
   afterAll(() => {

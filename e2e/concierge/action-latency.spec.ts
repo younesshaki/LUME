@@ -8,7 +8,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
  * "Asking for its data" is the readiness point on purpose. It is the first
  * thing a mounted inventory or detail page does, it happens after the route's
  * lazy chunk has loaded and rendered, and it excludes the inventory API's own
- * server time — which is measured separately by scripts/bench.
+ * server time — which is measured separately by apps/admin/bench.
  *
  * The chat and every backend call are fulfilled by `page.route`: nothing here
  * reaches Supabase, a model, or tenant data.

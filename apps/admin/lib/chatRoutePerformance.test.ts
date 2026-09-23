@@ -18,7 +18,7 @@ const route = readFileSync(
  * that the latency work (reads overlapped instead of chained) did not move
  * any decision: the quota still gates the answer, a failed read still fails
  * the turn where it did, and the model-only context stays off the
- * deterministic path. The measured effect lives in scripts/bench.
+ * deterministic path. The measured effect lives in apps/admin/bench.
  */
 const at = (needle: string, from = 0) => {
   const index = route.indexOf(needle, from);
