@@ -26,7 +26,18 @@ function sse(events: unknown[]): string {
   return `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
 }
 
+/** Any /api request no stub below answers. Asserted empty after each test. */
+let escapedRequests: string[] = [];
+
 async function stubBackend(page: Page): Promise<void> {
+  // Registered first so every specific stub below takes precedence (the most
+  // recently registered matching route wins). Anything reaching this handler
+  // was about to leave the page for a real backend.
+  await page.route("**/api/**", (route) => {
+    const url = new URL(route.request().url());
+    escapedRequests.push(`${route.request().method()} ${url.pathname}`);
+    return route.fulfill({ status: 599, contentType: "application/json", body: "{}" });
+  });
   await page.route("**/api/visitor/me", (route) =>
     route.fulfill({ status: 401, contentType: "application/json", body: "{}" }),
   );
@@ -44,6 +55,15 @@ async function stubBackend(page: Page): Promise<void> {
   );
   await page.route("**/api/vehicles/*", (route) =>
     route.fulfill({ status: 404, contentType: "application/json", body: "{}" }),
+  );
+  // The detail page asks for the price-drop badge alongside the vehicle. A
+  // tenant with the signal switched off is the shape normalizeVehiclePrice-
+  // SignalPayload accepts as "show nothing".
+  await page.route("**/api/vehicles/*/price-signal*", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ enabled: false }),
+    }),
   );
   await page.route("**/api/events*", (route) => route.fulfill({ status: 204, body: "" }));
   await page.route("**/api/consent*", (route) => route.fulfill({ status: 204, body: "" }));
@@ -121,8 +141,14 @@ test.beforeEach(async ({ page }) => {
       uploadThroughput: (1.5 * 1024 * 1024) / 8,
     });
   }
+  escapedRequests = [];
   await stubBackend(page);
   await instrumentFetch(page);
+});
+
+test.afterEach(() => {
+  // "Every backend call is stubbed" is a claim this suite makes, so it checks it.
+  expect(escapedRequests, "unstubbed /api requests").toEqual([]);
 });
 
 test("a filter action reaches a mounted inventory page promptly", async ({ page }, info) => {
