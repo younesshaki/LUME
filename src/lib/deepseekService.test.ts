@@ -122,6 +122,56 @@ describe("streamChat", () => {
     expect(events).toEqual([{ kind: "action", action: validAction }]);
   });
 
+  it("accepts a server-authored navigate-back and rejects forged or retired actions", async () => {
+    const encoder = new TextEncoder();
+    const lines = [
+      { type: "action", action: { type: "navigate-back", destination: "previous", fallback: { type: "filter_inventory", make: "Porsche" } } },
+      { type: "action", action: { type: "navigate-back", destination: "https://evil.example" } },
+      { type: "action", action: { type: "navigate-back", destination: "previous", fallback: { type: "navigate", route: "https://evil.example" } } },
+      { type: "action", action: { type: "navigate-back", destination: "results", path: "/vehicles" } },
+      { type: "action", action: { type: "scroll-to", sectionId: "finance" } },
+      { type: "action", action: { type: "schedule_test_drive", contact: { email: "a@b.c" } } },
+    ];
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const line of lines) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(line)}\n\n`));
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    });
+    const fetcher = vi.fn(async () => new Response(body, { status: 200 }));
+    vi.stubGlobal("fetch", fetcher);
+
+    const events = [];
+    for await (const event of streamChat([{ role: "user", content: "go back" }])) {
+      events.push(event);
+    }
+    // Only the well-formed navigate-back survives. An extra `path` field is
+    // ignored, never used: the browser resolves destinations itself.
+    expect(events.map((event) => event.kind === "action" && event.action.type)).toEqual([
+      "navigate-back",
+      "navigate-back",
+    ]);
+  });
+
+  it("sends only history booleans, never a path", async () => {
+    const fetcher = vi.fn(
+      async () => new Response("data: [DONE]\n\n", { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    for await (const _event of streamChat([{ role: "user", content: "go back" }])) {
+      // drain
+    }
+    const init = (fetcher.mock.calls[0] as unknown as [string, RequestInit])[1];
+    const sent = JSON.parse(String(init.body)) as { navigation?: Record<string, unknown> };
+    expect(Object.keys(sent.navigation ?? {}).sort()).toEqual(["hasPrevious", "hasResults"]);
+    for (const value of Object.values(sent.navigation ?? {})) {
+      expect(typeof value).toBe("boolean");
+    }
+  });
+
   it("surfaces explicit stream errors without exposing an unreadable response", async () => {
     vi.stubGlobal(
       "fetch",
