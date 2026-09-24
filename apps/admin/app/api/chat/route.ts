@@ -320,30 +320,49 @@ export async function POST(request: Request): Promise<Response> {
   }
   timing.mark("tenant");
   let timingReported = false;
+  let deferredTimingOutcome: TurnTimingOutcome | null = null;
+  const timingContext = (outcome: TurnTimingOutcome) => ({
+    ...outcome,
+    requestId,
+    clientRequestId: clientRequestId !== null,
+    tenantId: tenant.tenantId,
+    memoryMode: conversationMemoryMode(),
+    instanceTurn,
+  });
+  const queueServerTiming = (outcome: TurnTimingOutcome): void => {
+    if (timingReported) return;
+    timingReported = true;
+    queueTurnTimingEvent(
+      tenant.tenantId,
+      buildTurnTimingProperties(
+        timingContext(outcome),
+        timing.snapshot(),
+        timing.elapsed(),
+      ),
+    );
+  };
   /**
-   * Close the turn's stopwatch: queue the authoritative server event (once)
-   * and return the payload for the browser's `timing` SSE event.
+   * Close the turn's stopwatch and return the payload for the browser's
+   * `timing` SSE event. The authoritative server event is queued now, or —
+   * when work continues after [DONE] (the tool path's memory commit) —
+   * deferred until `finalizeDeferredTiming()`, so it includes that work.
    */
-  const reportTurnTiming = (outcome: TurnTimingOutcome): ClientTurnTiming => {
+  const reportTurnTiming = (
+    outcome: TurnTimingOutcome,
+    options: { deferServerEvent?: boolean } = {},
+  ): ClientTurnTiming => {
     timing.mark("done");
-    const snapshot = timing.snapshot();
-    const totalMs = timing.elapsed();
-    const context = {
-      ...outcome,
-      requestId,
-      clientRequestId: clientRequestId !== null,
-      tenantId: tenant.tenantId,
-      memoryMode: conversationMemoryMode(),
-      instanceTurn,
-    };
-    if (!timingReported) {
-      timingReported = true;
-      queueTurnTimingEvent(
-        tenant.tenantId,
-        buildTurnTimingProperties(context, snapshot, totalMs),
-      );
-    }
-    return buildClientTurnTiming(context, snapshot, totalMs);
+    const clientTiming = buildClientTurnTiming(
+      timingContext(outcome),
+      timing.snapshot(),
+      timing.elapsed(),
+    );
+    if (options.deferServerEvent) deferredTimingOutcome = outcome;
+    else queueServerTiming(outcome);
+    return clientTiming;
+  };
+  const finalizeDeferredTiming = (): void => {
+    if (deferredTimingOutcome) queueServerTiming(deferredTimingOutcome);
   };
   const reportTurnError = (status: number, errorStage: string): void => {
     reportTurnTiming({
@@ -1594,7 +1613,28 @@ export async function POST(request: Request): Promise<Response> {
   // contract is identical either way.
   const modelStartedAtMs = Date.now();
   const phase1StartedAt = timing.reading();
-  const phase1 = await fetch(chatProvider.apiUrl, {
+  /**
+   * A provider call that fails at the network level (DNS, TLS, reset)
+   * throws instead of returning a status. Time it as one error turn, then
+   * re-throw so the response is exactly what it was before.
+   */
+  const providerFetch = async (
+    stage: "provider_transport_phase_1" | "provider_transport_phase_2",
+    startedAt: number,
+    init: RequestInit,
+  ): Promise<Response> => {
+    try {
+      return await fetch(chatProvider.apiUrl, init);
+    } catch (error) {
+      timing.addSpan(
+        stage === "provider_transport_phase_1" ? "model_phase1" : "model_stream",
+        timing.reading() - startedAt,
+      );
+      reportTurnError(502, stage);
+      throw error;
+    }
+  };
+  const phase1 = await providerFetch("provider_transport_phase_1", phase1StartedAt, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1917,7 +1957,7 @@ export async function POST(request: Request): Promise<Response> {
   const thinkingSteps = turnThinkingSteps(turn.steps);
 
   const phase2StartedAt = timing.reading();
-  const phase2 = await fetch(chatProvider.apiUrl, {
+  const phase2 = await providerFetch("provider_transport_phase_2", phase2StartedAt, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -2113,10 +2153,36 @@ export async function POST(request: Request): Promise<Response> {
               type: "timing",
               timing: reportTurnTiming(
                 modelTimingOutcome("tool", emittedActions, 2),
+                // The memory commit runs after [DONE]; the server event
+                // waits for it so server_memory_commit_ms is real.
+                { deferServerEvent: true },
               ),
             }),
           ),
         );
+      };
+
+      // A stream that fails or ends without completion never reaches
+      // [DONE]. It is still one timed turn: the browser gets the (content-
+      // free) error timing once, before any error event it would throw on.
+      let errorTimingSent = false;
+      const emitErrorTiming = () => {
+        if (doneEventSent || errorTimingSent) return;
+        errorTimingSent = true;
+        timing.addSpan("model_stream", timing.reading() - phase2StartedAt);
+        const errorTiming = reportTurnTiming({
+          ...modelTimingOutcome("tool", emittedActions, 2),
+          route: "error",
+          status: 502,
+          errorStage: "provider_stream",
+        });
+        try {
+          controller.enqueue(
+            encoder.encode(sseEvent({ type: "timing", timing: errorTiming })),
+          );
+        } catch {
+          // The stream may already be closed by the client; telemetry only.
+        }
       };
 
       const emitFiltered = ({
@@ -2183,6 +2249,7 @@ export async function POST(request: Request): Promise<Response> {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "stream failure";
+        emitErrorTiming();
         controller.enqueue(
           encoder.encode(sseEvent({ type: "error", message })),
         );
@@ -2215,9 +2282,8 @@ export async function POST(request: Request): Promise<Response> {
             }),
           );
         }
-        // A stream that failed or ended without completion never reached
-        // [DONE]; it is still one turn, and it is reported as an error.
-        if (!doneEventSent) reportTurnError(502, "provider_stream");
+        if (doneEventSent) finalizeDeferredTiming();
+        else emitErrorTiming();
         if (streamCompletionObserved) {
           captureConciergeTranscript({
             sessionId: transcriptSessionId,

@@ -162,7 +162,8 @@ SELECT
 FROM events
 WHERE event = '${TURN}'
   AND timestamp > now() - INTERVAL 7 DAY
-  AND properties.client_was_hidden = 'false'
+  -- Works whether PostHog typed the property as Boolean or String.
+  AND coalesce(toString(properties.client_was_hidden), 'false') NOT IN ('true', '1')
 ORDER BY toFloat(properties.duration_ms) DESC
 LIMIT 50`),
     },

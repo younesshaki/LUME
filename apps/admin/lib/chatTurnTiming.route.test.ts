@@ -15,6 +15,12 @@ const state = vi.hoisted(() => ({
   plan: "pro" as PlanId,
   providerReply: "" as string,
   providerStatus: 200,
+  /** When set, the first model call asks for this tool. */
+  toolCall: null as null | { name: string; arguments: string },
+  /** Streamed body of the follow-up (tool) model call. */
+  phase2Body: "",
+  fetchThrows: false,
+  allowedTools: [] as string[],
   providerMalformed: false,
   providerCalls: 0,
   afterTasks: [] as Array<() => unknown>,
@@ -147,7 +153,10 @@ vi.mock("@/lib/chatTools", async (importOriginal) => {
   // No tools: model turns take the single-call prose path.
   return {
     ...actual,
-    loadTenantBotRuntimeConfig: async () => ({ allowedTools: [], modelId: DEFAULT_CONCIERGE_MODEL_ID }),
+    loadTenantBotRuntimeConfig: async () => ({
+      allowedTools: state.allowedTools,
+      modelId: DEFAULT_CONCIERGE_MODEL_ID,
+    }),
   };
 });
 vi.mock("@/lib/conciergeTargets", async (importOriginal) => {
@@ -179,16 +188,26 @@ beforeAll(async () => {
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
   delete process.env.ALLOWED_CHAT_ORIGINS;
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (url !== PROVIDER_URL) throw new Error(`unexpected network call: ${url}`);
     state.providerCalls += 1;
+    if (state.fetchThrows) throw new TypeError("fetch failed");
+    const request = JSON.parse(String(init?.body ?? "{}")) as { stream?: boolean };
+    if (request.stream) {
+      return new Response(state.phase2Body, {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+      });
+    }
+    const message = state.toolCall
+      ? {
+          content: "",
+          tool_calls: [{ id: "call_1", type: "function", function: state.toolCall }],
+        }
+      : { content: state.providerReply };
     return new Response(
-      JSON.stringify(
-        state.providerMalformed
-          ? { choices: [] }
-          : { choices: [{ message: { content: state.providerReply } }] },
-      ),
+      JSON.stringify(state.providerMalformed ? { choices: [] } : { choices: [{ message }] }),
       { status: state.providerStatus, headers: { "Content-Type": "application/json" } },
     );
   }) as typeof fetch;
@@ -206,6 +225,10 @@ beforeEach(() => {
   state.providerReply = "";
   state.providerStatus = 200;
   state.providerMalformed = false;
+  state.toolCall = null;
+  state.phase2Body = "";
+  state.fetchThrows = false;
+  state.allowedTools = [];
   state.providerCalls = 0;
   state.afterTasks.length = 0;
   state.posthog.length = 0;
@@ -392,5 +415,71 @@ describe("speed telemetry — turns that do not answer", () => {
     const [event] = timingEvents();
     expect(event!.properties.cold_start).toBe(false);
     expect(event!.properties.instance_turn).toEqual(expect.any(Number));
+  });
+});
+
+describe("speed telemetry — tool turn", () => {
+  const delta = (content: string) =>
+    `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`;
+  const finish = `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`;
+
+  beforeEach(() => {
+    state.allowedTools = ["find_vehicles"];
+    state.toolCall = { name: "find_vehicles", arguments: JSON.stringify({ make: "Porsche" }) };
+  });
+
+  it("times tools and the follow-up stream; the server event includes the post-[DONE] memory commit", async () => {
+    state.phase2Body = `${delta("We have two Porsches.")}${finish}data: [DONE]\n\n`;
+    const chat = new Conversation();
+    const turn = await chat.say("what fun weekend cars do you have?");
+    expect(state.providerCalls).toBe(2);
+
+    const types = turn.events.map((event) => event.type ?? "delta");
+    expect(types.at(-1)).toBe("[DONE]");
+    expect(types.at(-2)).toBe("timing");
+    const timing = serverTiming(turn.events)!;
+    expect(timing.route).toBe("tool");
+    expectOrdered(timing, ["model_response", "first_byte", "model_first_token", "first_text", "done"]);
+    expect(typeof timing.server_tools_ms).toBe("number");
+    expect(typeof timing.server_model_stream_ms).toBe("number");
+
+    const [event] = timingEvents();
+    expect(event!.properties).toMatchObject({ route: "tool", model_calls: 2 });
+    // Committed after [DONE] — present on the authoritative server event.
+    expect(typeof event!.properties.server_memory_commit_ms).toBe("number");
+    expect(event!.properties.server_total_ms as number).toBeGreaterThanOrEqual(
+      event!.properties.server_done_ms as number,
+    );
+    expect(timingEvents()).toHaveLength(1);
+  });
+
+  it("a follow-up stream cut off before [DONE] still reaches the browser as one error timing", async () => {
+    state.phase2Body = delta("We have two Porsch");
+    const chat = new Conversation();
+    const turn = await chat.say("what fun weekend cars do you have?");
+    const types = turn.events.map((event) => event.type ?? "delta");
+    expect(types).not.toContain("[DONE]");
+    expect(types.filter((type) => type === "timing")).toHaveLength(1);
+    expect(serverTiming(turn.events)!.route).toBe("error");
+
+    const [event] = timingEvents();
+    expect(event!.properties).toMatchObject({ route: "error", status: 502, error_stage: "provider_stream" });
+    expect(timingEvents()).toHaveLength(1);
+  });
+});
+
+describe("speed telemetry — provider network failure", () => {
+  it("a thrown provider fetch is timed as a transport error and still throws", async () => {
+    state.fetchThrows = true;
+    const chat = new Conversation();
+    await expect(chat.say("what are your opening hours?")).rejects.toThrow("fetch failed");
+    await runAfterTasks();
+    const [event] = timingEvents();
+    expect(event!.properties).toMatchObject({
+      route: "error",
+      status: 502,
+      error_stage: "provider_transport_phase_1",
+    });
+    expect(typeof event!.properties.server_model_phase1_ms).toBe("number");
   });
 });

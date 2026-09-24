@@ -89,8 +89,23 @@ The server event also carries:
 - **Environment:** `cold_start` and `instance_turn`, `region`
   (`VERCEL_REGION`), `release` (the commit) and `deployment_env`.
 
-Error turns are timed too. For example, a provider failure is reported as
-`route: "error", error_stage: "provider_phase_1"` with the time spent before it.
+Error turns are timed too, with the time spent before the failure. Possible
+`error_stage` values:
+
+- `quota`, `state_build`, `context_build`, `provider_unconfigured`;
+- `provider_phase_1`, `provider_parse`, `provider_phase_2`, `provider_no_body`
+  (the provider answered, but with an error or an unusable body);
+- `provider_transport_phase_1` / `_phase_2` (the call failed at the network
+  level; the request still fails exactly as before);
+- `provider_stream` (the streamed follow-up ended without `[DONE]`). The browser
+  still receives one error `timing` event, sent before any stream error event,
+  so the failed-turn event carries the server stages.
+
+**Tool turns commit memory after `[DONE]`.** The browser's `timing` payload is
+sent just before `[DONE]`. The authoritative server event waits for the commit,
+so it includes `server_memory_commit_ms`, and its `server_total_ms` can exceed
+`server_done_ms`. On every other route, the two payloads carry the same
+numbers.
 
 ## Action: from dispatch to page on screen
 
