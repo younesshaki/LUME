@@ -132,6 +132,10 @@ test("vehicle opened from filtered results → go back returns to those results"
   await send(page, "go back");
   await expect(page).toHaveURL(resultsUrl);
   await expect(lastAssistant(page)).toContainText("Taking you back");
+  // The concierge return replaces the vehicle-detail entry. Native browser
+  // Back must not resurrect the detail page it just left.
+  await page.goBack();
+  await expect(page).toHaveURL(resultsUrl);
   // The second turn told the server, with booleans only, that a way back existed.
   expect(chatBodies[1]?.navigation).toEqual({ hasPrevious: true, hasResults: true });
 });

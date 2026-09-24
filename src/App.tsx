@@ -430,7 +430,10 @@ export default function App() {
     setShowcaseChapterRevealed(false);
     if (target.kind === "history") {
       inAppHistory.markPendingBack(target);
-      routerNavigate(target.path, { state: { source: "bot" } });
+      // This is an in-site return, not a fresh forward navigation. Replacing
+      // the current entry means the browser's own Back button cannot resurrect
+      // the vehicle/detail page the concierge just left.
+      routerNavigate(target.path, { replace: true, state: { source: "bot" } });
       return;
     }
     navigateTo(vehicleRouteFromBotAction(target.fallback), {
