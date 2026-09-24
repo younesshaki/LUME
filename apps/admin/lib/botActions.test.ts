@@ -119,10 +119,31 @@ describe("parseBotActionLine / isBotAction", () => {
       `{"type":"compare_vehicles","vehicleIds":["v1","v2"]}`,
       `{"type":"open-lead-form"}`,
       `{"type":"capture_lead","contact":{"email":"a@b.c"}}`,
-      `{"type":"scroll-to","sectionId":"hero"}`,
+      `{"type":"navigate-back","destination":"previous"}`,
+      `{"type":"navigate-back","destination":"results","fallback":{"type":"filter_inventory","sort":"price_desc","limit":10}}`,
     ];
     for (const line of lines) {
       expect(parseBotActionLine(line), line).toBeDefined();
+    }
+  });
+
+  it("rejects the retired scroll-to and the deferred scheduling types", () => {
+    // Retired/deferred types have no browser consumer: accepting them would
+    // let the model "perform" something that silently does nothing.
+    expect(parseBotActionLine(`{"type":"scroll-to","sectionId":"hero"}`)).toBeUndefined();
+    expect(isBotAction({ type: "schedule_appointment", contact: { email: "a@b.c" } })).toBe(false);
+    expect(isBotAction({ type: "schedule_test_drive", contact: { email: "a@b.c" } })).toBe(false);
+  });
+
+  it("fails closed on forged navigate-back payloads", () => {
+    for (const forged of [
+      { type: "navigate-back" },
+      { type: "navigate-back", destination: "https://evil.example" },
+      { type: "navigate-back", destination: "previous", fallback: { type: "navigate", route: "https://evil.example" } },
+      { type: "navigate-back", destination: "previous", fallback: { type: "filter_inventory", limit: 5000 } },
+      { type: "navigate-back", destination: "previous", fallback: "/vehicles" },
+    ]) {
+      expect(isBotAction(forged), JSON.stringify(forged)).toBe(false);
     }
   });
 
@@ -146,12 +167,21 @@ describe("extractInlineActions", () => {
       "Here are some SUVs under budget.",
       `{"type":"filter_inventory","bodyStyle":"SUV","priceMax":80000}`,
       "Want me to narrow it down?",
-      `{"type":"scroll-to","sectionId":"inventory"}`,
+      `{"type":"highlight-vehicle","vehicleId":"v1"}`,
     ].join("\n");
     const actions = extractInlineActions(content);
     expect(actions).toHaveLength(2);
     expect(actions[0]?.type).toBe("filter_inventory");
-    expect(actions[1]?.type).toBe("scroll-to");
+    expect(actions[1]?.type).toBe("highlight-vehicle");
+  });
+
+  it("strips a legacy scroll-to from visible text without ever executing it", () => {
+    const content = [
+      "Here is the finance section.",
+      `{"type":"scroll-to","sectionId":"finance"}`,
+    ].join("\n");
+    expect(extractInlineActions(content)).toEqual([]);
+    expect(stripInlineActions(content)).toBe("Here is the finance section.");
   });
 
   it("returns empty for pure prose", () => {

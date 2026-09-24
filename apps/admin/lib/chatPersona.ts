@@ -69,7 +69,9 @@ type ActionShape = {
   hint?: string;
 };
 
-const ACTION_SHAPES: Record<string, ActionShape> = {
+// Keyed by the closed union: a new BotAction type without a gate entry is a
+// type error, and a retired type cannot be given one.
+const ACTION_SHAPES: Record<BotAction["type"], ActionShape> = {
   filter_inventory: {
     example: `{"type":"filter_inventory","make":"string","priceMin":0,"priceMax":0,"bodyStyle":"string","sort":"price_desc","limit":10}`,
     capability: "filterInventory",
@@ -106,10 +108,15 @@ const ACTION_SHAPES: Record<string, ActionShape> = {
     example: `{"type":"capture_lead","contact":{"email":"string","phone":"string","firstName":"string","lastName":"string","message":"string"},"vehicleId":"string"}`,
     capability: "captureLead",
   },
-  "scroll-to": {
-    example: `{"type":"scroll-to","sectionId":"string"}`,
-    capability: null,
+  // Server-authored only (deterministic back-navigation rules). Never shown to
+  // the model; model output of this type is discarded before this gate.
+  "navigate-back": {
+    example: `{"type":"navigate-back","destination":"previous"}`,
+    capability: "navigate",
+    advertise: false,
   },
+  // "scroll-to" is retired: no entry, so isActionAllowed() drops it from any
+  // source and actionSystemPrompt() can never advertise it.
 };
 
 function capabilityEnabled(
@@ -118,6 +125,11 @@ function capabilityEnabled(
 ): boolean {
   if (key === null) return true;
   return capabilities[key] !== false;
+}
+
+/** Action types this gate can authorize (for the capability contract test). */
+export function authorizableActionTypes(): string[] {
+  return Object.keys(ACTION_SHAPES);
 }
 
 /** The structured-actions prompt, advertising only capability-allowed shapes. */

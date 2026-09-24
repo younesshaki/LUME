@@ -46,9 +46,40 @@ export type BotOpenLeadFormAction = {
   attribution?: BotActionAttribution;
 };
 
+/**
+ * @deprecated Retired from the public concierge (2026-09-24). A free-form
+ * `sectionId` cannot be validated against anything the tenant registered, and
+ * no browser consumer ever existed, so the action was a silent no-op the model
+ * could still claim it had performed. Section scrolling is available through
+ * `navigate-target` with a tenant-registered `section-anchor` target. The type
+ * is kept only so legacy model output can be recognised and stripped.
+ */
 export type BotScrollToAction = {
   type: "scroll-to";
   sectionId: string;
+};
+
+/**
+ * In-site "go back", authored ONLY by the chat server's deterministic rules.
+ *
+ * It deliberately carries no URL, path, route or history index: the browser
+ * resolves the destination from its own same-origin record of pages visited
+ * in this LUME tab, so neither the model nor a crafted payload can choose
+ * where the visitor lands, and the visitor can never be sent off the site.
+ */
+export type BotNavigateBackAction = {
+  type: "navigate-back";
+  /**
+   * `previous` — the page before the current one.
+   * `results`  — the most recent inventory results page.
+   */
+  destination: "previous" | "results";
+  /**
+   * Server-grounded results to open when the browser has no usable in-app
+   * history (for example, the visitor landed directly on a vehicle page).
+   * Built from the conversation's verified result set, never from model text.
+   */
+  fallback?: BotInventoryFilterAction;
 };
 
 export type BotAction =
@@ -58,8 +89,8 @@ export type BotAction =
   | BotHighlightVehicleAction
   | BotCompareVehiclesAction
   | BotOpenLeadFormAction
-  | BotScrollToAction
-  | BotCaptureLeadAction;
+  | BotCaptureLeadAction
+  | BotNavigateBackAction;
 
 /** At least one of email or phone is required. */
 export type BotLeadContact = {
@@ -98,6 +129,11 @@ export type BotNavigateTargetAction = {
   attribution?: BotActionAttribution;
 };
 
+/**
+ * Deferred — not part of `BotAction`. No public flow exists that collects a
+ * date/time with the visitor's explicit confirmation and creates an
+ * attributed appointment; see PUBLIC_CONCIERGE_DEFERRED_ACTIONS.
+ */
 export type BotScheduleAppointmentAction = {
   type: "schedule_appointment";
   appointmentType: "appointment";
@@ -110,6 +146,7 @@ export type BotScheduleAppointmentAction = {
   message?: string;
 };
 
+/** Deferred — not part of `BotAction`. See BotScheduleAppointmentAction. */
 export type BotScheduleTestDriveAction = {
   type: "schedule_test_drive";
   contact: BotLeadContact;

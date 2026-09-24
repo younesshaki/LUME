@@ -7,7 +7,11 @@
  * tool runs. Both are validated/filtered before reaching the client.
  */
 import type { LlmToolCall } from "@lume/bot";
-import type { BotAction } from "@lume/types";
+import {
+  isRetiredPublicConciergeActionType,
+  isServerAuthoredOnlyAction,
+  type BotAction,
+} from "@lume/types";
 
 const DSML_TOKEN_SOURCE = String.raw`[|｜]{1,2}DSML[|｜]{1,2}`;
 const MAX_RECOVERED_TOOL_CALLS = 5;
@@ -365,17 +369,23 @@ function extractActionSegments(line: string): InlineActionFilterResult {
     if (start < 0) break;
     const end = completeJsonObjectEnd(line, start);
     if (end < 0) break;
-    const action = parseBotActionLine(line.slice(start, end));
+    const candidate = line.slice(start, end);
+    const action = parseBotActionLine(candidate);
     if (action) {
       visibleText += line.slice(visibleCursor, start);
       actions.push(action);
+      visibleCursor = end;
+    } else if (isRetiredActionLine(candidate)) {
+      // A retired action (e.g. legacy scroll-to) is protocol, not prose: hide
+      // it from the visitor, but it is never executed.
+      visibleText += line.slice(visibleCursor, start);
       visibleCursor = end;
     }
     searchCursor = end;
   }
 
   visibleText += line.slice(visibleCursor);
-  if (actions.length > 0 && !visibleText.trim()) {
+  if (visibleCursor > 0 && !visibleText.trim()) {
     visibleText = "";
   }
   return { visibleText, actions };
@@ -508,6 +518,15 @@ function parseDsmlJsonValue(value: string): unknown {
   }
 }
 
+function isRetiredActionLine(candidate: string): boolean {
+  try {
+    const parsed = JSON.parse(candidate.trim()) as unknown;
+    return isRecord(parsed) && isRetiredPublicConciergeActionType(parsed.type);
+  } catch {
+    return false;
+  }
+}
+
 export function parseBotActionLine(line: string): BotAction | undefined {
   const trimmed = line.trim();
   if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
@@ -530,6 +549,11 @@ export function validateBotActionEnvelope(value: unknown): BotActionEnvelopeVali
   if (!isBotAction(value.action)) {
     return { ok: false, error: "Action is missing or invalid." };
   }
+  // Server-authored actions (navigate-back) are produced only by the chat
+  // route's deterministic rules; a caller cannot mint one here.
+  if (isServerAuthoredOnlyAction(value.action.type)) {
+    return { ok: false, error: "Action is missing or invalid." };
+  }
   return { ok: true, value: { action: value.action } };
 }
 
@@ -540,23 +564,7 @@ export function isBotAction(value: unknown): value is BotAction {
 
   switch (value.type) {
     case "filter_inventory":
-      return (
-        isOptionalString(value.make) &&
-        isOptionalString(value.model) &&
-        isOptionalString(value.stockType) &&
-        isOptionalNumber(value.priceMin) &&
-        isOptionalNumber(value.priceMax) &&
-        isOptionalString(value.bodyStyle) &&
-        isOptionalString(value.fuelType) &&
-        isOptionalString(value.drivetrain) &&
-        isOptionalString(value.sellerState) &&
-        isOptionalString(value.sellerCity) &&
-        isOptionalNumber(value.yearMin) &&
-        isOptionalNumber(value.yearMax) &&
-        isOptionalNumber(value.mileageMax) &&
-        isOptionalVehicleSort(value.sort) &&
-        isOptionalResultLimit(value.limit)
-      );
+      return isInventoryFilterFields(value);
     case "navigate":
       return typeof value.route === "string";
     case "navigate-target":
@@ -575,11 +583,39 @@ export function isBotAction(value: unknown): value is BotAction {
       );
     case "capture_lead":
       return isLeadContact(value.contact) && isOptionalString(value.vehicleId);
-    case "scroll-to":
-      return typeof value.sectionId === "string";
+    case "navigate-back":
+      return (
+        (value.destination === "previous" || value.destination === "results") &&
+        (value.fallback === undefined ||
+          (isRecord(value.fallback) &&
+            value.fallback.type === "filter_inventory" &&
+            isInventoryFilterFields(value.fallback)))
+      );
     default:
+      // Includes retired ("scroll-to") and deferred ("schedule_*") types:
+      // not executable, so never valid.
       return false;
   }
+}
+
+function isInventoryFilterFields(value: Record<string, unknown>): boolean {
+  return (
+    isOptionalString(value.make) &&
+    isOptionalString(value.model) &&
+    isOptionalString(value.stockType) &&
+    isOptionalNumber(value.priceMin) &&
+    isOptionalNumber(value.priceMax) &&
+    isOptionalString(value.bodyStyle) &&
+    isOptionalString(value.fuelType) &&
+    isOptionalString(value.drivetrain) &&
+    isOptionalString(value.sellerState) &&
+    isOptionalString(value.sellerCity) &&
+    isOptionalNumber(value.yearMin) &&
+    isOptionalNumber(value.yearMax) &&
+    isOptionalNumber(value.mileageMax) &&
+    isOptionalVehicleSort(value.sort) &&
+    isOptionalResultLimit(value.limit)
+  );
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
