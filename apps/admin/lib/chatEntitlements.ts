@@ -43,7 +43,7 @@ export function planEnabledTools(
 /**
  * The plan gate on BotActions from ANY source (model inline JSON, tool
  * results, deterministic navigation). When chat.actions is off every
- * action is dropped — including always-allowed shapes like scroll-to and
+ * action is dropped — including always-allowed shapes like
  * highlight-vehicle that persona capabilities alone would let through.
  */
 export function filterPlanAllowedActions(

@@ -9,7 +9,10 @@ import {
 import { DEFAULT_BOT_PERSONA_CAPABILITIES } from "./persona";
 
 const navigate: BotAction = { type: "navigate", route: "/vehicles" };
-const scrollTo: BotAction = { type: "scroll-to", sectionId: "inventory" };
+// highlight-vehicle is the remaining capability-free ("always allowed") shape
+// now that scroll-to is retired.
+const highlight: BotAction = { type: "highlight-vehicle", vehicleId: "vehicle-1" };
+const navigateBack: BotAction = { type: "navigate-back", destination: "previous" };
 const openLeadForm: BotAction = { type: "open-lead-form" };
 
 describe("planEnabledTools — Basic vs Pro tool access", () => {
@@ -40,14 +43,30 @@ describe("filterPlanAllowedActions — Basic vs Pro action access", () => {
       .toEqual([]);
   });
 
-  it("Basic also drops always-allowed shapes like scroll-to that capabilities alone would keep", () => {
-    expect(filterPlanAllowedActions(false, [scrollTo], DEFAULT_BOT_PERSONA_CAPABILITIES))
+  it("Basic also drops always-allowed shapes like highlight-vehicle that capabilities alone would keep", () => {
+    expect(filterPlanAllowedActions(false, [highlight], DEFAULT_BOT_PERSONA_CAPABILITIES))
+      .toEqual([]);
+  });
+
+  it("Basic drops server-authored navigate-back too", () => {
+    expect(filterPlanAllowedActions(false, [navigateBack], DEFAULT_BOT_PERSONA_CAPABILITIES))
       .toEqual([]);
   });
 
   it("Pro keeps actions the tenant persona allows", () => {
-    expect(filterPlanAllowedActions(true, [navigate, scrollTo], DEFAULT_BOT_PERSONA_CAPABILITIES))
-      .toEqual([navigate, scrollTo]);
+    expect(filterPlanAllowedActions(true, [navigate, highlight, navigateBack], DEFAULT_BOT_PERSONA_CAPABILITIES))
+      .toEqual([navigate, highlight, navigateBack]);
+  });
+
+  it("navigate-back is a navigation capability: a persona without navigate loses it", () => {
+    const capabilities = { ...DEFAULT_BOT_PERSONA_CAPABILITIES, navigate: false };
+    expect(filterPlanAllowedActions(true, [navigateBack], capabilities)).toEqual([]);
+  });
+
+  it("a retired scroll-to cannot pass the gate from any source", () => {
+    const retired = { type: "scroll-to", sectionId: "inventory" } as unknown as BotAction;
+    expect(filterPlanAllowedActions(true, [retired], DEFAULT_BOT_PERSONA_CAPABILITIES))
+      .toEqual([]);
   });
 
   it("Pro still respects persona capabilities as an additional restriction", () => {

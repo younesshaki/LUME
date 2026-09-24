@@ -45,11 +45,18 @@ describe("actionSystemPrompt", () => {
       "filter_inventory",
       "navigate-target",
       "capture_lead",
-      "scroll-to",
     ]) {
       expect(prompt).toContain(`"type":"${type}"`);
     }
-    for (const type of ["navigate", "highlight-vehicle", "open-lead-form"]) {
+    // navigate-back is server-authored only and scroll-to is retired: the
+    // model must never be told either shape exists.
+    for (const type of [
+      "navigate",
+      "highlight-vehicle",
+      "open-lead-form",
+      "navigate-back",
+      "scroll-to",
+    ]) {
       expect(prompt).not.toContain(`"type":"${type}"`);
     }
     expect(prompt).toContain("you MUST emit navigate-target");

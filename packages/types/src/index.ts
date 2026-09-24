@@ -14,6 +14,16 @@ export {
   mergeConciergeTargets,
   conciergeTargetClientDescriptor,
 } from "./conciergeTargets";
+export type * from "./conciergeActionCapabilities";
+export {
+  PUBLIC_CONCIERGE_ACTIONS,
+  PUBLIC_CONCIERGE_ACTION_TYPES,
+  PUBLIC_CONCIERGE_RETIRED_ACTIONS,
+  PUBLIC_CONCIERGE_DEFERRED_ACTIONS,
+  isPublicConciergeActionType,
+  isRetiredPublicConciergeActionType,
+  isServerAuthoredOnlyAction,
+} from "./conciergeActionCapabilities";
 export type * from "./page";
 export type * from "./tenantTheme";
 export {

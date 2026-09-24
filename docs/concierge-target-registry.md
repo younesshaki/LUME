@@ -202,6 +202,13 @@ pending action in session storage plus an in-memory fallback.
 The app-level consumer is always mounted in `src/App.tsx`, so actions do not
 depend on the chat’s current page.
 
+The full public action inventory — which action types are live, the
+server-only `navigate-back` contract, the retired `scroll-to` and the deferred
+scheduling types — lives in
+[concierge-action-capabilities.md](concierge-action-capabilities.md).
+Section scrolling is done with a `section-anchor` target here, never a
+free-form selector.
+
 Existing surfaces are wired as follows:
 
 - inventory: generic route target;
