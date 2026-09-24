@@ -9,6 +9,9 @@ don't measure per turn, per stage, per release.
 class and release tags are recorded. No visitor text, reply text, contact
 detail or vehicle id is ever in a speed event. Tests enforce this.
 
+The prioritised list of what to speed up next, and how each item is measured,
+is in [concierge-speed-roadmap-2026-09-24.md](concierge-speed-roadmap-2026-09-24.md).
+
 ## The four events
 
 | Event | Sent from | When | Exists for |
