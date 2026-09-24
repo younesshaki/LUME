@@ -426,7 +426,7 @@ describe("public chat route: shadow interpretation is inert by default", () => {
 describe("public chat route: active contextual interpretation", () => {
   it("runs only behind both rollout gates and only after deterministic extraction misses", () => {
     expect(route).toContain(
-      "const contextualInterpretationEnabled = isContextualInterpretationEnabled(\n    tenant.slug,\n    planClampedModelId,\n  )",
+      "isResolvedContextualInterpretationEnabled(tenant.slug, chatProvider)",
     );
     const active = at("// Phase 3 active canary:");
     const window = route.slice(active, active + 1800);

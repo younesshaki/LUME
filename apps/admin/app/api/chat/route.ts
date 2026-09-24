@@ -137,7 +137,7 @@ import { runShadowInterpretation } from "@/lib/chatInterpretationRunner.server";
 import { CHAT_INTERPRETATION_SCHEMA_VERSION } from "@/lib/chatInterpretation";
 import {
   compileChatInterpretation,
-  isContextualInterpretationEnabled,
+  isResolvedContextualInterpretationEnabled,
 } from "@/lib/chatInterpretationExecution";
 import {
   claimConversationTurn,
@@ -332,10 +332,8 @@ export async function POST(request: Request): Promise<Response> {
       ? DEFAULT_CONCIERGE_MODEL_ID
       : botRuntimeConfig.modelId;
   const chatProvider = resolveChatProvider(planClampedModelId);
-  const contextualInterpretationEnabled = isContextualInterpretationEnabled(
-    tenant.slug,
-    planClampedModelId,
-  );
+  const contextualInterpretationEnabled =
+    isResolvedContextualInterpretationEnabled(tenant.slug, chatProvider);
   const tenantName = tenant.name ?? tenant.slug;
   const memoryStore = getConversationMemoryStore();
   // Public visitors need the same deterministic continuity as signed-in

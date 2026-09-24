@@ -71,9 +71,87 @@ describe("shadow interpretation provider accounting", () => {
     const body = JSON.parse(String(request?.body)) as {
       max_tokens?: number;
       temperature?: number;
+      response_format?: { type?: string };
     };
     expect(body.max_tokens).toBe(350);
     expect(body.temperature).toBe(0);
+    expect(body.response_format).toBeUndefined();
+  });
+
+  it("uses JSON-object mode with the direct Moonshot adapter", async () => {
+    const moonshotProvider: ResolvedChatProvider = {
+      ...provider,
+      requestedModelId: "kimi-k2.6",
+      profile: getConciergeModelProfile("kimi-k2.6"),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: validPlan() } }],
+            usage: { prompt_tokens: 20, completion_tokens: 10 },
+          }),
+        ),
+      ),
+    );
+
+    await runShadowInterpretation({ ...base, provider: moonshotProvider });
+
+    const request = vi.mocked(fetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String(request?.body)) as {
+      response_format?: { type?: string };
+    };
+    expect(body.response_format).toEqual({ type: "json_object" });
+  });
+
+  it("uses a strict closed JSON Schema through AI Gateway", async () => {
+    const gatewayProvider: ResolvedChatProvider = {
+      ...provider,
+      requestedModelId: "openai-gpt-5.4-mini",
+      profile: getConciergeModelProfile("openai-gpt-5.4-mini"),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: validPlan() } }],
+            usage: { prompt_tokens: 20, completion_tokens: 10 },
+          }),
+        ),
+      ),
+    );
+
+    await runShadowInterpretation({ ...base, provider: gatewayProvider });
+
+    const request = vi.mocked(fetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String(request?.body)) as {
+      response_format?: {
+        type?: string;
+        json_schema?: {
+          name?: string;
+          strict?: boolean;
+          schema?: { additionalProperties?: boolean; required?: string[] };
+        };
+      };
+    };
+    expect(body.response_format?.type).toBe("json_schema");
+    expect(body.response_format?.json_schema).toMatchObject({
+      name: "lume_concierge_interpretation",
+      strict: true,
+      schema: {
+        additionalProperties: false,
+      },
+    });
+    expect(body.response_format?.json_schema?.schema?.required).toEqual(
+      expect.arrayContaining([
+        "version",
+        "kind",
+        "setFilters",
+        "clearFilters",
+      ]),
+    );
   });
 
   it("counts non-2xx and malformed responses as attempted calls", async () => {
@@ -125,3 +203,15 @@ describe("shadow interpretation provider accounting", () => {
     });
   });
 });
+
+function validPlan(): string {
+  return JSON.stringify({
+    version: 1,
+    kind: "search",
+    setFilters: { make: "BMW", priceMax: 50000 },
+    clearFilters: [],
+    reference: null,
+    clarifyReason: null,
+    unsupportedClauses: [],
+  });
+}

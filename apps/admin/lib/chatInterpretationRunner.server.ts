@@ -2,6 +2,7 @@ import type { MemoryMessage } from "@lume/bot";
 import { buildChatCompletionBody } from "./chatProvider";
 import type { ResolvedChatProvider } from "./chatProviderResolution";
 import {
+  CHAT_INTERPRETATION_JSON_SCHEMA,
   buildInterpretationSchemaPrompt,
   parseChatInterpretation,
   type ChatInterpretation,
@@ -86,6 +87,7 @@ export async function runShadowInterpretation(input: {
           toolFields: {
             max_tokens: MAX_OUTPUT_TOKENS,
             temperature: 0,
+            ...structuredOutputRequestFields(input.provider),
           },
         }),
       ),
@@ -136,4 +138,33 @@ export async function runShadowInterpretation(input: {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/**
+ * Keep provider differences at the transport boundary, never in the intent
+ * parser. Gateway supports strict JSON Schema and Moonshot supports
+ * JSON-object mode. The strict TypeScript parser still rejects every
+ * unexpected or contradictory value after either response. Other direct
+ * adapters retain prompt-only JSON until they have their own measured
+ * compatibility evidence.
+ */
+function structuredOutputRequestFields(
+  provider: ResolvedChatProvider,
+): Record<string, unknown> {
+  if (provider.profile.provider === "gateway") {
+    return {
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "lume_concierge_interpretation",
+          strict: true,
+          schema: CHAT_INTERPRETATION_JSON_SCHEMA,
+        },
+      },
+    };
+  }
+
+  return provider.profile.provider === "moonshot"
+    ? { response_format: { type: "json_object" } }
+    : {};
 }

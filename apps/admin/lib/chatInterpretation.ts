@@ -143,6 +143,105 @@ const INTERPRETABLE_SORTS = new Set([
   "mileage_desc",
 ]);
 
+/**
+ * Provider-facing shape for the contextual interpreter.
+ *
+ * This deliberately describes only syntax. `parseChatInterpretation()` below
+ * remains the authority for semantic consistency (for example, it rejects a
+ * price range whose minimum exceeds its maximum). Keeping that policy in one
+ * TypeScript parser prevents a provider-specific JSON-schema dialect from
+ * becoming an execution authority.
+ */
+export const CHAT_INTERPRETATION_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "version",
+    "kind",
+    "setFilters",
+    "clearFilters",
+    "reference",
+    "clarifyReason",
+    "unsupportedClauses",
+  ],
+  properties: {
+    version: { const: CHAT_INTERPRETATION_SCHEMA_VERSION },
+    kind: { enum: KINDS },
+    setFilters: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        make: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        model: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        bodyStyle: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        stockType: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        fuelType: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        drivetrain: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        sellerState: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        sellerCity: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        year: { type: "integer", minimum: MIN_VEHICLE_YEAR, maximum: MAX_VEHICLE_YEAR },
+        yearMin: { type: "integer", minimum: MIN_VEHICLE_YEAR, maximum: MAX_VEHICLE_YEAR },
+        yearMax: { type: "integer", minimum: MIN_VEHICLE_YEAR, maximum: MAX_VEHICLE_YEAR },
+        mileageMax: { type: "number", minimum: 0, maximum: MAX_MILEAGE },
+        priceMin: { type: "number", minimum: 0, maximum: MAX_PRICE },
+        priceMax: { type: "number", minimum: 0, maximum: MAX_PRICE },
+        sort: { type: "string", enum: [...INTERPRETABLE_SORTS] },
+        limit: { type: "integer", minimum: 1, maximum: 20 },
+      },
+    },
+    clearFilters: {
+      type: "array",
+      maxItems: INTERPRETABLE_FILTER_KEYS.length,
+      items: { type: "string", enum: INTERPRETABLE_FILTER_KEYS },
+    },
+    reference: {
+      anyOf: [
+        { type: "null" },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["kind", "position"],
+          properties: {
+            kind: { const: "ordinal" },
+            position: { type: "integer", minimum: 1, maximum: MAX_ORDINAL_POSITION },
+          },
+        },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["kind"],
+          properties: { kind: { enum: ["last", "selected"] } },
+        },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["kind", "positions"],
+          properties: {
+            kind: { const: "compare" },
+            positions: {
+              type: "array",
+              minItems: 2,
+              maxItems: MAX_COMPARE_POSITIONS,
+              items: { type: "integer", minimum: 1, maximum: MAX_ORDINAL_POSITION },
+            },
+          },
+        },
+      ],
+    },
+    clarifyReason: {
+      anyOf: [
+        { type: "null" },
+        { type: "string", enum: INTERPRETATION_CLARIFY_REASONS },
+      ],
+    },
+    unsupportedClauses: {
+      type: "array",
+      maxItems: MAX_UNSUPPORTED_CLAUSES,
+      items: { type: "string", minLength: 1, maxLength: MAX_CLAUSE_LENGTH },
+    },
+  },
+} as const;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

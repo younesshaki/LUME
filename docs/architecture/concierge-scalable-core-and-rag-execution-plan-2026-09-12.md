@@ -338,6 +338,26 @@ pass development repeatedly, then run the held-out command once and add that
 exact model id to the certification list only if the report says
 `activation.eligible: true`.
 
+### Phase 3 structured-output hardening (2026-09-24)
+
+The interpreter now uses the tenant dashboard's *resolved exact model* only:
+if a selected provider is unavailable and public chat falls back to another
+profile, contextual interpretation remains off. Certification is evidence for
+one exact model, not a provider family.
+
+The transport now requests provider-appropriate structured output without
+making the provider the policy authority:
+
+- Vercel AI Gateway receives a strict closed JSON Schema.
+- Direct Moonshot/Kimi receives JSON-object mode.
+- Other direct adapters retain the versioned JSON prompt until their API
+  compatibility has separately been measured.
+
+In every case LUME's strict `parseChatInterpretation()` parser rechecks all
+keys, ranges, combinations and unsupported clauses before compiling a plan.
+No structured response contains, or can authorize, an action, URL, vehicle ID,
+target key, query, credential or browser command.
+
 Run development fixtures only:
 
 ```bash
