@@ -40,6 +40,7 @@ import {
   storePendingVehicleComparison,
   vehicleRouteFromBotAction,
 } from "./lib/botActionConsumers";
+import { noteConciergeRouteRendered } from "./lib/conciergeSpeed";
 import {
   inAppHistory,
   resolveBackNavigationTarget,
@@ -280,6 +281,10 @@ export default function App() {
         path: `${location.pathname}${location.search}${location.hash}`,
       },
       navigationType,
+    );
+    // Action → page shown: the route half of the concierge speed metric.
+    noteConciergeRouteRendered(
+      `${location.pathname}${location.search}${location.hash}`,
     );
   }, [location.key, location.pathname, location.search, location.hash, navigationType]);
 

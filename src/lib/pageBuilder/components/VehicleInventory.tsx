@@ -49,6 +49,7 @@ import { usePageBuilderRenderContext } from "../renderContext";
 import { booleanProp, stringProp } from "./props";
 import "@/experience/ui/VehiclesPage/VehiclesPage.css";
 import { MakeLogo } from "@/components/vehicles/MakeLogo";
+import { noteConciergeDestinationReady } from "@/lib/conciergeSpeed";
 
 const PAGE_SIZE = 24;
 const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
@@ -430,6 +431,11 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
       cancelled = true;
     };
   }, [effectivePage, filters, queryKey, resultLimit, sort]);
+
+  // Concierge speed: the destination's data is on screen (or failed).
+  useEffect(() => {
+    if (!loading) noteConciergeDestinationReady("inventory", !loadError);
+  }, [loading, loadError]);
 
   // Page-builder previews use the same bounded API path as the public
   // marketplace. Counts and filter options are secondary metadata, so defer

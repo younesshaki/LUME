@@ -172,6 +172,52 @@ describe("streamChat", () => {
     }
   });
 
+  it("yields the server timing event and reports transport milestones in order", async () => {
+    const order: string[] = [];
+    const fetcher = vi.fn(async () => {
+      order.push("fetch");
+      return new Response(
+        [
+          'data: {"type":"meta","sourceCategories":[]}',
+          'data: {"choices":[{"delta":{"content":"Hi"}}]}',
+          'data: {"type":"timing","timing":{"request_id":"r1","route":"deterministic","server_first_byte_ms":12}}',
+          "data: [DONE]",
+          "",
+        ].join("\n\n"),
+        { status: 200 },
+      );
+    });
+    vi.stubGlobal("fetch", fetcher);
+    const events = [];
+    for await (const event of streamChat([{ role: "user", content: "hi" }], undefined, undefined, false, "r1", {
+      onRequestSent: () => order.push("sent"),
+      onResponseHeaders: () => order.push("headers"),
+    })) {
+      events.push(event);
+    }
+    expect(order).toEqual(["sent", "fetch", "headers"]);
+    expect(events.at(-1)).toEqual({
+      kind: "timing",
+      timing: { request_id: "r1", route: "deterministic", server_first_byte_ms: 12 },
+    });
+  });
+
+  it("a throwing observer can never break the stream", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', { status: 200 })),
+    );
+    const events = [];
+    for await (const event of streamChat([{ role: "user", content: "hi" }], undefined, undefined, false, undefined, {
+      onRequestSent: () => {
+        throw new Error("observer bug");
+      },
+    })) {
+      events.push(event);
+    }
+    expect(events).toEqual([{ kind: "delta", text: "ok" }]);
+  });
+
   it("surfaces explicit stream errors without exposing an unreadable response", async () => {
     vi.stubGlobal(
       "fetch",

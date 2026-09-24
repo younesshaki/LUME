@@ -15,6 +15,8 @@ interface ImportMetaEnv {
   readonly VITE_OLLAMA_EMBED_MODEL?: string;
   readonly VITE_TURNSTILE_SITE_KEY?: string;
   readonly VITE_POSTHOG_ENABLED?: string;
+  /** Provided by Vercel at build time; tags speed events with the release. */
+  readonly VITE_VERCEL_GIT_COMMIT_SHA?: string;
   readonly VITE_POSTHOG_PROJECT_TOKEN?: string;
   readonly VITE_POSTHOG_HOST?: string;
   readonly VITE_POSTHOG_SESSION_REPLAY?: string;

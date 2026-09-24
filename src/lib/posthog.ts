@@ -51,6 +51,10 @@ export function initializeLumePostHog(): void {
       client.register({
         lume_surface: "public",
         lume_tenant_slug: publicTenantSlug,
+        // Tags every event with the deployed commit, so each speed iteration
+        // can be compared with the one before it.
+        lume_release:
+          import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA?.trim().slice(0, 12) || "local",
       });
     },
   });
