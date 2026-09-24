@@ -338,6 +338,26 @@ pass development repeatedly, then run the held-out command once and add that
 exact model id to the certification list only if the report says
 `activation.eligible: true`.
 
+### Phase 3 structured-output hardening (2026-09-24)
+
+The interpreter now uses the tenant dashboard's *resolved exact model* only:
+if a selected provider is unavailable and public chat falls back to another
+profile, contextual interpretation remains off. Certification is evidence for
+one exact model, not a provider family.
+
+The transport now requests provider-appropriate structured output without
+making the provider the policy authority:
+
+- Vercel AI Gateway receives a strict closed JSON Schema.
+- Direct Moonshot/Kimi receives JSON-object mode.
+- Other direct adapters retain the versioned JSON prompt until their API
+  compatibility has separately been measured.
+
+In every case LUME's strict `parseChatInterpretation()` parser rechecks all
+keys, ranges, combinations and unsupported clauses before compiling a plan.
+No structured response contains, or can authorize, an action, URL, vehicle ID,
+target key, query, credential or browser command.
+
 Run development fixtures only:
 
 ```bash
@@ -354,6 +374,31 @@ CONCIERGE_INTERPRETATION_EVAL_CONFIRM=held-out \
 CONCIERGE_INTERPRETATION_EVAL_MODEL=deepseek-v4-flash \
 npm run evaluate:chat-interpretation -- --held-out
 ```
+
+### Phase 3 Kimi K2.6 measurement — not certified (2026-09-24)
+
+Direct Moonshot evaluation found a transport incompatibility before any quality
+claim: Kimi K2.6 rejects `temperature: 0` and accepts only `0.6`. The runner
+now uses that provider-required value only for Moonshot; its TypeScript parser
+remains the execution authority. The model also accepts JSON-object mode. Its
+restricted "moonshot flavored" JSON-Schema dialect rejects the complete closed
+LUME schema, so LUME does not pretend that a weaker provider schema is an
+equivalent safety guarantee.
+
+After this compatibility fix, the nine-turn development partition scored 9/9
+exact on three consecutive runs. The one-time, separately confirmed held-out
+measurement was then run without further prompt tuning:
+
+| Exact model | Held-out turns | Accepted | Exact | Unsupported retained | Decision |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `kimi-k2.6` | 107 | 107 (100%) | 56 (52.3%) | 11/11 (100%) | **Not certified** — exact meaning is far below the 98% gate. |
+
+Valid JSON and successful parsing are not evidence that the model understood
+the visitor correctly. `CERTIFIED_CONTEXTUAL_INTERPRETER_MODELS` therefore
+remains empty and neither active interpreter flag may be enabled for K2.6.
+Do not tune against this held-out partition; evaluate a different exact model
+or make a separately versioned change using development cases, then use a new
+held-out partition for the next certification decision.
 
 ### Phase 4 implementation — lifecycle and hybrid retrieval (2026-09-19)
 

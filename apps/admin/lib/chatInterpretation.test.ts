@@ -257,6 +257,16 @@ describe("interpretation schema: what it refuses", () => {
         plan({ kind: "reset", setFilters: { make: "BMW" } }),
       ),
     ).toBeNull();
+    expect(
+      parseChatInterpretation(
+        plan({ clearFilters: ["priceMax"] }),
+      ),
+    ).toBeNull();
+    expect(
+      parseChatInterpretation(
+        plan({ kind: "reset", setFilters: {}, clearFilters: ["make"] }),
+      ),
+    ).toBeNull();
   });
 
   it("rejects impossible years and semantically contradictory intent payloads", () => {

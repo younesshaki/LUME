@@ -3,7 +3,9 @@ import type { ChatInterpretation } from "./chatInterpretation";
 import {
   compileChatInterpretation,
   isContextualInterpretationEnabled,
+  isResolvedContextualInterpretationEnabled,
 } from "./chatInterpretationExecution";
+import { getConciergeModelProfile } from "./conciergeModels";
 
 const plan = (over: Partial<ChatInterpretation>): ChatInterpretation => ({
   version: 1,
@@ -155,5 +157,34 @@ describe("contextual interpretation rollout gates", () => {
         certified,
       ),
     ).toBe(true);
+  });
+
+  it("never certifies a fallback provider in place of the dashboard-selected model", () => {
+    const certified = ["kimi-k2.6"];
+    const selectedKimi = {
+      profile: getConciergeModelProfile("kimi-k2.6"),
+      fellBack: false,
+    };
+    expect(
+      isResolvedContextualInterpretationEnabled(
+        "demo",
+        selectedKimi,
+        "true",
+        "demo",
+        certified,
+      ),
+    ).toBe(true);
+    expect(
+      isResolvedContextualInterpretationEnabled(
+        "demo",
+        {
+          profile: getConciergeModelProfile("deepseek-v4-flash"),
+          fellBack: true,
+        },
+        "true",
+        "demo",
+        certified,
+      ),
+    ).toBe(false);
   });
 });
