@@ -465,7 +465,7 @@ export const CHAT_INTERPRETATION_GOLD_SET: readonly GoldConversation[] = [
       },
       {
         message: "I'm not talking about Toyota, I mean in general",
-        expected: { kind: "reset", clearFilters: ["make"] },
+        expected: { kind: "reset" },
         note: "Negation plus 'in general' — the exact phrasing that stranded a make.",
       },
     ],

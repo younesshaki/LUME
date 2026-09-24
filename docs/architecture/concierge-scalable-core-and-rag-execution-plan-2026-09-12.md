@@ -375,6 +375,31 @@ CONCIERGE_INTERPRETATION_EVAL_MODEL=deepseek-v4-flash \
 npm run evaluate:chat-interpretation -- --held-out
 ```
 
+### Phase 3 Kimi K2.6 measurement — not certified (2026-09-24)
+
+Direct Moonshot evaluation found a transport incompatibility before any quality
+claim: Kimi K2.6 rejects `temperature: 0` and accepts only `0.6`. The runner
+now uses that provider-required value only for Moonshot; its TypeScript parser
+remains the execution authority. The model also accepts JSON-object mode. Its
+restricted "moonshot flavored" JSON-Schema dialect rejects the complete closed
+LUME schema, so LUME does not pretend that a weaker provider schema is an
+equivalent safety guarantee.
+
+After this compatibility fix, the nine-turn development partition scored 9/9
+exact on three consecutive runs. The one-time, separately confirmed held-out
+measurement was then run without further prompt tuning:
+
+| Exact model | Held-out turns | Accepted | Exact | Unsupported retained | Decision |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `kimi-k2.6` | 107 | 107 (100%) | 56 (52.3%) | 11/11 (100%) | **Not certified** — exact meaning is far below the 98% gate. |
+
+Valid JSON and successful parsing are not evidence that the model understood
+the visitor correctly. `CERTIFIED_CONTEXTUAL_INTERPRETER_MODELS` therefore
+remains empty and neither active interpreter flag may be enabled for K2.6.
+Do not tune against this held-out partition; evaluate a different exact model
+or make a separately versioned change using development cases, then use a new
+held-out partition for the next certification decision.
+
 ### Phase 4 implementation — lifecycle and hybrid retrieval (2026-09-19)
 
 Phase 4 is implemented in code on `integrate/concierge-core-hardening`, but it

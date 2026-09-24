@@ -101,8 +101,10 @@ describe("shadow interpretation provider accounting", () => {
     const request = vi.mocked(fetch).mock.calls[0]?.[1];
     const body = JSON.parse(String(request?.body)) as {
       response_format?: { type?: string };
+      temperature?: number;
     };
     expect(body.response_format).toEqual({ type: "json_object" });
+    expect(body.temperature).toBe(0.6);
   });
 
   it("uses a strict closed JSON Schema through AI Gateway", async () => {

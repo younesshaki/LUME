@@ -86,7 +86,12 @@ export async function runShadowInterpretation(input: {
           ] as MemoryMessage[],
           toolFields: {
             max_tokens: MAX_OUTPUT_TOKENS,
-            temperature: 0,
+            // Moonshot's Kimi K2.6 rejects every temperature except 0.6.
+            // Keep deterministic-capable providers at zero while using the
+            // provider's required setting; the closed plan schema remains the
+            // authority over output shape and meaning in both cases.
+            temperature:
+              input.provider.profile.provider === "moonshot" ? 0.6 : 0,
             ...structuredOutputRequestFields(input.provider),
           },
         }),
