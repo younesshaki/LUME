@@ -1658,6 +1658,7 @@ export async function POST(request: Request): Promise<Response> {
       tenantId: tenant.tenantId,
       detail: message,
     });
+    timing.addSpan("model_phase1", timing.reading() - phase1StartedAt);
     reportTurnError(502, "provider_parse");
     return json(
       { error: "Malformed model response" },

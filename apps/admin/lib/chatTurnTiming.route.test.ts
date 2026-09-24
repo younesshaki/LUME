@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   plan: "pro" as PlanId,
   providerReply: "" as string,
   providerStatus: 200,
+  providerMalformed: false,
   providerCalls: 0,
   afterTasks: [] as Array<() => unknown>,
   posthog: [] as Array<{ event: string; properties: Record<string, unknown> }>,
@@ -183,7 +184,11 @@ beforeAll(async () => {
     if (url !== PROVIDER_URL) throw new Error(`unexpected network call: ${url}`);
     state.providerCalls += 1;
     return new Response(
-      JSON.stringify({ choices: [{ message: { content: state.providerReply } }] }),
+      JSON.stringify(
+        state.providerMalformed
+          ? { choices: [] }
+          : { choices: [{ message: { content: state.providerReply } }] },
+      ),
       { status: state.providerStatus, headers: { "Content-Type": "application/json" } },
     );
   }) as typeof fetch;
@@ -200,6 +205,7 @@ beforeEach(() => {
   state.plan = "pro";
   state.providerReply = "";
   state.providerStatus = 200;
+  state.providerMalformed = false;
   state.providerCalls = 0;
   state.afterTasks.length = 0;
   state.posthog.length = 0;
@@ -349,6 +355,20 @@ describe("speed telemetry — turns that do not answer", () => {
       route: "error",
       status: 502,
       error_stage: "provider_phase_1",
+    });
+    expect(typeof event!.properties.server_model_phase1_ms).toBe("number");
+  });
+
+  it("records the completed phase-one span when the provider response is malformed", async () => {
+    state.providerMalformed = true;
+    const chat = new Conversation();
+    const turn = await chat.say("what are your opening hours?");
+    expect(turn.status).toBe(502);
+    const [event] = timingEvents();
+    expect(event!.properties).toMatchObject({
+      route: "error",
+      status: 502,
+      error_stage: "provider_parse",
     });
     expect(typeof event!.properties.server_model_phase1_ms).toBe("number");
   });
