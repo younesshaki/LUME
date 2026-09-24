@@ -161,6 +161,7 @@ import {
   type DeterministicAnswers,
   hasDeterministicAnswer,
   resolveDeterministicContent,
+  winningDeterministicRule,
 } from "@/lib/chatDeterministicAnswer";
 import { shouldGroundSelectedVehicle } from "@/lib/chatGroundingScope";
 import {
@@ -175,6 +176,19 @@ import {
   resolveReferenceOutcome,
 } from "@/lib/chatDeterministicRules";
 import { tenantLiveVehicleCount } from "@/lib/tenantInventoryCount";
+import {
+  backNavigationReply,
+  decideBackNavigation,
+  detectBackNavigationRequest,
+  isInventoryResultsPath,
+  normalizeChatNavigationContext,
+  type BackNavigationDecision,
+} from "@/lib/chatBackNavigation";
+import {
+  NO_ACTION_TRUTHFUL_CORRECTION,
+  claimsCompletedSiteAction,
+  truthfulReplyForEmittedActions,
+} from "@/lib/chatActionClaims";
 import {
   compareOrdinalIndexesFromText,
   filterActionsByConversationStateWithDiagnostics,
@@ -481,6 +495,9 @@ export async function POST(request: Request): Promise<Response> {
   // instead of honoring the reset (live-reproduced 2026-07-23, session
   // 2c19e8d4 turn 4: Jeep detail text duplicated, on a full-reset turn).
   const scopeResetRequested = hasScopeResetIntent(lastUser.content);
+  // "go back" is a whole-message site command, not an inventory query: when it
+  // matches, no inventory rule, interpreter or ordinal may act on the turn.
+  const backNavigationRequest = detectBackNavigationRequest(lastUser.content);
   let fullInventoryResetRequested = hasFullInventoryResetIntent(
     lastUser.content,
   );
@@ -608,10 +625,13 @@ export async function POST(request: Request): Promise<Response> {
     }
     const vocabulary = vehicleFilterVocabulary(facetResult.data);
     let extractedFilters =
-      unsupportedVehicleFactRequest || selectedVehicleDetailRequest
+      unsupportedVehicleFactRequest ||
+      selectedVehicleDetailRequest ||
+      backNavigationRequest
         ? {}
         : extractVehicleFilters(lastUser.content, [], vocabulary);
     let hasInventoryIntent =
+      !backNavigationRequest &&
       !unsupportedVehicleFactRequest &&
       !selectedVehicleDetailRequest &&
       (isVehicleQuery(lastUser.content, vocabulary) ||
@@ -631,6 +651,7 @@ export async function POST(request: Request): Promise<Response> {
     if (
       contextualInterpretationEnabled &&
       chatProvider &&
+      !backNavigationRequest &&
       !hasInventoryIntent &&
       !unsupportedVehicleFactRequest &&
       !selectedVehicleDetailRequest &&
@@ -721,14 +742,15 @@ export async function POST(request: Request): Promise<Response> {
     conversationState = stateTransition.state;
     stateRules = [...stateRules, ...stateTransition.rules];
     statePresentationRequest = stateTransition.useStoredResultSet;
-    stateOrdinalVehicleId = ordinalResultSetVehicleId(
-      deterministicUserText,
-      conversationState.resultSet,
-    );
-    stateSelectedVehicleId = selectedResultSetVehicleId(
-      deterministicUserText,
-      conversationState,
-    );
+    stateOrdinalVehicleId = backNavigationRequest
+      ? null
+      : ordinalResultSetVehicleId(
+          deterministicUserText,
+          conversationState.resultSet,
+        );
+    stateSelectedVehicleId = backNavigationRequest
+      ? null
+      : selectedResultSetVehicleId(deterministicUserText, conversationState);
     const stateReferencedVehicleId =
       stateOrdinalVehicleId ?? stateSelectedVehicleId;
 
@@ -745,7 +767,8 @@ export async function POST(request: Request): Promise<Response> {
 
     // Comparisons of result-set positions ("compare the first two") resolve
     // from the stored, verified list — never from the model improvising.
-    const compareIndexes = stateReferencedVehicleId
+    const compareIndexes =
+      stateReferencedVehicleId || backNavigationRequest
       ? null
       : compareOrdinalIndexesFromText(deterministicUserText);
     if (compareIndexes) {
@@ -810,8 +833,9 @@ export async function POST(request: Request): Promise<Response> {
       activeFilters: conversationState.activeFilters,
       resultSet: conversationState.resultSet,
       hasOrdinalOrSelectionPhrase:
-        isOrdinalVehicleReference(deterministicUserText) ||
-        isSelectedVehicleActionRequest(deterministicUserText),
+        !backNavigationRequest &&
+        (isOrdinalVehicleReference(deterministicUserText) ||
+          isSelectedVehicleActionRequest(deterministicUserText)),
       attemptedZeroResult: conversationState.attemptedZeroResult,
       memoryDegraded,
     });
@@ -918,6 +942,24 @@ export async function POST(request: Request): Promise<Response> {
 
   const stateResolvedAtMs = Date.now();
 
+  // Decided after state resolution, from server-held facts only: the
+  // browser's two history booleans choose wording, and the fallback is this
+  // conversation's verified result set (withheld while shared memory is
+  // degraded, when it may not be this visitor's). Never a URL.
+  const backNavigation: BackNavigationDecision | null = backNavigationRequest
+    ? decideBackNavigation({
+        request: backNavigationRequest,
+        navigation: normalizeChatNavigationContext(body.navigation),
+        currentPageIsInventory: isInventoryResultsPath(body.pagePath),
+        fallback:
+          !memoryDegraded && conversationState.resultSet
+            ? (inventoryFilterAction(
+                conversationState.resultSet.filtersApplied,
+              ) as Extract<BotAction, { type: "filter_inventory" }>)
+            : null,
+      })
+    : null;
+
   const stateActions: BotAction[] = [
     ...((stateOrdinalVehicleId &&
       isOrdinalVehicleActionRequest(deterministicUserText)) ||
@@ -934,7 +976,13 @@ export async function POST(request: Request): Promise<Response> {
       : []),
     ...(deterministicInventoryAction ? [deterministicInventoryAction] : []),
   ];
-  const deterministicActions = chatActionsEnabled
+  const deterministicActions = backNavigation
+    ? // A back request is answered by the back rule alone: no ordinal, filter
+      // or registry navigation may ride along with it.
+      chatActionsEnabled && backNavigation.kind === "action"
+      ? [backNavigation.action]
+      : []
+    : chatActionsEnabled
     ? [
         ...stateActions,
         ...(deterministicOrdinalReferenceAnswer ||
@@ -1067,6 +1115,9 @@ export async function POST(request: Request): Promise<Response> {
   // expressions over the same twelve variables could.
   const deterministicAnswers: DeterministicAnswers = {
     clarifier: deterministicClarifier,
+    // Placeholder that opens the deterministic path; the visible wording is
+    // re-derived below from the actions that actually survived every gate.
+    navigateBack: backNavigation ? backNavigationReply(backNavigation, []) : null,
     makeSwitchClarifier: deterministicMakeSwitchClarifier,
     compare: deterministicCompareAnswer,
     compareUnavailable: deterministicCompareUnavailableAnswer,
@@ -1110,10 +1161,14 @@ export async function POST(request: Request): Promise<Response> {
       actionAttribution,
     );
     const actionAcknowledgement = actionOnlyAcknowledgement(actions);
-    const visibleContent = resolveDeterministicContent(deterministicAnswers, {
-      ...deterministicGuardContext,
-      actionAcknowledgement,
-    });
+    const visibleContent =
+      backNavigation &&
+      winningDeterministicRule(deterministicAnswers) === "navigateBack"
+        ? backNavigationReply(backNavigation, actions)
+        : resolveDeterministicContent(deterministicAnswers, {
+            ...deterministicGuardContext,
+            actionAcknowledgement,
+          });
     captureDebug("api/chat/actions", {
       tenantId: tenant.tenantId,
       actionsEmitted: actionDebugSummary(actions),
@@ -1619,8 +1674,14 @@ export async function POST(request: Request): Promise<Response> {
       conciergeTargets,
       actionAttribution,
     );
-    const visibleContent =
-      filteredContent || actionOnlyAcknowledgement(actions);
+    // A model may not claim a page change it did not emit ("Done — I've
+    // sent you back" with no action was a confirmed production failure).
+    const truthful = truthfulReplyForEmittedActions(
+      filteredContent || actionOnlyAcknowledgement(actions),
+      actions.length,
+    );
+    if (truthful.replaced) stateRules.push("false_action_claim_replaced");
+    const visibleContent = truthful.text;
     captureDebug("api/chat/actions", {
       tenantId: tenant.tenantId,
       actionsEmitted: actionDebugSummary(actions),
@@ -1871,6 +1932,23 @@ export async function POST(request: Request): Promise<Response> {
         );
       };
 
+      // Streamed prose cannot be recalled, so a false claim of a page change
+      // (no action emitted all turn) is corrected in-line before [DONE], and
+      // the correction is what conversation memory stores.
+      const emitTruthfulCorrection = () => {
+        if (emittedActions.length > 0) return;
+        if (!claimsCompletedSiteAction(assistantContent)) return;
+        assistantContent += NO_ACTION_TRUTHFUL_CORRECTION;
+        stateRules.push("false_action_claim_corrected");
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              choices: [{ delta: { content: NO_ACTION_TRUTHFUL_CORRECTION } }],
+            }),
+          ),
+        );
+      };
+
       const emitFiltered = ({
         visibleText,
         actions,
@@ -1893,6 +1971,7 @@ export async function POST(request: Request): Promise<Response> {
         if (trimmed === "data: [DONE]") {
           emitFiltered(actionFilter.flush());
           emitActionOnlyAcknowledgement();
+          emitTruthfulCorrection();
           if (!doneEventSent) {
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             doneEventSent = true;
@@ -1924,6 +2003,7 @@ export async function POST(request: Request): Promise<Response> {
         emitFiltered(actionFilter.flush());
         if (streamCompletionObserved && !doneEventSent) {
           emitActionOnlyAcknowledgement();
+          emitTruthfulCorrection();
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           doneEventSent = true;
         }

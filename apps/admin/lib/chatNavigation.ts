@@ -1,10 +1,11 @@
 import type { MemoryToolResult } from "@lume/bot";
-import type {
-  BotAction,
-  BotPersonaCapabilities,
-  ConciergeTarget,
-  Vehicle,
-  VehicleSort,
+import {
+  isServerAuthoredOnlyAction,
+  type BotAction,
+  type BotPersonaCapabilities,
+  type ConciergeTarget,
+  type Vehicle,
+  type VehicleSort,
 } from "@lume/types";
 import {
   extractDeepseekDsmlToolCalls,
@@ -245,9 +246,14 @@ export function resolveDeterministicConciergeNavigation(
  * grounding rules.
  */
 export function filterModelNavigationActionsByUserIntent(
-  actions: readonly BotAction[],
+  modelActions: readonly BotAction[],
   messages: readonly ConversationMessage[],
 ): BotAction[] {
+  // Server-authored types (navigate-back) are never accepted from a model or
+  // tool: only deterministic rules may decide the visitor is going back.
+  const actions = modelActions.filter(
+    (action) => !isServerAuthoredOnlyAction(action.type),
+  );
   const lastUser = [...messages]
     .reverse()
     .find((message) => message.role === "user");
@@ -355,6 +361,9 @@ export function actionOnlyAcknowledgement(
   }
   if (actions.some((action) => action.type === "filter_inventory")) {
     return "I’ve opened the inventory with those filters applied.";
+  }
+  if (actions.some((action) => action.type === "navigate-back")) {
+    return "Taking you back.";
   }
   if (
     actions.some(
