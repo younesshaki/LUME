@@ -25,6 +25,7 @@
     "test:e2e": "npm run test:e2e --workspace=@lume/admin",
     "test:e2e:public": "playwright test --config=playwright.public.config.ts",
     "test:e2e:concierge": "playwright test --config=playwright.concierge.config.ts",
+    "posthog:speed-dashboard": "node scripts/posthog/concierge-speed-dashboard.mjs",
     "evaluate:chat-interpretation": "tsx scripts/evaluate-chat-interpretation.ts",
     "evaluate:rag-retrieval": "tsx scripts/evaluate-rag-retrieval.ts",
     "build": "tsc && vite build",
