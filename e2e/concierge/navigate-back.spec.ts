@@ -153,6 +153,38 @@ test("go back after a normal in-app page transition", async ({ page }) => {
   await expect(page).toHaveURL(/\/home$/);
 });
 
+test("successive concierge filters → go back restores the prior filtered results", async ({ page }) => {
+  await stubChatTurns(page, [
+    [
+      meta("r1"),
+      { type: "action", action: { type: "filter_inventory", make: "Cadillac" } },
+      { choices: [{ delta: { content: "Here are the Cadillacs." } }] },
+    ],
+    [
+      meta("r2"),
+      { type: "action", action: { type: "filter_inventory", make: "Porsche" } },
+      { choices: [{ delta: { content: "Here are the Porsches." } }] },
+    ],
+    [
+      meta("r3"),
+      { type: "action", action: { type: "navigate-back", destination: "previous" } },
+      { choices: [{ delta: { content: "Taking you back." } }] },
+    ],
+  ]);
+  await openChatOn(page, "/home");
+
+  await send(page, "show me Cadillacs");
+  await expect(page).toHaveURL(/\/vehicles#vehicles\?make=Cadillac/);
+  const cadillacResultsUrl = page.url();
+
+  await send(page, "show me Porsches");
+  await expect(page).toHaveURL(/\/vehicles#vehicles\?make=Porsche/);
+
+  await send(page, "go back");
+  await expect(page).toHaveURL(cadillacResultsUrl);
+  expect(chatBodies[2]?.navigation).toEqual({ hasPrevious: true, hasResults: true });
+});
+
 test("direct landing with no LUME history uses the server's grounded results", async ({ page }) => {
   await stubChatTurns(page, [
     [

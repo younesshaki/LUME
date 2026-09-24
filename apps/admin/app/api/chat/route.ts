@@ -84,6 +84,7 @@ import {
   recentVehicleIdFromAssistantHistory,
   recentVehicleIdFromToolResults,
   resolveDeterministicConciergeNavigation,
+  suppressRedundantInventoryNavigationActions,
 } from "@/lib/chatNavigation";
 import {
   actionSystemPrompt,
@@ -1140,7 +1141,7 @@ export async function POST(request: Request): Promise<Response> {
     });
     const sseHeaders = buildSseHeaders(sourceCategories);
     const metaEvent = buildMetaEvent(sourceCategories);
-    const actions = prepareBotActionsForClient(
+    const actions = suppressRedundantInventoryNavigationActions(prepareBotActionsForClient(
       filterGroundedVehicleActions(
         filterConversationActions(
           groundLeadCaptureActions(
@@ -1157,7 +1158,7 @@ export async function POST(request: Request): Promise<Response> {
       ),
       conciergeTargets,
       actionAttribution,
-    );
+    ));
     const actionAcknowledgement = actionOnlyAcknowledgement(actions);
     const visibleContent =
       backNavigation &&
@@ -1654,7 +1655,7 @@ export async function POST(request: Request): Promise<Response> {
           extractInlineActions(content),
           modelMessages,
         );
-    const actions = prepareBotActionsForClient(
+    const actions = suppressRedundantInventoryNavigationActions(prepareBotActionsForClient(
       filterGroundedVehicleActions(
         filterConversationActions(
           groundLeadCaptureActions(
@@ -1671,7 +1672,7 @@ export async function POST(request: Request): Promise<Response> {
       ),
       conciergeTargets,
       actionAttribution,
-    );
+    ));
     // A model may not claim a page change it did not emit ("Done — I've
     // sent you back" with no action was a confirmed production failure).
     const truthful = truthfulReplyForEmittedActions(
@@ -1847,7 +1848,8 @@ export async function POST(request: Request): Promise<Response> {
       const initialActions = hasDeterministicActions
         ? deterministicActions
         : filterModelNavigationActionsByUserIntent(turn.actions, modelMessages);
-      for (const action of prepareBotActionsForClient(
+      for (const action of suppressRedundantInventoryNavigationActions(
+        prepareBotActionsForClient(
         filterGroundedVehicleActions(
           filterConversationActions(
             groundLeadCaptureActions(
@@ -1865,6 +1867,8 @@ export async function POST(request: Request): Promise<Response> {
         conciergeTargets,
         actionAttribution,
         seenActionFingerprints,
+        ),
+        emittedActions,
       )) {
         controller.enqueue(
           encoder.encode(sseEvent({ type: "action", action })),
@@ -1885,7 +1889,8 @@ export async function POST(request: Request): Promise<Response> {
 
       const emitActions = (actions: readonly BotAction[]) => {
         if (hasDeterministicActions) return;
-        for (const action of prepareBotActionsForClient(
+        for (const action of suppressRedundantInventoryNavigationActions(
+          prepareBotActionsForClient(
           filterGroundedVehicleActions(
             filterConversationActions(
               groundLeadCaptureActions(
@@ -1906,6 +1911,8 @@ export async function POST(request: Request): Promise<Response> {
           conciergeTargets,
           actionAttribution,
           seenActionFingerprints,
+          ),
+          emittedActions,
         )) {
           controller.enqueue(
             encoder.encode(sseEvent({ type: "action", action })),

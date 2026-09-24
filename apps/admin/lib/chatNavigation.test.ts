@@ -9,6 +9,7 @@ import {
   recentVehicleIdFromAssistantHistory,
   recentVehicleIdFromToolResults,
   resolveDeterministicConciergeNavigation,
+  suppressRedundantInventoryNavigationActions,
 } from "./chatNavigation";
 
 const VEHICLE_ID = "5d6df0bd-85db-471e-9c4c-effa3c4938ab";
@@ -584,6 +585,33 @@ describe("action-only acknowledgement", () => {
 });
 
 describe("model navigation grounding", () => {
+  it("keeps a filter action instead of letting a duplicate inventory target erase it", () => {
+    expect(
+      suppressRedundantInventoryNavigationActions([
+        { type: "filter_inventory", make: "Cadillac" },
+        { type: "navigate-target", targetKey: "inventory" },
+        { type: "navigate-target", targetKey: "contact-lead-form" },
+      ]),
+    ).toEqual([
+      { type: "filter_inventory", make: "Cadillac" },
+      { type: "navigate-target", targetKey: "contact-lead-form" },
+    ]);
+  });
+
+  it("suppresses a later generic inventory navigation after a filter was emitted", () => {
+    expect(
+      suppressRedundantInventoryNavigationActions(
+        [{ type: "navigate", route: "/vehicles" }],
+        [{ type: "filter_inventory", make: "Porsche" }],
+      ),
+    ).toEqual([]);
+  });
+
+  it("does not suppress inventory navigation when no filter is present", () => {
+    const actions = [{ type: "navigate-target", targetKey: "inventory" }] as const;
+    expect(suppressRedundantInventoryNavigationActions(actions)).toEqual(actions);
+  });
+
   it("drops model navigation when the visitor did not request it", () => {
     expect(
       filterModelNavigationActionsByUserIntent(

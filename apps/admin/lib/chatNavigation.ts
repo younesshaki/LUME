@@ -269,6 +269,32 @@ export function filterModelNavigationActionsByUserIntent(
   );
 }
 
+/**
+ * A filter action already takes the visitor to inventory with its encoded
+ * result state. A second, bare inventory navigation in the same turn races
+ * that filter navigation and can replace its URL with `/vehicles`, silently
+ * discarding the constraints the assistant just described.
+ *
+ * `previouslyEmitted` also covers streamed model actions arriving after a
+ * tool action already moved the visitor to filtered inventory.
+ */
+export function suppressRedundantInventoryNavigationActions(
+  actions: readonly BotAction[],
+  previouslyEmitted: readonly BotAction[] = [],
+): BotAction[] {
+  const hasInventoryFilter = [...previouslyEmitted, ...actions].some(
+    (action) => action.type === "filter_inventory",
+  );
+  if (!hasInventoryFilter) return [...actions];
+
+  return actions.filter((action) => {
+    if (action.type === "navigate-target") return action.targetKey !== "inventory";
+    if (action.type !== "navigate") return true;
+    const route = action.route.trim().toLowerCase().replace(/^\//, "");
+    return !["inventory", "vehicles", "vehicle", "cars"].includes(route);
+  });
+}
+
 /** Direct, already-grounded destinations do not need an LLM round trip. */
 export function isImmediateSiteNavigation(
   actions: readonly BotAction[],
