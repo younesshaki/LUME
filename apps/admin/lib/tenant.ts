@@ -74,3 +74,86 @@ export async function getTenantFromRequest(
   if (!slug) return null;
   return resolveTenantBySlug(slug);
 }
+
+/**
+ * How long a successful slug → active-tenant resolution is reused.
+ *
+ * Kept short on purpose: it bounds how long a tenant that was just suspended
+ * can still be served. The plan entitlement cache (packages/db entitlements)
+ * already accepts five minutes for a comparable admin-side change.
+ */
+export const TENANT_RESOLUTION_CACHE_TTL_MS = 30_000;
+const MAX_CACHED_TENANT_SLUGS = 500;
+
+const tenantResolutionCache = new Map<
+  string,
+  { expiresAt: number; tenant: TenantContext }
+>();
+const inFlightTenantResolutions = new Map<string, Promise<TenantContext | null>>();
+
+/**
+ * resolveTenantBySlug with a short, per-instance cache — for the public chat
+ * route, where tenant resolution is the first of several dependent round
+ * trips on every turn.
+ *
+ * Only an active tenant is cached, keyed by the exact slug the RPC was asked
+ * about, and the cached value is that RPC's own row: a slug can only ever map
+ * back to the tenant it resolved to. Unknown, inactive and failed lookups are
+ * never cached, so a new or reactivated tenant is served immediately and an
+ * outage cannot pin a miss. Concurrent misses for one slug share one lookup.
+ */
+export async function resolveTenantBySlugCached(
+  slug: string,
+  nowMs: number = Date.now(),
+  resolve: (slug: string) => Promise<TenantContext | null> = resolveTenantBySlug,
+): Promise<TenantContext | null> {
+  if (!slug) return null;
+  const cached = tenantResolutionCache.get(slug);
+  if (cached && nowMs < cached.expiresAt) return cached.tenant;
+
+  const existing = inFlightTenantResolutions.get(slug);
+  if (existing) return existing;
+
+  const loading = resolve(slug).then((tenant) => {
+    if (tenant) {
+      if (tenantResolutionCache.size >= MAX_CACHED_TENANT_SLUGS) {
+        for (const [key, entry] of tenantResolutionCache) {
+          if (entry.expiresAt <= nowMs) tenantResolutionCache.delete(key);
+        }
+        // Still full of live entries: drop the oldest insertion.
+        if (tenantResolutionCache.size >= MAX_CACHED_TENANT_SLUGS) {
+          const oldest = tenantResolutionCache.keys().next().value;
+          if (oldest !== undefined) tenantResolutionCache.delete(oldest);
+        }
+      }
+      tenantResolutionCache.set(slug, {
+        expiresAt: nowMs + TENANT_RESOLUTION_CACHE_TTL_MS,
+        tenant,
+      });
+    }
+    return tenant;
+  });
+  inFlightTenantResolutions.set(slug, loading);
+  try {
+    return await loading;
+  } finally {
+    if (inFlightTenantResolutions.get(slug) === loading) {
+      inFlightTenantResolutions.delete(slug);
+    }
+  }
+}
+
+/** getTenantFromRequest backed by resolveTenantBySlugCached. */
+export async function getTenantFromRequestCached(
+  request: Request
+): Promise<TenantContext | null> {
+  const slug = extractTenantSlugFromRequest(request);
+  if (!slug) return null;
+  return resolveTenantBySlugCached(slug);
+}
+
+/** Clears only process-local tenant resolution state; for deterministic tests. */
+export function clearTenantResolutionCache(): void {
+  tenantResolutionCache.clear();
+  inFlightTenantResolutions.clear();
+}
