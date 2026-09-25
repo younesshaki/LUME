@@ -5,6 +5,11 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": {
+    "api/chat.ts": {
+      "regions": ["dub1"]
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

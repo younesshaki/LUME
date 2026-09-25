@@ -44,6 +44,11 @@ import {
   quotaResponseHeaders,
   resolveTenantPlan,
 } from "@lume/db";
+
+// Supabase is hosted in Ireland. Pin only the latency-sensitive public chat
+// route there instead of moving unrelated admin work away from its defaults.
+export const preferredRegion = "dub1";
+
 import {
   ConversationMemoryConflictError,
   conversationMemoryToolPrompt,
