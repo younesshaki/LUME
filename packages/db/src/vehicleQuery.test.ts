@@ -72,6 +72,7 @@ describe("queryTenantVehicles", () => {
     expect(calls).toContainEqual(["lte", "price", 150000]);
     expect(calls).toContainEqual(["gte", "year", 2020]);
     expect(calls).toContainEqual(["order", "price", { ascending: true }]);
+    expect(calls).toContainEqual(["order", "id", { ascending: true }]);
     expect(calls).toContainEqual(["range", 0, 1]);
 
     expect(result.totalCount).toBe(3);
@@ -91,12 +92,14 @@ describe("queryTenantVehicles", () => {
     await queryTenantVehicles(client, "t1", { limit: 500 });
     expect(calls).toContainEqual(["range", 0, 49]);
     expect(calls).toContainEqual(["order", "is_special", { ascending: false }]);
+    expect(calls).toContainEqual(["order", "id", { ascending: true }]);
   });
 
   it("supports latest-listing order for new-arrival blocks", async () => {
     const { client, calls } = fakeClient([]);
     await queryTenantVehicles(client, "t1", { sort: "created_desc", limit: 6 });
     expect(calls).toContainEqual(["order", "created_at", { ascending: false }]);
+    expect(calls).toContainEqual(["order", "id", { ascending: true }]);
   });
 });
 

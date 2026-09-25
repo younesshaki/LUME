@@ -24,6 +24,7 @@ type ClientFixture = {
   planLimits?: Record<string, unknown>;
   planError?: unknown;
   rpc?: (name: string, args: Record<string, unknown>) => Promise<RpcResult>;
+  atomicRpc?: (args: Record<string, unknown>) => Promise<RpcResult>;
 };
 
 /**
@@ -102,6 +103,41 @@ describe("quota limit policy", () => {
 });
 
 describe("checkQuota", () => {
+  it("uses one atomic database RPC when migration 089 is available", async () => {
+    const { client, atomicRpc, subscriptionReads, planReads, rpc } = mockClient({
+      atomicRpc: async () => ({
+        data: [{
+          allowed: true,
+          reason: "within_limit",
+          usage_count: 8,
+          quota_limit: 10,
+          resets_at: "2026-08-01T00:00:00Z",
+        }],
+        error: null,
+      }),
+    });
+
+    await expect(checkQuota(client, {
+      tenantId: "tenant-1",
+      eventType: "chat_requests",
+    })).resolves.toEqual({
+      allowed: true,
+      reason: "within_limit",
+      warning: true,
+      limitType: "chat_requests",
+      used: 8,
+      limit: 10,
+      resetsAt: "2026-08-01T00:00:00.000Z",
+    });
+    expect(atomicRpc).toHaveBeenCalledWith({
+      p_tenant_id: "tenant-1",
+      p_event_type: "chat_requests",
+    });
+    expect(subscriptionReads).not.toHaveBeenCalled();
+    expect(planReads).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("reserves configured usage atomically and warns on the request reaching 80 percent", async () => {
     const { client, rpc } = mockClient({
       subscription: subscription({
@@ -372,11 +408,22 @@ function mockClient(fixture: ClientFixture) {
       error: null,
     };
   });
+  const atomicRpc = vi.fn(async (args: Record<string, unknown>) => {
+    if (fixture.atomicRpc) return fixture.atomicRpc(args);
+    return {
+      data: null,
+      error: { code: "PGRST202", message: "function check_and_consume_usage_quota not found" },
+    };
+  });
+  const clientRpc = vi.fn((name: string, args: Record<string, unknown>) =>
+    name === "check_and_consume_usage_quota" ? atomicRpc(args) : rpc(name, args),
+  );
 
   return {
-    client: { from, rpc } as never,
+    client: { from, rpc: clientRpc } as never,
     planReads,
     subscriptionReads,
     rpc,
+    atomicRpc,
   };
 }

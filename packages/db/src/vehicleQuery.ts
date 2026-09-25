@@ -85,24 +85,25 @@ type VehicleSelectQuery = ReturnType<
 function applySort(query: VehicleSelectQuery, sort: VehicleSort): VehicleSelectQuery {
   switch (sort) {
     case "created_desc":
-      return query.order("created_at", { ascending: false });
+      return query.order("created_at", { ascending: false }).order("id", { ascending: true });
     case "price_asc":
-      return query.order("price", { ascending: true });
+      return query.order("price", { ascending: true }).order("id", { ascending: true });
     case "price_desc":
-      return query.order("price", { ascending: false });
+      return query.order("price", { ascending: false }).order("id", { ascending: true });
     case "year_desc":
-      return query.order("year", { ascending: false });
+      return query.order("year", { ascending: false }).order("id", { ascending: true });
     case "year_asc":
-      return query.order("year", { ascending: true });
+      return query.order("year", { ascending: true }).order("id", { ascending: true });
     case "mileage_asc":
-      return query.order("mileage", { ascending: true, nullsFirst: false });
+      return query.order("mileage", { ascending: true, nullsFirst: false }).order("id", { ascending: true });
     case "mileage_desc":
-      return query.order("mileage", { ascending: false, nullsFirst: false });
+      return query.order("mileage", { ascending: false, nullsFirst: false }).order("id", { ascending: true });
     case "recommended":
     default:
       return query
         .order("is_special", { ascending: false })
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: true });
   }
 }
 

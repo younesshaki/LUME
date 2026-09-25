@@ -1974,6 +1974,19 @@ export type Database = {
           period_start: string;
         }[];
       };
+      check_and_consume_usage_quota: {
+        Args: {
+          p_tenant_id: string;
+          p_event_type: "chat_requests" | "vehicle_requests" | "bot_action_requests" | "lead_requests";
+        };
+        Returns: {
+          allowed: boolean;
+          reason: string;
+          usage_count: number;
+          quota_limit: number | null;
+          resets_at: string | null;
+        }[];
+      };
       measure_tenant_supabase_storage: {
         Args: { p_tenant_id: string };
         Returns: {
