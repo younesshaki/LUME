@@ -214,6 +214,24 @@ function originalInventoryLogic(input: {
 }
 
 describe("resolveInventoryOutcome", () => {
+  it("keeps a ranked result set bounded in both copy and the public action", () => {
+    const outcome = resolveInventoryOutcome({
+      userText: "10 most expensive cars",
+      filters: { sort: "price_desc", limit: 10 },
+      matchedVehicles: [vehicle(), vehicle({ id: "v2", price: 49_000 })],
+      totalMatched: 10,
+      hasPriorResultSet: false,
+      fullInventoryResetRequested: false,
+    });
+
+    expect(outcome.inventory).toContain("Top 10 matching vehicles");
+    expect(outcome.filterAction).toMatchObject({
+      type: "filter_inventory",
+      sort: "price_desc",
+      limit: 10,
+    });
+  });
+
   const TEXTS = [
     "show me BMWs",
     "do you have any BMWs",

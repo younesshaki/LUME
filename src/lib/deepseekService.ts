@@ -13,6 +13,7 @@ import {
   type ConciergeTargetKind,
 } from "@lume/types";
 import { publicTenantSlug } from "./publicTenant";
+import { inAppHistory } from "./inAppHistory";
 
 const CHAT_ENDPOINT = "/api/chat";
 
@@ -56,7 +57,18 @@ export type ChatStreamYield =
    * the visitor is being answered by the delivery that holds the lease, so the
    * caller should end this turn quietly rather than showing a failure.
    */
-  | { kind: "duplicate" };
+  | { kind: "duplicate" }
+  /**
+   * The server's own stage timings for this turn (content-free). Sent once,
+   * just before the stream ends; see apps/admin/lib/conciergeTurnTiming.
+   */
+  | { kind: "timing"; timing: Record<string, unknown> };
+
+/** Transport milestones the caller may time. Never affects the stream. */
+export type ChatStreamObserver = {
+  onRequestSent?: () => void;
+  onResponseHeaders?: () => void;
+};
 
 type DeepseekStreamChunk = {
   choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
@@ -80,11 +92,13 @@ export async function* streamChat(
    * behaviour: the server generates its own.
    */
   requestId?: string,
+  observer?: ChatStreamObserver,
 ): AsyncGenerator<ChatStreamYield, void, unknown> {
   const sanitized = messages
     .filter((m) => m.role === "user" || m.role === "assistant")
     .map((m) => ({ role: m.role, content: m.content }));
 
+  notify(observer?.onRequestSent);
   const response = await fetch(CHAT_ENDPOINT, {
     method: "POST",
     headers: {
@@ -100,10 +114,14 @@ export async function* streamChat(
       ...(sessionId ? { sessionId } : {}),
       ...(startNewSession ? { startNewSession: true } : {}),
       ...(requestId ? { requestId } : {}),
+      // Two booleans from the same-origin in-app history, never a path: the
+      // server only uses them to word a "go back" reply truthfully.
+      navigation: inAppHistory.summary(),
     }),
     credentials: "include",
     signal,
   });
+  notify(observer?.onResponseHeaders);
 
   if (!response.ok) {
     let body = "";
@@ -175,6 +193,10 @@ export async function* streamChat(
           };
           continue;
         }
+        if (isTimingEvent(parsed)) {
+          yield { kind: "timing", timing: parsed.timing };
+          continue;
+        }
         if (isErrorEvent(parsed)) {
           throw new Error(parsed.message);
         }
@@ -188,6 +210,18 @@ export async function* streamChat(
   } finally {
     reader.releaseLock();
   }
+}
+
+function notify(callback: (() => void) | undefined): void {
+  try {
+    callback?.();
+  } catch {
+    // Timing observers are best-effort and never affect the stream.
+  }
+}
+
+function isTimingEvent(v: unknown): v is { type: "timing"; timing: Record<string, unknown> } {
+  return isRecord(v) && v.type === "timing" && isRecord(v.timing);
 }
 
 function isMetaEvent(v: unknown): v is ChatMetaEvent {
@@ -237,22 +271,7 @@ function isBotAction(value: unknown): value is BotAction {
 
   switch (value.type) {
     case "filter_inventory":
-      return (
-        isOptionalString(value.make) &&
-        isOptionalString(value.model) &&
-        isOptionalString(value.stockType) &&
-        isOptionalNumber(value.priceMin) &&
-        isOptionalNumber(value.priceMax) &&
-        isOptionalString(value.bodyStyle) &&
-        isOptionalString(value.fuelType) &&
-        isOptionalString(value.drivetrain) &&
-        isOptionalString(value.sellerState) &&
-        isOptionalString(value.sellerCity) &&
-        isOptionalNumber(value.yearMin) &&
-        isOptionalNumber(value.yearMax) &&
-        isOptionalNumber(value.mileageMax) &&
-        isOptionalVehicleSort(value.sort)
-      );
+      return isInventoryFilterFields(value);
     case "navigate":
       return typeof value.route === "string";
     case "navigate-target":
@@ -272,11 +291,40 @@ function isBotAction(value: unknown): value is BotAction {
       );
     case "capture_lead":
       return isLeadContact(value.contact) && isOptionalString(value.vehicleId);
-    case "scroll-to":
-      return typeof value.sectionId === "string";
+    case "navigate-back":
+      // No path, URL or history index is ever accepted: the destination is
+      // resolved locally from same-origin in-app history.
+      return (
+        (value.destination === "previous" || value.destination === "results") &&
+        (value.fallback === undefined ||
+          (isRecord(value.fallback) &&
+            value.fallback.type === "filter_inventory" &&
+            isInventoryFilterFields(value.fallback)))
+      );
     default:
+      // Retired (scroll-to) and deferred (schedule_*) types fail closed.
       return false;
   }
+}
+
+function isInventoryFilterFields(value: Record<string, unknown>): boolean {
+  return (
+    isOptionalString(value.make) &&
+    isOptionalString(value.model) &&
+    isOptionalString(value.stockType) &&
+    isOptionalNumber(value.priceMin) &&
+    isOptionalNumber(value.priceMax) &&
+    isOptionalString(value.bodyStyle) &&
+    isOptionalString(value.fuelType) &&
+    isOptionalString(value.drivetrain) &&
+    isOptionalString(value.sellerState) &&
+    isOptionalString(value.sellerCity) &&
+    isOptionalNumber(value.yearMin) &&
+    isOptionalNumber(value.yearMax) &&
+    isOptionalNumber(value.mileageMax) &&
+    isOptionalVehicleSort(value.sort) &&
+    isOptionalResultLimit(value.limit)
+  );
 }
 
 function isConciergeTargetDescriptor(
@@ -319,6 +367,14 @@ function isOptionalString(value: unknown): boolean {
 
 function isOptionalNumber(value: unknown): boolean {
   return value === undefined || typeof value === "number";
+}
+
+function isOptionalResultLimit(value: unknown): boolean {
+  return value === undefined ||
+    (typeof value === "number" &&
+      Number.isSafeInteger(value) &&
+      value >= 1 &&
+      value <= 20);
 }
 
 function isOptionalVehicleSort(value: unknown): boolean {

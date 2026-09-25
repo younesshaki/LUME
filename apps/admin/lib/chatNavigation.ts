@@ -1,10 +1,11 @@
 import type { MemoryToolResult } from "@lume/bot";
-import type {
-  BotAction,
-  BotPersonaCapabilities,
-  ConciergeTarget,
-  Vehicle,
-  VehicleSort,
+import {
+  isServerAuthoredOnlyAction,
+  type BotAction,
+  type BotPersonaCapabilities,
+  type ConciergeTarget,
+  type Vehicle,
+  type VehicleSort,
 } from "@lume/types";
 import {
   extractDeepseekDsmlToolCalls,
@@ -245,9 +246,14 @@ export function resolveDeterministicConciergeNavigation(
  * grounding rules.
  */
 export function filterModelNavigationActionsByUserIntent(
-  actions: readonly BotAction[],
+  modelActions: readonly BotAction[],
   messages: readonly ConversationMessage[],
 ): BotAction[] {
+  // Server-authored types (navigate-back) are never accepted from a model or
+  // tool: only deterministic rules may decide the visitor is going back.
+  const actions = modelActions.filter(
+    (action) => !isServerAuthoredOnlyAction(action.type),
+  );
   const lastUser = [...messages]
     .reverse()
     .find((message) => message.role === "user");
@@ -261,6 +267,32 @@ export function filterModelNavigationActionsByUserIntent(
   return actions.filter(
     (action) => !isNavigationAction(action) || navigationRequested,
   );
+}
+
+/**
+ * A filter action already takes the visitor to inventory with its encoded
+ * result state. A second, bare inventory navigation in the same turn races
+ * that filter navigation and can replace its URL with `/vehicles`, silently
+ * discarding the constraints the assistant just described.
+ *
+ * `previouslyEmitted` also covers streamed model actions arriving after a
+ * tool action already moved the visitor to filtered inventory.
+ */
+export function suppressRedundantInventoryNavigationActions(
+  actions: readonly BotAction[],
+  previouslyEmitted: readonly BotAction[] = [],
+): BotAction[] {
+  const hasInventoryFilter = [...previouslyEmitted, ...actions].some(
+    (action) => action.type === "filter_inventory",
+  );
+  if (!hasInventoryFilter) return [...actions];
+
+  return actions.filter((action) => {
+    if (action.type === "navigate-target") return action.targetKey !== "inventory";
+    if (action.type !== "navigate") return true;
+    const route = action.route.trim().toLowerCase().replace(/^\//, "");
+    return !["inventory", "vehicles", "vehicle", "cars"].includes(route);
+  });
 }
 
 /** Direct, already-grounded destinations do not need an LLM round trip. */
@@ -355,6 +387,9 @@ export function actionOnlyAcknowledgement(
   }
   if (actions.some((action) => action.type === "filter_inventory")) {
     return "I’ve opened the inventory with those filters applied.";
+  }
+  if (actions.some((action) => action.type === "navigate-back")) {
+    return "Taking you back.";
   }
   if (
     actions.some(

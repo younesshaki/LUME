@@ -29,7 +29,10 @@ import {
   type VehicleFilters,
   type VehicleSort,
 } from "@/experience/vehicles/catalog";
-import { vehicleFiltersFromBotAction } from "@/lib/botActionConsumers";
+import {
+  vehicleFiltersFromBotAction,
+  vehicleResultLimitFromBotAction,
+} from "@/lib/botActionConsumers";
 import { readVehicleUrlState, writeVehicleUrlState } from "@/experience/vehicles/urlState";
 import { ROUTE_PATHS } from "@/app-shell/routePaths";
 import { useBotAction } from "@/lib/useBotAction";
@@ -46,6 +49,7 @@ import { usePageBuilderRenderContext } from "../renderContext";
 import { booleanProp, stringProp } from "./props";
 import "@/experience/ui/VehiclesPage/VehiclesPage.css";
 import { MakeLogo } from "@/components/vehicles/MakeLogo";
+import { noteConciergeDestinationReady } from "@/lib/conciergeSpeed";
 
 const PAGE_SIZE = 24;
 const SAVED_STORAGE_KEY = "lume.vehicle-saved.v1";
@@ -385,6 +389,10 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   const [filters, setFilters] = useState<VehicleFilters>(initialState.filters);
   const [sort, setSort] = useState<VehicleSort>(initialState.sort);
   const [page, setPage] = useState(initialState.page);
+  const [resultLimit, setResultLimit] = useState(initialState.resultLimit);
+  // A ranked concierge request is one explicit ordered list, not a second
+  // page of the whole inventory. Guard manually edited/stale hash state too.
+  const effectivePage = resultLimit === null ? page : 1;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [previewSavedVehicleIds, setPreviewSavedVehicleIds] = useState<
     string[]
@@ -394,8 +402,8 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   );
   const gridRef = useRef<HTMLDivElement>(null);
   const queryKey = useMemo(
-    () => JSON.stringify({ filters, sort, page }),
-    [filters, page, sort],
+    () => JSON.stringify({ filters, sort, page: effectivePage, resultLimit }),
+    [effectivePage, filters, resultLimit, sort],
   );
   const [loadedQueryKey, setLoadedQueryKey] = useState("");
 
@@ -403,7 +411,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
     let cancelled = false;
     setLoading(true);
     setTotalCount(null);
-    loadVehicleResults(filters, sort, page, PAGE_SIZE)
+    loadVehicleResults(filters, sort, effectivePage, resultLimit ?? PAGE_SIZE)
       .then((result) => {
         if (cancelled) return;
         setVehicles(result.vehicles);
@@ -422,7 +430,12 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
     return () => {
       cancelled = true;
     };
-  }, [filters, page, queryKey, sort]);
+  }, [effectivePage, filters, queryKey, resultLimit, sort]);
+
+  // Concierge speed: the destination's data is on screen (or failed).
+  useEffect(() => {
+    if (!loading) noteConciergeDestinationReady("inventory", !loadError);
+  }, [loading, loadError]);
 
   // Page-builder previews use the same bounded API path as the public
   // marketplace. Counts and filter options are secondary metadata, so defer
@@ -469,13 +482,19 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   // it from an embedded instance would hijack an unrelated page's URL.
   useEffect(() => {
     if (typeof window === "undefined" || window.location.pathname !== ROUTE_PATHS.vehicles) return;
-    writeVehicleUrlState(filters, sort, page);
-  }, [filters, page, sort]);
+    writeVehicleUrlState(filters, sort, effectivePage, resultLimit);
+  }, [effectivePage, filters, resultLimit, sort]);
+
+  const visibleTotalCount = totalCount === null
+    ? null
+    : resultLimit === null
+      ? totalCount
+      : Math.min(totalCount, resultLimit);
 
   const totalPages =
-    totalCount === null
+    visibleTotalCount === null
       ? Math.max(1, page)
-      : Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+      : Math.max(1, Math.ceil(visibleTotalCount / (resultLimit ?? PAGE_SIZE)));
   const safePage = Math.min(page, totalPages);
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
   const filterChips = useMemo(() => activeFilterChips(filters), [filters]);
@@ -486,12 +505,14 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
 
   const handleFilterChange = (patch: Partial<VehicleFilters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
+    setResultLimit(null);
     setPage(1);
   };
 
   useBotAction("filter_inventory", (action) => {
     setFilters(vehicleFiltersFromBotAction(action));
-    setSort("recommended");
+    setSort(action.sort ?? "recommended");
+    setResultLimit(vehicleResultLimitFromBotAction(action));
     setPage(1);
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -561,6 +582,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
               onSortChange={(nextSort) => {
                 play(vehiclePageSoundActions.filterChange);
                 setSort(nextSort);
+                setResultLimit(null);
                 setPage(1);
               }}
               onOpenFilters={() => setFiltersOpen(true)}
@@ -595,6 +617,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                   className="vehiclesPage__activeFiltersClearAll"
                   onClick={() => {
                     setFilters(DEFAULT_FILTERS);
+                    setResultLimit(null);
                     setPage(1);
                   }}
                 >
@@ -610,9 +633,9 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
           </p>
 
           <div className="vehiclesPage__resultsBar" ref={gridRef}>
-            {!loading && totalCount !== null && (
+            {!loading && visibleTotalCount !== null && (
               <span className="vehiclesPage__resultCount">
-                {totalCount} vehicle{totalCount !== 1 ? "s" : ""}
+                {visibleTotalCount} vehicle{visibleTotalCount !== 1 ? "s" : ""}
                 {activeCount > 0 ? " matching filters" : ""}
               </span>
             )}
@@ -629,8 +652,9 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                 type="button"
                 className="vehiclesPage__clearBtn"
                 onClick={() => {
-                  setFilters(DEFAULT_FILTERS);
-                  setPage(1);
+                    setFilters(DEFAULT_FILTERS);
+                    setResultLimit(null);
+                    setPage(1);
                 }}
               >
                 Clear all filters
@@ -667,7 +691,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
                 })}
               </motion.div>
 
-              {totalCount !== null && (
+              {visibleTotalCount !== null && (
                 <Pagination
                   page={safePage}
                   totalPages={totalPages}
@@ -693,6 +717,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
           onChange={handleFilterChange}
           onClear={() => {
             setFilters(DEFAULT_FILTERS);
+            setResultLimit(null);
             setPage(1);
           }}
           onClose={() => setFiltersOpen(false)}

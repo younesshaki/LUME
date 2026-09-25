@@ -209,9 +209,12 @@ describe("public chat route: client-supplied turn id", () => {
   });
 
   it("records only whether an id was client-supplied, never the id's origin detail", () => {
+    // Turn telemetry (deterministic + model paths) and the speed timing
+    // record: all three store the boolean only.
     const records =
       route.split("clientRequestId: clientRequestId !== null").length - 1;
-    expect(records).toBe(2);
+    expect(records).toBe(3);
+    expect(route).not.toMatch(/clientRequestId: clientRequestId(?! !== null)/);
   });
 
   it("keeps one UUID shape check for both the turn id and the session id", () => {
@@ -426,7 +429,7 @@ describe("public chat route: shadow interpretation is inert by default", () => {
 describe("public chat route: active contextual interpretation", () => {
   it("runs only behind both rollout gates and only after deterministic extraction misses", () => {
     expect(route).toContain(
-      "const contextualInterpretationEnabled = isContextualInterpretationEnabled(\n    tenant.slug,\n    planClampedModelId,\n  )",
+      "isResolvedContextualInterpretationEnabled(tenant.slug, chatProvider)",
     );
     const active = at("// Phase 3 active canary:");
     const window = route.slice(active, active + 1800);

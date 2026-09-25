@@ -295,7 +295,11 @@ describe("the chat component actually applies the guard", () => {
   it("generates one turn id per send and passes it to the stream", () => {
     expect(component).toContain("const turnRequestId = newChatRequestId()");
     expect(component).toContain("turnSequencerRef.current.begin(turnRequestId)");
-    expect(component).toContain("turnRequestId,\n      )) {");
+    // The turn id is the stream's requestId argument (a timing observer may
+    // follow it).
+    expect(component).toMatch(
+      /streamChat\(\s*messages,\s*abortController\.signal,\s*sessionId \?\? undefined,\s*startNewSession,\s*turnRequestId,/,
+    );
   });
 
   it("ends a duplicate turn quietly instead of showing a failure", () => {

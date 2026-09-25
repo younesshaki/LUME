@@ -380,8 +380,8 @@ export function botActionFingerprint(action: BotAction): string {
       return `open-lead:${action.vehicleId ?? ""}:${action.attribution?.targetKey ?? ""}`;
     case "capture_lead":
       return `capture-lead:${action.vehicleId ?? ""}:${action.contact.email ?? ""}:${action.contact.phone ?? ""}`;
-    case "scroll-to":
-      return `scroll:${action.sectionId}`;
+    case "navigate-back":
+      return `navigate-back:${action.destination}`;
   }
 }
 

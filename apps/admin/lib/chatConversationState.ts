@@ -1,5 +1,9 @@
 import type { BotAction, Vehicle } from "@lume/types";
-import type { VehicleQueryFilters } from "@lume/rag";
+import {
+  classifyInventoryQueryScope,
+  type InventoryQueryScope,
+  type VehicleQueryFilters,
+} from "@lume/rag";
 
 export type ConversationResultSet = {
   orderedIds: string[];
@@ -66,6 +70,7 @@ export type InventoryStateTransition = {
   state: ConversationInventoryState;
   shouldQuery: boolean;
   useStoredResultSet: boolean;
+  scope: InventoryQueryScope;
   rules: string[];
 };
 
@@ -85,6 +90,7 @@ const FILTER_KEYS = [
   "priceMin",
   "priceMax",
   "sort",
+  "limit",
 ] as const satisfies readonly (keyof VehicleQueryFilters)[];
 
 export const INVENTORY_SCOPE_STALE_AFTER_MS = 30 * 60 * 1_000;
@@ -280,6 +286,15 @@ export function transitionInventoryState(
   const nextTurn = current.turn + 1;
   const resetScope = hasScopeResetIntent(userText);
   const normalizedExtracted = pickFilters(extractedFilters);
+  const scope = classifyInventoryQueryScope(userText, normalizedExtracted);
+  // A complete make-agnostic phrase ("cars over $100k") must abandon the
+  // previous topic. Named make/model changes already have a more precise,
+  // regression-tested reducer below: it clears vehicle-specific facets while
+  // retaining explicitly useful generic facets such as "SUV".
+  const startsFreshBroadSearch =
+    scope === "new_search" &&
+    normalizedExtracted.make === undefined &&
+    normalizedExtracted.model === undefined;
   const clearsStaleBroadScope = shouldStartFreshBroadInventorySearch(
     current,
     userText,
@@ -315,7 +330,7 @@ export function transitionInventoryState(
     normalizedExtracted.model !== current.activeFilters.model;
   const clearsVehicleScope =
     switchesMake || clearsStrandedModel || switchesModelWithoutMake;
-  const inferredBase = clearsStaleBroadScope
+  const inferredBase = startsFreshBroadSearch || clearsStaleBroadScope
     ? {}
     : resetScope
       ? normalizedExtracted.make !== undefined ||
@@ -339,11 +354,16 @@ export function transitionInventoryState(
   const selectedAction = selectedResultSetVehicleId(userText, current);
   const rules = [
     ...(resetScope ? ["clear_make_model_scope"] : []),
+    ...(startsFreshBroadSearch ? ["start_new_inventory_search"] : []),
     ...(clearsStaleBroadScope ? ["clear_stale_scope_for_broad_query"] : []),
-    ...(!resetScope && !clearsStaleBroadScope && switchesModelWithoutMake
+    ...(!resetScope &&
+    !startsFreshBroadSearch &&
+    !clearsStaleBroadScope &&
+    switchesModelWithoutMake
       ? ["clear_make_on_model_change"]
       : []),
     ...(!resetScope &&
+    !startsFreshBroadSearch &&
     !clearsStaleBroadScope &&
     !switchesModelWithoutMake &&
     clearsVehicleScope
@@ -369,7 +389,7 @@ export function transitionInventoryState(
       // turn's grounding, and the model narrated the old Jeep instead of the
       // reset inventory. The route re-queries and rebuilds the result set on
       // reset turns anyway, so this only removes stale state.
-      ...(resetScope || clearsStaleBroadScope
+      ...(resetScope || startsFreshBroadSearch || clearsStaleBroadScope
         ? {
             selectedVehicleId: null,
             resultSet: null,
@@ -383,6 +403,7 @@ export function transitionInventoryState(
     shouldQuery:
       hasInventoryIntent && !useStoredResultSet && !ordinal && !selectedAction,
     useStoredResultSet,
+    scope,
     rules,
   };
 }
@@ -863,7 +884,11 @@ function shouldStartFreshBroadInventorySearch(
   const isPriceOnly =
     extractedKeys.length > 0 &&
     extractedKeys.every(
-      (key) => key === "priceMin" || key === "priceMax" || key === "sort",
+    (key) =>
+      key === "priceMin" ||
+      key === "priceMax" ||
+      key === "sort" ||
+      key === "limit",
     ) &&
     (extractedFilters.priceMin !== undefined ||
       extractedFilters.priceMax !== undefined);

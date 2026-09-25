@@ -43,6 +43,17 @@ describe("interpretation schema: what it accepts", () => {
     });
   });
 
+  it("accepts a bounded ranked inventory request", () => {
+    expect(
+      parseChatInterpretation(
+        plan({ setFilters: { sort: "price_desc", limit: 10 } }),
+      ),
+    ).toMatchObject({
+      kind: "search",
+      setFilters: { sort: "price_desc", limit: 10 },
+    });
+  });
+
   it("accepts a fenced reply, because models fence JSON", () => {
     expect(
       parseChatInterpretation("```json\n" + plan() + "\n```"),
@@ -112,6 +123,12 @@ describe("interpretation schema: what it refuses", () => {
     ).toBeNull();
     expect(
       parseChatInterpretation(plan({ setFilters: { make: 7 } })),
+    ).toBeNull();
+    expect(
+      parseChatInterpretation(plan({ setFilters: { limit: 21 } })),
+    ).toBeNull();
+    expect(
+      parseChatInterpretation(plan({ setFilters: { sort: "anything" } })),
     ).toBeNull();
   });
 
@@ -238,6 +255,16 @@ describe("interpretation schema: what it refuses", () => {
     expect(
       parseChatInterpretation(
         plan({ kind: "reset", setFilters: { make: "BMW" } }),
+      ),
+    ).toBeNull();
+    expect(
+      parseChatInterpretation(
+        plan({ clearFilters: ["priceMax"] }),
+      ),
+    ).toBeNull();
+    expect(
+      parseChatInterpretation(
+        plan({ kind: "reset", setFilters: {}, clearFilters: ["make"] }),
       ),
     ).toBeNull();
   });

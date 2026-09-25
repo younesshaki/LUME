@@ -103,6 +103,25 @@ export function preloadRouteModule(routeKey: string): void {
 }
 
 /**
+ * Warm the code — never the data — of the pages the concierge drives to.
+ *
+ * Called when the visitor opens the assistant, which is the interaction
+ * signal: nearly every action the concierge can take lands on the inventory
+ * or a vehicle detail page, and on a mobile connection downloading those
+ * route chunks after the action arrived was most of the delay before the
+ * page appeared. No inventory request is made here; a bot navigation still
+ * fetches its results only after the destination has applied the filter.
+ */
+export function preloadConciergeDestinationModules(): void {
+  const vehiclesLoader = routeModuleIntentFor("vehicles") === "vehicles-page-renderer"
+    ? loadVehiclesPageRendererRoute
+    : loadVehiclesPage;
+  // Speculative: a failed prefetch leaves the normal lazy load on navigation.
+  void vehiclesLoader().catch(() => undefined);
+  void loadVehicleDetailPageRendererRoute().catch(() => undefined);
+}
+
+/**
  * A Vehicles navigation intent has enough confidence to load both its route
  * module and first card page. These independent operations intentionally run
  * in parallel and are coalesced by the catalog layer when the route mounts.

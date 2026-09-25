@@ -23,6 +23,19 @@ export type ChatRequest = {
    * id when absent or malformed.
    */
   requestId?: string;
+  /**
+   * What the browser's same-origin in-app history can do right now. Booleans
+   * only — never a path. The server uses them solely to word a back-navigation
+   * reply truthfully; the destination is always resolved by the browser.
+   */
+  navigation?: ChatNavigationContext;
+};
+
+export type ChatNavigationContext = {
+  /** A page visited earlier in this LUME tab precedes the current one. */
+  hasPrevious?: boolean;
+  /** An inventory results page precedes the current one. */
+  hasResults?: boolean;
 };
 
 export type ChatStreamMeta = {

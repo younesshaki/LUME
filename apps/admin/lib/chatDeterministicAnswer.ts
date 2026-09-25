@@ -27,6 +27,12 @@
 export type DeterministicAnswers = {
   /** "Do you mean the first option or the second?" — outranks everything. */
   clarifier: string | null;
+  /**
+   * In-site "go back". Its final wording is re-derived from the emitted
+   * actions by the route (chatBackNavigation.backNavigationReply), so it can
+   * never claim a navigation that a later gate removed.
+   */
+  navigateBack: string | null;
   makeSwitchClarifier: string | null;
   compare: string | null;
   compareUnavailable: string | null;
@@ -48,7 +54,8 @@ export type DeterministicAnswers = {
  * The shape of the order matters and is not alphabetical:
  *
  *  1. Clarifiers come first. If we are unsure what the visitor meant, saying
- *     anything confident is worse than asking.
+ *     anything confident is worse than asking. A back-navigation request is
+ *     next: it is a whole-message command that no inventory rule answers.
  *  2. Comparison and zero-result next: both describe the *state of the
  *     search*, which contradicts any answer that assumes results exist.
  *  3. Reference resolution (ordinal, selected vehicle) before facts about a
@@ -58,6 +65,7 @@ export type DeterministicAnswers = {
  */
 export const DETERMINISTIC_ANSWER_ORDER = [
   "clarifier",
+  "navigateBack",
   "makeSwitchClarifier",
   "compare",
   "compareUnavailable",
@@ -74,6 +82,7 @@ export const DETERMINISTIC_ANSWER_ORDER = [
 export function emptyDeterministicAnswers(): DeterministicAnswers {
   return {
     clarifier: null,
+    navigateBack: null,
     makeSwitchClarifier: null,
     compare: null,
     compareUnavailable: null,

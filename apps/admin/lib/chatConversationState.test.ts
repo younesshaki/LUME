@@ -442,6 +442,50 @@ describe("chat conversation inventory state", () => {
     expect(transition.rules).not.toContain("clear_stale_scope_for_broad_query");
   });
 
+  it("starts a fresh make-agnostic inventory search instead of carrying a named vehicle scope", () => {
+    const state = setConversationResultSet(
+      {
+        ...emptyConversationInventoryState(),
+        activeFilters: { make: "Ferrari", model: "Ferrari" },
+        turn: 1,
+      },
+      [vehicle(FIRST)],
+      4,
+    );
+    const transition = transitionInventoryState(
+      state,
+      "cars for more than $100k",
+      { priceMin: 100_000 },
+      true,
+    );
+
+    expect(transition.scope).toBe("new_search");
+    expect(transition.state.activeFilters).toEqual({ priceMin: 100_000 });
+    expect(transition.state.resultSet).toBeNull();
+    expect(transition.state.selectedVehicleId).toBeNull();
+    expect(transition.rules).toContain("start_new_inventory_search");
+  });
+
+  it("treats ranked broad inventory requests as a new bounded result set", () => {
+    const state = {
+      ...emptyConversationInventoryState(),
+      activeFilters: { make: "BMW", priceMax: 70_000 },
+      turn: 3,
+    };
+    const transition = transitionInventoryState(
+      state,
+      "10 most expensive cars",
+      { sort: "price_desc", limit: 10 },
+      true,
+    );
+
+    expect(transition.scope).toBe("new_search");
+    expect(transition.state.activeFilters).toEqual({
+      sort: "price_desc",
+      limit: 10,
+    });
+  });
+
   it("starts a fresh broad budget search after many unrelated turns", () => {
     const nowMs = Date.parse("2026-07-23T20:00:00.000Z");
     let state = setConversationResultSet(

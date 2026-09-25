@@ -37,6 +37,8 @@ export const INTERPRETABLE_FILTER_KEYS = [
   "mileageMax",
   "priceMin",
   "priceMax",
+  "sort",
+  "limit",
 ] as const satisfies readonly (keyof VehicleQueryFilters)[];
 
 export type InterpretableFilterKey = (typeof INTERPRETABLE_FILTER_KEYS)[number];
@@ -127,7 +129,118 @@ const NUMERIC_KEYS: readonly InterpretableFilterKey[] = [
   "mileageMax",
   "priceMin",
   "priceMax",
+  "limit",
 ];
+
+const INTERPRETABLE_SORTS = new Set([
+  "recommended",
+  "created_desc",
+  "price_asc",
+  "price_desc",
+  "year_desc",
+  "year_asc",
+  "mileage_asc",
+  "mileage_desc",
+]);
+
+/**
+ * Provider-facing shape for the contextual interpreter.
+ *
+ * This deliberately describes only syntax. `parseChatInterpretation()` below
+ * remains the authority for semantic consistency (for example, it rejects a
+ * price range whose minimum exceeds its maximum). Keeping that policy in one
+ * TypeScript parser prevents a provider-specific JSON-schema dialect from
+ * becoming an execution authority.
+ */
+export const CHAT_INTERPRETATION_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "version",
+    "kind",
+    "setFilters",
+    "clearFilters",
+    "reference",
+    "clarifyReason",
+    "unsupportedClauses",
+  ],
+  properties: {
+    version: { const: CHAT_INTERPRETATION_SCHEMA_VERSION },
+    kind: { enum: KINDS },
+    setFilters: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        make: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        model: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        bodyStyle: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        stockType: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        fuelType: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        drivetrain: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        sellerState: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        sellerCity: { type: "string", minLength: 1, maxLength: MAX_FILTER_TEXT_LENGTH },
+        year: { type: "integer", minimum: MIN_VEHICLE_YEAR, maximum: MAX_VEHICLE_YEAR },
+        yearMin: { type: "integer", minimum: MIN_VEHICLE_YEAR, maximum: MAX_VEHICLE_YEAR },
+        yearMax: { type: "integer", minimum: MIN_VEHICLE_YEAR, maximum: MAX_VEHICLE_YEAR },
+        mileageMax: { type: "number", minimum: 0, maximum: MAX_MILEAGE },
+        priceMin: { type: "number", minimum: 0, maximum: MAX_PRICE },
+        priceMax: { type: "number", minimum: 0, maximum: MAX_PRICE },
+        sort: { type: "string", enum: [...INTERPRETABLE_SORTS] },
+        limit: { type: "integer", minimum: 1, maximum: 20 },
+      },
+    },
+    clearFilters: {
+      type: "array",
+      maxItems: INTERPRETABLE_FILTER_KEYS.length,
+      items: { type: "string", enum: INTERPRETABLE_FILTER_KEYS },
+    },
+    reference: {
+      anyOf: [
+        { type: "null" },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["kind", "position"],
+          properties: {
+            kind: { const: "ordinal" },
+            position: { type: "integer", minimum: 1, maximum: MAX_ORDINAL_POSITION },
+          },
+        },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["kind"],
+          properties: { kind: { enum: ["last", "selected"] } },
+        },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["kind", "positions"],
+          properties: {
+            kind: { const: "compare" },
+            positions: {
+              type: "array",
+              minItems: 2,
+              maxItems: MAX_COMPARE_POSITIONS,
+              items: { type: "integer", minimum: 1, maximum: MAX_ORDINAL_POSITION },
+            },
+          },
+        },
+      ],
+    },
+    clarifyReason: {
+      anyOf: [
+        { type: "null" },
+        { type: "string", enum: INTERPRETATION_CLARIFY_REASONS },
+      ],
+    },
+    unsupportedClauses: {
+      type: "array",
+      maxItems: MAX_UNSUPPORTED_CLAUSES,
+      items: { type: "string", minLength: 1, maxLength: MAX_CLAUSE_LENGTH },
+    },
+  },
+} as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -205,6 +318,7 @@ function parseSetFilters(
     const text = raw.trim();
     if (text.length > MAX_FILTER_TEXT_LENGTH) return null;
     if (!text) return null;
+    if (key === "sort" && !INTERPRETABLE_SORTS.has(text)) return null;
     out[key] = text;
   }
   return out;
@@ -330,6 +444,7 @@ function validNumericFilter(
   }
   if (key === "mileageMax") return value <= MAX_MILEAGE;
   if (key === "priceMin" || key === "priceMax") return value <= MAX_PRICE;
+  if (key === "limit") return Number.isInteger(value) && value >= 1 && value <= 20;
   return true;
 }
 
@@ -382,14 +497,22 @@ function interpretationIsConsistent(value: ChatInterpretation): boolean {
         !hasFilterChanges
       );
     case "search":
-      return setCount > 0 && !hasReference && !hasClarifier;
+      // A new search replaces the prior scope in the deterministic state
+      // transition. A model must not invent an explicit `clearFilters` list
+      // from that consequence; it may only report a field the visitor
+      // explicitly asked to drop in a refinement or reset.
+      return setCount > 0 && clearCount === 0 && !hasReference && !hasClarifier;
     case "refine":
       // Relative refinements such as "anything cheaper?" cannot be reduced to
       // a trusted numeric filter. They must retain that clause for a later
       // clarification rather than becoming an empty executable refinement.
       return hasFilterChanges && !hasReference && !hasClarifier;
     case "reset":
-      return setCount === 0 && !hasReference && !hasClarifier;
+      // Reset means the full inventory and therefore clears every filter.
+      // `clearFilters` would be redundant and is deliberately ignored by the
+      // compiler, so accepting it would make the model report information
+      // that cannot affect execution.
+      return setCount === 0 && clearCount === 0 && !hasReference && !hasClarifier;
     case "unsupported":
       return (
         value.unsupportedClauses.length > 0 &&
@@ -418,14 +541,15 @@ export function buildInterpretationSchemaPrompt(): string {
     `kind is one of: ${KINDS.join(" | ")}`,
     "Use search for an explicit new vehicle topic or a broad inventory search. Use refine only when the message narrows or edits the active search without introducing a new named vehicle topic.",
     "Use reset when the visitor asks for all/whole/entire inventory or explicitly abandons the current filters. Use present only to display the current result set again.",
+    "The phrases 'in general', 'not talking about [a make], I mean in general', 'all cars', 'whole inventory', and 'entire inventory' are reset requests, never ambiguous references.",
     "Use reference for an ordinal, last item, selected item, or positional comparison. Use selected_followup only for a question about the already selected vehicle. Use lead_form for a request to start a supported contact/lead form.",
     "Use clarify when the meaning cannot be represented safely; choose the closest bounded clarifyReason. Use unsupported only when no supported intent remains.",
-    `setFilters keys: ${INTERPRETABLE_FILTER_KEYS.join(", ")}. Numbers for year, yearMin, yearMax, mileageMax, priceMin, priceMax; strings otherwise. Include ONLY what this message states.`,
+    `setFilters keys: ${INTERPRETABLE_FILTER_KEYS.join(", ")}. Numbers for year, yearMin, yearMax, mileageMax, priceMin, priceMax and limit (1-20); sort must be one of recommended, created_desc, price_asc, price_desc, year_desc, year_asc, mileage_asc, mileage_desc; strings otherwise. Include ONLY what this message states.`,
     "Normalize common vehicle makes and inventory facets to their conventional display spelling. Convert monetary or mileage suffixes such as 40k to 40000. 'Under', 'up to', 'budget', and 'at most' set a maximum; 'over', 'at least', and 'starting at' set a minimum.",
-    "clearFilters lists fields the visitor explicitly dropped, e.g. 'any year', 'not Toyota'.",
+    "clearFilters lists fields the visitor explicitly dropped, e.g. 'any year', 'not Toyota'. For kind search or reset, clearFilters MUST be []: a new search replaces old scope automatically, and reset clears all filters.",
     'reference is {"kind":"ordinal","position":N} | {"kind":"last"} | {"kind":"selected"} | {"kind":"compare","positions":[N,M]} | null.',
     `clarifyReason is one of ${INTERPRETATION_CLARIFY_REASONS.join(" | ")} when kind is clarify, otherwise null.`,
     "unsupportedClauses holds any part of the request this schema cannot express. Never drop a clause silently.",
-    "Never invent a make, model, price or vehicle the visitor did not mention.",
+    "Never infer a make from a model. If the message is '2026 Camry', set only model='Camry' and year=2026, NOT make='Toyota'. Never invent a make, model, price or vehicle the visitor did not mention.",
   ].join("\n");
 }

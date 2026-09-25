@@ -1,4 +1,5 @@
 import type { VehicleQueryFilters } from "@lume/rag";
+import type { ResolvedChatProvider } from "./chatProviderResolution";
 import type {
   ChatInterpretation,
   InterpretationClarifyReason,
@@ -150,6 +151,33 @@ export function isContextualInterpretationEnabled(
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean)
     .includes(tenantSlug.trim().toLowerCase());
+}
+
+/**
+ * An interpreter is certified for the exact model that was evaluated, never
+ * for a provider family. If dashboard selection falls back because its key is
+ * absent, preserve normal chat availability but keep interpretation disabled:
+ * otherwise an unmeasured model could silently start steering state.
+ */
+export function isResolvedContextualInterpretationEnabled(
+  tenantSlug: string,
+  provider: Pick<ResolvedChatProvider, "profile" | "fellBack"> | null,
+  flag: string | undefined = process.env.CONCIERGE_CONTEXTUAL_INTERPRETER,
+  allowlist: string | undefined = process.env
+    .CONCIERGE_CONTEXTUAL_INTERPRETER_TENANTS,
+  certifiedModels: readonly string[] = CERTIFIED_CONTEXTUAL_INTERPRETER_MODELS,
+): boolean {
+  return Boolean(
+    provider &&
+      !provider.fellBack &&
+      isContextualInterpretationEnabled(
+        tenantSlug,
+        provider.profile.id,
+        flag,
+        allowlist,
+        certifiedModels,
+      ),
+  );
 }
 
 function explicitlyRequestsNavigation(text: string): boolean {

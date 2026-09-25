@@ -16,6 +16,13 @@ import {
 } from "@/lib/chatTurnSequencer";
 import { publicTenantSlug } from "@/lib/publicTenant";
 import { botActionBus } from "@/lib/botActionBus";
+import { preloadConciergeDestinationModules } from "@/app-shell/routeModules";
+import {
+  ClientTurnTimer,
+  afterNextPaint,
+  captureConciergeSpeedEvent,
+  noteConciergeActionDispatched,
+} from "@/lib/conciergeSpeed";
 import {
   captureLumeConciergeTranscript,
   captureLumeEvent,
@@ -234,8 +241,13 @@ export function OllamaChat() {
     // posting the whole conversation turned every send past exchange 16 into a
     // 400 that never recovered. See OllamaChat.history.ts.
     const nextApiMessages = buildOutboundMessages(apiMessages, trimmedInput);
+    // Speed telemetry starts at the visitor's press, before any state update.
+    const timer = new ClientTurnTimer();
+    const conversationTurn =
+      messages.filter((message) => message.role === "user").length + 1;
 
     setMessages((prev) => [...prev, userMessage]);
+    timer.markAfterPaint("submit_painted");
     setInput("");
     setError(null);
     setPendingThinkingSteps([]);
@@ -247,7 +259,6 @@ export function OllamaChat() {
     // and be deduplicated server-side instead of appending a second turn.
     const turnRequestId = newChatRequestId();
     turnSequencerRef.current.begin(turnRequestId);
-    const turnStartedAt = performance.now();
     captureLumeEvent("lume_concierge_turn_started", {
       turn_id: turnRequestId,
       history_messages: nextApiMessages.length,
@@ -281,7 +292,16 @@ export function OllamaChat() {
         sessionId ?? undefined,
         startNewSession,
         turnRequestId,
+        {
+          onRequestSent: () => timer.mark("request_sent"),
+          onResponseHeaders: () => timer.mark("response_headers"),
+        },
       )) {
+        timer.mark("first_event");
+        if (event.kind === "timing") {
+          timer.setServerTiming(event.timing);
+          continue;
+        }
         if (event.kind === "meta") {
           sourceCategories = event.sourceCategories;
           setStartNewSession(false);
@@ -321,6 +341,7 @@ export function OllamaChat() {
           continue;
         }
         if (event.kind === "action") {
+          timer.mark("first_action_received");
           receivedActionTypes.push(event.action.type);
           // Only the current turn may touch the page. A superseded or aborted
           // stream's actions are valid answers to a question that is no longer
@@ -337,7 +358,9 @@ export function OllamaChat() {
           }
           // Hand the action to the bus; subscribed UI (router, inventory,
           // highlight overlay, lead form) reacts. Chat stays decoupled.
+          noteConciergeActionDispatched(turnRequestId, event.action);
           botActionBus.publish(event.action);
+          timer.mark("first_action_dispatched");
           captureLumeEvent("lume_concierge_action_dispatched", {
             turn_id: turnRequestId,
             action_type: event.action.type,
@@ -352,6 +375,7 @@ export function OllamaChat() {
           break;
         }
         if (event.kind === "thinking") {
+          timer.mark("first_thinking");
           turnThinkingSteps = appendThinkingStep(turnThinkingSteps, event.text);
           setPendingThinkingSteps(turnThinkingSteps);
           continue;
@@ -359,6 +383,8 @@ export function OllamaChat() {
         if (event.kind === "delta") {
           assistantContent += event.text;
           if (!assistantInserted) {
+            timer.mark("first_text_received");
+            timer.markAfterPaint("first_text_painted");
             setIsRetrieving(false);
             setIsSending(true);
             chatSounds.receive();
@@ -385,16 +411,37 @@ export function OllamaChat() {
         }
       }
 
+      timer.mark("done");
       if (duplicateTurn) {
         // Nothing was inserted for this turn, so there is nothing to tidy up
         // and nothing to show. The finally block clears the pending states.
+        captureConciergeSpeedEvent("lume_concierge_turn_duplicate", {
+          turn_id: turnRequestId,
+          duration_ms: timer.elapsed(),
+          ...timer.properties(),
+        });
+        timer.dispose();
         return;
       }
 
-      captureLumeEvent("lume_concierge_turn_completed", {
-        turn_id: turnRequestId,
-        response_started: assistantInserted,
-        duration_ms: Math.round(performance.now() - turnStartedAt),
+      // Captured after the final frame is painted, so the paint marks
+      // scheduled for this turn have landed. One event carries the visitor's
+      // timings and the server's stage timings (from the `timing` event).
+      const completedDurationMs = timer.elapsed();
+      const completedActionTypes = [...receivedActionTypes];
+      afterNextPaint(() => {
+        captureConciergeSpeedEvent("lume_concierge_turn_completed", {
+          turn_id: turnRequestId,
+          conversation_id: turnConversationId,
+          conversation_turn: conversationTurn,
+          response_started: assistantInserted,
+          duration_ms: completedDurationMs,
+          action_count: completedActionTypes.length,
+          action_types: completedActionTypes.join(",") || null,
+          response_chars: assistantContent.length,
+          ...timer.properties(),
+        });
+        timer.dispose();
       });
 
       const completedAssistantContent = assistantContent.trim();
@@ -420,20 +467,26 @@ export function OllamaChat() {
       );
     } catch (caughtError) {
       if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
-        captureLumeEvent("lume_concierge_turn_aborted", {
+        captureConciergeSpeedEvent("lume_concierge_turn_aborted", {
           turn_id: turnRequestId,
-          duration_ms: Math.round(performance.now() - turnStartedAt),
+          conversation_turn: conversationTurn,
+          duration_ms: timer.elapsed(),
+          ...timer.properties(),
         });
+        timer.dispose();
         setMessages((prev) => prev.filter((m) => m.id !== assistantMessageId));
         return;
       }
       setMessages((prev) => prev.filter((m) => m.id !== assistantMessageId));
       const message = caughtError instanceof Error ? caughtError.message : "Unable to reach chat API.";
-      captureLumeEvent("lume_concierge_turn_failed", {
+      captureConciergeSpeedEvent("lume_concierge_turn_failed", {
         turn_id: turnRequestId,
-        duration_ms: Math.round(performance.now() - turnStartedAt),
+        conversation_turn: conversationTurn,
+        duration_ms: timer.elapsed(),
         failure_kind: message.startsWith("Chat API ") ? "api" : "network_or_stream",
+        ...timer.properties(),
       });
+      timer.dispose();
       setError(message);
     } finally {
       if (abortControllerRef.current === abortController) abortControllerRef.current = null;
@@ -498,6 +551,7 @@ export function OllamaChat() {
             onClick={() => {
               chatSounds.open();
               setIsOpen(true);
+              preloadConciergeDestinationModules();
               captureLumeEvent("lume_concierge_opened");
             }}
           >

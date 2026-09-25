@@ -16,6 +16,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  useNavigationType,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -39,6 +40,11 @@ import {
   storePendingVehicleComparison,
   vehicleRouteFromBotAction,
 } from "./lib/botActionConsumers";
+import { noteConciergeRouteRendered } from "./lib/conciergeSpeed";
+import {
+  inAppHistory,
+  resolveBackNavigationTarget,
+} from "./lib/inAppHistory";
 import {
   activatePendingConciergeTarget,
   queueConciergeTargetAction,
@@ -248,6 +254,7 @@ function ShowcaseExperienceRoute(props: ShowcaseExperienceRouteProps) {
 export default function App() {
   const location = useLocation();
   const routerNavigate = useNavigate();
+  const navigationType = useNavigationType();
   const { navigateTo } = useNavigation();
   const { routeId, config: currentRouteConfig } = useCurrentRoute();
   const setActiveRoute = useUIStore((state) => state.setActiveRoute);
@@ -264,6 +271,22 @@ export default function App() {
   useEffect(() => {
     setActiveRoute(routeId);
   }, [routeId, setActiveRoute]);
+
+  // Same-origin record of pages rendered in this tab — the only source the
+  // concierge's navigate-back may take a destination from.
+  useEffect(() => {
+    inAppHistory.record(
+      {
+        key: location.key,
+        path: `${location.pathname}${location.search}${location.hash}`,
+      },
+      navigationType,
+    );
+    // Action → page shown: the route half of the concierge speed metric.
+    noteConciergeRouteRendered(
+      `${location.pathname}${location.search}${location.hash}`,
+    );
+  }, [location.key, location.pathname, location.search, location.hash, navigationType]);
 
   const handleGoHome = useCallback((playNavSound = true) => {
     setShowcaseChapterRevealed(false);
@@ -398,6 +421,30 @@ export default function App() {
         state: { source: "bot", conciergeTargetKey: action.targetKey },
       });
     }
+  });
+
+  // Never history.back(): the previous browser entry may be another site.
+  // The destination comes only from the in-app record, else the server's
+  // grounded results; with neither, nothing happens.
+  useBotAction("navigate-back", (action) => {
+    const target = resolveBackNavigationTarget(inAppHistory, action);
+    if (!target) {
+      console.warn("[concierge] No in-app page to go back to");
+      return;
+    }
+    setShowcaseChapterRevealed(false);
+    if (target.kind === "history") {
+      inAppHistory.markPendingBack(target);
+      // This is an in-site return, not a fresh forward navigation. Replacing
+      // the current entry means the browser's own Back button cannot resurrect
+      // the vehicle/detail page the concierge just left.
+      routerNavigate(target.path, { replace: true, state: { source: "bot" } });
+      return;
+    }
+    navigateTo(vehicleRouteFromBotAction(target.fallback), {
+      source: "bot",
+      analytics: { action: "bot_navigate_back" },
+    });
   });
 
   useBotAction("highlight-vehicle", (action) => {
