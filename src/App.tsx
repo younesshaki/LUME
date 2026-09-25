@@ -38,8 +38,14 @@ import {
   resolveBotNavigationRoute,
   storePendingLeadFormPrefill,
   storePendingVehicleComparison,
+  vehicleFiltersFromBotAction,
+  vehicleResultLimitFromBotAction,
   vehicleRouteFromBotAction,
 } from "./lib/botActionConsumers";
+import {
+  prefetchVehicleResults,
+  type VehicleSort,
+} from "./experience/vehicles/catalog";
 import { noteConciergeRouteRendered } from "./lib/conciergeSpeed";
 import {
   inAppHistory,
@@ -461,6 +467,16 @@ export default function App() {
   });
 
   useBotAction("filter_inventory", (action) => {
+    // Start the exact filtered-page request while React downloads/renders the
+    // destination route. `loadVehicleResults` consumes this bounded handoff,
+    // so navigation never creates a second request for the same page.
+    const resultLimit = vehicleResultLimitFromBotAction(action);
+    void prefetchVehicleResults(
+      vehicleFiltersFromBotAction(action),
+      (action.sort ?? "recommended") as VehicleSort,
+      1,
+      resultLimit ?? 24,
+    ).catch(() => undefined);
     setShowcaseChapterRevealed(false);
     navigateTo(
       vehicleRouteFromBotAction(action),
