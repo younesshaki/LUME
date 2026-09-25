@@ -57,7 +57,18 @@ export type ChatStreamYield =
    * the visitor is being answered by the delivery that holds the lease, so the
    * caller should end this turn quietly rather than showing a failure.
    */
-  | { kind: "duplicate" };
+  | { kind: "duplicate" }
+  /**
+   * The server's own stage timings for this turn (content-free). Sent once,
+   * just before the stream ends; see apps/admin/lib/conciergeTurnTiming.
+   */
+  | { kind: "timing"; timing: Record<string, unknown> };
+
+/** Transport milestones the caller may time. Never affects the stream. */
+export type ChatStreamObserver = {
+  onRequestSent?: () => void;
+  onResponseHeaders?: () => void;
+};
 
 type DeepseekStreamChunk = {
   choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
@@ -81,11 +92,13 @@ export async function* streamChat(
    * behaviour: the server generates its own.
    */
   requestId?: string,
+  observer?: ChatStreamObserver,
 ): AsyncGenerator<ChatStreamYield, void, unknown> {
   const sanitized = messages
     .filter((m) => m.role === "user" || m.role === "assistant")
     .map((m) => ({ role: m.role, content: m.content }));
 
+  notify(observer?.onRequestSent);
   const response = await fetch(CHAT_ENDPOINT, {
     method: "POST",
     headers: {
@@ -108,6 +121,7 @@ export async function* streamChat(
     credentials: "include",
     signal,
   });
+  notify(observer?.onResponseHeaders);
 
   if (!response.ok) {
     let body = "";
@@ -179,6 +193,10 @@ export async function* streamChat(
           };
           continue;
         }
+        if (isTimingEvent(parsed)) {
+          yield { kind: "timing", timing: parsed.timing };
+          continue;
+        }
         if (isErrorEvent(parsed)) {
           throw new Error(parsed.message);
         }
@@ -192,6 +210,18 @@ export async function* streamChat(
   } finally {
     reader.releaseLock();
   }
+}
+
+function notify(callback: (() => void) | undefined): void {
+  try {
+    callback?.();
+  } catch {
+    // Timing observers are best-effort and never affect the stream.
+  }
+}
+
+function isTimingEvent(v: unknown): v is { type: "timing"; timing: Record<string, unknown> } {
+  return isRecord(v) && v.type === "timing" && isRecord(v.timing);
 }
 
 function isMetaEvent(v: unknown): v is ChatMetaEvent {

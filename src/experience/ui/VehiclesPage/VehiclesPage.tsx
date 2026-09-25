@@ -46,6 +46,7 @@ import { vehiclePageSoundActions } from "./VehiclesPage.sounds";
 import { AdvancedFilters, MarketplaceToolbar } from "./VehicleFilters";
 import "./VehiclesPage.css";
 import { MakeLogo } from "@/components/vehicles/MakeLogo";
+import { noteConciergeDestinationReady } from "@/lib/conciergeSpeed";
 
 const PAGE_SIZE = 24;
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
@@ -619,6 +620,11 @@ export default function VehiclesPage({
       cancelled = true;
     };
   }, [effectivePage, filters, queryKey, resultLimit, sort]);
+
+  // Concierge speed: the destination's data is on screen (or failed).
+  useEffect(() => {
+    if (!loading) noteConciergeDestinationReady("inventory", !loadError);
+  }, [loading, loadError]);
 
   useEffect(() => {
     if (loading || loadError || inventoryTrackedRef.current) return;

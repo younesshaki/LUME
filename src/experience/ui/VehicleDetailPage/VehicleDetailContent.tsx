@@ -19,6 +19,7 @@ import { botLeadFormSourceContext } from "@/lib/botActionConsumers";
 import VehicleGallery from "./VehicleGallery";
 import { vehicleDetailSoundActions } from "./VehicleDetailPage.sounds";
 import { MakeLogo } from "@/components/vehicles/MakeLogo";
+import { noteConciergeDestinationReady } from "@/lib/conciergeSpeed";
 
 /**
  * The shared vehicle-detail surface: gallery, title/price, action row, specs,
@@ -357,6 +358,11 @@ export default function VehicleDetailContent({
   useEffect(() => {
     if (vehicle) trackConversion("vehicle_view", { vehicleId: vehicle.id });
   }, [vehicle]);
+
+  // Concierge speed: the destination's data is on screen (or failed).
+  useEffect(() => {
+    if (!loading) noteConciergeDestinationReady("vehicle", !loadError);
+  }, [loading, loadError]);
 
   useConciergeTarget("vehicle-inquiry", (action) => {
     setBotInquiryContext(

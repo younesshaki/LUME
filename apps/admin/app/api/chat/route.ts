@@ -68,7 +68,8 @@ import {
   type VehicleQueryFilters,
 } from "@lume/rag";
 import { createOllamaEmbedder, retrieveHybridContext } from "@lume/rag/server";
-import { getTenantFromRequest } from "@/lib/tenant";
+import { getTenantFromRequestCached } from "@/lib/tenant";
+import { settle, unwrapSettled } from "@/lib/settled";
 import { checkChatRateLimit, clientIpFromRequest } from "@/lib/rateLimit";
 import { corsHeadersFor, isAllowedOrigin } from "@/lib/origin";
 import {
@@ -141,9 +142,19 @@ import {
   isResolvedContextualInterpretationEnabled,
 } from "@/lib/chatInterpretationExecution";
 import {
+  TurnStopwatch,
+  buildClientTurnTiming,
+  buildTurnTimingProperties,
+  nextInstanceTurn,
+  queueTurnTimingEvent,
+  type ClientTurnTiming,
+  type TurnTimingOutcome,
+} from "@/lib/conciergeTurnTiming";
+import {
   claimConversationTurn,
   conversationMemoryKey,
   getConversationMemoryStore,
+  conversationMemoryMode,
   isConversationMemoryDegraded,
 } from "@/lib/conversationMemory.server";
 import {
@@ -225,6 +236,10 @@ export async function OPTIONS(request: Request) {
 
 export async function POST(request: Request): Promise<Response> {
   const turnStartedAtMs = Date.now();
+  // Speed telemetry: one stopwatch per turn, marked at each stage. Content-free
+  // and off the response path (see lib/conciergeTurnTiming).
+  const timing = new TurnStopwatch();
+  const instanceTurn = nextInstanceTurn();
   if (!isAllowedOrigin(request)) {
     return json({ error: "Forbidden origin" }, 403);
   }
@@ -299,26 +314,119 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "no user message found" }, 400, request);
   }
 
-  // Resolve tenant.
-  const tenant = await getTenantFromRequest(request);
+  // Resolve tenant. Briefly cached per slug for this route only; see
+  // getTenantFromRequestCached for why that is safe.
+  const tenant = await getTenantFromRequestCached(request);
   if (!tenant) {
     return json({ error: "Unknown or inactive tenant" }, 404, request);
   }
+  timing.mark("tenant");
+  let timingReported = false;
+  let deferredTimingOutcome: TurnTimingOutcome | null = null;
+  const timingContext = (outcome: TurnTimingOutcome) => ({
+    ...outcome,
+    requestId,
+    clientRequestId: clientRequestId !== null,
+    tenantId: tenant.tenantId,
+    memoryMode: conversationMemoryMode(),
+    instanceTurn,
+  });
+  const queueServerTiming = (outcome: TurnTimingOutcome): void => {
+    if (timingReported) return;
+    timingReported = true;
+    queueTurnTimingEvent(
+      tenant.tenantId,
+      buildTurnTimingProperties(
+        timingContext(outcome),
+        timing.snapshot(),
+        timing.elapsed(),
+      ),
+    );
+  };
+  /**
+   * Close the turn's stopwatch and return the payload for the browser's
+   * `timing` SSE event. The authoritative server event is queued now, or —
+   * when work continues after [DONE] (the tool path's memory commit) —
+   * deferred until `finalizeDeferredTiming()`, so it includes that work.
+   */
+  const reportTurnTiming = (
+    outcome: TurnTimingOutcome,
+    options: { deferServerEvent?: boolean } = {},
+  ): ClientTurnTiming => {
+    timing.mark("done");
+    const clientTiming = buildClientTurnTiming(
+      timingContext(outcome),
+      timing.snapshot(),
+      timing.elapsed(),
+    );
+    if (options.deferServerEvent) deferredTimingOutcome = outcome;
+    else queueServerTiming(outcome);
+    return clientTiming;
+  };
+  const finalizeDeferredTiming = (): void => {
+    if (deferredTimingOutcome) queueServerTiming(deferredTimingOutcome);
+  };
+  const reportTurnError = (status: number, errorStage: string): void => {
+    reportTurnTiming({
+      conversationId: null,
+      turn: null,
+      route: "error",
+      status,
+      errorStage,
+    });
+  };
 
   // Build the tenant-scoped system prompt. Keyword + fuzzy retrieval over
   // this tenant's chunks — no embedder needed. When the corpus outgrows
   // in-memory scoring (~thousands of chunks), swap retrieveByKeywords()
   // for retrieveContext() from @lume/rag/server + an embedder.
   const supabase = createServiceClient();
+  // The quota decision comes first and alone: a refused caller must cost one
+  // quota check, not the tenant reads below. Nothing speculative starts until
+  // it has approved the turn.
   const quota = await checkPublicApiQuota(
     tenant.tenantId,
     "chat_requests",
     supabase,
   );
+  timing.mark("quota");
   if (!quota.allowed) {
+    reportTurnError(429, "quota");
     return json(quotaExceededPayload(quota), 429, request);
   }
   const quotaHeaders = quotaResponseHeaders(quota);
+
+  // Once approved, every read that depends only on the tenant starts together
+  // rather than one round trip after another. The facet and early-vehicle
+  // reads are consumed later, after conversation memory, so they are settled:
+  // an early failure cannot surface as an unhandled rejection, and it is
+  // re-thrown at the exact point the sequential code used to await it — a
+  // failed read still fails the turn where it always did. The reads are
+  // side-effect free; on a duplicate delivery their results are discarded.
+  //
+  // The facet RPC is the bounded tenant vocabulary filter extraction needs to
+  // recognize a make/model this turn. Extraction vocabulary must be
+  // tenant-wide, never narrowed by the previous turn's active scope. With BMW
+  // active, p_make:"BMW" excluded "Camry" from the model vocabulary, so the
+  // next explicit "2026 Camry" query extracted only the year and silently
+  // retained BMW. Filters are applied by queryTenantVehicles later; vocabulary
+  // discovery is deliberately scope-independent.
+  const facetRead = settle(
+    supabase.rpc("vehicle_facets_v2", {
+      p_tenant_id: tenant.tenantId,
+      p_make: null,
+      p_state: null,
+    }),
+  );
+  // The open vehicle page always wins the selected-vehicle candidate order
+  // below, unless the visitor asked to reset scope, so when it is present its
+  // row can be read now instead of after conversation memory.
+  const earlySelectedVehicleId = hasScopeResetIntent(lastUser.content)
+    ? null
+    : vehicleIdFromPublicPagePath(body.pagePath);
+  const earlySelectedVehicleRead = earlySelectedVehicleId
+    ? settle(getTenantVehicle(supabase, tenant.tenantId, earlySelectedVehicleId))
+    : null;
 
   // Persona (admin-configured voice + capabilities); degrades to the default
   // persona — chat never fails because persona storage is missing.
@@ -330,6 +438,7 @@ export async function POST(request: Request): Promise<Response> {
       loadConciergeTargets(supabase, tenant.tenantId),
       resolveTenantPlan(supabase, tenant.tenantId),
     ]);
+  timing.mark("config");
   const conciergeTargets = targetRegistry.targets;
   // Plan entitlement "chat.actions" (Basic = informational concierge only)
   // gates tools and BotActions below, on top of the tenant's own allowlist
@@ -393,6 +502,11 @@ export async function POST(request: Request): Promise<Response> {
       memoryDegraded: isConversationMemoryDegraded(),
       timingsMs: { total: Date.now() - turnStartedAtMs },
     });
+    reportTurnTiming({
+      conversationId: anonymousConversationId ?? null,
+      turn: null,
+      route: "duplicate",
+    });
     return duplicateTurnResponse(request, quotaHeaders);
   }
 
@@ -406,6 +520,7 @@ export async function POST(request: Request): Promise<Response> {
     : null;
   // The version this turn read. Committing against it makes a late turn lose
   // to the newer one that already landed, instead of overwriting it.
+  timing.mark("memory");
   const expectedStateVersion = remembered?.stateVersion ?? 0;
   // Only true when a CONFIGURED shared store has failed. A deployment with no
   // shared store at all is not degraded — it never promised cross-instance
@@ -561,23 +676,15 @@ export async function POST(request: Request): Promise<Response> {
     // fetching them for an ordinal, a "show me", or a reset was pure waste on
     // the highest-frequency turns. They are loaded lazily on the model path.
     //
-    // The facet RPC stays unconditional: it is the bounded tenant vocabulary
-    // that filter extraction needs to recognize a make/model this turn.
+    // The facet RPC stays unconditional (started with the tenant reads above).
     const [selectedVehicleResult, facetResult] = await Promise.all([
       selectedVehicleCandidate
-        ? getTenantVehicle(supabase, tenant.tenantId, selectedVehicleCandidate)
+        ? selectedVehicleCandidate === earlySelectedVehicleId &&
+          earlySelectedVehicleRead
+          ? unwrapSettled(earlySelectedVehicleRead)
+          : getTenantVehicle(supabase, tenant.tenantId, selectedVehicleCandidate)
         : Promise.resolve(null),
-      supabase.rpc("vehicle_facets_v2", {
-        p_tenant_id: tenant.tenantId,
-        // Extraction vocabulary must be tenant-wide, never narrowed by the
-        // previous turn's active scope. With BMW active, p_make:"BMW"
-        // excluded "Camry" from the model vocabulary, so the next explicit
-        // "2026 Camry" query extracted only the year and silently retained
-        // BMW. Filters are applied by queryTenantVehicles later; vocabulary
-        // discovery is deliberately scope-independent.
-        p_make: null,
-        p_state: null,
-      }),
+      unwrapSettled(facetRead),
     ]);
     const unsupportedVehicleFactRequest = isUnsupportedVehicleFactRequest(
       lastUser.content,
@@ -656,19 +763,21 @@ export async function POST(request: Request): Promise<Response> {
       !selectedVehicleDetailRequest &&
       !deterministicClarifier
     ) {
-      activeInterpretationResult = await runShadowInterpretation({
-        provider: chatProvider,
-        userMessage: lastUser.content,
-        context: buildInterpreterContext({
-          state: conversationState,
-          deterministicFilters: extractedFilters,
+      activeInterpretationResult = await timing.span("interpretation", () =>
+        runShadowInterpretation({
+          provider: chatProvider,
+          userMessage: lastUser.content,
+          context: buildInterpreterContext({
+            state: conversationState,
+            deterministicFilters: extractedFilters,
+          }),
+          deterministic: {
+            kind: "unsupported",
+            filters: {},
+            hasReference: false,
+          },
         }),
-        deterministic: {
-          kind: "unsupported",
-          filters: {},
-          hasReference: false,
-        },
-      });
+      );
       recordChatInterpretationShadow({
         mode: "active",
         requestId,
@@ -874,13 +983,16 @@ export async function POST(request: Request): Promise<Response> {
         Math.max(1, filters.limit ?? 30),
         MAX_CONCIERGE_RESULT_LIMIT,
       );
-      const match = await queryTenantVehicles(supabase, tenant.tenantId, {
-        ...vehicleQueryFromFilters(filters),
-        // A ranked visitor request ("top 10") is a real bounded result set,
-        // not merely wording for the model. The result snapshot, ordinal
-        // references, and public inventory action all receive this same cap.
-        limit: requestedLimit,
-      });
+      const queryFilters = filters;
+      const match = await timing.span("inventory_query", () =>
+        queryTenantVehicles(supabase, tenant.tenantId, {
+          ...vehicleQueryFromFilters(queryFilters),
+          // A ranked visitor request ("top 10") is a real bounded result set,
+          // not merely wording for the model. The result snapshot, ordinal
+          // references, and public inventory action all receive this same cap.
+          limit: requestedLimit,
+        }),
+      );
       matchedVehicles = match.vehicles;
       groundedVehicles = matchedVehicles;
       groundedInventoryFilters = filters;
@@ -931,6 +1043,7 @@ export async function POST(request: Request): Promise<Response> {
       tenantId: tenant.tenantId,
       detail: message,
     });
+    reportTurnError(500, "state_build");
     return json(
       { error: "Failed to build context" },
       500,
@@ -940,6 +1053,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const stateResolvedAtMs = Date.now();
+  timing.mark("state");
 
   // Decided after state resolution, from server-held facts only: the
   // browser's two history booleans choose wording, and the fallback is this
@@ -1208,25 +1322,30 @@ export async function POST(request: Request): Promise<Response> {
         // arrives token by token, and buffering it to commit first would
         // delay the visitor's first word by the whole generation.
         const persisted = visibleContent
-          ? await persistTurnMemory({
-              messages: [
-                lastUser,
-                { role: "assistant", content: visibleContent },
-              ],
-              conversationState,
-            })
+          ? await timing.span("memory_commit", () =>
+              persistTurnMemory({
+                messages: [
+                  lastUser,
+                  { role: "assistant", content: visibleContent },
+                ],
+                conversationState,
+              }),
+            )
           : "skipped";
         const supersededByNewerTurn = persisted === "conflict";
 
+        timing.mark("first_byte");
         controller.enqueue(encoder.encode(metaEvent));
         if (!supersededByNewerTurn) {
           for (const action of actions) {
+            timing.mark("first_action");
             controller.enqueue(
               encoder.encode(sseEvent({ type: "action", action })),
             );
           }
         }
         if (visibleContent) {
+          timing.mark("first_text");
           controller.enqueue(
             encoder.encode(
               sseEvent({ choices: [{ delta: { content: visibleContent } }] }),
@@ -1241,6 +1360,33 @@ export async function POST(request: Request): Promise<Response> {
             assistantContent: visibleContent,
           });
         }
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "timing",
+              timing: reportTurnTiming({
+                conversationId: transcriptSessionId,
+                turn: conversationState.turn,
+                route: activeInterpretationApplied ? "interpreted" : "deterministic",
+                model:
+                  activeInterpretationResult && chatProvider
+                    ? {
+                        provider: chatProvider.profile.provider,
+                        id: chatProvider.profile.id,
+                        fellBack: chatProvider.fellBack,
+                        calls: 1,
+                      }
+                    : null,
+                queryStatus: inventoryQueryStatus(),
+                resultCount: totalMatched ?? null,
+                actionTypes: supersededByNewerTurn
+                  ? []
+                  : actions.map((action) => action.type),
+                ruleCodes: stateRules,
+              }),
+            }),
+          ),
+        );
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -1309,6 +1455,7 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
   if (!chatProvider) {
+    reportTurnError(503, "provider_unconfigured");
     return json(
       { error: "AI provider is not configured" },
       503,
@@ -1336,23 +1483,58 @@ export async function POST(request: Request): Promise<Response> {
   // read, image descriptions or the inventory count.
   let assembled: ReturnType<typeof assembleSystemPrompt>;
   try {
-    const [contextChunks, loadedLoyaltyContext, loadedPreferenceContext] =
-      await Promise.all([
-        loadPublishedKnowledgeContext(
-          supabase,
-          tenant.tenantId,
-          lastUser.content,
-        ),
-        visitor
-          ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
-          : Promise.resolve(null),
-        visitor
-          ? loadVisitorPreferenceContext(supabase, {
-              tenantId: tenant.tenantId,
-              visitorId: visitor.id,
-            })
-          : Promise.resolve(null),
-      ]);
+    const matchedIds = (matchedVehicles ?? [])
+      .slice(0, 20)
+      .map((vehicle) => vehicle.id);
+    // All five inputs are independent reads, so they share one round trip
+    // instead of three sequential ones. Assembly below keeps the original
+    // chunk order exactly.
+    const [
+      contextChunks,
+      loadedLoyaltyContext,
+      loadedPreferenceContext,
+      imageDescriptions,
+      totalInventory,
+    ] = await Promise.all([
+      loadPublishedKnowledgeContext(
+        supabase,
+        tenant.tenantId,
+        lastUser.content,
+      ),
+      visitor
+        ? loadChatLoyaltyContext(supabase, tenant.tenantId, visitor)
+        : Promise.resolve(null),
+      visitor
+        ? loadVisitorPreferenceContext(supabase, {
+            tenantId: tenant.tenantId,
+            visitorId: visitor.id,
+          })
+        : Promise.resolve(null),
+      matchedIds.length > 0
+        ? supabase
+            .from("vehicle_images")
+            .select("vehicle_id, ai_description")
+            .eq("tenant_id", tenant.tenantId)
+            .eq("is_primary", true)
+            .eq("ai_description_status", "completed")
+            .in("vehicle_id", matchedIds)
+            .then(({ data }) => data ?? [])
+        : Promise.resolve([]),
+      // Without this the prompt omitted "Total vehicles in full inventory"
+      // entirely, so with a filter active the model could only see TOTAL
+      // MATCHING — and "how many cars do you have?" got answered as "how many
+      // match your filters". Cached per tenant; a failure leaves it undefined
+      // and the line is omitted exactly as before.
+      tenantLiveVehicleCount(tenant.tenantId, async (tenantId) => {
+        const { count, error } = await supabase
+          .from("vehicles")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .neq("status", "archived")
+          .is("sold_at", null);
+        return error ? undefined : (count ?? undefined);
+      }),
+    ]);
     chatLoyaltyContext = loadedLoyaltyContext;
     visitorPreferenceContext = loadedPreferenceContext;
     // Same ordering as before the split: retrieved chunks, the open vehicle
@@ -1362,49 +1544,19 @@ export async function POST(request: Request): Promise<Response> {
       contextChunks.unshift(selectedVehicleChunk);
     }
     if (matchedVehicles !== undefined) {
-      const matchedIds = matchedVehicles
-        .slice(0, 20)
-        .map((vehicle) => vehicle.id);
-      if (matchedIds.length > 0) {
-        const { data: imageDescriptions } = await supabase
-          .from("vehicle_images")
-          .select("vehicle_id, ai_description")
-          .eq("tenant_id", tenant.tenantId)
-          .eq("is_primary", true)
-          .eq("ai_description_status", "completed")
-          .in("vehicle_id", matchedIds);
-        for (const image of imageDescriptions ?? []) {
-          if (!image.ai_description) continue;
-          const vehicle = matchedVehicles.find(
-            (candidate) => candidate.id === image.vehicle_id,
-          );
-          if (vehicle)
-            contextChunks.push({
-              category: "vehicle-image",
-              text: `Primary image for ${vehicle.year} ${vehicle.make} ${vehicle.model}: ${image.ai_description}`,
-              score: 1,
-            });
-        }
+      for (const image of imageDescriptions) {
+        if (!image.ai_description) continue;
+        const vehicle = matchedVehicles.find(
+          (candidate) => candidate.id === image.vehicle_id,
+        );
+        if (vehicle)
+          contextChunks.push({
+            category: "vehicle-image",
+            text: `Primary image for ${vehicle.year} ${vehicle.make} ${vehicle.model}: ${image.ai_description}`,
+            score: 1,
+          });
       }
     }
-
-    // Without this the prompt omitted "Total vehicles in full inventory"
-    // entirely, so with a filter active the model could only see TOTAL
-    // MATCHING — and "how many cars do you have?" got answered as "how many
-    // match your filters". Cached per tenant; a failure leaves it undefined
-    // and the line is omitted exactly as before.
-    const totalInventory = await tenantLiveVehicleCount(
-      tenant.tenantId,
-      async (tenantId) => {
-        const { count, error } = await supabase
-          .from("vehicles")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", tenantId)
-          .neq("status", "archived")
-          .is("sold_at", null);
-        return error ? undefined : (count ?? undefined);
-      },
-    );
 
     assembled = assembleSystemPrompt({
       basePrompt: personaBasePrompt(persona, tenantName),
@@ -1420,6 +1572,7 @@ export async function POST(request: Request): Promise<Response> {
       tenantId: tenant.tenantId,
       detail: message,
     });
+    reportTurnError(500, "context_build");
     return json(
       { error: "Failed to build context" },
       500,
@@ -1429,6 +1582,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const contextLoadedAtMs = Date.now();
+  timing.mark("context");
   const sseHeaders = buildSseHeaders(assembled.sourceCategories);
   const metaEvent = buildMetaEvent(
     assembled.sourceCategories,
@@ -1492,7 +1646,29 @@ export async function POST(request: Request): Promise<Response> {
   // model answers in prose we re-emit its content as SSE below, so the client
   // contract is identical either way.
   const modelStartedAtMs = Date.now();
-  const phase1 = await fetch(chatProvider.apiUrl, {
+  const phase1StartedAt = timing.reading();
+  /**
+   * A provider call that fails at the network level (DNS, TLS, reset)
+   * throws instead of returning a status. Time it as one error turn, then
+   * re-throw so the response is exactly what it was before.
+   */
+  const providerFetch = async (
+    stage: "provider_transport_phase_1" | "provider_transport_phase_2",
+    startedAt: number,
+    init: RequestInit,
+  ): Promise<Response> => {
+    try {
+      return await fetch(chatProvider.apiUrl, init);
+    } catch (error) {
+      timing.addSpan(
+        stage === "provider_transport_phase_1" ? "model_phase1" : "model_stream",
+        timing.reading() - startedAt,
+      );
+      reportTurnError(502, stage);
+      throw error;
+    }
+  };
+  const phase1 = await providerFetch("provider_transport_phase_1", phase1StartedAt, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1520,6 +1696,8 @@ export async function POST(request: Request): Promise<Response> {
         status: phase1.status,
       },
     );
+    timing.addSpan("model_phase1", timing.reading() - phase1StartedAt);
+    reportTurnError(phase1.status === 429 ? 429 : 502, "provider_phase_1");
     return json(
       { error: "AI provider request failed" },
       phase1.status === 429 ? 429 : 502,
@@ -1554,6 +1732,8 @@ export async function POST(request: Request): Promise<Response> {
       tenantId: tenant.tenantId,
       detail: message,
     });
+    timing.addSpan("model_phase1", timing.reading() - phase1StartedAt);
+    reportTurnError(502, "provider_parse");
     return json(
       { error: "Malformed model response" },
       502,
@@ -1563,6 +1743,27 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const modelCompletedAtMs = Date.now();
+  timing.addSpan("model_phase1", timing.reading() - phase1StartedAt);
+  timing.mark("model_response");
+  const modelTimingOutcome = (
+    route: "model" | "tool",
+    emitted: readonly BotAction[],
+    calls: number,
+  ): TurnTimingOutcome => ({
+    conversationId: transcriptSessionId,
+    turn: conversationState.turn,
+    route,
+    model: {
+      provider: chatProvider.profile.provider,
+      id: chatProvider.profile.id,
+      fellBack: chatProvider.fellBack,
+      calls: calls + (activeInterpretationResult ? 1 : 0),
+    },
+    queryStatus: inventoryQueryStatus(),
+    resultCount: totalMatched ?? null,
+    actionTypes: emitted.map((action) => action.type),
+    ruleCodes: stateRules,
+  });
   /**
    * Both model paths report through here so their fields cannot drift.
    *
@@ -1712,13 +1913,16 @@ export async function POST(request: Request): Promise<Response> {
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        timing.mark("first_byte");
         controller.enqueue(encoder.encode(metaEvent));
         for (const action of actions) {
+          timing.mark("first_action");
           controller.enqueue(
             encoder.encode(sseEvent({ type: "action", action })),
           );
         }
         if (visibleContent) {
+          timing.mark("first_text");
           controller.enqueue(
             encoder.encode(
               sseEvent({ choices: [{ delta: { content: visibleContent } }] }),
@@ -1734,14 +1938,24 @@ export async function POST(request: Request): Promise<Response> {
           });
         }
         if (memoryKey && visibleContent) {
-          await persistTurnMemory({
-            messages: [
-              lastUser,
-              { role: "assistant", content: visibleContent },
-            ],
-            conversationState,
-          });
+          await timing.span("memory_commit", () =>
+            persistTurnMemory({
+              messages: [
+                lastUser,
+                { role: "assistant", content: visibleContent },
+              ],
+              conversationState,
+            }),
+          );
         }
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "timing",
+              timing: reportTurnTiming(modelTimingOutcome("model", actions, 1)),
+            }),
+          ),
+        );
         controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
         controller.close();
       },
@@ -1769,12 +1983,15 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   const calls = parseToolCalls(phase1Message.toolCalls);
-  const turn = await runToolCalls(calls, ctx, {
-    allowedToolNames: enabledToolNames,
-  });
+  const turn = await timing.span("tools", () =>
+    runToolCalls(calls, ctx, {
+      allowedToolNames: enabledToolNames,
+    }),
+  );
   const thinkingSteps = turnThinkingSteps(turn.steps);
 
-  const phase2 = await fetch(chatProvider.apiUrl, {
+  const phase2StartedAt = timing.reading();
+  const phase2 = await providerFetch("provider_transport_phase_2", phase2StartedAt, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1808,6 +2025,7 @@ export async function POST(request: Request): Promise<Response> {
         status: phase2.status,
       },
     );
+    reportTurnError(phase2.status === 429 ? 429 : 502, "provider_phase_2");
     return json(
       { error: "AI provider request failed" },
       phase2.status === 429 ? 429 : 502,
@@ -1816,6 +2034,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
   if (!phase2.body) {
+    reportTurnError(502, "provider_no_body");
     return json({ error: "No upstream body" }, 502, request, quotaHeaders);
   }
 
@@ -1824,6 +2043,7 @@ export async function POST(request: Request): Promise<Response> {
     async start(controller) {
       const encoder = new TextEncoder();
       const decoder = new TextDecoder();
+      timing.mark("first_byte");
       controller.enqueue(encoder.encode(metaEvent));
       // These are fixed operational summaries of completed tool calls, not
       // model reasoning or chain-of-thought. Emit them before actions/prose.
@@ -1874,6 +2094,7 @@ export async function POST(request: Request): Promise<Response> {
           encoder.encode(sseEvent({ type: "action", action })),
         );
         emittedActions.push(action);
+        timing.mark("first_action");
       }
       captureDebug("api/chat/actions", {
         tenantId: tenant.tenantId,
@@ -1918,6 +2139,7 @@ export async function POST(request: Request): Promise<Response> {
             encoder.encode(sseEvent({ type: "action", action })),
           );
           emittedActions.push(action);
+        timing.mark("first_action");
         }
         captureDebug("api/chat/actions", {
           tenantId: tenant.tenantId,
@@ -1930,6 +2152,7 @@ export async function POST(request: Request): Promise<Response> {
         const acknowledgement = actionOnlyAcknowledgement(emittedActions);
         if (!acknowledgement) return;
         assistantContent = acknowledgement;
+        timing.mark("first_text");
         controller.enqueue(
           encoder.encode(
             sseEvent({ choices: [{ delta: { content: acknowledgement } }] }),
@@ -1954,12 +2177,55 @@ export async function POST(request: Request): Promise<Response> {
         );
       };
 
+      // The follow-up stream's own duration, and the turn's timing event,
+      // sent once, just before [DONE].
+      const emitTimingEvent = () => {
+        timing.addSpan("model_stream", timing.reading() - phase2StartedAt);
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "timing",
+              timing: reportTurnTiming(
+                modelTimingOutcome("tool", emittedActions, 2),
+                // The memory commit runs after [DONE]; the server event
+                // waits for it so server_memory_commit_ms is real.
+                { deferServerEvent: true },
+              ),
+            }),
+          ),
+        );
+      };
+
+      // A stream that fails or ends without completion never reaches
+      // [DONE]. It is still one timed turn: the browser gets the (content-
+      // free) error timing once, before any error event it would throw on.
+      let errorTimingSent = false;
+      const emitErrorTiming = () => {
+        if (doneEventSent || errorTimingSent) return;
+        errorTimingSent = true;
+        timing.addSpan("model_stream", timing.reading() - phase2StartedAt);
+        const errorTiming = reportTurnTiming({
+          ...modelTimingOutcome("tool", emittedActions, 2),
+          route: "error",
+          status: 502,
+          errorStage: "provider_stream",
+        });
+        try {
+          controller.enqueue(
+            encoder.encode(sseEvent({ type: "timing", timing: errorTiming })),
+          );
+        } catch {
+          // The stream may already be closed by the client; telemetry only.
+        }
+      };
+
       const emitFiltered = ({
         visibleText,
         actions,
       }: ReturnType<InlineActionStreamFilter["push"]>) => {
         if (visibleText) {
           assistantContent += visibleText;
+          timing.mark("first_text");
           controller.enqueue(
             encoder.encode(
               sseEvent({ choices: [{ delta: { content: visibleText } }] }),
@@ -1978,6 +2244,7 @@ export async function POST(request: Request): Promise<Response> {
           emitActionOnlyAcknowledgement();
           emitTruthfulCorrection();
           if (!doneEventSent) {
+            emitTimingEvent();
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             doneEventSent = true;
           }
@@ -1986,6 +2253,7 @@ export async function POST(request: Request): Promise<Response> {
 
         const textDelta = extractChatCompletionTextDelta(line);
         if (!textDelta) return;
+        timing.mark("model_first_token");
         emitFiltered(actionFilter.push(textDelta));
       };
 
@@ -2009,11 +2277,13 @@ export async function POST(request: Request): Promise<Response> {
         if (streamCompletionObserved && !doneEventSent) {
           emitActionOnlyAcknowledgement();
           emitTruthfulCorrection();
+          emitTimingEvent();
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           doneEventSent = true;
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "stream failure";
+        emitErrorTiming();
         controller.enqueue(
           encoder.encode(sseEvent({ type: "error", message })),
         );
@@ -2032,18 +2302,22 @@ export async function POST(request: Request): Promise<Response> {
           });
         }
         if (streamCompletionObserved && memoryKey && assistantContent.trim()) {
-          await persistTurnMemory({
-            messages: [
-              lastUser,
-              { role: "assistant", content: assistantContent },
-            ],
-            conversationState,
-            toolResults: turn.steps.map((step) => ({
-              name: step.call.name,
-              result: step.result,
-            })),
-          });
+          await timing.span("memory_commit", () =>
+            persistTurnMemory({
+              messages: [
+                lastUser,
+                { role: "assistant", content: assistantContent },
+              ],
+              conversationState,
+              toolResults: turn.steps.map((step) => ({
+                name: step.call.name,
+                result: step.result,
+              })),
+            }),
+          );
         }
+        if (doneEventSent) finalizeDeferredTiming();
+        else emitErrorTiming();
         if (streamCompletionObserved) {
           captureConciergeTranscript({
             sessionId: transcriptSessionId,
