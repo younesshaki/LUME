@@ -1,6 +1,38 @@
 import type { TenantId } from "./tenant";
 import type { ConciergeTargetClientDescriptor } from "./conciergeTargets";
-import type { VehicleSort } from "./vehicle";
+import type { Vehicle, VehicleSort } from "./vehicle";
+
+/**
+ * A bounded, public-safe first page already verified by the concierge's
+ * tenant-scoped inventory query. It is optional acceleration data only: the
+ * browser still owns filters, navigation and subsequent pagination.
+ */
+export type BotInventoryResultPreview = {
+  vehicles: Array<Pick<Vehicle,
+    | "id"
+    | "stockType"
+    | "year"
+    | "make"
+    | "model"
+    | "trim"
+    | "price"
+    | "mileage"
+    | "bodyStyle"
+    | "exteriorColor"
+    | "interiorColor"
+    | "drivetrain"
+    | "fuelType"
+    | "imageSrc"
+    | "primaryImageSrc"
+    | "primaryImageAlt"
+    | "sellerCity"
+    | "sellerState"
+    | "isSpecial"
+    | "specialImageSrc"
+  >>;
+  totalCount: number;
+  hasMore: boolean;
+};
 
 export type BotNavigationAction = {
   type: "navigate";
@@ -26,6 +58,8 @@ export type BotInventoryFilterAction = {
   sort?: VehicleSort;
   /** Bounded ranked result set requested by the visitor (for example, top 10). */
   limit?: number;
+  /** Optional server-grounded page one; never authored or trusted from model text. */
+  initialResults?: BotInventoryResultPreview;
 };
 
 export type BotHighlightVehicleAction = {

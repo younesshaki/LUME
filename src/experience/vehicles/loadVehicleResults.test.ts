@@ -4,6 +4,7 @@ import {
   loadVehicleCount,
   loadVehicleResults,
   prefetchVehicleResults,
+  primeVehicleResultsFromConcierge,
 } from "./catalog";
 
 afterEach(() => {
@@ -106,6 +107,29 @@ describe("loadVehicleResults pagination", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.vehicles).toEqual([expect.objectContaining({ id: vehicle.id })]);
+  });
+
+  it("uses a server-grounded concierge first page without another vehicle fetch", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const filters = { ...DEFAULT_FILTERS, make: "CountCacheMake" };
+    const primed = primeVehicleResultsFromConcierge({
+      type: "filter_inventory",
+      make: "CountCacheMake",
+      initialResults: {
+        vehicles: [vehicle],
+        totalCount: 1,
+        hasMore: false,
+      },
+    }, filters, "recommended", 24);
+
+    expect(primed).toBe(true);
+    await expect(loadVehicleResults(filters, "recommended", 1, 24)).resolves.toMatchObject({
+      vehicles: [expect.objectContaining({ id: vehicle.id })],
+      totalCount: 1,
+      hasMore: false,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("uses one legacy CSV request instead of draining API pages after an API failure", async () => {

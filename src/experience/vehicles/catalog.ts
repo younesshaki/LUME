@@ -1,5 +1,6 @@
 import { publicTenantSlug } from "@/lib/publicTenant";
 import { R2, mediaUrl, fallbackMediaUrl } from "@/config/cdn";
+import type { BotInventoryFilterAction } from "@lume/types";
 
 const CSV_KEY = "vehicles-with-generated-images.csv";
 const VEHICLES_API_PATH = "/api/vehicles";
@@ -51,6 +52,13 @@ export type VehicleFacets = {
     mileageMin: number | null;
     mileageMax: number | null;
   };
+};
+
+const EMPTY_VEHICLE_FACETS: VehicleFacets = {
+  makes: [],
+  models: [],
+  states: [],
+  cities: [],
 };
 
 export type VehicleResults = {
@@ -404,6 +412,43 @@ export function prefetchVehicleResults(
     if (current?.request === request) prefetchedVehicleResults.delete(requestKey);
   });
   return request;
+}
+
+/**
+ * Accept a bounded first page that the chat server just obtained through the
+ * same tenant-scoped query. This is deliberately a very short route handoff,
+ * not a durable catalog cache: a later visit still fetches current inventory.
+ */
+export function primeVehicleResultsFromConcierge(
+  action: BotInventoryFilterAction,
+  filters: VehicleFilters,
+  sort: VehicleSort,
+  pageSize: number,
+): boolean {
+  const preview = action.initialResults;
+  if (!preview || !Number.isSafeInteger(preview.totalCount) || preview.totalCount < 0) {
+    return false;
+  }
+  if (!Array.isArray(preview.vehicles) || preview.vehicles.length > pageSize) return false;
+  const vehicles = preview.vehicles
+    .map((vehicle) => normalizeApiVehicle(vehicle))
+    .filter((vehicle): vehicle is Vehicle => Boolean(vehicle));
+  if (vehicles.length !== preview.vehicles.length || preview.totalCount < vehicles.length) {
+    return false;
+  }
+  const requestKey = vehicleResultRequestKey(filters, sort, 1, pageSize);
+  const request = Promise.resolve({
+    vehicles,
+    totalCount: preview.totalCount,
+    hasMore: Boolean(preview.hasMore),
+    facets: EMPTY_VEHICLE_FACETS,
+    source: "api" as const,
+  });
+  prefetchedVehicleResults.set(requestKey, {
+    request,
+    expiresAt: Date.now() + VEHICLE_PREFETCH_RESULT_TTL_MS,
+  });
+  return true;
 }
 
 function vehicleResultRequestKey(

@@ -44,6 +44,7 @@ import {
 } from "./lib/botActionConsumers";
 import {
   prefetchVehicleResults,
+  primeVehicleResultsFromConcierge,
   type VehicleSort,
 } from "./experience/vehicles/catalog";
 import { noteConciergeRouteRendered } from "./lib/conciergeSpeed";
@@ -468,15 +469,14 @@ export default function App() {
 
   useBotAction("filter_inventory", (action) => {
     // Start the exact filtered-page request while React downloads/renders the
-    // destination route. `loadVehicleResults` consumes this bounded handoff,
-    // so navigation never creates a second request for the same page.
+    // destination route. When the server already included that verified first
+    // page, consume it directly; otherwise share an in-flight request.
     const resultLimit = vehicleResultLimitFromBotAction(action);
-    void prefetchVehicleResults(
-      vehicleFiltersFromBotAction(action),
-      (action.sort ?? "recommended") as VehicleSort,
-      1,
-      resultLimit ?? 24,
-    ).catch(() => undefined);
+    const filters = vehicleFiltersFromBotAction(action);
+    const sort = (action.sort ?? "recommended") as VehicleSort;
+    if (!primeVehicleResultsFromConcierge(action, filters, sort, resultLimit ?? 24)) {
+      void prefetchVehicleResults(filters, sort, 1, resultLimit ?? 24).catch(() => undefined);
+    }
     setShowcaseChapterRevealed(false);
     navigateTo(
       vehicleRouteFromBotAction(action),
