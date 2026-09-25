@@ -139,8 +139,12 @@ let configuredStore: ConversationMemoryStore | null = null;
 
 export function getConversationMemoryStore(): ConversationMemoryStore {
   if (configuredStore) return configuredStore;
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  // Vercel's Upstash Marketplace integration injects KV_REST_API_* while a
+  // directly managed Upstash database conventionally uses UPSTASH_REDIS_*.
+  // Supporting both keeps the storage adapter provider-neutral and avoids
+  // copying credentials between environment-variable names.
+  const url = firstConfiguredEnv("UPSTASH_REDIS_REST_URL", "KV_REST_API_URL");
+  const token = firstConfiguredEnv("UPSTASH_REDIS_REST_TOKEN", "KV_REST_API_TOKEN");
   if (!url || !token) {
     configuredStore = fallback;
     return configuredStore;
@@ -158,6 +162,14 @@ export function getConversationMemoryStore(): ConversationMemoryStore {
     },
   );
   return configuredStore;
+}
+
+function firstConfiguredEnv(...names: readonly string[]): string | undefined {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  return undefined;
 }
 
 /**
