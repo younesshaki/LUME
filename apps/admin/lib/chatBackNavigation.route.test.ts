@@ -114,7 +114,11 @@ vi.mock("@lume/db", async (importOriginal) => {
   };
 });
 
-vi.mock("@/lib/tenant", () => ({ getTenantFromRequest: async () => TENANT }));
+vi.mock("@/lib/tenant", () => ({
+  getTenantFromRequest: async () => TENANT,
+  // The chat route resolves its tenant through the short-lived cache.
+  getTenantFromRequestCached: async () => TENANT,
+}));
 vi.mock("@/lib/quota.server", async () => {
   const { failOpenQuotaDecision } = await import("@lume/db");
   return { checkPublicApiQuota: async () => failOpenQuotaDecision("chat_requests") };
