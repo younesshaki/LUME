@@ -244,6 +244,17 @@
   width: 100%;
 }
 
+/* Desktop only, like the classic DesktopNav (`hidden md:flex`). Below the md
+   breakpoint the mobile sheet menu is the navigation. Without this, on phones
+   (confirmed at 390px on the live demo tenant) the gooey track squeezed into
+   the middle column, showed a lone "MORE" with the active label bleeding
+   through behind it, and pushed the menu button out of the clipped header. */
+@media (max-width: 767.98px) {
+  .gooey-nav-track {
+    display: none;
+  }
+}
+
 /* Laid out so item widths are measurable, but never visible or interactive.
    Matches the real item typography so the measurement is honest. */
 .gooey-nav-probe {

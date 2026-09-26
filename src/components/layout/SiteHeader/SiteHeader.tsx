@@ -9,6 +9,7 @@ import { useTenantTheme } from "@/lib/TenantThemeProvider";
 import { play } from "@/lib/sound";
 import { DesktopNav } from "../nav/DesktopNav";
 import { GooeyDesktopNav } from "../nav/GooeyDesktopNav";
+import { deriveActiveNavKey } from "../nav/activeNav";
 import { MobileNav } from "../nav/MobileNav";
 import { InvitationCTA } from "../nav/InvitationCTA";
 import { ThemeToggle } from "../ThemeToggle";
@@ -16,7 +17,6 @@ import { VisitorAccountButton } from "../VisitorAccountButton";
 import { isSiteScreen, useSiteNavItems, type SiteNavItem } from "../siteNavigation";
 import { useSiteHeaderLayoutState } from "./SiteHeader.animations";
 import { getHeaderNavigationSound } from "./SiteHeader.sounds";
-import { useSiteHeaderState } from "./SiteHeader.state";
 import "./SiteHeader.css";
 
 const useGooeyNav = import.meta.env.VITE_ENABLE_GOOEY_NAV === 'true';
@@ -47,22 +47,6 @@ const NAV_JUSTIFY: Record<TenantHeaderVariant, string> = {
   minimal: "justify-end",
 };
 
-/**
- * Which nav item is active. Cinematic screens come from the route section;
- * custom published pages are matched from the /:pageSlug pathname.
- */
-function deriveActiveNavKey(
-  currentPath: string,
-  currentScreen: string,
-  items: SiteNavItem[]
-): string {
-  const slug = currentPath.replace(/^\/+|\/+$/g, "");
-  if (slug && !isSiteScreen(slug) && items.some((item) => item.screen === slug)) {
-    return slug;
-  }
-  return currentScreen;
-}
-
 function useHeaderConfig(): PublicHeaderConfig {
   // Optimistic default matches the historical look, so the header does not
   // reflow once the real config lands.
@@ -90,14 +74,16 @@ function useHeaderConfig(): PublicHeaderConfig {
 export function SiteHeader() {
   const { navigateTo, currentPath } = useNavigation();
   const routerNavigate = useNavigate();
-  const { currentScreen } = useSiteHeaderState();
   const { hasOverlayPressure } = useSiteHeaderLayoutState();
   const items = useSiteNavItems();
   const headerConfig = useHeaderConfig();
   const tenantTheme = useTenantTheme();
   const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
 
-  const activeKey = deriveActiveNavKey(currentPath, currentScreen, items);
+  // Only a page that is actually in the nav is marked; an unmatched page (for
+  // example a published page left out of the nav) marks nothing rather than
+  // falsely claiming "Home". See nav/activeNav.ts.
+  const activeKey = deriveActiveNavKey(currentPath, items) ?? "";
 
   const onNavigate = (key: string) => {
     if (isSiteScreen(key)) {
