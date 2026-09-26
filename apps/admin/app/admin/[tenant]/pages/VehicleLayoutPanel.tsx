@@ -17,6 +17,9 @@ type VehicleLayoutPanelProps = {
   existingPageId: string | null;
   /** Whether that page has a published revision. */
   isPublished: boolean;
+  /** One tenant-owned inventory record used for an honest public preview. */
+  sampleVehicle: { id: string; label: string } | null;
+  publicSiteBaseUrl: string;
 };
 
 /**
@@ -34,6 +37,8 @@ export function VehicleLayoutPanel({
   tenantId,
   existingPageId,
   isPublished,
+  sampleVehicle,
+  publicSiteBaseUrl,
 }: VehicleLayoutPanelProps) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -84,14 +89,36 @@ export function VehicleLayoutPanel({
               them.
             </p>
             {existingPageId ? (
-              <p className="text-xs text-muted-foreground">
-                {isPublished
-                  ? "Published — your vehicle pages use this layout."
-                  : "Draft only — your vehicle pages still use the built-in layout until you publish."}
+              isPublished ? (
+                <p className="max-w-prose text-xs text-muted-foreground">
+                  Published — every vehicle currently uses this layout. You can unpublish it from
+                  the editor at any time to restore LUME&apos;s built-in layout; your draft remains
+                  saved and can be published again.
+                </p>
+              ) : (
+                <p className="max-w-prose text-xs text-muted-foreground">
+                  Draft only — visitors still see LUME&apos;s built-in layout until you publish. You
+                  can edit and preview safely without changing any live vehicle page.
+                </p>
+              )
+            ) : (
+              <p className="max-w-prose text-xs text-muted-foreground">
+                Not created yet. Your vehicle pages use LUME&apos;s built-in layout until you create
+                and publish a draft.
               </p>
+            )}
+            {sampleVehicle ? (
+              <a
+                href={buildVehiclePreviewUrl(publicSiteBaseUrl, tenantSlug, sampleVehicle.id)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex text-xs font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                Preview with sample vehicle: {sampleVehicle.label || "vehicle"}
+              </a>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Not created yet. Your vehicle pages currently use LUME&apos;s built-in layout.
+                Add a vehicle to inventory to preview this layout with actual vehicle data.
               </p>
             )}
             {error && (
@@ -117,10 +144,21 @@ export function VehicleLayoutPanel({
             className="inline-flex shrink-0 items-center gap-2 rounded-md bg-neutral-950 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-60 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
           >
             {creating && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-            {creating ? "Creating…" : "Customize vehicle pages"}
+            {creating ? "Creating…" : "Create vehicle layout draft"}
           </button>
         )}
       </div>
     </section>
   );
+}
+
+function buildVehiclePreviewUrl(publicSiteBaseUrl: string, tenantSlug: string, vehicleId: string) {
+  try {
+    const url = new URL(publicSiteBaseUrl);
+    url.pathname = `/vehicles/${encodeURIComponent(vehicleId)}`;
+    url.searchParams.set("tenant", tenantSlug);
+    return url.toString();
+  } catch {
+    return `/vehicles/${encodeURIComponent(vehicleId)}?tenant=${encodeURIComponent(tenantSlug)}`;
+  }
 }

@@ -22,6 +22,8 @@ type PagesListClientProps = {
   tenantId: string;
   tenantSlug: string;
   initialPages: Page[];
+  publicSiteBaseUrl: string;
+  sampleVehicle: { id: string; label: string } | null;
 };
 
 type StatusState =
@@ -40,6 +42,8 @@ export default function PagesListClient({
   tenantId,
   tenantSlug,
   initialPages,
+  publicSiteBaseUrl,
+  sampleVehicle,
 }: PagesListClientProps) {
   const router = useRouter();
   const [pages, setPages] = useState(initialPages);
@@ -261,6 +265,8 @@ export default function PagesListClient({
         tenantId={tenantId}
         existingPageId={vehicleLayoutPage?.id ?? null}
         isPublished={Boolean(vehicleLayoutPage?.publishedRevisionId)}
+        publicSiteBaseUrl={publicSiteBaseUrl}
+        sampleVehicle={sampleVehicle}
       />
 
       {view === "carousel" ? (
