@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GripVertical, Sparkles } from "lucide-react";
+import { ExternalLink, GripVertical, Sparkles } from "lucide-react";
 import { publishDraft, restoreRevision, unpublishPage, updateDraftBlocks } from "@lume/db";
 import type { PageBlock, PageBlocksDocument, PageRevision } from "@lume/types";
 import type { BlockCategory, BlockField, EditorBlockDescriptor } from "@lume/blocks";
@@ -85,6 +85,7 @@ export default function PageEditorClient({
   const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
   const [paletteQuery, setPaletteQuery] = useState("");
   const [conciergeOpen, setConciergeOpen] = useState(false);
+  const [isPublished, setIsPublished] = useState(Boolean(page.publishedRevisionId));
   // Snapshots of `blocks` taken right before concierge proposals are applied.
   const [conciergeUndoStack, setConciergeUndoStack] = useState<PageBlock[][]>([]);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
@@ -124,6 +125,14 @@ export default function PageEditorClient({
     if (!selectedBlockId) return;
     rowRefs.current.get(selectedBlockId)?.scrollIntoView({ block: "nearest" });
   }, [selectedBlockId]);
+
+  // A router refresh supplies the durable revision id after publish/unpublish.
+  // Keep the handoff immediately truthful while that refresh is in flight.
+  useEffect(() => {
+    setIsPublished(Boolean(page.publishedRevisionId));
+  }, [page.publishedRevisionId]);
+
+  const livePageUrl = publicPageUrl(publicSiteBaseUrl, tenantSlug, page.slug);
 
   function addBlock(descriptor: EditorBlockDescriptor, index?: number) {
     const block: PageBlock = {
@@ -302,6 +311,7 @@ export default function PageEditorClient({
       const supabase = createPageServiceClient();
       await updateDraftBlocks(supabase, page.id, doc);
       await publishDraft(supabase, page.id);
+      setIsPublished(true);
       setState({ type: "success", message: "Draft published." });
       router.refresh();
     } catch (error) {
@@ -316,6 +326,7 @@ export default function PageEditorClient({
     try {
       const supabase = createPageServiceClient();
       await unpublishPage(supabase, page.id);
+      setIsPublished(false);
       setState({ type: "success", message: "Page unpublished. Draft content is still saved." });
       router.refresh();
     } catch (error) {
@@ -403,6 +414,17 @@ export default function PageEditorClient({
           >
             Unpublish
           </button>
+          {isPublished && livePageUrl ? (
+            <a
+              href={livePageUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
+            >
+              <ExternalLink className="size-4" aria-hidden="true" />
+              View live page
+            </a>
+          ) : null}
         </div>
       </header>
 
@@ -1163,4 +1185,15 @@ function sortJson(value: unknown): unknown {
 
 function createPageServiceClient(): Parameters<typeof updateDraftBlocks>[0] {
   return createSupabaseBrowserClient() as unknown as Parameters<typeof updateDraftBlocks>[0];
+}
+
+function publicPageUrl(publicSiteBaseUrl: string, tenantSlug: string, slug: string): string | null {
+  try {
+    const url = new URL(publicSiteBaseUrl);
+    url.pathname = `${url.pathname.replace(/\/$/, "")}/${encodeURIComponent(slug)}`;
+    url.searchParams.set("tenant", tenantSlug);
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
