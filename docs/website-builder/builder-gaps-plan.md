@@ -1,6 +1,9 @@
 # Website builder: gaps and plan
 
-Status: agreed 2026-07-30. Four phases, each independently shippable.
+Status: agreed 2026-07-30. **All four phases shipped 2026-07-30** (`db4e298`,
+`a1ace8b`, `df10f84`, `e12f895`; header overflow fix `38d575b`). Kept for
+history. Current work: [demo-polish-sprint-plan.md](demo-polish-sprint-plan.md)
+and [ui-component-sources.md](ui-component-sources.md).
 
 Decisions taken up front:
 
