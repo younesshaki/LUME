@@ -25,6 +25,28 @@ Production data:
 - `demo` is the only tenant with a **published** vehicle layout.
 - `default` and `secondplace` have none.
 
+Live site designs in production (`tenants.theme.template`):
+
+- `default`: **Concierge**.
+- `demo`: **Luxury**, with the `centred` header and `stacked` footer.
+- `secondplace`: **no template stored**.
+
+Two gaps reported by the owner on 2026-09-26, confirmed in the code:
+
+- **The visitor can't tell which page they're on.** `deriveActiveNavKey` in
+  `SiteHeader.tsx` only matches an exact top-level slug or the cinematic
+  screen, so a vehicle page (`/vehicles/:id`), a filtered inventory URL or
+  a nested custom page highlights nothing. When it does match, the only marker
+  is gold text plus a 1-pixel underline (`NavLink.tsx`), which is nearly
+  invisible on some tenant themes.
+- **The dashboard's Templates section doesn't show the current template.**
+  `TemplatesClient.tsx` only adds a small "Live" badge to one card among
+  five. For a tenant with no stored template, `templates/page.tsx` falls back
+  to `createDefaultSiteDesign("luxury")`, so Luxury is labelled "Live" even
+  though the tenant never chose it.
+
+Both are tasks below: A5 and B5.
+
 **Therefore:** don't rebuild any of this. First task for each agent: update the
 status line of `builder-gaps-plan.md` to "all four phases shipped 2026-07-30"
 (the docs branch for this plan already does it).
@@ -83,6 +105,34 @@ Tasks:
    failed requests (Playwright `page.on("console")` and
    `page.on("requestfailed")`).
 
+5. **Show the current page in the header (reported gap).** Make the active
+   page obvious on every surface: the desktop nav in all four variants, the
+   gooey nav, the "More" menu, the mobile menu and the bottom dock.
+   - **Derivation:** extract `deriveActiveNavKey` from `SiteHeader.tsx` into a
+     pure, tested module. It must resolve:
+     - exact pages;
+     - **nested routes to their section** (`/vehicles/:id` and
+       `/vehicles#vehicles?...` → Inventory; `/products/:id` → Products);
+     - custom published pages, including nested slugs;
+     - the home and cinematic screens.
+   - **Priority rule:** the longest matching nav path wins, and a query or
+     hash never breaks a match.
+   - **Overflow:** when the active item has moved into the "More" menu, the
+     "More" trigger itself shows the active state, so the visitor can still
+     see where they are.
+   - **Visuals:** replace the 1-pixel underline with a clearly visible
+     indicator that fits each variant (for example a pill or underline of at
+     least 2 px, plus weight or contrast), using theme tokens. Check contrast
+     of at least 3:1 against the header background in light and dark mode
+     for every production tenant theme (Luxury, Concierge, default fallback).
+     Keep `aria-current="page"` on exactly one item.
+   - **Tests:**
+     - a table-driven unit test of the derivation (every route shape above);
+     - a Playwright check that exactly one `aria-current="page"` exists after
+       navigating to home, inventory, a filtered inventory, a vehicle page, a
+       custom page, and a page whose nav item is in the "More" menu;
+     - the same check after a concierge-driven navigation.
+
 ### Lane B: Codex — admin editor and Pages list
 
 Branch: `chore/demo-polish-admin`. Owns:
@@ -108,6 +158,29 @@ Tasks:
    survive save and reload.
 4. **Admin console clean.** Pages list, editor and website settings must load
    with zero console errors.
+
+5. **Show the current template in the Templates section (reported gap).** In
+   `apps/admin/app/admin/[tenant]/templates/`:
+   - **Top panel.** Add a "Your current template" panel above the grid. It
+     shows the live template's name and preview, its version and when it was
+     published, the header and footer variants in use, and the primary
+     actions (Customize / Continue draft / Preview live site).
+   - **The live card.** In the grid, list the live template first and mark it
+     clearly: a "Current" badge plus a highlighted border, not only the small
+     "Live" badge.
+   - **Be truthful when nothing is stored.** In `page.tsx`, pass whether a
+     template is actually stored, instead of silently defaulting to Luxury.
+     When none is stored (today: `secondplace`), the panel says "No template
+     applied yet: your site uses the built-in default", and no card is marked
+     current.
+   - **Drafts.** Show a working draft of a *different* template as "Draft in
+     progress", distinct from the current one.
+   - **Scope:** read only. No data or migration change is needed, because the
+     live template is already in `tenants.theme.template`.
+   - **Tests:** a component test for three cases (stored template, no stored
+     template, a draft of another template), and a check against production
+     data shapes: `default` shows Concierge, `demo` shows Luxury,
+     `secondplace` shows the default notice.
 
 ### Shared rules
 
