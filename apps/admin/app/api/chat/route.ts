@@ -187,6 +187,7 @@ import {
   selectedVehicleDetailAnswer,
   unsupportedVehicleFactAnswer,
 } from "@/lib/chatAnswers";
+import { withAuthoritativeInventoryAction } from "@/lib/authoritativeInventoryAction";
 import { attachInventoryActionPreview } from "@/lib/inventoryActionPreview";
 import {
   resolveCompareOutcome,
@@ -659,6 +660,14 @@ export async function POST(request: Request): Promise<Response> {
   let extractedInventoryFilters: ReturnType<typeof extractVehicleFilters> = {};
   let stateRules: string[] = [];
   let selectedVehicleId: string | null = null;
+  // Set only after the server has successfully queried a non-empty result
+  // set. Model prose may describe that result set, but it cannot opt out of
+  // the matching browser action without splitting visible inventory from the
+  // conversation state.
+  let authoritativeInventoryAction: Extract<
+    BotAction,
+    { type: "filter_inventory" }
+  > | null = null;
   let deterministicUserText = lastUser.content;
   let activeInterpretationResult: Awaited<
     ReturnType<typeof runShadowInterpretation>
@@ -1033,6 +1042,12 @@ export async function POST(request: Request): Promise<Response> {
           matchedVehicles,
           totalMatched,
         );
+      }
+      if (!inventoryOutcome.rollBackToPreviousFilters && totalMatched > 0) {
+        authoritativeInventoryAction = inventoryFilterAction(filters) as Extract<
+          BotAction,
+          { type: "filter_inventory" }
+        >;
       }
 
       deterministicZeroResultAnswer = inventoryOutcome.zeroResult;
@@ -1870,12 +1885,15 @@ export async function POST(request: Request): Promise<Response> {
   if (phase1Message.toolCalls.length === 0) {
     const content = phase1Message.content;
     const filteredContent = stripInlineActions(content);
-    const modelActions = hasDeterministicActions
-      ? deterministicActions
-      : filterModelNavigationActionsByUserIntent(
-          extractInlineActions(content),
-          modelMessages,
-        );
+    const modelActions = withAuthoritativeInventoryAction(
+      hasDeterministicActions
+        ? deterministicActions
+        : filterModelNavigationActionsByUserIntent(
+            extractInlineActions(content),
+            modelMessages,
+          ),
+      authoritativeInventoryAction,
+    );
     const actions = withInventoryPreview(suppressRedundantInventoryNavigationActions(prepareBotActionsForClient(
       filterGroundedVehicleActions(
         filterConversationActions(
@@ -2085,9 +2103,12 @@ export async function POST(request: Request): Promise<Response> {
       }
       const seenActionFingerprints = new Set<string>();
       const emittedActions: BotAction[] = [];
-      const initialActions = hasDeterministicActions
-        ? deterministicActions
-        : filterModelNavigationActionsByUserIntent(turn.actions, modelMessages);
+      const initialActions = withAuthoritativeInventoryAction(
+        hasDeterministicActions
+          ? deterministicActions
+          : filterModelNavigationActionsByUserIntent(turn.actions, modelMessages),
+        authoritativeInventoryAction,
+      );
       for (const action of withInventoryPreview(suppressRedundantInventoryNavigationActions(
         prepareBotActionsForClient(
         filterGroundedVehicleActions(
@@ -2130,6 +2151,10 @@ export async function POST(request: Request): Promise<Response> {
 
       const emitActions = (actions: readonly BotAction[]) => {
         if (hasDeterministicActions) return;
+        const actionCandidates = withAuthoritativeInventoryAction(
+          filterModelNavigationActionsByUserIntent(actions, modelMessages),
+          authoritativeInventoryAction,
+        );
         for (const action of withInventoryPreview(suppressRedundantInventoryNavigationActions(
           prepareBotActionsForClient(
           filterGroundedVehicleActions(
@@ -2137,10 +2162,7 @@ export async function POST(request: Request): Promise<Response> {
               groundLeadCaptureActions(
                 filterPlanAllowedActions(
                   chatActionsEnabled,
-                  filterModelNavigationActionsByUserIntent(
-                    actions,
-                    modelMessages,
-                  ),
+                  actionCandidates,
                   persona.capabilities,
                 ),
                 modelMessages,
