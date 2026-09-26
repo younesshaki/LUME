@@ -140,11 +140,12 @@ export function NavOverflowMenu({
                 onMouseEnter={() => onIntent?.(item.screen)}
                 onFocus={() => onIntent?.(item.screen)}
                 aria-current={active ? "page" : undefined}
-                className={`block w-full text-left px-4 py-2 text-sm tracking-widest uppercase
+                className={`relative block w-full text-left px-4 py-2 text-sm tracking-widest uppercase
                   transition-colors duration-150 cursor-pointer
+                  before:absolute before:left-1.5 before:top-1/2 before:h-4 before:w-[3px] before:-translate-y-1/2 before:rounded-full
                   ${active
-                    ? "text-[var(--theme-lume-gold,#C9A84C)]"
-                    : "text-[var(--theme-lume-muted,rgba(255,255,255,.7))] hover:text-[var(--theme-lume-ink,#fff)]"}
+                    ? "font-semibold text-[var(--theme-lume-gold,#C9A84C)] before:bg-[var(--theme-lume-gold,#C9A84C)]"
+                    : "text-[var(--theme-lume-muted,rgba(255,255,255,.7))] hover:text-[var(--theme-lume-ink,#fff)] before:bg-transparent"}
                   hover:bg-[var(--theme-lume-soft,rgba(255,255,255,.06))]`}
               >
                 {item.label}
