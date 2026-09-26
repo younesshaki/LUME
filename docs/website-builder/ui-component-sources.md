@@ -52,6 +52,20 @@ Codex's `~/.codex/config.toml` has only the Unreal and Unity servers.
   a private one, goes under `"registries"` in `components.json`, for example
   `"@acme": "https://registry.acme.com/{name}.json"`.
 
+**Installed 2026-09-26.** The shadcn MCP is registered at **user level** for
+both agents: Claude with `claude mcp add --scope user shadcn -- npx -y
+shadcn@latest mcp`, and Codex in `~/.codex/config.toml`. It works in every
+worktree.
+
+In MCP mode, search only covers registries listed in `components.json`, so
+this branch adds the verified free ones: `@7ovr`, `@efferd`, `@aceternity`,
+`@launchui`, `@kokonutui` and `@magicui`. A worktree whose `components.json`
+lacks them returns `NOT_CONFIGURED`.
+
+Search results currently print `Add command: [object Promise]`, a bug in
+shadcn MCP 4.21. Use the `get_add_command_for_items` tool, or run
+`npx shadcn@latest add @registry/item` directly.
+
 **Other MCPs, optional:**
 
 - **Magic UI MCP** (`@magicuidesign/mcp`): free, but Magic UI has **no** header
