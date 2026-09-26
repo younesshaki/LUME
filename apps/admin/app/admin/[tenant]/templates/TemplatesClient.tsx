@@ -11,12 +11,15 @@ import {
   Gauge,
   Layers3,
   LoaderCircle,
+  MonitorUp,
   Repeat2,
   Sparkles,
 } from "lucide-react";
 import {
+  getSiteTemplate,
   listSiteTemplates,
   resolveModeColors,
+  type SiteDesign,
   type SiteMode,
   type SiteTemplate,
   type SiteTemplateSpecialty,
@@ -57,7 +60,14 @@ import { prepareWebsiteTemplateDraftAction } from "./actions";
 type TemplatesClientProps = {
   tenantSlug: string;
   tenantName: string;
-  publishedDesign: import("@lume/types").SiteDesign;
+  publishedDesign: SiteDesign;
+  /** The server distinguishes an explicit tenant choice from the visual fallback. */
+  hasStoredTemplate: boolean;
+  /** The tenant theme's last live update, unavailable when the default is in use. */
+  publishedAt: string | null;
+  headerVariant: "centred" | "left" | "split" | "minimal";
+  footerVariant: "columns" | "stacked" | "minimal";
+  liveSiteUrl: string;
   initialDrafts: DesignDraftSummary[];
   canManage: boolean;
 };
@@ -85,11 +95,27 @@ export default function TemplatesClient({
   tenantSlug,
   tenantName,
   publishedDesign,
+  hasStoredTemplate,
+  publishedAt,
+  headerVariant,
+  footerVariant,
+  liveSiteUrl,
   initialDrafts,
   canManage,
 }: TemplatesClientProps) {
   const router = useRouter();
   const templates = listSiteTemplates();
+  const currentTemplate = hasStoredTemplate
+    ? getSiteTemplate(publishedDesign.template.key)
+    : null;
+  const orderedTemplates = useMemo(() => {
+    if (!currentTemplate) return templates;
+    return [...templates].sort((left, right) => {
+      if (left.key === currentTemplate.key) return -1;
+      if (right.key === currentTemplate.key) return 1;
+      return 0;
+    });
+  }, [currentTemplate, templates]);
   const draftsByTemplate = useMemo(
     () => new Map(initialDrafts.map((draft) => [draft.templateKey, draft])),
     [initialDrafts],
@@ -101,6 +127,8 @@ export default function TemplatesClient({
   const [error, setError] = useState("");
   const preview = templates.find((template) => template.key === previewKey) ?? null;
   const pending = templates.find((template) => template.key === pendingKey) ?? null;
+  const currentDraft = currentTemplate ? draftsByTemplate.get(currentTemplate.key) : undefined;
+  const latestDraft = initialDrafts[0];
 
   function openPreview(templateKey: string) {
     setPreviewMode("dark");
@@ -154,9 +182,84 @@ export default function TemplatesClient({
         </div>
       ) : null}
 
+      <section
+        className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background shadow-sm"
+        aria-labelledby="current-template-heading"
+      >
+        {currentTemplate ? (
+          <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.7fr)] lg:items-center">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="gap-1.5"><Check className="size-3.5" /> Current</Badge>
+                <Badge variant="outline">Version {currentTemplate.version}</Badge>
+              </div>
+              <h2 id="current-template-heading" className="mt-4 text-2xl font-semibold">
+                Your current template: {currentTemplate.name}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{currentTemplate.description}</p>
+              <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
+                <div>
+                  <dt className="text-muted-foreground">Published</dt>
+                  <dd className="mt-1 font-medium">
+                    {publishedAt ? (
+                      <time dateTime={publishedAt} suppressHydrationWarning>
+                        {new Date(publishedAt).toLocaleDateString(undefined, {
+                          dateStyle: "medium",
+                        })}
+                      </time>
+                    ) : "Date unavailable"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Header</dt>
+                  <dd className="mt-1 font-medium capitalize">{headerVariant}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Footer</dt>
+                  <dd className="mt-1 font-medium capitalize">{footerVariant}</dd>
+                </div>
+              </dl>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Button
+                  disabled={!canManage}
+                  onClick={() => currentDraft ? continueDraft(currentTemplate.key) : setPendingKey(currentTemplate.key)}
+                >
+                  {currentDraft ? <ArrowRight /> : <Layers3 />}
+                  {currentDraft ? "Continue draft" : "Customize"}
+                </Button>
+                {latestDraft && latestDraft.templateKey !== currentTemplate.key ? (
+                  <Button variant="outline" disabled={!canManage} onClick={() => continueDraft(latestDraft.templateKey)}>
+                    <ArrowRight /> Continue {getSiteTemplate(latestDraft.templateKey).name} draft
+                  </Button>
+                ) : null}
+                <Button variant="outline" asChild>
+                  <a href={liveSiteUrl} target="_blank" rel="noreferrer">
+                    <MonitorUp /> Preview live site
+                  </a>
+                </Button>
+              </div>
+            </div>
+            <TemplatePreview template={currentTemplate} mode="dark" />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <Badge variant="outline">Built-in default</Badge>
+              <h2 id="current-template-heading" className="mt-3 text-2xl font-semibold">No template applied yet</h2>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Your site uses the built-in default. Choose a template below to start a private working draft; it will not change your live site until you publish.
+              </p>
+            </div>
+            <Button variant="outline" asChild>
+              <a href={liveSiteUrl} target="_blank" rel="noreferrer"><MonitorUp /> Preview live site</a>
+            </Button>
+          </div>
+        )}
+      </section>
+
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {templates.map((template) => {
-          const selected = publishedDesign.template.key === template.key;
+        {orderedTemplates.map((template) => {
+          const selected = currentTemplate?.key === template.key;
           const savedDraft = draftsByTemplate.get(template.key);
           const working = workingKey === template.key;
           const SpecialtyIcon = SPECIALTY_ICONS[template.specialty];
@@ -164,7 +267,10 @@ export default function TemplatesClient({
           return (
             <Card
               key={template.key}
-              className="group relative overflow-hidden transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg"
+              data-template-card={template.key}
+              className={`group relative overflow-hidden transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg ${
+                selected ? "border-primary/60 ring-1 ring-primary/25" : ""
+              }`}
             >
               <CardContent className="p-3 pb-0">
                 <TemplatePreview template={template} mode="dark" />
@@ -175,8 +281,8 @@ export default function TemplatesClient({
                     <SpecialtyIcon className="size-3.5" />
                     {SPECIALTY_LABELS[template.specialty]}
                   </Badge>
-                  {selected ? <Badge variant="secondary"><Check /> Live</Badge> : null}
-                  {savedDraft ? <Badge>Draft saved</Badge> : null}
+                  {selected ? <Badge className="gap-1.5"><Check className="size-3.5" /> Current</Badge> : null}
+                  {savedDraft ? <Badge variant={selected ? "secondary" : "default"}>{selected ? "Current draft saved" : "Draft in progress"}</Badge> : null}
                 </div>
                 <div>
                   <CardTitle className="text-xl">{template.name}</CardTitle>
