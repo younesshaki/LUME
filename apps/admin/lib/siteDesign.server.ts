@@ -22,6 +22,7 @@ import {
   getSiteTemplate,
   normalizeSiteDesign,
   type SiteDesign,
+  type TenantFooterConfig,
 } from "@lume/types";
 import { createServiceClient } from "@lume/db/server";
 import { TENANT_BUCKETS } from "@lume/db";
@@ -140,13 +141,21 @@ function normalizeFromRaw(raw: unknown): SiteDesign {
   return normalizeSiteDesign(raw, getSiteTemplate(key));
 }
 
-function designAsJson(design: SiteDesign): Record<string, unknown> {
+/**
+ * Persist only validated design fields into a per-template working draft.
+ * Exported for the focused serialization contract test; callers still use the
+ * mutation functions below, never this helper directly.
+ */
+export function serializeSiteDesignDraft(
+  design: SiteDesign & { footer?: TenantFooterConfig },
+): Record<string, unknown> {
   return {
     schemaVersion: design.schemaVersion,
     template: design.template,
     shared: design.shared,
     modes: design.modes,
     ...(design.header ? { header: design.header } : {}),
+    ...(design.footer ? { footer: design.footer } : {}),
     ...(design.branding ? { branding: design.branding } : {}),
     ...(design.vehiclePricing ? { vehiclePricing: design.vehiclePricing } : {}),
   };
@@ -203,7 +212,7 @@ async function storeDesignDraft(
       {
         tenant_id: authorized.tenantId,
         template_key: design.template.key,
-        design: designAsJson(design),
+        design: serializeSiteDesignDraft(design),
         updated_by: authorized.userId,
       },
       { onConflict: "tenant_id,template_key" },
@@ -387,7 +396,7 @@ export async function publishSiteDesign(slug: string, incoming: unknown): Promis
       {
         tenant_id: authorized.tenantId,
         template_key: published.template.key,
-        design: designAsJson(published),
+        design: serializeSiteDesignDraft(published),
         updated_by: authorized.userId,
       },
       { onConflict: "tenant_id,template_key" },
