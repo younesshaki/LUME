@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeNavOverflow, splitNavForOverflow } from "./navOverflow";
+import { computeNavOverflow, splitNavForOverflow, overflowPanelPosition } from "./navOverflow";
 
 const base = { moreTriggerWidth: 70, gap: 32 } as const;
 
@@ -140,5 +140,31 @@ describe("splitNavForOverflow", () => {
     const { visible, overflow } = splitNavForOverflow(items, 2, "nonexistent");
     expect(visible.map((i) => i.screen)).toEqual(["home", "vehicles"]);
     expect(overflow).toHaveLength(3);
+  });
+});
+
+describe("overflowPanelPosition", () => {
+  it("right-aligns the panel to the trigger when there is room", () => {
+    expect(
+      overflowPanelPosition({ trigger: { bottom: 50, right: 900 }, panelWidth: 192, viewportWidth: 1440 }),
+    ).toEqual({ top: 62, left: 708 });
+  });
+
+  it("shifts right instead of opening past the left edge (trigger at the far left)", () => {
+    expect(
+      overflowPanelPosition({ trigger: { bottom: 50, right: 90 }, panelWidth: 192, viewportWidth: 768 }),
+    ).toEqual({ top: 62, left: 8 });
+  });
+
+  it("never runs past the right edge either", () => {
+    expect(
+      overflowPanelPosition({ trigger: { bottom: 50, right: 1000 }, panelWidth: 192, viewportWidth: 800 }),
+    ).toEqual({ top: 62, left: 600 });
+  });
+
+  it("pins to the left edge when the viewport is narrower than the panel", () => {
+    expect(
+      overflowPanelPosition({ trigger: { bottom: 50, right: 100 }, panelWidth: 400, viewportWidth: 300 }).left,
+    ).toBe(8);
   });
 });

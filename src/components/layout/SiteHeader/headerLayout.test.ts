@@ -18,7 +18,39 @@ function trackCount(tracks: string): number {
   return count;
 }
 
+/** The individual track sizes of a Tailwind `grid-cols-[a_b_c]` class. */
+function tracksOf(tracks: string): string[] {
+  const inner = /^grid-cols-\[(.+)\]$/.exec(tracks)?.[1] ?? "";
+  const out: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of inner) {
+    if (char === "(") depth += 1;
+    if (char === ")") depth -= 1;
+    if (char === "_" && depth === 0) {
+      out.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  return [...out, current];
+}
+
 describe("headerLayout", () => {
+  it("never sizes the nav track by its own content (overflow measures it)", () => {
+    // An `auto` nav track made the "More" measurement circular: the gooey nav
+    // in the `left` variant pushed even a lone "Home" into "More" at 1920px.
+    for (const variant of VARIANTS) {
+      for (const placement of ["left", "centre"] as const) {
+        const layout = headerLayout(variant, placement);
+        const navTrack = tracksOf(layout.tracks)[placement === "centre" ? 0 : 1];
+        expect(navTrack, `${variant}/${placement}`).not.toBe("auto");
+        expect(navTrack, `${variant}/${placement}`).toMatch(/fr|minmax/);
+      }
+    }
+  });
+
   it("is a three-track grid for every variant and logo placement", () => {
     for (const variant of VARIANTS) {
       for (const placement of ["left", "centre"] as const) {
