@@ -102,6 +102,7 @@ export default function NavigationClient({
   const [showSocial, setShowSocial] = useState<boolean>(
     initialTheme.footer?.showSocial ?? true
   );
+  const hasConfiguredSocialLinks = Boolean(initialTheme.footer?.socialLinks?.length);
   const [saving, setSaving] = useState(false);
 
   const { visible, overflow } = useMemo(
@@ -367,6 +368,9 @@ export default function NavigationClient({
               />
               <span className="font-medium">Show social links</span>
             </label>
+            <p className="text-xs text-muted-foreground">
+              Links appear only when this website has social destinations configured.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -391,6 +395,7 @@ export default function NavigationClient({
             footerVariant={footerVariant}
             footerColumns={clampFooterColumns(footerColumns)}
             showSocial={showSocial}
+            hasConfiguredSocialLinks={hasConfiguredSocialLinks}
             pages={visible}
           />
           {overflow.length > 0 && (
@@ -427,6 +432,7 @@ function HeaderFooterPreview({
   footerVariant,
   footerColumns,
   showSocial,
+  hasConfiguredSocialLinks,
   pages,
 }: {
   headerVariant: TenantHeaderVariant;
@@ -436,6 +442,7 @@ function HeaderFooterPreview({
   footerVariant: TenantFooterVariant;
   footerColumns: number;
   showSocial: boolean;
+  hasConfiguredSocialLinks: boolean;
   pages: NavPageEntry[];
 }) {
   const displayPages = pages.length ? pages : [{ slug: "home", title: "Home", navOrder: 0 }];
@@ -480,7 +487,9 @@ function HeaderFooterPreview({
         ) : (
           <div className={footerVariant === "columns" ? "grid gap-2" : "flex flex-wrap items-center justify-between gap-3"} style={footerVariant === "columns" ? { gridTemplateColumns: `repeat(${footerColumns}, minmax(0, 1fr))` } : undefined}>
             {displayPages.map((page) => <span key={page.slug}>{page.title || page.slug}</span>)}
-            {showSocial ? <span className="whitespace-nowrap text-neutral-500">Instagram · YouTube</span> : null}
+            {showSocial && hasConfiguredSocialLinks ? (
+              <span className="whitespace-nowrap text-neutral-500">Social links</span>
+            ) : null}
           </div>
         )}
       </footer>

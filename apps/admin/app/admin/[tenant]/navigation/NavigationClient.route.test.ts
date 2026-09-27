@@ -105,5 +105,11 @@ describe("NavigationClient live header and footer preview", () => {
     expect(preview().dataset.logoPlacement).toBe("centre");
     expect(preview().dataset.footerVariant).toBe("columns");
     expect(preview().textContent).toContain("Book a test drive");
+    expect(preview().textContent).not.toContain("Social links");
+  });
+
+  it("shows social links in the preview only when destinations are configured", () => {
+    renderNavigation({ footer: { showSocial: true, socialLinks: [{ label: "Instagram", href: "https://example.test" }] } });
+    expect(preview().textContent).toContain("Social links");
   });
 });
