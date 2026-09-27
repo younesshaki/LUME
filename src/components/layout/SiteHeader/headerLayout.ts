@@ -8,6 +8,13 @@ import type { TenantHeaderVariant } from "@lume/types";
  * placement changes which slot the logo occupies, never whether the nav is a
  * flow participant.
  *
+ * The nav track is never `auto`. The overflow logic ("More") measures the nav
+ * track to decide what fits; an `auto` track is sized by the nav's own content,
+ * so the measurement was circular — once items moved into "More" the track
+ * shrank and they never came back. The `left` variant hit this: with the gooey
+ * nav even a single "Home" was pushed into "More" at 1920px (A1 matrix,
+ * 2026-09-26). Every nav track is now `minmax(0, …)`, sized by the header.
+ *
  * `logoPlacement` was resolved from tenant config and edited in the admin, but
  * the header ignored it, so the admin preview and the live site disagreed
  * (reported by the admin lane, 2026-09-26). With `centre`, the logo takes the
@@ -31,7 +38,9 @@ export type HeaderLayout = {
 
 const LEFT_TRACKS: Record<TenantHeaderVariant, string> = {
   centred: "grid-cols-[auto_1fr_auto]",
-  left: "grid-cols-[auto_auto_1fr]",
+  // Same look as the old `auto_auto_1fr` (nav hugs the logo, actions pushed
+  // right) but the nav track has a definite, header-derived width.
+  left: "grid-cols-[auto_minmax(0,1fr)_auto]",
   split: "grid-cols-[auto_1fr_1fr]",
   minimal: "grid-cols-[auto_minmax(0,4rem)_auto]",
 };

@@ -73,6 +73,22 @@ describe("SiteFooter for a dealership", () => {
   });
 });
 
+describe("SiteFooter minimal variant", () => {
+  it("drops the nav row but keeps the tenant's social links", () => {
+    state.footer = {
+      variant: "minimal",
+      showSocial: true,
+      socialLinks: [{ label: "Instagram", href: "https://instagram.com/luxurymotors" }],
+    };
+    renderFooter();
+    expect(screen.queryByRole("navigation", { name: "Footer navigation" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Instagram" })).toHaveAttribute(
+      "href",
+      "https://instagram.com/luxurymotors",
+    );
+  });
+});
+
 describe("SiteFooter for the LUME house site", () => {
   it("keeps the historical copy and default social links", async () => {
     state.slug = "default";

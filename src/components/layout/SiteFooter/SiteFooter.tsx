@@ -92,6 +92,28 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
     else routerNavigate(`/${key}`);
   };
 
+  // Social links follow `showSocial` in every variant; `minimal` drops the
+  // nav row, so it renders them on their own line instead of losing them.
+  const socialRow =
+    socialLinks.length > 0 ? (
+      <div className="flex items-center gap-5">
+        {socialLinks.map((social) => (
+          <a
+            key={social.label}
+            href={social.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={social.label}
+            className="text-[11px] tracking-widest uppercase text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-gold)] transition-colors duration-200"
+          >
+            {/* Configured links have no bundled icon, so they fall back to
+                their label rather than rendering an empty anchor. */}
+            {social.icon ?? social.label}
+          </a>
+        ))}
+      </div>
+    ) : null;
+
   return (
     <footer className="relative bg-[var(--theme-lume-background,#000)] text-[var(--theme-lume-ink,#fff8ec)] border-t border-[var(--theme-lume-line)] mt-auto">
       {/* Top gradient bleed */}
@@ -157,26 +179,11 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
             ))}
           </nav>
 
-          {socialLinks.length > 0 && (
-            <div className="flex items-center gap-5">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={social.label}
-                  className="text-[11px] tracking-widest uppercase text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-gold)] transition-colors duration-200"
-                >
-                  {/* Configured links have no bundled icon, so they fall back to
-                      their label rather than rendering an empty anchor. */}
-                  {social.icon ?? social.label}
-                </a>
-              ))}
-            </div>
-          )}
+          {socialRow}
         </div>
         )}
+
+        {isMinimal && socialRow && <div className="flex justify-center mb-8">{socialRow}</div>}
 
         {/* Address (LUME house site only) */}
         {content.address && (

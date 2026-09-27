@@ -118,3 +118,37 @@ export function splitNavForOverflow<T extends { screen: string }>(
   overflow[activeInOverflow] = displaced;
   return { visible, overflow };
 }
+
+export type OverflowPanelInput = {
+  /** The "More" trigger's viewport rect. */
+  trigger: { bottom: number; right: number };
+  /** The panel's rendered width (its min-width before it has rendered). */
+  panelWidth: number;
+  viewportWidth: number;
+  /** Space kept between the panel and the viewport edge, in px. */
+  edge?: number;
+  /** Space between the trigger and the panel, in px. */
+  offset?: number;
+};
+
+/**
+ * Where the "More" panel opens.
+ *
+ * It right-aligns to the trigger, which suits a trigger at the right of the
+ * nav. With a centred logo the nav sits at the left, and the minimal variant
+ * collapses it to the trigger alone — then a right-aligned panel opened past
+ * the viewport's left edge and its first items could not be clicked (A1
+ * matrix, 2026-09-26). The panel now shifts right just enough to stay inside
+ * the viewport.
+ */
+export function overflowPanelPosition({
+  trigger,
+  panelWidth,
+  viewportWidth,
+  edge = 8,
+  offset = 12,
+}: OverflowPanelInput): { top: number; left: number } {
+  const preferred = trigger.right - panelWidth;
+  const max = Math.max(edge, viewportWidth - edge - panelWidth);
+  return { top: trigger.bottom + offset, left: Math.min(Math.max(preferred, edge), max) };
+}
