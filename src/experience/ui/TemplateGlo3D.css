@@ -800,3 +800,206 @@ html:root[data-lume-template="glo3d"] :is(.vehicleDetail__badge, .vehicleGallery
   font-weight: 700;
   letter-spacing: 0.04em;
 }
+
+/* ── Classic page skins (hand-built pages and the classic hero) ────────
+ * The same editorial type as the rest of Glo3D: sentence case, bold sans,
+ * left-aligned, no shadow or display face. */
+html:root[data-lume-template="glo3d"] :is(
+  .contactPage__title,
+  .storyHome__title,
+  .productsPage__title,
+  .showcasePage__title
+) {
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(2rem, 1.35rem + 2.6vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  text-transform: none;
+  text-shadow: none;
+  text-wrap: balance;
+}
+
+html:root[data-lume-template="glo3d"] :is(
+  .contactPage__eyebrow,
+  .storyHome__eyebrow,
+  .productsPage__eyebrow,
+  .showcasePage__eyebrow
+) {
+  color: var(--theme-lume-gold);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+html:root[data-lume-template="glo3d"] :is(
+  .contactPage__lead,
+  .storyHome__subtitle,
+  .productsPage__subtitle
+) {
+  color: var(--theme-lume-muted);
+  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.125rem);
+  line-height: 1.6;
+}
+
+html:root[data-lume-template="glo3d"] :is(
+  .storyHome__hero,
+  .storyHome__heroCopy,
+  .productsPage__hero,
+  .showcasePage__hero,
+  .contactPage__hero
+) {
+  text-align: left;
+  margin-left: 0;
+}
+
+html:root[data-lume-template="glo3d"] .pageBuilderMain :is(.storyHome__hero, .productsPage__hero, .showcasePage__hero, .contactPage__hero) {
+  margin-inline: auto;
+  padding-block: clamp(2.5rem, 5vw, 4.5rem);
+}
+
+html:root[data-lume-template="glo3d"] :is(.storyHome__subtitle, .productsPage__subtitle) {
+  margin-left: 0;
+}
+
+/* ── Product grid: underline filter, flat cards, no blur or spotlight ── */
+html:root[data-lume-template="glo3d"] .pageBuilderMain :is(.productsPage__filters, .productsPage__grid) {
+  width: min(100% - 2rem, var(--glo3d-container));
+  margin-inline: auto;
+}
+
+html:root[data-lume-template="glo3d"] .productsPage__filters {
+  justify-content: flex-start;
+}
+
+html:root[data-lume-template="glo3d"] .luxuryTabs {
+  display: flex;
+  gap: 1.5rem;
+  width: auto;
+  overflow-x: auto;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--theme-lume-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+}
+
+html:root[data-lume-template="glo3d"] .luxuryTabs__active {
+  display: none;
+}
+
+html:root[data-lume-template="glo3d"] .luxuryTabs__button {
+  margin-bottom: -1px;
+  padding: 0.75rem 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--theme-lume-muted);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  filter: none;
+}
+
+html:root[data-lume-template="glo3d"] .luxuryTabs__button--active {
+  border-bottom-color: var(--theme-lume-gold);
+  color: var(--theme-lume-ink);
+  font-weight: 600;
+  text-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] .luxuryTabs__button--touched {
+  filter: none;
+}
+
+html:root[data-lume-template="glo3d"] .luxuryTabs__button:focus-visible {
+  outline: 2px solid var(--theme-lume-gold);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] :is(
+  .productsPage__grid:hover .productsPage__card:not(:hover),
+  .productsPage__grid:focus-within .productsPage__card:not(:focus-visible)
+) {
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+
+html:root[data-lume-template="glo3d"] :is(.productsPage__card, .productsPage__card--live) {
+  border: 1px solid var(--theme-lume-line);
+  border-radius: var(--glo3d-radius-card);
+  background: var(--theme-lume-background);
+  box-shadow: none;
+  transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .productsPage__card::before {
+  display: none;
+}
+
+html:root[data-lume-template="glo3d"] .productsPage__cardImagePlaceholder {
+  background: var(--theme-lume-panel);
+}
+
+html:root[data-lume-template="glo3d"] :is(.productsPage__cardCategory, .productsPage__cardBrand, .productsPage__cardName, .productsPage__cardCta, .productsPage__cardSoon, .productsPage__cardImagePlaceholder span) {
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+  letter-spacing: 0;
+  text-transform: none;
+  text-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] .productsPage__cardBrand {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+html:root[data-lume-template="glo3d"] .productsPage__cardCta {
+  border-radius: var(--glo3d-radius);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] :is(.luxuryTabs__label, .luxuryTabs__button) {
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .productsPage__cardCategory {
+  text-transform: capitalize;
+}
+
+html:root[data-lume-template="glo3d"] :is(.productsPage__card, .productsPage__card--live):hover {
+  border-color: color-mix(in srgb, var(--theme-lume-ink) 35%, var(--theme-lume-line));
+  box-shadow: none;
+  transform: none;
+}
+
+/* Page-skin headings sit on the template container's left edge. */
+html:root[data-lume-template="glo3d"] .pageBuilderMain :is(
+  .storyHome__hero,
+  .productsPage__hero,
+  .showcasePage__hero,
+  .contactPage__hero
+) {
+  max-width: var(--glo3d-container);
+}
+
+/* Showcase gallery (standard mode renders flat cards). */
+html:root[data-lume-template="glo3d"] .storyHome__flatCard {
+  border: 1px solid var(--theme-lume-line);
+  border-radius: var(--glo3d-radius-card);
+  background: var(--theme-lume-background);
+  box-shadow: none;
+  transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .storyHome__flatCard :is(h3, p, span, button) {
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+  letter-spacing: 0;
+  text-transform: none;
+}
