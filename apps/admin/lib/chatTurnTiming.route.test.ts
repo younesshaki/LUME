@@ -25,6 +25,7 @@ const state = vi.hoisted(() => ({
   providerCalls: 0,
   afterTasks: [] as Array<() => unknown>,
   posthog: [] as Array<{ event: string; properties: Record<string, unknown> }>,
+  traces: [] as Array<Record<string, unknown>>,
 }));
 
 function vehicle(id: string, make: string, model: string, price: number): Vehicle {
@@ -73,6 +74,13 @@ vi.mock("@/lib/posthog.server", () => ({
   captureConciergeTrainingTrace: async () => undefined,
   conciergeTrainingProperties: () => ({}),
   posthogServerMode: () => "configured",
+}));
+
+vi.mock("@/lib/conciergeTrace.server", () => ({
+  writeInternalConciergeTrace: async (_client: unknown, trace: Record<string, unknown>) => {
+    state.traces.push(trace);
+    return true;
+  },
 }));
 
 vi.mock("@lume/db/server", () => {
@@ -236,6 +244,7 @@ beforeEach(() => {
   state.providerCalls = 0;
   state.afterTasks.length = 0;
   state.posthog.length = 0;
+  state.traces.length = 0;
 });
 
 type StreamEvent = Record<string, unknown> & { type?: string };
@@ -384,6 +393,21 @@ describe("speed telemetry — turns that do not answer", () => {
       error_stage: "provider_phase_1",
     });
     expect(typeof event!.properties.server_model_phase1_ms).toBe("number");
+  });
+
+  it("a provider failure leaves a failed trace with the visitor's question", async () => {
+    state.providerStatus = 500;
+    const chat = new Conversation();
+    const turn = await chat.say("what are your opening hours?");
+    expect(turn.status).toBe(502);
+    expect(state.traces).toHaveLength(1);
+    expect(state.traces[0]).toMatchObject({
+      source: "error",
+      status: "failed",
+      userMessage: "what are your opening hours?",
+      assistantResponse: null,
+      model: { errorStage: "provider_phase_1", httpStatus: 502 },
+    });
   });
 
   it("records the completed phase-one span when the provider response is malformed", async () => {

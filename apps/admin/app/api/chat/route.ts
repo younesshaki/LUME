@@ -173,6 +173,7 @@ import {
 import {
   writeInternalConciergeTrace,
   type ConciergeTraceSource,
+  type ConciergeTraceStatus,
 } from "@/lib/conciergeTrace.server";
 import {
   type DeterministicAnswers,
@@ -372,6 +373,11 @@ export async function POST(request: Request): Promise<Response> {
   const finalizeDeferredTiming = (): void => {
     if (deferredTimingOutcome) queueServerTiming(deferredTimingOutcome);
   };
+  // Assigned once the turn's conversation identity exists (below). Earlier
+  // failures have no conversation to attach a trace to.
+  let traceTurnFailure:
+    | ((status: number, errorStage: string) => void)
+    | null = null;
   const reportTurnError = (status: number, errorStage: string): void => {
     reportTurnTiming({
       conversationId: null,
@@ -380,6 +386,7 @@ export async function POST(request: Request): Promise<Response> {
       status,
       errorStage,
     });
+    traceTurnFailure?.(status, errorStage);
   };
 
   // Build the tenant-scoped system prompt. Keyword + fuzzy retrieval over
@@ -1175,6 +1182,31 @@ export async function POST(request: Request): Promise<Response> {
   // during state-isolation investigations.
   const transcriptSessionId =
     visitorTurn?.sessionId ?? anonymousConversationId ?? "unknown";
+  // A failed turn otherwise leaves no record of what the visitor asked.
+  traceTurnFailure = (status, errorStage) => {
+    queueInternalConciergeTrace({
+      client: supabase,
+      tenantId: tenant.tenantId,
+      requestId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      source: "error",
+      status: "failed",
+      userMessage: lastUser.content,
+      assistantResponse: null,
+      stateBefore: conversationStateBefore,
+      stateAfter: conversationState,
+      actions: [],
+      retrieval: { totalMatched: totalMatched ?? null },
+      model: {
+        ...(chatProvider
+          ? { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id }
+          : {}),
+        errorStage,
+        httpStatus: status,
+      },
+    });
+  };
   captureDebug("api/chat/conversation-state", {
     tenantId: tenant.tenantId,
     conversationSessionId: transcriptSessionId,
@@ -2392,8 +2424,9 @@ function queueInternalConciergeTrace(input: {
   conversationId: string;
   turn: number;
   source: ConciergeTraceSource;
+  status?: ConciergeTraceStatus;
   userMessage: string;
-  assistantResponse: string;
+  assistantResponse: string | null;
   stateBefore: ConversationInventoryState;
   stateAfter: ConversationInventoryState;
   actions: readonly BotAction[];
@@ -2410,6 +2443,7 @@ function queueInternalConciergeTrace(input: {
       conversationId: input.conversationId,
       turn: input.turn,
       source: input.source,
+      status: input.status,
       userMessage: input.userMessage,
       assistantResponse: input.assistantResponse,
       stateBefore: input.stateBefore as unknown as Record<string, unknown>,
