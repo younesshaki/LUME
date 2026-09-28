@@ -1,10 +1,12 @@
 import type { BlockDescriptor, BlockValidationResult } from "./blockTypes";
 import { getBlockDescriptor } from "./blockTypes";
+import { validateBlockAppearance } from "./appearance";
 
 export type BlockInstance = {
   id: string;
   type: string;
   props: Record<string, unknown>;
+  appearance?: unknown;
 };
 
 export type PageBlocksDocumentLike = {
@@ -43,7 +45,13 @@ export function validateBlock(block: unknown): BlockValidationResult {
   }
   const descriptor = getBlockDescriptor(block.type);
   if (!descriptor) return { ok: false, errors: [`unknown block type "${block.type}"`] };
-  return validateBlockProps(descriptor, block.props);
+  const props = validateBlockProps(descriptor, block.props);
+  const appearance = block.appearance === undefined ? { ok: true as const } : validateBlockAppearance(block.appearance);
+  if (props.ok && appearance.ok) return { ok: true };
+  return {
+    ok: false,
+    errors: [...(props.ok ? [] : props.errors), ...(appearance.ok ? [] : appearance.errors)],
+  };
 }
 
 export function validatePageBlocksDocument(document: unknown): DocumentValidation {

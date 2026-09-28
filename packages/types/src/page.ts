@@ -17,6 +17,34 @@ export type PageBlock = {
   /** Registry key, e.g. "hero", "product-grid", "vehicle-inventory". */
   type: string;
   props: Record<string, unknown>;
+  /**
+   * Optional presentation shared by every block type (background colour and
+   * image). Kept beside `props` so no block schema owns it; validated by
+   * `blockAppearanceSchema` in @lume/blocks. Absent = the template's look.
+   */
+  appearance?: BlockAppearance;
+};
+
+/** Theme colours a block background can follow; they adapt to light/dark mode. */
+export type BlockBackgroundToken = "page" | "panel" | "accent" | "ink";
+
+export type BlockAppearance = {
+  backgroundColor?:
+    | { token: BlockBackgroundToken }
+    /** Six-digit hex per website mode, so one choice works in light and dark. */
+    | { custom: { light: string; dark: string } };
+  backgroundImage?: {
+    /** https or root-relative URL, normally from the tenant's media library. */
+    url: string;
+    position?: "center" | "top" | "bottom";
+    size?: "cover" | "contain";
+    /** Six-digit hex drawn over the image for readable text. */
+    overlayColor?: string;
+    /** 0–80 (%). */
+    overlayOpacity?: number;
+  };
+  /** Paint the background across the whole window width, not just the block. */
+  fullWidth?: boolean;
 };
 
 /** The ordered blocks document stored in `page_revisions.blocks`. `version`

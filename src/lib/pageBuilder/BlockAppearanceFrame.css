@@ -1,0 +1,85 @@
+/* Block backgrounds (PageBlock.appearance). The frame only exists for blocks
+   that set one. flow-root keeps the block's own margins inside the painted
+   area; isolation keeps the photo layer behind the block's content. */
+.blockAppearance {
+  position: relative;
+  display: flow-root;
+  isolation: isolate;
+  background-color: var(--block-bg, transparent);
+  color: var(--theme-lume-ink);
+}
+
+.blockAppearance__media {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.blockAppearance__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.blockAppearance__overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--block-bg-overlay, transparent);
+}
+
+/* Full width: paint the colour past the block's column without widening the
+   layout (a shadow adds no scroll area), and stretch the photo layer to the
+   window; the page clips it horizontally. */
+.blockAppearance[data-full-width="true"] {
+  box-shadow: 0 0 0 100vmax var(--block-bg, transparent);
+  clip-path: inset(0 -100vmax);
+}
+
+.blockAppearance[data-full-width="true"] .blockAppearance__media {
+  left: calc(50% - 50vw);
+  right: calc(50% - 50vw);
+}
+
+.pageBuilderMain:has(.blockAppearance[data-full-width="true"]) {
+  overflow-x: clip;
+}
+
+/* A background whose tone is opposite to the page's mode runs the block in the
+   other mode's palette: text and inner cards/panels switch together. The
+   tenant's own variables for that mode arrive inline and win over these
+   defaults, which mirror src/index.css. */
+.blockAppearance[data-block-tone="light"] {
+  color-scheme: light;
+  --theme-lume-ink: #211d16;
+  --theme-lume-muted: rgba(33, 29, 22, 0.66);
+  --theme-lume-soft: rgba(33, 29, 22, 0.46);
+  --theme-lume-line: rgba(47, 38, 25, 0.16);
+  --theme-lume-background: #f4efe5;
+  --theme-lume-panel: rgba(255, 252, 246, 0.88);
+  --lume-surface: color-mix(in srgb, var(--theme-lume-panel) 94%, var(--theme-lume-background));
+  --lume-surface-raised: color-mix(in srgb, var(--theme-lume-panel) 98%, var(--theme-lume-background));
+  --lume-surface-subtle: color-mix(in srgb, var(--theme-lume-ink) 4%, transparent);
+  --lume-control: color-mix(in srgb, var(--theme-lume-ink) 5%, var(--theme-lume-panel));
+  --lume-shadow: color-mix(in srgb, #372810 16%, transparent);
+  --lume-danger: #a6382b;
+  --lume-on-primary: #fffaf0;
+}
+
+.blockAppearance[data-block-tone="dark"] {
+  color-scheme: dark;
+  --theme-lume-ink: #fff8ec;
+  --theme-lume-muted: rgba(255, 248, 236, 0.64);
+  --theme-lume-soft: rgba(255, 248, 236, 0.42);
+  --theme-lume-line: rgba(255, 248, 236, 0.12);
+  --theme-lume-background: #000;
+  --theme-lume-panel: rgba(8, 8, 9, 0.82);
+  --lume-surface: rgba(12, 11, 13, 0.82);
+  --lume-surface-raised: rgba(18, 14, 15, 0.9);
+  --lume-surface-subtle: rgba(255, 248, 236, 0.06);
+  --lume-control: rgba(255, 248, 236, 0.07);
+  --lume-shadow: rgba(0, 0, 0, 0.38);
+  --lume-danger: #ffb3a6;
+  --lume-on-primary: #17130d;
+}

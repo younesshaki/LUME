@@ -9,6 +9,7 @@ import type { PageBlock, PageBlocksDocument, PageRevision } from "@lume/types";
 import type { BlockCategory, BlockField, EditorBlockDescriptor } from "@lume/blocks";
 import { validatePageBlocksDocument } from "@lume/blocks";
 import { AssetPicker } from "@/components/asset-picker";
+import { BlockBackgroundPanel } from "./BlockBackgroundPanel";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   PALETTE_DRAG_MIME,
@@ -266,6 +267,18 @@ export default function PageEditorClient({
             }
           : block,
       ),
+    );
+  }
+
+  function updateSelectedAppearance(appearance: PageBlock["appearance"]) {
+    if (!selectedBlock) return;
+    setBlocks((current) =>
+      current.map((block) => {
+        if (block.id !== selectedBlock.id) return block;
+        const next: PageBlock = { ...block, appearance };
+        if (!appearance) delete next.appearance;
+        return next;
+      }),
     );
   }
 
@@ -669,6 +682,15 @@ export default function PageEditorClient({
               ))}
             </div>
           )}
+          {selectedBlock && selectedDescriptor ? (
+            <BlockBackgroundPanel
+              key={selectedBlock.id}
+              tenantId={tenantId}
+              block={selectedBlock}
+              errors={(blockErrors[selectedBlock.id] ?? []).filter((error) => error.startsWith("appearance"))}
+              onChange={updateSelectedAppearance}
+            />
+          ) : null}
 
           <RevisionHistory
             page={page}

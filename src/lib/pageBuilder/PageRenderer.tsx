@@ -12,6 +12,7 @@ import { isAutomotiveEditorial, useActiveSiteTemplate } from "@/lib/useActiveSit
 import { PageBuilderRenderProvider, type PageBuilderRenderContextValue } from "./renderContext";
 import { registerBlocks } from "./registerBlocks";
 import { isPageRendererEnabled } from "./featureFlag";
+import { BlockAppearanceFrame } from "./BlockAppearanceFrame";
 import { usePublishedPageSeo } from "@/lib/seo/SeoProvider";
 import { TemplateConversionPanel } from "@/components/site/TemplateConversionPanel";
 import { ConciergeLeadForm } from "@/components/site/ConciergeLeadForm";
@@ -224,8 +225,17 @@ export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverri
             {renderableBlocks.map(({ block, Component }) => (
               <BlockBoundary key={block.id} block={block}>
                 {blockWrapper
-                  ? blockWrapper(block, <Component block={block} mode={mode} />)
-                  : <Component block={block} mode={mode} />}
+                  ? blockWrapper(
+                      block,
+                      <BlockAppearanceFrame block={block}>
+                        <Component block={block} mode={mode} />
+                      </BlockAppearanceFrame>,
+                    )
+                  : (
+                      <BlockAppearanceFrame block={block}>
+                        <Component block={block} mode={mode} />
+                      </BlockAppearanceFrame>
+                    )}
               </BlockBoundary>
             ))}
             {slug === "contact" ? <ConciergeLeadForm /> : null}
