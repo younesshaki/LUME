@@ -8,6 +8,7 @@ import { useDualMode } from "@/lib/DualModeContext";
 import { supabase } from "@/lib/supabase";
 import { publicTenantSlug, resolveTenantId } from "@/lib/publicTenant";
 import { getBlockComponent, getBlockDescriptor } from "./registry";
+import { isAutomotiveEditorial, useActiveSiteTemplate } from "@/lib/useActiveSiteTemplate";
 import { PageBuilderRenderProvider, type PageBuilderRenderContextValue } from "./renderContext";
 import { registerBlocks } from "./registerBlocks";
 import { isPageRendererEnabled } from "./featureFlag";
@@ -187,7 +188,10 @@ type PageBlocksViewProps = {
  */
 export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverride, blockWrapper }: PageBlocksViewProps) {
   const { mode: ambientMode } = useDualMode();
-  const mode = modeOverride ?? ambientMode;
+  // Glo3D has no cinematic mode, and the editor preview must match the live
+  // site, so it wins over the editor's mode switch too.
+  const flatTemplate = isAutomotiveEditorial(useActiveSiteTemplate());
+  const mode = flatTemplate ? "standard" : (modeOverride ?? ambientMode);
 
   const renderableBlocks = useMemo(
     () =>
@@ -208,8 +212,13 @@ export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverri
           {frame.beforeMain}
           <main
             id={frame.mainId}
-            className={frame.mainClassName || undefined}
-            style={{ paddingTop: "72px", paddingBottom: "160px" }}
+            // `pageBuilderMain` lets a template (Glo3D) run blocks edge to edge;
+            // the padding stays the same unless a template sets the variables.
+            className={["pageBuilderMain", frame.mainClassName].filter(Boolean).join(" ")}
+            style={{
+              paddingTop: "var(--page-builder-main-top, 72px)",
+              paddingBottom: "var(--page-builder-main-bottom, 160px)",
+            }}
           >
             {slug === "home" && <div className="storyHome__tracingBeam" aria-hidden="true" />}
             {renderableBlocks.map(({ block, Component }) => (
@@ -221,7 +230,8 @@ export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverri
             ))}
             {slug === "contact" ? <ConciergeLeadForm /> : null}
           </main>
-          {slug === "home" ? <TemplateConversionPanel /> : null}
+          {/* Glo3D's home already carries these actions in its own blocks. */}
+          {slug === "home" && !flatTemplate ? <TemplateConversionPanel /> : null}
           {footer}
         </div>
       </CinematicShell>

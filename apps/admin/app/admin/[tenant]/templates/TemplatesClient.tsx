@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { createContext, useContext, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -70,7 +70,12 @@ type TemplatesClientProps = {
   liveSiteUrl: string;
   initialDrafts: DesignDraftSummary[];
   canManage: boolean;
+  /** Public media base (R2) for template preview photos; empty hides them. */
+  mediaBaseUrl?: string;
 };
+
+/** Public media base for preview photos, provided once for every preview. */
+const PreviewMediaContext = createContext("");
 
 const SPECIALTY_LABELS: Record<SiteTemplateSpecialty, string> = {
   luxury: "Curated retail",
@@ -102,6 +107,7 @@ export default function TemplatesClient({
   liveSiteUrl,
   initialDrafts,
   canManage,
+  mediaBaseUrl = "",
 }: TemplatesClientProps) {
   const router = useRouter();
   const templates = listSiteTemplates();
@@ -159,6 +165,7 @@ export default function TemplatesClient({
   }
 
   return (
+    <PreviewMediaContext.Provider value={mediaBaseUrl}>
     <div className="space-y-6">
       <PageHeader
         title="Website Templates"
@@ -371,6 +378,7 @@ export default function TemplatesClient({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </PreviewMediaContext.Provider>
   );
 }
 
@@ -439,6 +447,10 @@ function PreviewScene({ template, expanded }: { template: SiteTemplate; expanded
   const headingClass = compact
     ? "mt-5 max-w-[85%] text-lg font-semibold leading-[1.05]"
     : "mt-12 max-w-2xl text-4xl font-semibold leading-[1.02] sm:text-5xl";
+
+  if (template.visual.layout === "automotive-editorial") {
+    return <AutomotiveEditorialPreview template={template} compact={compact} />;
+  }
 
   if (template.visual.layout === "precision-grid") {
     return (
@@ -519,7 +531,54 @@ function PreviewScene({ template, expanded }: { template: SiteTemplate; expanded
   );
 }
 
+/**
+ * Template Glo3D in miniature: what the template actually is — a split hero
+ * with a real showroom photo, then a row of vehicle listing cards with prices.
+ * Flat, bordered, sentence case, like the live template.
+ */
+function AutomotiveEditorialPreview({ template, compact }: { template: SiteTemplate; compact: boolean }) {
+  const mediaBase = useContext(PreviewMediaContext).replace(/\/+$/, "");
+  const photo = mediaBase ? `${mediaBase}/templates/glo3d/hero-showroom-1200.webp` : "";
+  const cards = [
+    { title: "2023 Sedan", price: "$38,900" },
+    { title: "2022 SUV", price: "$45,500" },
+    { title: "2021 Coupe", price: "$52,000" },
+  ];
+  return (
+    <div>
+      <div className={`grid items-center gap-4 ${compact ? "mt-3 grid-cols-[1fr_1.1fr]" : "mt-8 sm:grid-cols-[1fr_1.1fr]"}`}>
+        <div>
+          <p className="text-[9px] font-semibold text-[var(--preview-accent)]">{template.conversion.eyebrow}</p>
+          <h3 className={compact ? "mt-1 text-sm font-bold leading-tight" : "mt-2 text-3xl font-bold leading-[1.08] tracking-tight"}>
+            {template.conversion.headline}
+          </h3>
+          {!compact ? <p className="mt-3 text-sm text-[var(--preview-muted)]">{template.conversion.description}</p> : null}
+          <span className={`mt-3 inline-block rounded-[3px] bg-[var(--preview-accent)] font-semibold text-[var(--preview-bg)] ${compact ? "px-2 py-1 text-[8px]" : "px-3 py-2 text-xs"}`}>
+            {template.conversion.primaryLabel}
+          </span>
+        </div>
+        <div className="aspect-[4/3] overflow-hidden rounded-[3px] bg-[var(--preview-panel)]">
+          {photo ? <img src={photo} alt="" className="size-full object-cover" loading="lazy" /> : null}
+        </div>
+      </div>
+      <div className={`grid grid-cols-3 gap-2 ${compact ? "mt-3" : "mt-6"}`}>
+        {cards.map((card) => (
+          <div key={card.title} className="overflow-hidden rounded-[3px] border" style={{ borderColor: "var(--preview-line)" }}>
+            <div className={`${compact ? "h-5" : "h-16"} bg-[var(--preview-panel)]`} />
+            <div className={compact ? "p-1" : "p-2"}>
+              <p className={`${compact ? "text-[7px]" : "text-[11px]"} font-semibold`}>{card.title}</p>
+              <p className={`${compact ? "text-[7px]" : "text-xs"} font-bold`}>{card.price}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function previewBackdrop(template: SiteTemplate): string {
+  // Glo3D is flat: no decorative backdrop.
+  if (template.visual.layout === "automotive-editorial") return "none";
   if (template.visual.layout === "precision-grid") {
     return "linear-gradient(var(--preview-line) 1px, transparent 1px), linear-gradient(90deg, var(--preview-line) 1px, transparent 1px)";
   }

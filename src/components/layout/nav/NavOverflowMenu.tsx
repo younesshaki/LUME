@@ -137,7 +137,7 @@ export function NavOverflowMenu({
         aria-haspopup="true"
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((value) => !value)}
-        className={`inline-flex items-center gap-1 px-1 py-0.5 text-sm tracking-widest uppercase
+        className={`siteNavMore inline-flex items-center gap-1 px-1 py-0.5 text-sm tracking-widest uppercase
           transition-colors duration-200 cursor-pointer whitespace-nowrap
           ${containsActive
             ? "text-[var(--theme-lume-gold,#C9A84C)]"
@@ -157,7 +157,7 @@ export function NavOverflowMenu({
           role="group"
           aria-label="More navigation"
           style={{ position: "fixed", top: anchor.top, left: anchor.left }}
-          className="min-w-[12rem] rounded-md border
+          className="siteNavMorePanel min-w-[12rem] rounded-md border
             border-[var(--theme-lume-line,rgba(255,255,255,.12))]
             bg-[var(--theme-lume-panel,rgba(12,12,12,.96))]
             backdrop-blur-md shadow-xl py-1 z-[60]"
@@ -175,7 +175,7 @@ export function NavOverflowMenu({
                 onMouseEnter={() => onIntent?.(item.screen)}
                 onFocus={() => onIntent?.(item.screen)}
                 aria-current={active ? "page" : undefined}
-                className={`relative block w-full text-left px-4 py-2 text-sm tracking-widest uppercase
+                className={`siteNavMorePanel__item relative block w-full text-left px-4 py-2 text-sm tracking-widest uppercase
                   transition-colors duration-150 cursor-pointer
                   before:absolute before:left-1.5 before:top-1/2 before:h-4 before:w-[3px] before:-translate-y-1/2 before:rounded-full
                   ${active

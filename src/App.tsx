@@ -1,6 +1,7 @@
 import "./App.scss";
 import "./experience/ui/PublicLightMode.css";
 import "./experience/ui/SiteTemplates.css";
+import "./experience/ui/TemplateGlo3D.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import {
@@ -67,6 +68,7 @@ import {
 import { SeoProvider } from "./lib/seo/SeoProvider";
 import { ThemeProvider } from "./lib/theme/ThemeContext";
 import { TenantThemeProvider } from "./lib/TenantThemeProvider";
+import { TemplateModeScope } from "./lib/TemplateModeScope";
 import { PublicNavLoader } from "./lib/navLoader/PublicNavLoader";
 import { VisitorAuthProvider } from "./lib/visitor/VisitorAuthContext";
 import { SavedVehiclesProvider } from "./lib/visitor/SavedVehiclesContext";
@@ -544,6 +546,7 @@ export default function App() {
     return (
       <ThemeProvider>
         <TenantThemeProvider>
+          <TemplateModeScope>
           <VisitorAuthProvider>
             <SavedVehiclesProvider>
               <Suspense fallback={null}>
@@ -553,6 +556,7 @@ export default function App() {
               </Suspense>
             </SavedVehiclesProvider>
           </VisitorAuthProvider>
+          </TemplateModeScope>
         </TenantThemeProvider>
       </ThemeProvider>
     );
@@ -561,6 +565,7 @@ export default function App() {
   return (
     <ThemeProvider enabled={!isAdminPath}>
       <TenantThemeProvider enabled={!isAdminPath}>
+      <TemplateModeScope>
       <VisitorAuthProvider enabled={!isAdminPath}>
         <SavedVehiclesProvider enabled={!isAdminPath}>
         <SeoProvider pathname={location.pathname} enabled={!isAdminPath}>
@@ -785,6 +790,7 @@ export default function App() {
         </SeoProvider>
         </SavedVehiclesProvider>
       </VisitorAuthProvider>
+      </TemplateModeScope>
       </TenantThemeProvider>
     </ThemeProvider>
   );

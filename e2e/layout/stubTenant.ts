@@ -26,7 +26,22 @@ export const NAV_PAGES = [
 export type StubTheme = {
   header?: Record<string, unknown>;
   footer?: Record<string, unknown>;
+  /** Website template, e.g. { key: "glo3d", version: 1 }; defaults to Luxury. */
+  template?: { key: string; version: number };
 };
+
+/** Templates the layout suites run under. Glo3D never uses the gooey nav. */
+export const LAYOUT_TEMPLATES = ["luxury", "glo3d"] as const;
+export type LayoutTemplate = (typeof LAYOUT_TEMPLATES)[number];
+
+export function templateTheme(template: LayoutTemplate): Pick<StubTheme, "template"> {
+  return template === "luxury" ? {} : { template: { key: template, version: 1 } };
+}
+
+/** Test-name suffix: existing Luxury names stay unchanged. */
+export function templateLabel(template: LayoutTemplate): string {
+  return template === "luxury" ? "" : ` · ${template}`;
+}
 
 export async function stubTenant(
   page: Page,
@@ -83,6 +98,11 @@ export async function stubTenant(
     return route.fulfill({ json: [] });
   });
   await page.route("**/api/**", (route) => route.fulfill({ status: 404, json: {} }));
+  // Template photos live in production R2; the production smoke test checks
+  // the real uploads. Here they are a 1×1 image, like other external assets.
+  await page.route(/\/templates\/glo3d\/[a-z0-9-]+\.webp$/, (route) =>
+    route.fulfill({ contentType: "image/gif", body: Buffer.from("R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==", "base64") }),
+  );
   // What the public proxy answers for an anonymous visitor (no console error).
   await page.route("**/api/visitor/me*", (route) => route.fulfill({ json: { visitor: null } }));
 }

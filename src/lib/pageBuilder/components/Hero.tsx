@@ -1,6 +1,7 @@
 import type { BlockComponentProps } from "../registry";
 import { usePageBuilderRenderContext } from "../renderContext";
 import { stringProp } from "./props";
+import { AutomotiveHero } from "./AutomotiveHero";
 import "./PageBuilderBlocks.css";
 import "@/experience/ui/ContactPage/ContactPage.css";
 import "@/experience/ui/ProductsPage/ProductsPage.css";
@@ -54,8 +55,14 @@ const HERO_SKINS: Record<string, HeroSkin> = {
   },
 };
 
-export function Hero({ block }: BlockComponentProps) {
+export function Hero({ block, mode }: BlockComponentProps) {
   const { pageSlug } = usePageBuilderRenderContext();
+  // Photo designs render their own markup; `classic` (and any stored hero from
+  // before variants) keeps the page-specific skins below, unchanged.
+  const variant = stringProp(block, "variant", "classic");
+  if (variant === "split" || variant === "search" || variant === "fullBleed") {
+    return <AutomotiveHero block={block} mode={mode} variant={variant} />;
+  }
   const skin = HERO_SKINS[pageSlug] ?? HERO_SKINS.home;
   const eyebrow = stringProp(block, "eyebrow");
   const title = stringProp(block, "title");

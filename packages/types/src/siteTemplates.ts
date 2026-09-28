@@ -16,7 +16,8 @@ export type SiteTemplateKey =
   | "capital"
   | "ignition"
   | "concierge"
-  | "exchange";
+  | "exchange"
+  | "glo3d";
 
 export type SiteTemplateSpecialty =
   | "luxury"
@@ -38,7 +39,8 @@ export type SiteTemplateVisual = {
     | "precision-grid"
     | "kinetic-track"
     | "hospitality-suite"
-    | "equity-split";
+    | "equity-split"
+    | "automotive-editorial";
   corners: "soft" | "structured" | "angular" | "pill" | "split";
   surface: "glass" | "solid" | "outlined" | "layered";
   motion: "cinematic" | "measured" | "kinetic" | "gentle" | "responsive";
@@ -402,12 +404,93 @@ const EXCHANGE: SiteTemplate = {
   },
 };
 
+/**
+ * Template Glo3D — automotive editorial + inventory utility. A flat, light-first
+ * dealership site: real photography, a clear vehicle information hierarchy,
+ * thin dividers, solid surfaces, no glass, glow or decorative gradients. The
+ * tenant's accent (the `gold` role) and imagery give it personality; these are
+ * only the fallbacks. Plan: docs/website-builder/template-glo3d-plan.md.
+ *
+ * Contrast (checked in siteTemplates.test.ts): ink, muted and gold all clear
+ * 4.5:1 on their background in both modes.
+ */
+const GLO3D: SiteTemplate = {
+  key: "glo3d",
+  version: 1,
+  name: "Template Glo3D",
+  description:
+    "Automotive editorial layout focused on inventory, photography, dealership information, and conversion.",
+  // Shares the test-drive conversion strategy; Glo3D's difference is its
+  // presentation, not a new buying journey.
+  specialty: "test-drive",
+  visual: {
+    layout: "automotive-editorial",
+    corners: "structured",
+    surface: "solid",
+    motion: "measured",
+    heroAlignment: "split",
+  },
+  conversion: {
+    eyebrow: "Current inventory",
+    headline: "Find the right vehicle, then see it in person.",
+    description:
+      "Browse vehicles with clear prices and specifications, then book a test drive or talk to the team.",
+    primaryAction: "browse-inventory",
+    primaryLabel: "View inventory",
+    secondaryAction: "book-test-drive",
+    secondaryLabel: "Book a test drive",
+    trustPoints: ["Clear pricing", "Inspected vehicles", "Local dealership team"],
+  },
+  shared: {
+    fonts: {
+      // One clean sans for headings and body: hierarchy comes from size and
+      // weight, not a display face.
+      experience: DEFAULT_TENANT_THEME.fonts.body,
+      body: DEFAULT_TENANT_THEME.fonts.body,
+    },
+    // The header carries navigation; a floating icon dock reads as an app.
+    dockVariant: "hidden",
+    cinematicIntensity: 0,
+  },
+  modes: {
+    dark: {
+      colors: {
+        ink: "#f3f5f8",
+        muted: "#a3aab6",
+        soft: "#7d8492",
+        line: "#262b33",
+        gold: "#5b8dff",
+        background: "#0e1013",
+        panel: "#161a20",
+        dockItemBackground: "#161a20",
+        dockItemColor: "#f3f5f8",
+        dockItemBorder: "#262b33",
+      },
+    },
+    light: {
+      colors: {
+        ink: "#0f1115",
+        muted: "#525a67",
+        soft: "#6b7280",
+        line: "#e3e6eb",
+        gold: "#1f5eff",
+        background: "#ffffff",
+        panel: "#f6f7f9",
+        dockItemBackground: "#ffffff",
+        dockItemColor: "#0f1115",
+        dockItemBorder: "#e3e6eb",
+      },
+    },
+  },
+};
+
 export const SITE_TEMPLATES: Readonly<Record<SiteTemplateKey, SiteTemplate>> = {
   luxury: LUXURY,
   capital: CAPITAL,
   ignition: IGNITION,
   concierge: CONCIERGE,
   exchange: EXCHANGE,
+  glo3d: GLO3D,
 } as const;
 
 export const DEFAULT_SITE_TEMPLATE_KEY: SiteTemplateKey = "luxury";
@@ -432,6 +515,7 @@ export {
   CAPITAL,
   CONCIERGE,
   EXCHANGE,
+  GLO3D,
   IGNITION,
   LUXURY,
   LUXURY_DARK_COLORS,

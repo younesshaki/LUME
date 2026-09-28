@@ -60,6 +60,12 @@ const VALID_MUTATIONS: Record<string, unknown> = {
 const PREREQUISITES: Record<string, Record<string, unknown>> = {
   // "Notch / Bento accent colour"
   "vehicle-inventory.cardColor": { cardStyle: "notch" },
+  // The photo fields belong to the photo designs ("Shown by the Split,
+  // Inventory search and Full-bleed designs"); the classic hero has no photo.
+  "hero.mediaUrl": { variant: "split" },
+  "hero.mediaAlt": { variant: "split", mediaUrl: "/sample-photo.jpg" },
+  "hero.mediaPosition": { variant: "split", mediaUrl: "/sample-photo.jpg" },
+  "hero.overlayStrength": { variant: "fullBleed", mediaUrl: "/sample-photo.jpg" },
 };
 const VALID_ITEM_MUTATIONS: Record<string, Record<string, unknown>> = {
   "logo-marquee.items": { body: "https://images.example/mutated-logo.png" },
