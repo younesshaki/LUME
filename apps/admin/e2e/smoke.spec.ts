@@ -297,6 +297,7 @@ test("website design publishes separate dark and light backgrounds", async () =>
   await page.addInitScript(() => {
     window.sessionStorage.setItem("lume.gate-passed.v1", "1");
     window.localStorage.setItem("lume.color-theme.v1", "dark");
+    window.localStorage.setItem("lume.color-theme.chosen.v1", "1");
   });
   const publicUrl = process.env.LUME_E2E_PUBLIC_URL!.replace(/\/+$/, "");
   await page.goto(`${publicUrl}/home?tenant=${encodeURIComponent(tenantSlug)}`);

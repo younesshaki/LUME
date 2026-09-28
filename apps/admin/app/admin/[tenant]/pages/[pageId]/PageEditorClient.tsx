@@ -54,6 +54,8 @@ type PageEditorClientProps = {
   initialBlocks: PageBlocksDocument;
   initialRevisions: PageRevision[];
   blockDescriptors: EditorBlockDescriptor[];
+  /** Per-type props a newly added block starts from on this tenant's template. */
+  newBlockDefaults?: Readonly<Record<string, Record<string, unknown>>>;
   /** Display hint for the concierge intelligence selector — the editor chat
    * route re-enforces the plan gate server-side on every turn. */
   premiumModelsEnabled: boolean;
@@ -68,6 +70,7 @@ export default function PageEditorClient({
   initialBlocks,
   initialRevisions,
   blockDescriptors,
+  newBlockDefaults = {},
   premiumModelsEnabled,
   providerAvailability,
 }: PageEditorClientProps) {
@@ -134,11 +137,15 @@ export default function PageEditorClient({
 
   const livePageUrl = publicPageUrl(publicSiteBaseUrl, tenantSlug, page.slug);
 
+  function newBlockProps(descriptor: EditorBlockDescriptor): Record<string, unknown> {
+    return cloneProps({ ...descriptor.defaultProps, ...newBlockDefaults[descriptor.type] });
+  }
+
   function addBlock(descriptor: EditorBlockDescriptor, index?: number) {
     const block: PageBlock = {
       id: createBlockId(descriptor.type),
       type: descriptor.type,
-      props: cloneProps(descriptor.defaultProps),
+      props: newBlockProps(descriptor),
     };
     setBlocks((current) =>
       insertAt(current, index ?? insertionIndexAfter(current, selectedBlockId), block)
@@ -181,7 +188,7 @@ export default function PageEditorClient({
       const newBlock: PageBlock = {
         id: createBlockId(descriptor.type),
         type: descriptor.type,
-        props: cloneProps(descriptor.defaultProps),
+        props: newBlockProps(descriptor),
       };
       setBlocks((current) => {
         const targetIndex = current.findIndex((block) => block.id === blockId);

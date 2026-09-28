@@ -8,6 +8,7 @@ import {
   type PropsWithChildren,
 } from "react";
 import {
+  applySiteDefaultMode,
   persistThemeMode,
   readThemeMode,
   resolveTheme,
@@ -19,6 +20,8 @@ type ThemeContextValue = {
   mode: ThemeMode;
   resolvedTheme: ResolvedTheme;
   setMode: (mode: ThemeMode) => void;
+  /** The site template's default mode (null: none); ignored once the visitor has chosen. */
+  applySiteDefault: (mode: ThemeMode | null) => void;
 };
 
 type ThemeProviderProps = PropsWithChildren<{
@@ -57,12 +60,21 @@ function ActiveThemeProvider({ children }: PropsWithChildren) {
     setStoredMode(nextMode);
   }, []);
 
+  const applySiteDefault = useCallback((siteDefault: ThemeMode | null) => {
+    setStoredMode(applySiteDefaultMode(siteDefault));
+  }, []);
+
   const value = useMemo(
-    () => ({ mode, resolvedTheme, setMode }),
-    [mode, resolvedTheme, setMode]
+    () => ({ mode, resolvedTheme, setMode, applySiteDefault }),
+    [mode, resolvedTheme, setMode, applySiteDefault]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+/** The theme context, or null where the public theme is disabled (admin paths). */
+export function useOptionalTheme(): ThemeContextValue | null {
+  return useContext(ThemeContext);
 }
 
 export function useTheme(): ThemeContextValue {

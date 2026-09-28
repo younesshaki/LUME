@@ -19,6 +19,33 @@ const photo = (slot: string) => `${GLO3D_MEDIA_BASE}/${slot}.webp`;
 /** Feature bands take an R2 key; the 1200px variant suits their half-width column. */
 const photoKey = (slot: string) => `templates/glo3d/${slot}-1200.webp`;
 
+/** Glo3D's hero: the inventory search design over a showroom photo. */
+export const GLO3D_HERO_PROPS = {
+  variant: "search",
+  eyebrow: "Current inventory",
+  title: "Find the right vehicle, then see it in person.",
+  subtitle: "Browse vehicles with clear prices and full specifications, then book a test drive with our team.",
+  primaryCtaLabel: "View inventory",
+  primaryCtaHref: "/vehicles",
+  secondaryCtaLabel: "Book a test drive",
+  secondaryCtaHref: "/contact",
+  mediaUrl: photo("hero-showroom"),
+  mediaAlt: "Car on display in a bright dealership showroom",
+  mediaPosition: "right",
+  overlayStrength: 45,
+  alignment: "left",
+} as const;
+
+/**
+ * Props a newly added block starts from on a given template, layered over the
+ * block's own defaults. Only for blocks being added: stored blocks keep what
+ * they have. Glo3D heroes start as the inventory search design rather than
+ * the classic hero (whose defaults are LUME's own copy).
+ */
+export function templateNewBlockDefaults(templateKey: string | null | undefined): Record<string, Record<string, unknown>> {
+  return templateKey === "glo3d" ? { hero: { ...GLO3D_HERO_PROPS } } : {};
+}
+
 export const GLO3D_STARTER_PAGES: DefaultPageSeed[] = [
   {
     slug: "home",
@@ -34,21 +61,7 @@ export const GLO3D_STARTER_PAGES: DefaultPageSeed[] = [
         {
           id: "glo3d-home-hero",
           type: "hero",
-          props: {
-            variant: "split",
-            eyebrow: "Current inventory",
-            title: "Find the right vehicle, then see it in person.",
-            subtitle: "Browse vehicles with clear prices and full specifications, then book a test drive with our team.",
-            primaryCtaLabel: "View inventory",
-            primaryCtaHref: "/vehicles",
-            secondaryCtaLabel: "Book a test drive",
-            secondaryCtaHref: "/contact",
-            mediaUrl: photo("hero-showroom"),
-            mediaAlt: "Car on display in a bright dealership showroom",
-            mediaPosition: "right",
-            overlayStrength: 45,
-            alignment: "left",
-          },
+          props: { ...GLO3D_HERO_PROPS },
         },
         {
           id: "glo3d-home-new-arrivals",

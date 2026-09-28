@@ -6,22 +6,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
       (() => {
+        // Keep in step with readThemeMode (src/lib/theme/theme.ts): the
+        // visitor's own choice, else the last site's template default, else an
+        // older stored value, else dark. A default is never saved as a choice.
         try {
+          const isMode = (value) => value === "light" || value === "dark";
           const saved = localStorage.getItem("lume.color-theme.v1");
-          if (saved === "light" || saved === "dark") {
+          const chosen = localStorage.getItem("lume.color-theme.chosen.v1") === "1";
+          const siteDefault = localStorage.getItem("lume.color-theme.site-default.v1");
+          if (isMode(saved) && chosen) {
+            document.documentElement.dataset.theme = saved;
+            return;
+          }
+          if (isMode(siteDefault)) {
+            document.documentElement.dataset.theme = siteDefault;
+            return;
+          }
+          if (isMode(saved)) {
             document.documentElement.dataset.theme = saved;
             return;
           }
 
           // Auto was removed from the public site. Preserve an existing Auto
           // visitor's current appearance once, then store an explicit choice.
-          const migrated = saved === "auto" && matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : saved === "auto"
-              ? "light"
-              : "dark";
-          localStorage.setItem("lume.color-theme.v1", migrated);
-          document.documentElement.dataset.theme = migrated;
+          if (saved === "auto") {
+            const migrated = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            localStorage.setItem("lume.color-theme.v1", migrated);
+            localStorage.setItem("lume.color-theme.chosen.v1", "1");
+            document.documentElement.dataset.theme = migrated;
+            return;
+          }
+          document.documentElement.dataset.theme = "dark";
         } catch {
           document.documentElement.dataset.theme = "dark";
         }
