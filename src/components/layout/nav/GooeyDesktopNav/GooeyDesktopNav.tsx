@@ -37,11 +37,16 @@ export function GooeyDesktopNav({
   const filterRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
-  // Collapse instead of overflowing the header track. The active item is
-  // always kept inline (see splitNavForOverflow) because the particle effect
-  // anchors to a rendered <li> — if the active tab collapsed into "More", the
-  // effect would have nothing to attach to and the indicator would vanish.
-  const { trackRef, probeRef, triggerRef, result } = useNavOverflow(items.length);
+  // Collapse instead of overflowing the header track. Responsive overflow
+  // keeps the active item inline for the particle effect; pages deliberately
+  // placed in More by tenant settings stay there and the More trigger marks
+  // their active state (see splitNavForOverflow).
+  const inlineItems = items.filter((item) => !item.headerOverflow);
+  const hasConfiguredOverflow = inlineItems.length !== items.length;
+  const { trackRef, probeRef, triggerRef, result } = useNavOverflow(
+    inlineItems.length,
+    hasConfiguredOverflow,
+  );
   const { visible: visibleItems, overflow: overflowItems } =
     splitNavForOverflow(items, result.visibleCount, currentScreen);
 
@@ -159,7 +164,7 @@ export function GooeyDesktopNav({
         aria-hidden="true"
         className="gooey-nav-probe"
       >
-        {items.map((item) => (
+        {inlineItems.map((item) => (
           <span key={item.screen}>{item.label}</span>
         ))}
       </div>
@@ -196,7 +201,7 @@ export function GooeyDesktopNav({
       <span className="effect text" ref={textRef} />
       </div>
 
-      {result.hasOverflow && (
+      {overflowItems.length > 0 && (
         <NavOverflowMenu
           items={overflowItems}
           currentScreen={currentScreen}

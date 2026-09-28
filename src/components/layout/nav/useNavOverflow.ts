@@ -12,7 +12,7 @@ const GAP_PX = 32; // matches gap-8 on the nav track
  * hidden by a previous pass have no width, so the nav could never re-expand
  * when the viewport grows.
  */
-export function useNavOverflow(itemCount: number): {
+export function useNavOverflow(itemCount: number, hasConfiguredOverflow = false): {
   trackRef: React.RefObject<HTMLDivElement>;
   probeRef: React.RefObject<HTMLDivElement>;
   triggerRef: React.RefObject<HTMLButtonElement>;
@@ -39,6 +39,7 @@ export function useNavOverflow(itemCount: number): {
       itemWidths,
       moreTriggerWidth: triggerRef.current?.getBoundingClientRect().width ?? 72,
       gap: GAP_PX,
+      forceOverflow: hasConfiguredOverflow,
     });
     // Only commit real changes; setState on every resize frame would thrash.
     setResult((previous) =>
@@ -46,7 +47,7 @@ export function useNavOverflow(itemCount: number): {
         ? previous
         : next,
     );
-  }, []);
+  }, [hasConfiguredOverflow]);
 
   useLayoutEffect(measure, [measure, itemCount]);
 

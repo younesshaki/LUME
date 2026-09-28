@@ -28,7 +28,12 @@ export function DesktopNav({
   onIntent,
   items = SITE_NAV_ITEMS,
 }: DesktopNavProps) {
-  const { trackRef, probeRef, triggerRef, result } = useNavOverflow(items.length);
+  const inlineItems = items.filter((item) => !item.headerOverflow);
+  const hasConfiguredOverflow = inlineItems.length !== items.length;
+  const { trackRef, probeRef, triggerRef, result } = useNavOverflow(
+    inlineItems.length,
+    hasConfiguredOverflow,
+  );
   const { visible, overflow } = splitNavForOverflow(items, result.visibleCount, currentScreen);
 
   return (
@@ -40,7 +45,7 @@ export function DesktopNav({
         className="pointer-events-none absolute left-0 top-0 flex items-center gap-8"
         style={{ visibility: "hidden" }}
       >
-        {items.map((item) => (
+        {inlineItems.map((item) => (
           <span
             key={item.screen}
             className="px-1 py-0.5 text-sm tracking-widest uppercase whitespace-nowrap"
@@ -60,7 +65,7 @@ export function DesktopNav({
             onIntent={() => onIntent?.(item.screen)}
           />
         ))}
-        {result.hasOverflow && (
+        {overflow.length > 0 && (
           <NavOverflowMenu
             items={overflow}
             currentScreen={currentScreen}
