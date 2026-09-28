@@ -5,7 +5,7 @@ import { preloadRouteModule } from "@/app-shell/routeModules";
 import { loadHeaderConfig, type PublicHeaderConfig } from "@/lib/publicNav";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
 import { allowsGooeyNav, useActiveSiteTemplate } from "@/lib/useActiveSiteTemplate";
-import { usePublicTenantName } from "@/lib/usePublicTenantName";
+import { houseOrTenantLabel, usePublicTenantName } from "@/lib/usePublicTenantName";
 import { play } from "@/lib/sound";
 import { DesktopNav } from "../nav/DesktopNav";
 import { GooeyDesktopNav } from "../nav/GooeyDesktopNav";
@@ -63,6 +63,8 @@ export function SiteHeader() {
   const useGooeyNav = allowsGooeyNav(GOOEY_NAV_BUILD_FLAG, siteTemplate);
   const logoImage = useSiteLogo();
   const tenantName = usePublicTenantName();
+  const brandName = houseOrTenantLabel("LUME", tenantName);
+  const homeLabel = brandName ? `Go to ${brandName} home` : "Go to home page";
 
   // Only a page that is actually in the nav is marked; an unmatched page (for
   // example a published page left out of the nav) marks nothing rather than
@@ -109,7 +111,7 @@ export function SiteHeader() {
     >
       {/* Logo */}
       <button
-        aria-label="Go to LUME home"
+        aria-label={homeLabel}
         data-header-slot="logo"
         onClick={() => onNavigate("home")}
         onMouseEnter={() => preloadRouteModule("home")}
