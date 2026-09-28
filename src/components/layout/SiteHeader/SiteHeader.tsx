@@ -4,6 +4,7 @@ import { useNavigation } from "@/app-shell/NavigationProvider";
 import { preloadRouteModule } from "@/app-shell/routeModules";
 import { loadHeaderConfig, type PublicHeaderConfig } from "@/lib/publicNav";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
+import { allowsGooeyNav, useActiveSiteTemplate } from "@/lib/useActiveSiteTemplate";
 import { usePublicTenantName } from "@/lib/usePublicTenantName";
 import { play } from "@/lib/sound";
 import { DesktopNav } from "../nav/DesktopNav";
@@ -20,7 +21,7 @@ import { getHeaderNavigationSound } from "./SiteHeader.sounds";
 import "./SiteHeader.css";
 import { headerLayout } from "./headerLayout";
 
-const useGooeyNav = import.meta.env.VITE_ENABLE_GOOEY_NAV === 'true';
+const GOOEY_NAV_BUILD_FLAG = import.meta.env.VITE_ENABLE_GOOEY_NAV === 'true';
 
 
 function useHeaderConfig(): PublicHeaderConfig {
@@ -54,6 +55,8 @@ export function SiteHeader() {
   const items = useSiteNavItems();
   const headerConfig = useHeaderConfig();
   const tenantTheme = useTenantTheme();
+  const siteTemplate = useActiveSiteTemplate();
+  const useGooeyNav = allowsGooeyNav(GOOEY_NAV_BUILD_FLAG, siteTemplate);
   const logoImage = useSiteLogo();
   const tenantName = usePublicTenantName();
 

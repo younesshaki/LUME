@@ -1,29 +1,25 @@
 import {
   useEffect,
   useId,
-  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
 } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useReducedMotion } from "motion/react";
-import { encodeVehicleUrlState } from "@/experience/vehicles/urlState";
 import {
   DEFAULT_FILTERS,
   formatVehiclePrice,
   loadVehicleById,
-  loadVehicleFacets,
   loadVehicleResults,
   vehicleDisplayImage,
   type Vehicle,
-  type VehicleFacets,
-  type VehicleFilters,
   type VehicleSort,
 } from "@/experience/vehicles/catalog";
 import type { BlockComponentProps } from "../registry";
 import { DealershipActionLink, DealershipSection } from "./DealershipSection";
 import { MakeLogo } from "@/components/vehicles/MakeLogo";
+import { VehicleQuickSearch } from "./VehicleQuickSearch";
 import {
   labelBodyItemsProp,
   numberProp,
@@ -35,13 +31,6 @@ type CollectionState =
   | { status: "loading"; vehicles: Vehicle[] }
   | { status: "ready"; vehicles: Vehicle[] }
   | { status: "error"; vehicles: Vehicle[] };
-
-const EMPTY_FACETS: VehicleFacets = {
-  makes: [],
-  models: [],
-  states: [],
-  cities: [],
-};
 
 function useVehicleCollection(
   block: BlockComponentProps["block"],
@@ -234,97 +223,17 @@ export function NewArrivals({ block }: BlockComponentProps) {
 }
 
 export function VehicleSearchBand({ block }: BlockComponentProps) {
-  const defaultBudget = Math.max(0, numberProp(block, "defaultBudget"));
-  const [make, setMake] = useState("");
-  const [model, setModel] = useState("");
-  const [budget, setBudget] = useState(defaultBudget);
-  const [facets, setFacets] = useState<VehicleFacets>(EMPTY_FACETS);
-
-  useEffect(() => setBudget(defaultBudget), [defaultBudget]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setFacets(EMPTY_FACETS);
-    void loadVehicleFacets(make, "")
-      .then((next) => {
-        if (!cancelled) setFacets(next);
-      })
-      .catch(() => {
-        if (!cancelled) setFacets(EMPTY_FACETS);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [make]);
-
-  const inventoryHref = useMemo(() => {
-    const filters: VehicleFilters = {
-      ...DEFAULT_FILTERS,
-      make,
-      model,
-      priceMax: budget,
-    };
-    return `/vehicles${encodeVehicleUrlState(filters, "recommended", 1)}`;
-  }, [budget, make, model]);
-
   return (
     <DealershipSection
       block={block}
       className="dealershipBlock--search"
       headerAside={<Search aria-hidden="true" />}
     >
-      <div className="vehicleSearchBand" role="search">
-        <label>
-          <span>Make</span>
-          <select
-            name="vehicleMake"
-            value={make}
-            onChange={(event) => {
-              setMake(event.target.value);
-              setModel("");
-            }}
-          >
-            <option value="">All makes</option>
-            {facets.makes.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Model</span>
-          <select
-            name="vehicleModel"
-            value={model}
-            disabled={!make}
-            onChange={(event) => setModel(event.target.value)}
-          >
-            <option value="">All models</option>
-            {facets.models.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Maximum budget</span>
-          <input
-            name="vehicleBudget"
-            type="number"
-            min={0}
-            step={1000}
-            inputMode="numeric"
-            value={budget || ""}
-            placeholder="Any budget"
-            onChange={(event) => {
-              const nextBudget = Number(event.target.value);
-              setBudget(Number.isFinite(nextBudget) ? Math.max(0, nextBudget) : 0);
-            }}
-          />
-        </label>
-        <a className="vehicleSearchBand__submit" href={inventoryHref}>
-          {stringProp(block, "buttonLabel")}
-          <ArrowRight aria-hidden="true" />
-        </a>
-      </div>
+      <VehicleQuickSearch
+        className="vehicleSearchBand"
+        buttonLabel={stringProp(block, "buttonLabel")}
+        defaultBudget={Math.max(0, numberProp(block, "defaultBudget"))}
+      />
     </DealershipSection>
   );
 }

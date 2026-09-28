@@ -101,7 +101,37 @@ const TRADE_IN_FORM_VARIANTS: readonly BlockVariant[] = [
   },
 ];
 
+/**
+ * Hero designs. `classic` is first and is the pre-variants look (page-specific
+ * skins, centred copy), so every stored hero renders exactly as before. The
+ * others are the automotive layouts introduced with Template Glo3D, but any
+ * template may use them.
+ */
+export const HERO_VARIANTS: readonly BlockVariant[] = [
+  {
+    id: "classic",
+    label: "Classic",
+    description: "Headline, supporting copy and calls to action. The original hero.",
+  },
+  {
+    id: "split",
+    label: "Split with photo",
+    description: "Copy and calls to action beside a large vehicle or showroom photo.",
+  },
+  {
+    id: "search",
+    label: "Inventory search",
+    description: "Headline over a photo with make, model, price and condition search.",
+  },
+  {
+    id: "fullBleed",
+    label: "Full-bleed photo",
+    description: "Edge-to-edge photo with a restrained overlay and left-aligned copy.",
+  },
+];
+
 export const heroSchema = z.object({
+  variant: variantSchema(["classic", "split", "search", "fullBleed"] as const),
   eyebrow: nullableString,
   title: z.string().min(1, "Title is required"),
   subtitle: nullableString,
@@ -110,7 +140,17 @@ export const heroSchema = z.object({
   secondaryCtaLabel: nullableString,
   secondaryCtaHref: nullableString,
   backgroundImageKey: nullableString,
-  mediaUrl: nullableString,
+  // Photo for the split / search / full-bleed designs (the classic hero has
+  // none). Same rule as every other block image.
+  mediaUrl: z
+    .string()
+    .max(2_048)
+    .refine(isSafeMediaValue, "Use a local path or an http(s) image URL")
+    .optional()
+    .default(""),
+  mediaAlt: z.string().max(180).optional().default(""),
+  mediaPosition: z.enum(["right", "left"]).optional().default("right"),
+  overlayStrength: z.number().int().min(0).max(80).optional().default(45),
   alignment: z.enum(["left", "center"]).optional().default("center"),
 });
 
@@ -291,7 +331,9 @@ export const BLOCK_DESCRIPTORS = {
     category: "content",
     modes: ["experience", "standard"],
     palette: true,
+    variants: HERO_VARIANTS,
     defaultProps: {
+      variant: "classic",
       eyebrow: "",
       title: "Luxury versions of everyday energy.",
       subtitle:
@@ -302,6 +344,9 @@ export const BLOCK_DESCRIPTORS = {
       secondaryCtaHref: "",
       backgroundImageKey: "",
       mediaUrl: "",
+      mediaAlt: "",
+      mediaPosition: "right",
+      overlayStrength: 45,
       alignment: "center",
     },
     schema: heroSchema,
@@ -313,9 +358,36 @@ export const BLOCK_DESCRIPTORS = {
       { name: "primaryCtaHref", label: "Primary CTA href", type: "url" },
       { name: "secondaryCtaLabel", label: "Secondary CTA label", type: "text" },
       { name: "secondaryCtaHref", label: "Secondary CTA href", type: "url" },
-      // `backgroundImageKey` and `mediaUrl` stay in the schema (stored pages
-      // keep validating) but are not offered in the editor: no renderer ever
-      // read them, so editing them changed nothing on the site (2026-09-28).
+      // `backgroundImageKey` stays in the schema (stored pages keep
+      // validating) but is not offered: no renderer reads it.
+      {
+        name: "mediaUrl",
+        label: "Photo",
+        type: "url",
+        helpText: "Shown by the Split, Inventory search and Full-bleed designs.",
+      },
+      {
+        name: "mediaAlt",
+        label: "Photo description",
+        type: "text",
+        helpText: "Describes the photo for screen readers, e.g. “Silver SUV in the showroom”.",
+      },
+      {
+        name: "mediaPosition",
+        label: "Photo side",
+        type: "select",
+        options: [
+          { label: "Right", value: "right" },
+          { label: "Left", value: "left" },
+        ],
+        helpText: "Split design only.",
+      },
+      {
+        name: "overlayStrength",
+        label: "Photo darkening (%)",
+        type: "number",
+        helpText: "Keeps text readable on the Inventory search and Full-bleed designs.",
+      },
       {
         name: "alignment",
         label: "Alignment",
