@@ -66,6 +66,10 @@ async function required<T>(label: string, value: PromiseLike<{ data: T | null; e
   if (error || data === null) fail(`${label}: ${error?.message ?? "no data returned"}`);
   return data;
 }
+async function requiredWrite(label: string, value: PromiseLike<{ error: any }>): Promise<void> {
+  const { error } = await value;
+  if (error) fail(`${label}: ${error.message}`);
+}
 function extension(contentType: string, key: string) {
   if (contentType === "image/png") return "png";
   if (contentType === "image/webp") return "webp";
@@ -100,7 +104,7 @@ async function ensureUser(service: any, demo: DemoTenant, password: string) {
     if (error || !data.user) fail(`Create ${demo.email}: ${error?.message ?? "no user"}`);
     found = data.user;
   }
-  await required(`Upsert ${demo.username} profile`, service.from("profiles").upsert({ id: found.id, username: demo.username }, { onConflict: "id" }));
+  await requiredWrite(`Upsert ${demo.username} profile`, service.from("profiles").upsert({ id: found.id, username: demo.username }, { onConflict: "id" }));
   return found.id as string;
 }
 
@@ -120,10 +124,10 @@ async function copyPages(service: any, source: any, target: any, targetName: str
       if (!sourceRevisionId) { pointers[key] = null; continue; }
       const revision = revisionById.get(sourceRevisionId); if (!revision) fail(`Missing ${key} for ${page.slug}.`);
       const id = uuid(`demo-page-revision:${target.id}:${revision.id}`);
-      await required(`Copy ${key} for ${page.slug}`, service.from("page_revisions").upsert({ id, page_id: targetPage.id, tenant_id: target.id, kind: revision.kind, blocks: cloneReplace(revision.blocks, source.name, targetName), created_by: null }, { onConflict: "id" }));
+      await requiredWrite(`Copy ${key} for ${page.slug}`, service.from("page_revisions").upsert({ id, page_id: targetPage.id, tenant_id: target.id, kind: revision.kind, blocks: cloneReplace(revision.blocks, source.name, targetName), created_by: null }, { onConflict: "id" }));
       pointers[key] = id;
     }
-    await required(`Point ${page.slug} revisions`, service.from("pages").update(pointers).eq("id", targetPage.id));
+    await requiredWrite(`Point ${page.slug} revisions`, service.from("pages").update(pointers).eq("id", targetPage.id));
   }
 }
 
@@ -135,7 +139,7 @@ async function copyVehicles(service: any, source: any, target: any, targetSlug: 
   for (const vehicle of vehicles) {
     const id = uuid(`demo-vehicle:${target.id}:${vehicle.id}`); idMap.set(vehicle.id, id);
     const { id: _id, tenant_id: _tenant, search_vector: _search, created_at: _created, updated_at: _updated, ...copy } = vehicle;
-    await required("Copy demo vehicle", service.from("vehicles").upsert({ ...copy, id, tenant_id: target.id }, { onConflict: "id" }));
+    await requiredWrite("Copy demo vehicle", service.from("vehicles").upsert({ ...copy, id, tenant_id: target.id }, { onConflict: "id" }));
   }
   for (const image of images) {
     const vehicleId = idMap.get(image.vehicle_id); if (!vehicleId) fail("Managed image points to a missing demo vehicle.");
@@ -145,7 +149,7 @@ async function copyVehicles(service: any, source: any, target: any, targetSlug: 
     if (!existing) {
       await copyR2Object(config, image.r2_key, targetKey, image.content_type, image.byte_size);
       const { id: _id, tenant_id: _tenant, vehicle_id: _vehicle, r2_key: _key, sort_order: _sort, is_primary: _primary, created_at: _created, updated_at: _updated, ...copy } = image;
-      await required("Copy managed image metadata", service.from("vehicle_images").insert({ ...copy, id: targetId, tenant_id: target.id, vehicle_id: vehicleId, r2_key: targetKey }));
+      await requiredWrite("Copy managed image metadata", service.from("vehicle_images").insert({ ...copy, id: targetId, tenant_id: target.id, vehicle_id: vehicleId, r2_key: targetKey }));
     }
   }
   return { vehicles: vehicles.length, images: images.length };
@@ -153,11 +157,11 @@ async function copyVehicles(service: any, source: any, target: any, targetSlug: 
 
 async function applyLogoAndTheme(service: any, source: any, target: any, demo: DemoTenant, logoBytes: Uint8Array, logoVersion: number) {
   const key = brandingAssetObjectKey(target.id, "logo");
-  await required(`Upload ${demo.slug} logo`, service.storage.from(TENANT_BUCKETS.logos).upload(key, logoBytes, { upsert: true, contentType: "image/png", cacheControl: "3600" }));
+  await requiredWrite(`Upload ${demo.slug} logo`, service.storage.from(TENANT_BUCKETS.logos).upload(key, logoBytes, { upsert: true, contentType: "image/png", cacheControl: "3600" }));
   const logoUrl = `${publicUrl(service, TENANT_BUCKETS.logos, key)}?v=${logoVersion}`;
   const copiedTheme = cloneReplace(source.theme ?? {}, source.name, demo.name) as Record<string, any>;
   const branding = { ...(copiedTheme.branding ?? {}), logoUrl };
-  await required(`Apply ${demo.slug} theme`, service.from("tenants").update({ name: demo.name, theme: { ...copiedTheme, branding } }).eq("id", target.id));
+  await requiredWrite(`Apply ${demo.slug} theme`, service.from("tenants").update({ name: demo.name, theme: { ...copiedTheme, branding } }).eq("id", target.id));
 }
 
 async function verifyIsolation(url: string, anonKey: string, password: string, own: any, other: any, email: string) {
@@ -171,10 +175,14 @@ async function verifyIsolation(url: string, anonKey: string, password: string, o
   const foreignVehicles = await required<any[]>("RLS foreign inventory read", client.from("vehicles").select("id").eq("tenant_id", other.id));
   const foreignPages = await required<any[]>("RLS foreign page read", client.from("pages").select("id").eq("tenant_id", other.id));
   const foreignLeads = await required<any[]>("RLS foreign lead read", client.from("leads").select("id").eq("tenant_id", other.id));
-  if (foreignVehicles.length || foreignPages.length || foreignLeads.length) fail("Tenant RLS table isolation failed.");
+  const ownSettings = await required<any[]>("RLS own settings read", client.from("tenant_settings").select("tenant_id").eq("tenant_id", own.id));
+  const foreignSettings = await required<any[]>("RLS foreign settings read", client.from("tenant_settings").select("tenant_id").eq("tenant_id", other.id));
+  if (foreignVehicles.length || foreignPages.length || foreignLeads.length || ownSettings.length !== 1 || foreignSettings.length) fail("Tenant RLS table isolation failed.");
+  const crossTenantWrite = await client.from("tenant_settings").update({ lead_assignment_mode: "manual" }).eq("tenant_id", other.id).select("tenant_id");
+  if (crossTenantWrite.data?.length) fail("Tenant RLS write isolation failed.");
   const anonymous = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const anonVehicles = await required<any[]>("Anonymous tenant inventory read", anonymous.from("vehicles").select("tenant_id").eq("tenant_id", own.id).limit(1));
-  if (anonVehicles.some((row) => row.tenant_id !== own.id)) fail("Anonymous inventory scope failed.");
+  if (anonVehicles.length !== 1 || anonVehicles.some((row) => row.tenant_id !== own.id)) fail("Anonymous inventory scope failed.");
 }
 
 async function main() {
