@@ -4,6 +4,7 @@ export * from "./dealerPageTemplates";
 export * from "./glo3dStarterPages";
 export * from "./previewProtocol";
 export * from "./validation";
+export * from "./appearance";
 export * from "./editorOrdering";
 export {
   DEFAULT_CONCIERGE_TARGETS,
