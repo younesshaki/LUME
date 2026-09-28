@@ -19,7 +19,6 @@ export const WEBSITE_TOUR_TARGETS = {
   pages: '[data-tour="website-pages"]',
   visualManagement: '[data-tour="website-design"]',
   navigation: '[data-tour="website-navigation"]',
-  launchReadiness: '[data-tour="website-launch-readiness"]',
   publishedPreview: '[data-tour="website-published-preview"]',
 } as const;
 
@@ -92,16 +91,6 @@ export const WEBSITE_HUB_TOUR_STEPS: readonly WebsiteHubTourStep[] = [
     pointerRadius: 12,
   },
   {
-    id: "launch-readiness",
-    selector: WEBSITE_TOUR_TARGETS.launchReadiness,
-    side: "top",
-    title: "Check launch readiness",
-    content: "Review what remains before your site can go live. This section never publishes changes for you.",
-    disableInteraction: true,
-    pointerPadding: 8,
-    pointerRadius: 12,
-  },
-  {
     id: "published-preview",
     selector: WEBSITE_TOUR_TARGETS.publishedPreview,
     side: "top",
@@ -132,6 +121,36 @@ export type WebsiteTourPreference = {
 };
 
 export type WebsiteTourStart = "automatic" | "manual" | "none";
+
+/**
+ * Room a step needs besides its target: the tour card, its gap and the
+ * scroll offset. A target taller than the viewport minus this would push the
+ * card off-screen (the card sits above or below the target), so such steps
+ * point at a compact anchor inside the target instead.
+ */
+export const WEBSITE_TOUR_CARD_CLEARANCE = 320;
+
+type TourDocument = Pick<Document, "querySelector">;
+
+/**
+ * The selector a step should use right now so its card stays on screen.
+ * Tall targets resolve to an explicit `[data-tour-anchor]` inside them, else
+ * their first heading; the anchor is tagged so the tour can select it.
+ */
+export function compactTourSelector(
+  selector: string,
+  stepId: string,
+  viewportHeight: number,
+  doc: TourDocument = document,
+): string {
+  const target = doc.querySelector(selector);
+  if (!target) return selector;
+  if (target.getBoundingClientRect().height + WEBSITE_TOUR_CARD_CLEARANCE <= viewportHeight) return selector;
+  const anchor = target.querySelector("[data-tour-anchor]") ?? target.querySelector("h1, h2, h3, header");
+  if (!anchor) return selector;
+  anchor.setAttribute("data-tour-anchor-for", stepId);
+  return `[data-tour-anchor-for="${stepId}"]`;
+}
 
 /** Window event the Tutorial buttons fire to (re)start the tour in place. */
 export const WEBSITE_TOUR_START_EVENT = "lume:start-website-tour";
