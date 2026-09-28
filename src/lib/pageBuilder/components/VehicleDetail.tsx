@@ -27,7 +27,8 @@ export function VehicleDetail({ block }: BlockComponentProps) {
     <VehicleDetailContent
       vehicleId={vehicleId}
       onBackToVehicles={() => navigate("/vehicles")}
-      eyebrow={stringProp(block, "eyebrow", "Marketplace Concept")}
+      // Unset → the house/tenant default inside VehicleDetailContent.
+      eyebrow={stringProp(block, "eyebrow") || undefined}
       overviewTitle={stringProp(block, "overviewTitle")}
       overviewText={stringProp(block, "overviewText")}
       showGallery={booleanProp(block, "showGallery", true)}
