@@ -146,6 +146,7 @@ export function getTenantSiteDesignStyles(
 
 export function applyTenantFavicons(theme: TenantTheme, target: Document = document): void {
   target.querySelectorAll("link[data-lume-tenant-favicon]").forEach((link) => link.remove());
+  let applied = false;
   for (const [size, href] of [
     ["32x32", theme.branding?.favicon32Url],
     ["192x192", theme.branding?.favicon192Url],
@@ -158,7 +159,13 @@ export function applyTenantFavicons(theme: TenantTheme, target: Document = docum
     link.href = safeHref;
     link.dataset.lumeTenantFavicon = "true";
     target.head.append(link);
+    applied = true;
   }
+  // index.html's LUME icon has no size, so browsers may still pick it over the
+  // tenant's; switch it off while the tenant has its own and back on otherwise.
+  target.querySelectorAll<HTMLLinkElement>("link[data-lume-default-favicon]").forEach((link) => {
+    link.rel = applied ? "lume-default-icon" : "icon";
+  });
 }
 
 export function clearTenantThemeCacheForTests(): void {
