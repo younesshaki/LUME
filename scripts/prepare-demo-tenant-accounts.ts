@@ -35,6 +35,19 @@ function envFile(path: string) {
     if (match && process.env[match[1]] === undefined) process.env[match[1]] = match[2].replace(/^["']|["']$/g, "");
   }
 }
+function resolveProjectKeys() {
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY && (process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) return;
+  const result = spawnSync("npx", ["--yes", "supabase@2.109.1", "projects", "api-keys", "--project-ref", "atsgdjwjtmqvtotbrowu", "--reveal", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  if (result.status !== 0) fail("Unable to resolve project API keys. Authenticate the Supabase CLI or set runtime credentials.");
+  let parsed: any;
+  try { parsed = JSON.parse(result.stdout); } catch { fail("Supabase CLI returned invalid API key data."); }
+  const keys = Array.isArray(parsed) ? parsed : parsed?.api_keys ?? parsed?.keys ?? [];
+  const value = (names: string[]) => keys.find((entry: any) => names.includes(String(entry?.name ?? entry?.type ?? entry?.role)))?.api_key
+    ?? keys.find((entry: any) => names.includes(String(entry?.name ?? entry?.type ?? entry?.role)))?.key;
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??= value(["service_role"]);
+  process.env.SUPABASE_ANON_KEY ??= value(["anon", "publishable"]);
+  process.env.SUPABASE_URL ??= "https://atsgdjwjtmqvtotbrowu.supabase.co";
+}
 function uuid(seed: string) {
   const bytes = Buffer.from(createHash("sha256").update(seed).digest().subarray(0, 16));
   bytes[6] = (bytes[6] & 0x0f) | 0x50;
@@ -167,6 +180,7 @@ async function verifyIsolation(url: string, anonKey: string, password: string, o
 async function main() {
   const repoRoot = resolve(import.meta.dirname, "..");
   envFile(resolve(repoRoot, "apps/admin/.env.local")); envFile(resolve(repoRoot, ".env.local"));
+  resolveProjectKeys();
   const password = process.env.DEMO_TENANT_PASSWORD; if (!password) fail("DEMO_TENANT_PASSWORD is required at runtime.");
   const url = process.env.SUPABASE_URL; const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; const anonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !serviceKey || !anonKey) fail("Supabase service and browser credentials are required in the local environment.");
