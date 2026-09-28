@@ -98,6 +98,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { AdminConciergePanel } from "@/components/admin-concierge-panel";
+import { TutorialButton } from "@/components/onboarding/TutorialButton";
 import { NavLoaderProvider, useNavLoader } from "@/components/navigation-loader";
 import {
   markAdminNotificationRead,
@@ -561,6 +562,7 @@ function ShellHeader({
         </BreadcrumbList>
       </Breadcrumb>
       <div className="ml-auto flex items-center gap-2">
+        {activeTenant ? <TutorialButton tenantSlug={activeTenant.slug} /> : null}
         {activeTenant ? <AdminConciergePanel tenantSlug={activeTenant.slug} /> : null}
         <NotificationMenu
           tenant={activeTenant}
