@@ -13,6 +13,7 @@ import { recordWebsiteTourOutcome } from "../../app/admin/[tenant]/website/actio
 import {
   WEBSITE_HUB_TOUR_STEPS,
   compactTourSelector,
+  visibleTourSelector,
   WEBSITE_HUB_TOUR_OVERLAY_OPTIONS,
   WEBSITE_TOUR_NAME,
   WEBSITE_TOUR_START_EVENT,
@@ -30,16 +31,20 @@ type WebsiteHubTourProps = {
  * is too tall for the screen for a compact anchor inside it, so the card is
  * never scrolled out of view (see compactTourSelector).
  */
+type StepDefinition = (typeof WEBSITE_HUB_TOUR_STEPS)[number];
+
 function buildTours(
-  selectorFor: (step: (typeof WEBSITE_HUB_TOUR_STEPS)[number]) => string = (step) => step.selector,
+  placementFor: (step: StepDefinition) => { selector: string; side: StepDefinition["side"] } = (step) => step,
 ): Tour[] {
   return [{
     tour: WEBSITE_TOUR_NAME,
     steps: WEBSITE_HUB_TOUR_STEPS.map((definition) => {
-      const { id: _id, ...step } = definition;
+      const { id: _id, fallbackSelectors: _fallbacks, ...step } = definition;
+      const placement = placementFor(definition);
       return {
         ...step,
-        selector: selectorFor(definition),
+        selector: placement.selector,
+        side: placement.side,
         cardOffset: 16,
         scrollOffset: 88,
         selectorRetryAttempts: 4,
@@ -50,7 +55,13 @@ function buildTours(
 }
 
 function fitToViewport(): Tour[] {
-  return buildTours((step) => compactTourSelector(step.selector, step.id, window.innerHeight));
+  return buildTours((step) => {
+    const visible = visibleTourSelector(step);
+    return {
+      selector: compactTourSelector(visible, step.id, window.innerHeight),
+      side: visible === step.selector ? step.side : "bottom",
+    };
+  });
 }
 
 /**

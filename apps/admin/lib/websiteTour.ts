@@ -19,7 +19,16 @@ export const WEBSITE_TOUR_TARGETS = {
   pages: '[data-tour="website-pages"]',
   visualManagement: '[data-tour="website-design"]',
   navigation: '[data-tour="website-navigation"]',
-  publishedPreview: '[data-tour="website-published-preview"]',
+} as const;
+
+/**
+ * Targets that may be hidden, so the tour never waits for them: the sidebar's
+ * View website link is off-canvas on small screens. Steps using them list a
+ * full-width Hub fallback (a card centred on a small control near the screen
+ * edge would spill off a phone screen).
+ */
+export const WEBSITE_TOUR_OPTIONAL_TARGETS = {
+  viewWebsite: '[data-tour="website-view-site"]',
 } as const;
 
 /**
@@ -31,6 +40,12 @@ export const WEBSITE_TOUR_TARGETS = {
 export type WebsiteHubTourStep = {
   id: string;
   selector: string;
+  /**
+   * Used in order when `selector` is missing or not visible on this screen;
+   * the card then sits below the fallback (it is laid out for the Hub, not
+   * beside the sidebar).
+   */
+  fallbackSelectors?: readonly string[];
   side: "top" | "bottom" | "left" | "right";
   title: string;
   content: string;
@@ -91,14 +106,16 @@ export const WEBSITE_HUB_TOUR_STEPS: readonly WebsiteHubTourStep[] = [
     pointerRadius: 12,
   },
   {
-    id: "published-preview",
-    selector: WEBSITE_TOUR_TARGETS.publishedPreview,
-    side: "top",
-    title: "View the published site",
-    content: "Draft template and design changes appear here only after publishing. You can replay this tour anytime from Website.",
+    id: "view-website",
+    selector: WEBSITE_TOUR_OPTIONAL_TARGETS.viewWebsite,
+    // On a phone the sidebar is hidden: the Hub header holds Open live site.
+    fallbackSelectors: [WEBSITE_TOUR_TARGETS.overview],
+    side: "right",
+    title: "View your website",
+    content: "Open your live website in a new tab to see exactly what visitors see. Replay this tour anytime with the Tutorial button at the top.",
     disableInteraction: true,
-    pointerPadding: 8,
-    pointerRadius: 12,
+    pointerPadding: 6,
+    pointerRadius: 10,
   },
 ];
 
@@ -131,6 +148,21 @@ export type WebsiteTourStart = "automatic" | "manual" | "none";
 export const WEBSITE_TOUR_CARD_CLEARANCE = 320;
 
 type TourDocument = Pick<Document, "querySelector">;
+
+/**
+ * The first of a step's selectors whose element is on the page and visible
+ * (has a size). Falls back to the step's own selector.
+ */
+export function visibleTourSelector(
+  step: Pick<WebsiteHubTourStep, "selector" | "fallbackSelectors">,
+  doc: TourDocument = document,
+): string {
+  for (const selector of [step.selector, ...(step.fallbackSelectors ?? [])]) {
+    const rect = doc.querySelector(selector)?.getBoundingClientRect();
+    if (rect && rect.width > 0 && rect.height > 0) return selector;
+  }
+  return step.selector;
+}
 
 /**
  * The selector a step should use right now so its card stays on screen.

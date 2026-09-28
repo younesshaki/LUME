@@ -8,6 +8,16 @@ no production data has been changed or deployed. The visual layer uses
 `nextstepjs` 2.3.0, is lazy-loaded only by the admin Website Hub, and has unit
 and real-overlay integration coverage.
 
+### Update (2026-09-28): last step points at the sidebar's View website
+
+The final step now highlights the admin sidebar's **View website** link
+(`data-tour="website-view-site"`, card to its right). The sidebar is
+off-canvas on phones, so steps may list `fallbackSelectors`: the tour picks the
+first visible target at start (`visibleTourSelector`) and puts the card below
+a fallback. This step falls back to the full-width Hub header, which holds the
+Open live site button. The tour never waits for optional targets
+(`WEBSITE_TOUR_OPTIONAL_TARGETS`) before starting.
+
 ### Update (2026-09-28): cards always stay on screen
 
 The Launch readiness step was removed: its section is taller than a laptop

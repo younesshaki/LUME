@@ -357,7 +357,7 @@ export function AdminShell({
                   })}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="View website">
-                      <a href={activeTenant.siteUrl} target="_blank" rel="noopener noreferrer">
+                      <a href={activeTenant.siteUrl} target="_blank" rel="noopener noreferrer" data-tour="website-view-site">
                         <ExternalLink />
                         <span>View website</span>
                       </a>

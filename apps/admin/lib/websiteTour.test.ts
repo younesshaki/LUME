@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   WEBSITE_TOUR_CARD_CLEARANCE,
   compactTourSelector,
+  visibleTourSelector,
   WEBSITE_HUB_TOUR_STEPS,
   WEBSITE_HUB_TOUR_OVERLAY_OPTIONS,
   WEBSITE_TOUR_VERSION,
@@ -21,7 +22,7 @@ describe("Website Hub tour eligibility and state", () => {
       "pages",
       "visual-management",
       "navigation",
-      "published-preview",
+      "view-website",
     ]);
     expect(WEBSITE_HUB_TOUR_STEPS.every((step) => step.disableInteraction)).toBe(true);
     expect(WEBSITE_HUB_TOUR_STEPS.map((step) => step.selector)).not.toContain(
@@ -134,5 +135,35 @@ describe("compactTourSelector (tour cards never scroll off-screen)", () => {
     expect(compactTourSelector('[data-tour="missing"]', "x", 900)).toBe('[data-tour="missing"]');
     mount(1200, "<p>No heading</p>");
     expect(compactTourSelector('[data-tour="tall"]', "x", 900)).toBe('[data-tour="tall"]');
+  });
+});
+
+describe("visibleTourSelector (the last step points at the sidebar's View website)", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  const step = WEBSITE_HUB_TOUR_STEPS[WEBSITE_HUB_TOUR_STEPS.length - 1];
+  function sized(selector: string, width: number) {
+    const element = document.querySelector<HTMLElement>(selector)!;
+    element.getBoundingClientRect = () => ({ width, height: width ? 32 : 0 } as DOMRect);
+  }
+
+  it("targets the sidebar link when it is on screen", () => {
+    expect(step.id).toBe("view-website");
+    document.body.innerHTML = '<a data-tour="website-view-site">View website</a><header data-tour="website-overview"></header>';
+    sized('[data-tour="website-view-site"]', 180);
+    expect(visibleTourSelector(step)).toBe('[data-tour="website-view-site"]');
+  });
+
+  it("falls back to the full-width Hub header when the sidebar is hidden", () => {
+    document.body.innerHTML = '<a data-tour="website-view-site">View website</a><header data-tour="website-overview"></header>';
+    sized('[data-tour="website-view-site"]', 0);
+    sized('[data-tour="website-overview"]', 360);
+    expect(visibleTourSelector(step)).toBe('[data-tour="website-overview"]');
+
+    document.body.innerHTML = '<header data-tour="website-overview"></header>';
+    sized('[data-tour="website-overview"]', 360);
+    expect(visibleTourSelector(step)).toBe('[data-tour="website-overview"]');
   });
 });
