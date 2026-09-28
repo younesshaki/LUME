@@ -136,8 +136,17 @@ async function copyPages(service: any, source: any, target: any, targetName: str
   }
 }
 
+async function readAllTenantRows(service: any, label: string, table: string, tenantId: string) {
+  const rows: any[] = [];
+  for (let start = 0; ; start += 1000) {
+    const page = await required<any[]>(label, service.from(table).select("*").eq("tenant_id", tenantId).range(start, start + 999));
+    rows.push(...page);
+    if (page.length < 1000) return rows;
+  }
+}
+
 async function copyVehicles(service: any, source: any, target: any, targetSlug: string) {
-  const vehicles = await required<any[]>("Read demo vehicles", service.from("vehicles").select("*").eq("tenant_id", source.id));
+  const vehicles = await readAllTenantRows(service, "Read demo vehicles", "vehicles", source.id);
   const images = await required<any[]>("Read demo managed images", service.from("vehicle_images").select("*").eq("tenant_id", source.id).order("vehicle_id").order("is_primary", { ascending: false }).order("sort_order"));
   const config = readR2StorageConfig(); if (!config) fail("R2 storage configuration is unavailable.");
   const idMap = new Map<string, string>();
