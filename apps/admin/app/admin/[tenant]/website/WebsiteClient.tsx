@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
+import { Switch } from "../../../../components/ui/switch";
 import { setSiteNavLoaderEnabled } from "./actions";
 import LaunchReadinessSection from "./LaunchReadinessSection";
 import type { LaunchReadinessReport } from "@/lib/launchReadiness";
@@ -21,6 +22,13 @@ import {
   Tablet,
 } from "lucide-react";
 import type { Page } from "@lume/types";
+import type { WebsiteTourStart } from "../../../../lib/websiteTour";
+import { TutorialButton } from "../../../../components/onboarding/TutorialButton";
+
+const WebsiteHubTour = dynamic(
+  () => import("../../../../components/onboarding/WebsiteHubTour").then((module) => module.WebsiteHubTour),
+  { ssr: false },
+);
 
 type WebsiteClientProps = {
   tenantSlug: string;
@@ -31,6 +39,7 @@ type WebsiteClientProps = {
   pilotReport: LaunchReadinessReport | null;
   publicReport: LaunchReadinessReport | null;
   launchLoadError: boolean;
+  websiteTourStart: WebsiteTourStart;
 };
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -61,6 +70,7 @@ export default function WebsiteClient({
   pilotReport,
   publicReport,
   launchLoadError,
+  websiteTourStart,
 }: WebsiteClientProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [reloadKey, setReloadKey] = useState(0);
@@ -94,36 +104,42 @@ export default function WebsiteClient({
       icon: FileText,
       title: "Pages & content",
       description: "Add, edit, and publish pages. Arrange the blocks that make up each page.",
+      tourTarget: "website-pages",
     },
     {
       href: `/admin/${tenantSlug}/templates`,
       icon: LayoutTemplate,
       title: "Templates",
       description: "Preview and prepare a versioned visual starting point without changing the live site.",
+      tourTarget: "website-templates",
     },
     {
       href: `/admin/${tenantSlug}/design`,
       icon: Palette,
       title: "Website design",
       description: "Edit shared settings and separate Website dark and light modes, then publish explicitly.",
+      tourTarget: "website-design",
     },
     {
       href: `/admin/${tenantSlug}/navigation`,
       icon: PanelTop,
       title: "Header & navigation",
       description: "Choose which pages appear in the header and how the top bar behaves.",
+      tourTarget: "website-navigation",
     },
     {
       href: `/admin/${tenantSlug}/branding`,
       icon: ImageIcon,
       title: "Logo & favicons",
       description: "Manage dealership identity assets separately from the website visual design.",
+      tourTarget: "website-branding",
     },
     {
       href: `/admin/${tenantSlug}/assets`,
       icon: ImageIcon,
       title: "Media assets",
       description: "Upload and manage the images used across pages and blocks.",
+      tourTarget: "website-media-assets",
     },
   ];
 
@@ -131,25 +147,34 @@ export default function WebsiteClient({
   const width = DEVICE_WIDTH[device];
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <>
+      <WebsiteHubTour tenantSlug={tenantSlug} startMode={websiteTourStart} />
+      <div className="space-y-6">
+      <header data-tour="website-overview" className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Website</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Shape {tenantName}&rsquo;s public site and preview exactly how it looks before it goes live.
           </p>
         </div>
-        {validUrl && (
-          <a
-            href={previewUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-          >
-            <ExternalLink className="size-4" />
-            Open live site
-          </a>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <TutorialButton
+            tenantSlug={tenantSlug}
+            label="Take Website tour"
+            className="gap-1.5 px-3 py-2 text-sm font-medium [&_span]:inline"
+          />
+          {validUrl && (
+            <a
+              href={previewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+            >
+              <ExternalLink className="size-4" />
+              Open live site
+            </a>
+          )}
+        </div>
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -157,6 +182,7 @@ export default function WebsiteClient({
           <Link
             key={surface.href}
             href={surface.href}
+            data-tour={surface.tourTarget}
             className="group rounded-xl border border-neutral-200 p-4 transition-colors hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:border-neutral-700 dark:hover:bg-neutral-900/50"
           >
             <surface.icon className="size-5 text-muted-foreground group-hover:text-foreground" />
@@ -166,15 +192,17 @@ export default function WebsiteClient({
         ))}
       </section>
 
-      <LaunchReadinessSection
-        pilotReport={pilotReport}
-        publicReport={publicReport}
-        tenantSlug={tenantSlug}
-        publicSiteBaseUrl={publicSiteBaseUrl}
-        loadError={launchLoadError}
-      />
+      <div data-tour="website-launch-readiness">
+        <LaunchReadinessSection
+          pilotReport={pilotReport}
+          publicReport={publicReport}
+          tenantSlug={tenantSlug}
+          publicSiteBaseUrl={publicSiteBaseUrl}
+          loadError={launchLoadError}
+        />
+      </div>
 
-      <section className="rounded-xl border border-neutral-200 dark:border-neutral-800">
+      <section data-tour="website-published-preview" className="rounded-xl border border-neutral-200 dark:border-neutral-800">
         <div className="flex items-start justify-between gap-4 p-4">
           <div>
             <label htmlFor="site-nav-loader" className="text-sm font-semibold">
@@ -290,7 +318,8 @@ export default function WebsiteClient({
           ))}
         </ul>
       </section>
-    </div>
+      </div>
+    </>
   );
 }
 

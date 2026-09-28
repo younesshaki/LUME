@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { evaluateLaunchReadiness } from "@/lib/launchReadiness";
 import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
 import type { OnboardingChecklistItem } from "@/lib/onboardingChecklist";
+import { websiteTourHref } from "@/lib/websiteTour";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,11 @@ export default async function TenantOverviewPage({ params }: PageProps) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
-        <OnboardingChecklist tenantId={tenant.id} items={setupItems} />
+        <OnboardingChecklist
+          tenantId={tenant.id}
+          items={setupItems}
+          websiteTourHref={websiteTourHref(tenant.slug)}
+        />
 
         <Card>
           <CardHeader>
