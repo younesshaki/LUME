@@ -1,0 +1,116 @@
+{
+  "hero": {
+    "eyebrow": "",
+    "title": "Financing",
+    "subtitle": "Plans for every driver.",
+    "primaryCtaLabel": "",
+    "primaryCtaHref": "",
+    "secondaryCtaLabel": "",
+    "secondaryCtaHref": "",
+    "backgroundImageKey": "",
+    "mediaUrl": "",
+    "alignment": "center"
+  },
+  "finance-calculator": {
+    "eyebrow": "Finance",
+    "title": "Shape the terms around the drive.",
+    "body": "Adjust the purchase price, deposit, term, and illustrative rate to explore a monthly estimate.",
+    "defaultPrice": 85000,
+    "defaultDeposit": 15000,
+    "defaultTermMonths": 60,
+    "defaultAnnualRate": 6.9,
+    "disclaimer": "Illustrative estimate only. This is not an offer of credit. Final terms depend on lender approval, taxes, fees, and individual circumstances."
+  },
+  "trust-stats": {
+    "eyebrow": "Measured Experience",
+    "title": "The numbers behind the service.",
+    "body": "Edit each value as number, optional decimal places, and suffix: 2500|0|+.",
+    "items": [
+      {
+        "label": "Vehicles delivered",
+        "body": "2500|0|+"
+      },
+      {
+        "label": "Client rating",
+        "body": "4.9|1|/5"
+      },
+      {
+        "label": "Years of expertise",
+        "body": "18|0|+"
+      },
+      {
+        "label": "Repeat clients",
+        "body": "72|0|%"
+      }
+    ]
+  },
+  "faq-accordion": {
+    "eyebrow": "Questions, Answered",
+    "title": "The details worth knowing.",
+    "body": "Clear answers before the conversation begins.",
+    "items": [
+      {
+        "label": "Can you source a vehicle that is not listed?",
+        "body": "Yes. Share the model, specification, and timing and our team can begin a discreet search."
+      },
+      {
+        "label": "Do you accept part exchange?",
+        "body": "Yes. We can review your current vehicle remotely before arranging a final inspection."
+      },
+      {
+        "label": "Can delivery be arranged?",
+        "body": "Collection and enclosed transport options can be coordinated once the purchase is complete."
+      }
+    ]
+  },
+  "cta-banner": {
+    "eyebrow": "Your Next Vehicle",
+    "title": "The right example deserves a closer look.",
+    "body": "Explore the live collection or arrange a private conversation with our team.",
+    "primaryLabel": "View inventory",
+    "primaryHref": "/vehicles",
+    "secondaryLabel": "Contact the team",
+    "secondaryHref": "/contact"
+  },
+  "rich-text": {
+    "body": "About us."
+  },
+  "team-grid": {
+    "eyebrow": "Your Team",
+    "title": "Expertise with a name and a direct line.",
+    "body": "A small team, accountable for every detail.",
+    "items": [
+      {
+        "label": "Alex Morgan",
+        "body": "Managing Director|Collector-car sourcing and long-term client relationships."
+      },
+      {
+        "label": "Maya Laurent",
+        "body": "Sales Director|Contemporary performance and luxury vehicles."
+      },
+      {
+        "label": "James Ellis",
+        "body": "Vehicle Specialist|Appraisals, provenance, and pre-delivery preparation."
+      }
+    ]
+  },
+  "testimonials": {
+    "eyebrow": "Client Notes",
+    "title": "Confidence, expressed quietly.",
+    "body": "A few words from clients who trusted us with their next vehicle.",
+    "items": [
+      {
+        "label": "Amelia R. \u2014 Returning client",
+        "body": "Every detail was handled before I needed to ask. The car was exactly as described."
+      },
+      {
+        "label": "Daniel M. \u2014 First-time buyer",
+        "body": "Measured advice, transparent history, and a delivery that felt genuinely personal."
+      },
+      {
+        "label": "Sophia K. \u2014 Collector",
+        "body": "They understood the specification I wanted and waited for the right example."
+      }
+    ]
+  }
+}

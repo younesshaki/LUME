@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/app-shell/NavigationProvider";
 import { preloadRouteModule } from "@/app-shell/routeModules";
-import { mediaUrl } from "@/config/cdn";
 import { loadHeaderConfig, type PublicHeaderConfig } from "@/lib/publicNav";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
+import { usePublicTenantName } from "@/lib/usePublicTenantName";
 import { play } from "@/lib/sound";
 import { DesktopNav } from "../nav/DesktopNav";
 import { GooeyDesktopNav } from "../nav/GooeyDesktopNav";
@@ -14,6 +14,7 @@ import { InvitationCTA } from "../nav/InvitationCTA";
 import { ThemeToggle } from "../ThemeToggle";
 import { VisitorAccountButton } from "../VisitorAccountButton";
 import { isSiteScreen, useSiteNavItems, type SiteNavItem } from "../siteNavigation";
+import { useSiteLogo } from "../siteLogo";
 import { useSiteHeaderLayoutState } from "./SiteHeader.animations";
 import { getHeaderNavigationSound } from "./SiteHeader.sounds";
 import "./SiteHeader.css";
@@ -21,7 +22,6 @@ import { headerLayout } from "./headerLayout";
 
 const useGooeyNav = import.meta.env.VITE_ENABLE_GOOEY_NAV === 'true';
 
-const lumeLogoImage = mediaUrl("LUMElogo.png");
 
 function useHeaderConfig(): PublicHeaderConfig {
   // Optimistic default matches the historical look, so the header does not
@@ -54,7 +54,8 @@ export function SiteHeader() {
   const items = useSiteNavItems();
   const headerConfig = useHeaderConfig();
   const tenantTheme = useTenantTheme();
-  const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
+  const logoImage = useSiteLogo();
+  const tenantName = usePublicTenantName();
 
   // Only a page that is actually in the nav is marked; an unmatched page (for
   // example a published page left out of the nav) marks nothing rather than
@@ -108,12 +109,17 @@ export function SiteHeader() {
         className={`flex-shrink-0 cursor-pointer focus-visible:outline-none
           focus-visible:ring-1 focus-visible:ring-[#C9A84C] rounded ${layout.order.logo}`}
       >
-        <img
-          src={logoImage}
-          alt="Site logo"
-          className="h-8 md:h-9 w-auto object-contain"
-          draggable={false}
-        />
+        {logoImage ? (
+          <img
+            src={logoImage}
+            alt={tenantName ? `${tenantName} logo` : "Site logo"}
+            className="h-8 md:h-9 w-auto object-contain"
+            draggable={false}
+          />
+        ) : (
+          // Holds the logo's space while the dealer's theme loads.
+          <span aria-hidden="true" className="block h-8 md:h-9 w-24" />
+        )}
       </button>
 
       {/* Desktop nav — the flexible middle track. min-w-0 lets it shrink below

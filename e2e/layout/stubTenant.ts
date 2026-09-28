@@ -35,12 +35,15 @@ export async function stubTenant(
     navCount,
     mode,
     pages = NAV_PAGES,
+    publishedPages = {},
   }: {
     theme: StubTheme;
     navCount: number;
     mode: "light" | "dark";
     /** Nav order override; defaults to NAV_PAGES. */
     pages?: ReadonlyArray<readonly [string, string]>;
+    /** Published page bodies by slug, served by get_published_page. */
+    publishedPages?: Record<string, unknown[]>;
   },
 ): Promise<void> {
   await page.addInitScript((colorMode) => {
@@ -61,6 +64,15 @@ export async function stubTenant(
     if (path.endsWith("/rpc/get_tenant_theme")) {
       return route.fulfill({
         json: [{ theme: { schemaVersion: 2, template: { key: "luxury", version: 1 }, ...theme } }],
+      });
+    }
+    if (path.endsWith("/rpc/get_published_page")) {
+      const slug = String((route.request().postDataJSON() as { p_slug?: string } | null)?.p_slug ?? "");
+      const blocks = publishedPages[slug];
+      return route.fulfill({
+        json: blocks
+          ? [{ id: `page-${slug}`, slug, title: slug, seo_meta: {}, published_revision_id: `rev-${slug}`, blocks: { version: 1, blocks } }]
+          : [],
       });
     }
     if (path.endsWith("/rpc/list_published_nav_pages")) {
