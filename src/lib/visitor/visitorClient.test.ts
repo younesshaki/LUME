@@ -53,6 +53,12 @@ describe("visitor client", () => {
     await expect(client.getMe()).resolves.toBeNull();
   });
 
+  it("treats the public proxy's 200 `visitor: null` as anonymous", async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(jsonResponse({ visitor: null }));
+    const client = createVisitorClient({ fetcher, tenantSlug: "demo" });
+    await expect(client.getMe()).resolves.toBeNull();
+  });
+
   it("memoizes concurrent session checks", async () => {
     let resolveResponse: ((response: Response) => void) | undefined;
     const fetcher = vi.fn(() => new Promise<Response>((resolve) => {

@@ -22,7 +22,11 @@ export function setUiSoundPreference(enabled: boolean): void {
     return;
   }
 
-  window.localStorage.setItem(UI_SOUND_STORAGE_KEY, String(enabled));
+  try {
+    window.localStorage.setItem(UI_SOUND_STORAGE_KEY, String(enabled));
+  } catch {
+    // Storage unavailable: still broadcast the change for this visit.
+  }
   window.dispatchEvent(
     new CustomEvent<{ enabled: boolean }>(UI_SOUND_EVENT, {
       detail: { enabled },

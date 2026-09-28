@@ -92,7 +92,13 @@ function readStoredIds(key: string): string[] {
 
 function writeStoredIds(key: string, ids: string[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(ids));
+  // Storage can throw (private browsing, blocked site data, quota); a
+  // remembered comparison list is a convenience, never worth a crashed page.
+  try {
+    window.localStorage.setItem(key, JSON.stringify(ids));
+  } catch {
+    // keep going without persistence
+  }
 }
 
 function IconButton({

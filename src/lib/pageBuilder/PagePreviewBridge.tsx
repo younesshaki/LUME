@@ -79,6 +79,7 @@ export default function PagePreviewBridge() {
         slug={doc.slug}
         blocks={doc.blocks as PageBlock[]}
         mode={mode}
+        context={PREVIEW_CONTEXT}
         blockWrapper={selectableBlockWrapper}
       />
     </>
@@ -102,6 +103,8 @@ export default function PagePreviewBridge() {
     );
   }
 }
+
+const PREVIEW_CONTEXT = { preview: true } as const;
 
 /** Hover affordance for click-to-select; gold, on-brand, preview-only. */
 const PREVIEW_BLOCK_STYLES = `
