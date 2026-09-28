@@ -17,9 +17,10 @@ import { Progress } from "@/components/ui/progress";
 type OnboardingChecklistProps = {
   tenantId: string;
   items: OnboardingChecklistItem[];
+  websiteTourHref?: string;
 };
 
-export function OnboardingChecklist({ tenantId, items }: OnboardingChecklistProps) {
+export function OnboardingChecklist({ tenantId, items, websiteTourHref }: OnboardingChecklistProps) {
   const progress = onboardingProgress(items);
   const storageKey = onboardingDismissalKey(tenantId);
   const [hidden, setHidden] = React.useState(false);
@@ -85,25 +86,32 @@ export function OnboardingChecklist({ tenantId, items }: OnboardingChecklistProp
           aria-label={`${progress.percentage}% of onboarding complete`}
         />
       </CardHeader>
-      <CardContent className="grid gap-2 sm:grid-cols-2">
-        {items.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            className="flex items-center gap-2 rounded-lg border p-3 text-sm transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {item.complete ? (
-              <CheckCircle2 className="size-4 text-emerald-500" aria-hidden="true" />
-            ) : (
-              <Circle className="size-4 text-muted-foreground" aria-hidden="true" />
-            )}
-            <span className={item.complete ? "text-muted-foreground line-through" : "font-medium"}>
-              {item.label}
-            </span>
-            <ArrowRight className="ml-auto size-3.5 text-muted-foreground" aria-hidden="true" />
-            <span className="sr-only">{item.complete ? "Complete" : "Incomplete"}</span>
-          </Link>
-        ))}
+      <CardContent className="space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          {items.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className="flex items-center gap-2 rounded-lg border p-3 text-sm transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {item.complete ? (
+                <CheckCircle2 className="size-4 text-emerald-500" aria-hidden="true" />
+              ) : (
+                <Circle className="size-4 text-muted-foreground" aria-hidden="true" />
+              )}
+              <span className={item.complete ? "text-muted-foreground line-through" : "font-medium"}>
+                {item.label}
+              </span>
+              <ArrowRight className="ml-auto size-3.5 text-muted-foreground" aria-hidden="true" />
+              <span className="sr-only">{item.complete ? "Complete" : "Incomplete"}</span>
+            </Link>
+          ))}
+        </div>
+        {websiteTourHref ? (
+          <Button variant="outline" size="sm" asChild>
+            <Link href={websiteTourHref}>Take Website tour</Link>
+          </Button>
+        ) : null}
       </CardContent>
     </Card>
   );

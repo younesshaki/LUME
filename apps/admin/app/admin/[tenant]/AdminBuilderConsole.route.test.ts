@@ -123,6 +123,8 @@ describe("admin website-builder surfaces", () => {
       pilotReport: null,
       publicReport: null,
       launchLoadError: false,
+      websiteTourStart: "none",
+      websiteTourEnabled: false,
     }));
     expect(consoleError).not.toHaveBeenCalled();
   });

@@ -3,12 +3,22 @@ import { listPages } from "@lume/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { evaluateLaunchReadiness, type LaunchReadinessReport, type TenantLaunchSnapshot } from "@/lib/launchReadiness";
 import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
+import {
+  hasWebsiteTourReplayRequest,
+  isWebsiteTourEligibleTenant,
+  websiteTourStartMode,
+} from "@/lib/websiteTour";
+import { websiteTourPreferenceFromRow } from "@/lib/websiteTour.server";
 import WebsiteClient from "./WebsiteClient";
 
-type PageProps = { params: Promise<{ tenant: string }> };
+type PageProps = {
+  params: Promise<{ tenant: string }>;
+  searchParams: Promise<{ tour?: string | string[] }>;
+};
 
-export default async function WebsitePage({ params }: PageProps) {
+export default async function WebsitePage({ params, searchParams }: PageProps) {
   const { tenant: slug } = await params;
+  const { tour } = await searchParams;
   const supabase = await createSupabaseServerClient();
 
   const { data: tenant } = await supabase
@@ -17,6 +27,22 @@ export default async function WebsitePage({ params }: PageProps) {
     .eq("slug", slug)
     .maybeSingle();
   if (!tenant) notFound();
+
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData.user;
+  const { data: websiteTourPreference } = user
+    ? await supabase
+      .from("tenant_member_preferences")
+      .select("website_tour_version, website_tour_completed_at, website_tour_skipped_at")
+      .eq("tenant_id", tenant.id)
+      .eq("user_id", user.id)
+      .maybeSingle()
+    : { data: null };
+  const websiteTourStart = websiteTourStartMode({
+    tenantSlug: tenant.slug,
+    preference: websiteTourPreferenceFromRow(websiteTourPreference),
+    replayRequested: hasWebsiteTourReplayRequest(tour),
+  });
 
   const pages = await listPages(supabase, tenant.id);
   const publicSiteBaseUrl =
@@ -60,6 +86,8 @@ export default async function WebsitePage({ params }: PageProps) {
       pilotReport={pilotReport}
       publicReport={publicReport}
       launchLoadError={launchLoadError}
+      websiteTourStart={websiteTourStart}
+      websiteTourEnabled={isWebsiteTourEligibleTenant(tenant.slug)}
     />
   );
 }
