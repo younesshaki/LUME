@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/app-shell/NavigationProvider";
 import { preloadRouteModule } from "@/app-shell/routeModules";
@@ -18,6 +18,7 @@ import { isSiteScreen, useSiteNavItems, type SiteNavItem } from "../siteNavigati
 import { useSiteLogo } from "../siteLogo";
 import { useSiteHeaderLayoutState } from "./SiteHeader.animations";
 import { getHeaderNavigationSound } from "./SiteHeader.sounds";
+import { useUnpinnedHeader } from "./useUnpinnedHeader";
 import "./SiteHeader.css";
 import { headerLayout } from "./headerLayout";
 
@@ -54,6 +55,9 @@ export function SiteHeader() {
   const { hasOverlayPressure } = useSiteHeaderLayoutState();
   const items = useSiteNavItems();
   const headerConfig = useHeaderConfig();
+  const headerRef = useRef<HTMLElement>(null);
+  // "Keep the header pinned while scrolling" off: scroll away with the page.
+  useUnpinnedHeader(headerRef, headerConfig.sticky, currentPath);
   const tenantTheme = useTenantTheme();
   const siteTemplate = useActiveSiteTemplate();
   const useGooeyNav = allowsGooeyNav(GOOEY_NAV_BUILD_FLAG, siteTemplate);
@@ -93,6 +97,8 @@ export function SiteHeader() {
     // that slab spills below the header and covers the page on scroll. The
     // "More" panel is portalled to <body> precisely so this clip can stay.
     <header
+      ref={headerRef}
+      data-header-sticky={headerConfig.sticky ? "true" : "false"}
       data-header-variant={headerConfig.variant}
       data-header-logo-placement={headerConfig.logoPlacement}
       className={`siteHeader ${headerConfig.sticky ? "fixed" : "absolute"} top-0 left-0 right-0 z-50
