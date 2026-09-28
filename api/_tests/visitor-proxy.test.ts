@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import handler from "./[...path]";
+import handler from "../visitor/[...path]";
 
 type TestResponse = {
   statusCode: number | null;

@@ -53,7 +53,7 @@ vi.mock("@supabase/supabase-js", () => {
   };
 });
 
-import handler from "./[id]";
+import handler from "../vehicles/[id]";
 
 async function get(): Promise<{ status: number; body: any }> {
   let status = 0;
