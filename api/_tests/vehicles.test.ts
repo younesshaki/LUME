@@ -3,7 +3,7 @@ import {
   hasStableTenantCacheKey,
   inventoryCacheControl,
   inventorySlugFastPathEnabled,
-} from "./vehicles";
+} from "../vehicles";
 
 type RequestLike = Parameters<typeof inventoryCacheControl>[0];
 
