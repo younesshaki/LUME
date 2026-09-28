@@ -71,6 +71,8 @@ export async function stubTenant(
     return route.fulfill({ json: [] });
   });
   await page.route("**/api/**", (route) => route.fulfill({ status: 404, json: {} }));
+  // What the public proxy answers for an anonymous visitor (no console error).
+  await page.route("**/api/visitor/me*", (route) => route.fulfill({ json: { visitor: null } }));
 }
 
 export function navLabels(navCount: number): string[] {

@@ -78,13 +78,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(404).json({ error: "Visitor endpoint not found" });
   }
 
-  // Most inventory visitors are anonymous. Their `/me` response is
-  // deterministically 401 when the public-origin session cookie is absent, so
-  // do not pay an extra public-function → Admin-function network round trip
-  // merely to learn that fact. Authenticated sessions continue through the
-  // trusted upstream path and retain its tenant/session validation.
+  // Most inventory visitors are anonymous. Without the public-origin session
+  // cookie the answer is known, so do not pay an extra public-function →
+  // Admin-function round trip to learn it. It is a 200 with `visitor: null`,
+  // not a 401: every page asks, and browsers log any 4xx as a console error,
+  // so the 401 put an error on every public page view (found 2026-09-28).
+  // Authenticated sessions continue through the trusted upstream path and
+  // retain its tenant/session validation.
   if (path === "me" && req.method === "GET" && !visitorSessionCookieHeader(header(req, "cookie"))) {
-    return res.status(401).json({ error: "Unauthorized" });
+    res.setHeader("Cache-Control", "private, no-store");
+    return res.status(200).json({ visitor: null });
   }
   if (!CHAT_UPSTREAM_URL) {
     return res.status(503).json({ error: "Visitor API upstream not configured" });

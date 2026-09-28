@@ -94,9 +94,12 @@ export function createVisitorClient({
       if (!signal && getMeRequest) return getMeRequest;
       const lookup = (async (): Promise<Visitor | null> => {
         const response = await request("/api/visitor/me", { signal });
+        // Anonymous: the public proxy answers 200 `{ visitor: null }` (no
+        // console error); the admin API itself still answers 401.
         if (response.status === 401) return null;
         await ensureOk(response);
         const payload = await readJson(response);
+        if (isRecord(payload) && payload.visitor === null) return null;
         if (!isRecord(payload) || !isVisitor(payload.visitor)) {
           throw new VisitorApiError(response.status, "The account response was invalid.");
         }
