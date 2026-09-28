@@ -188,8 +188,15 @@ async function copyConciergeRuntime(service: any, source: any, target: any) {
   if (config) await requiredWrite("Copy bot config", service.from("tenant_bot_config").upsert({ ...config, tenant_id: target.id }, { onConflict: "tenant_id" }));
   const subscription = await optional<any>("Read demo subscription", service.from("subscriptions").select("plan_id, current_period_end").eq("tenant_id", source.id).eq("status", "active").maybeSingle());
   if (!subscription) return;
-  const existing = await optional<any[]>("Read target subscriptions", service.from("subscriptions").select("id").eq("tenant_id", target.id).in("status", ["active", "trialing", "past_due", "incomplete"]));
-  if (existing?.length) return;
+  const existing = await optional<any[]>("Read target subscriptions", service.from("subscriptions").select("id, stripe_subscription_id").eq("tenant_id", target.id).in("status", ["active", "trialing", "past_due", "incomplete"]));
+  // Re-point an existing operational row too: a copy left on Basic (or an
+  // older source plan) keeps clamping the model and disabling tools. Only the
+  // plan changes, and Stripe-managed rows are left to the billing flow.
+  if (existing?.length) {
+    const unmanaged = existing.filter((row) => !row.stripe_subscription_id).map((row) => row.id);
+    if (unmanaged.length) await requiredWrite("Sync subscription plan", service.from("subscriptions").update({ plan_id: subscription.plan_id }).in("id", unmanaged));
+    return;
+  }
   await requiredWrite("Copy subscription", service.from("subscriptions").insert({ tenant_id: target.id, plan_id: subscription.plan_id, status: "active", current_period_start: new Date().toISOString(), current_period_end: subscription.current_period_end }));
 }
 
