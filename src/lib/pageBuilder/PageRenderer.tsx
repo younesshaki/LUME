@@ -230,7 +230,8 @@ export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverri
             ))}
             {slug === "contact" ? <ConciergeLeadForm /> : null}
           </main>
-          {slug === "home" ? <TemplateConversionPanel /> : null}
+          {/* Glo3D's home already carries these actions in its own blocks. */}
+          {slug === "home" && !flatTemplate ? <TemplateConversionPanel /> : null}
           {footer}
         </div>
       </CinematicShell>

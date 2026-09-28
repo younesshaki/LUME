@@ -1003,3 +1003,9 @@ html:root[data-lume-template="glo3d"] .storyHome__flatCard :is(h3, p, span, butt
   letter-spacing: 0;
   text-transform: none;
 }
+
+/* The hand-built home's template panel repeats the hero's actions; Glo3D's
+   home blocks already carry them. */
+html:root[data-lume-template="glo3d"] .templateHome {
+  display: none;
+}
