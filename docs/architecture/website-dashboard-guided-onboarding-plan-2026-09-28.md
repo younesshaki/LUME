@@ -8,6 +8,17 @@ no production data has been changed or deployed. The visual layer uses
 `nextstepjs` 2.3.0, is lazy-loaded only by the admin Website Hub, and has unit
 and real-overlay integration coverage.
 
+### Update (2026-09-28): cards always stay on screen
+
+The Launch readiness step was removed: its section is taller than a laptop
+screen, and because the card sits above or below its target, `nextstepjs`
+scrolled the card out of view. The "published site" step now targets the real
+preview section (it pointed at the Loading-animation switch). Every step is
+fitted to the screen when the tour starts (`compactTourSelector`): a target
+taller than the viewport minus `WEBSITE_TOUR_CARD_CLEARANCE` is swapped for a
+`[data-tour-anchor]` inside it, else its first heading. New steps on large
+sections should mark their header with `data-tour-anchor`.
+
 ### Update (2026-09-28): on-demand Tutorial button
 
 Per the owner, the tour can be started whenever wanted: a **Tutorial** button
@@ -236,7 +247,6 @@ export const WEBSITE_TOUR_TARGETS = {
   design: '[data-tour="website-design"]',
   media: '[data-tour="website-media-assets"]',
   navigation: '[data-tour="website-navigation"]',
-  launchReadiness: '[data-tour="website-launch-readiness"]',
   publishedPreview: '[data-tour="website-published-preview"]',
 } as const;
 ```
