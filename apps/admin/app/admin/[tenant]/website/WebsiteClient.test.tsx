@@ -1,10 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent } from "@testing-library/react";
 import { cleanup, render, screen } from "@testing-library/react";
 import WebsiteClient from "./WebsiteClient";
-import { WEBSITE_TOUR_TARGETS } from "../../../../lib/websiteTour";
+import { WEBSITE_TOUR_START_EVENT, WEBSITE_TOUR_TARGETS } from "../../../../lib/websiteTour";
 
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: React.ComponentProps<"a">) => <a {...props}>{children}</a>,
+}));
+
+const push = vi.fn();
+let pathname = "/admin/demo-sean/website";
+vi.mock("next/navigation", () => ({
+  usePathname: () => pathname,
+  useRouter: () => ({ push }),
 }));
 
 vi.mock("next/dynamic", () => ({
@@ -42,7 +50,6 @@ function renderWebsite(overrides: Partial<React.ComponentProps<typeof WebsiteCli
       publicReport={null}
       launchLoadError={false}
       websiteTourStart="none"
-      websiteTourEnabled
       {...overrides}
     />,
   );
@@ -57,25 +64,15 @@ describe("Website Hub tour targets", () => {
     expect(screen.getByRole("switch", { name: "Loading animation" }).getAttribute("data-tour")).toBeNull();
   });
 
-  it("shows the replay entry point only for the enabled rollout cohort", () => {
-    const { rerender } = renderWebsite();
-    expect(screen.getByRole("link", { name: "Take Website tour" }).getAttribute("href"))
-      .toBe("/admin/demo-sean/website?tour=website");
-
-    rerender(
-      <WebsiteClient
-        tenantSlug="default"
-        tenantName="Default Motors"
-        publicSiteBaseUrl="https://example.com"
-        pages={[]}
-        navLoaderEnabled
-        pilotReport={null}
-        publicReport={null}
-        launchLoadError={false}
-        websiteTourStart="none"
-        websiteTourEnabled={false}
-      />,
-    );
-    expect(screen.queryByRole("link", { name: "Take Website tour" })).toBeNull();
+  it("restarts the tutorial in place from the Hub, for any tenant", () => {
+    const started = vi.fn();
+    window.addEventListener(WEBSITE_TOUR_START_EVENT, started);
+    pathname = "/admin/default/website";
+    renderWebsite({ tenantSlug: "default", tenantName: "Default Motors" });
+    fireEvent.click(screen.getByRole("button", { name: "Start the Website tutorial" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start the Website tutorial" }));
+    expect(started).toHaveBeenCalledTimes(2);
+    expect(push).not.toHaveBeenCalled();
+    window.removeEventListener(WEBSITE_TOUR_START_EVENT, started);
   });
 });

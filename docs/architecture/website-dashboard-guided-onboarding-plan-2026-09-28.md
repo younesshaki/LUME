@@ -8,6 +8,15 @@ no production data has been changed or deployed. The visual layer uses
 `nextstepjs` 2.3.0, is lazy-loaded only by the admin Website Hub, and has unit
 and real-overlay integration coverage.
 
+### Update (2026-09-28): on-demand Tutorial button
+
+Per the owner, the tour can be started whenever wanted: a **Tutorial** button
+in the admin top bar (every tenant page) opens the Website Hub with the tour,
+or restarts it in place when already on the Hub (`WEBSITE_TOUR_START_EVENT`).
+Manual start now works for every tenant; the automatic first-visit start
+remains limited to the demo cohort below. The migration shipped as
+`090_website_tour_preferences.sql` (089 was taken on main).
+
 ## Decision
 
 Build a focused, polished **Website Hub tour** for the first rollout—not a

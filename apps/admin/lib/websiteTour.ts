@@ -133,6 +133,14 @@ export type WebsiteTourPreference = {
 
 export type WebsiteTourStart = "automatic" | "manual" | "none";
 
+/** Window event the Tutorial buttons fire to (re)start the tour in place. */
+export const WEBSITE_TOUR_START_EVENT = "lume:start-website-tour";
+
+/** Opens the Website Hub and starts the tour there (from any admin page). */
+export function websiteTourHref(tenantSlug: string): string {
+  return `/admin/${tenantSlug}/website?tour=website`;
+}
+
 export function isWebsiteTourEligibleTenant(tenantSlug: string): boolean {
   return WEBSITE_TOUR_DEMO_TENANTS.has(tenantSlug);
 }
@@ -142,8 +150,10 @@ export function websiteTourStartMode(input: {
   preference: WebsiteTourPreference | null;
   replayRequested: boolean;
 }): WebsiteTourStart {
-  if (!isWebsiteTourEligibleTenant(input.tenantSlug)) return "none";
+  // Anyone can start the tutorial on demand; only the demo cohort gets it
+  // automatically on a first visit.
   if (input.replayRequested) return "manual";
+  if (!isWebsiteTourEligibleTenant(input.tenantSlug)) return "none";
 
   const preference = input.preference;
   const settledCurrentVersion = preference?.websiteTourVersion === WEBSITE_TOUR_VERSION

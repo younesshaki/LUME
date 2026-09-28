@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { evaluateLaunchReadiness } from "@/lib/launchReadiness";
 import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
 import type { OnboardingChecklistItem } from "@/lib/onboardingChecklist";
-import { isWebsiteTourEligibleTenant } from "@/lib/websiteTour";
+import { websiteTourHref } from "@/lib/websiteTour";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -138,11 +138,7 @@ export default async function TenantOverviewPage({ params }: PageProps) {
         <OnboardingChecklist
           tenantId={tenant.id}
           items={setupItems}
-          websiteTourHref={
-            isWebsiteTourEligibleTenant(tenant.slug)
-              ? `/admin/${tenant.slug}/website?tour=website`
-              : undefined
-          }
+          websiteTourHref={websiteTourHref(tenant.slug)}
         />
 
         <Card>

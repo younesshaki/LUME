@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { Page } from "@lume/types";
 import type { WebsiteTourStart } from "../../../../lib/websiteTour";
+import { TutorialButton } from "../../../../components/onboarding/TutorialButton";
 
 const WebsiteHubTour = dynamic(
   () => import("../../../../components/onboarding/WebsiteHubTour").then((module) => module.WebsiteHubTour),
@@ -39,7 +40,6 @@ type WebsiteClientProps = {
   publicReport: LaunchReadinessReport | null;
   launchLoadError: boolean;
   websiteTourStart: WebsiteTourStart;
-  websiteTourEnabled: boolean;
 };
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -71,7 +71,6 @@ export default function WebsiteClient({
   publicReport,
   launchLoadError,
   websiteTourStart,
-  websiteTourEnabled,
 }: WebsiteClientProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [reloadKey, setReloadKey] = useState(0);
@@ -159,14 +158,11 @@ export default function WebsiteClient({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {websiteTourEnabled ? (
-            <Link
-              href={`/admin/${tenantSlug}/website?tour=website`}
-              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-            >
-              Take Website tour
-            </Link>
-          ) : null}
+          <TutorialButton
+            tenantSlug={tenantSlug}
+            label="Take Website tour"
+            className="gap-1.5 px-3 py-2 text-sm font-medium [&_span]:inline"
+          />
           {validUrl && (
             <a
               href={previewUrl}

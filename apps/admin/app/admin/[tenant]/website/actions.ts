@@ -4,21 +4,19 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@lume/db/server";
 import { auditWrite } from "@/lib/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isWebsiteTourEligibleTenant } from "@/lib/websiteTour";
 import { persistWebsiteTourOutcome } from "@/lib/websiteTour.server";
 
 type ActionResult = { error?: string };
 
 /**
  * Persist only a terminal Website Hub tour outcome for the authenticated
- * member. The rollout guard lives on the server so a client cannot enable the
- * demo tour for another tenant by hand-crafting an action call.
+ * member. The tutorial can be started on demand in any workspace, so the
+ * guard is membership: a member only ever writes their own preference row.
  */
 export async function recordWebsiteTourOutcome(
   slug: string,
   outcome: "completed" | "skipped",
 ): Promise<ActionResult> {
-  if (!isWebsiteTourEligibleTenant(slug)) return { error: "This tour is not enabled for this workspace." };
   if (outcome !== "completed" && outcome !== "skipped") return { error: "Invalid tour outcome." };
 
   const supabase = await createSupabaseServerClient();

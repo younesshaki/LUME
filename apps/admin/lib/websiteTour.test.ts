@@ -5,6 +5,7 @@ import {
   WEBSITE_TOUR_VERSION,
   hasWebsiteTourReplayRequest,
   isWebsiteTourEligibleTenant,
+  websiteTourHref,
   websiteTourOutcomeUpdate,
   websiteTourStartMode,
 } from "./websiteTour";
@@ -72,7 +73,7 @@ describe("Website Hub tour eligibility and state", () => {
     })).toBe("automatic");
   });
 
-  it("permits a manual replay only for an eligible tenant", () => {
+  it("starts on demand for any tenant, automatically only for the cohort", () => {
     expect(hasWebsiteTourReplayRequest("website")).toBe(true);
     expect(hasWebsiteTourReplayRequest(["website"])).toBe(false);
     expect(hasWebsiteTourReplayRequest("other")).toBe(false);
@@ -81,7 +82,8 @@ describe("Website Hub tour eligibility and state", () => {
       preference: { websiteTourVersion: WEBSITE_TOUR_VERSION, websiteTourCompletedAt: "2026-09-28T12:00:00Z", websiteTourSkippedAt: null },
       replayRequested: true,
     })).toBe("manual");
-    expect(websiteTourStartMode({ tenantSlug: "default", preference: null, replayRequested: true })).toBe("none");
+    expect(websiteTourStartMode({ tenantSlug: "default", preference: null, replayRequested: true })).toBe("manual");
+    expect(websiteTourHref("demo-max")).toBe("/admin/demo-max/website?tour=website");
   });
 
   it("keeps a prior completion when a replay is later skipped", () => {

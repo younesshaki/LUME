@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   NextStep,
   NextStepProvider,
@@ -14,6 +14,7 @@ import {
   WEBSITE_HUB_TOUR_STEPS,
   WEBSITE_HUB_TOUR_OVERLAY_OPTIONS,
   WEBSITE_TOUR_NAME,
+  WEBSITE_TOUR_START_EVENT,
   WEBSITE_TOUR_TARGETS,
   type WebsiteTourStart,
 } from "../../lib/websiteTour";
@@ -66,15 +67,13 @@ function WebsiteHubTourStarter({ startMode }: { startMode: WebsiteTourStart }) {
   const { startNextStep } = useNextStep();
   const attempted = useRef(false);
 
-  useEffect(() => {
-    if (startMode === "none" || attempted.current) return;
-    attempted.current = true;
-
+  // Waits for every step's target to be on the page (and no modal open), then
+  // starts the tour. Returns a cancel function.
+  const startWhenReady = useCallback((clearQuery: boolean) => {
     let observer: MutationObserver | null = null;
-    let frame = 0;
     let started = false;
 
-    const startWhenReady = () => {
+    const tryStart = () => {
       if (started || document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       const everyTargetExists = Object.values(WEBSITE_TOUR_TARGETS).every((selector) =>
         document.querySelector(selector),
@@ -83,14 +82,14 @@ function WebsiteHubTourStarter({ startMode }: { startMode: WebsiteTourStart }) {
 
       started = true;
       observer?.disconnect();
-      if (startMode === "manual") clearReplayQuery();
+      if (clearQuery) clearReplayQuery();
       startNextStep(WEBSITE_TOUR_NAME);
     };
 
-    frame = requestAnimationFrame(() => {
-      startWhenReady();
+    const frame = requestAnimationFrame(() => {
+      tryStart();
       if (!started) {
-        observer = new MutationObserver(startWhenReady);
+        observer = new MutationObserver(tryStart);
         observer.observe(document.body, { childList: true, subtree: true });
       }
     });
@@ -99,7 +98,27 @@ function WebsiteHubTourStarter({ startMode }: { startMode: WebsiteTourStart }) {
       cancelAnimationFrame(frame);
       observer?.disconnect();
     };
-  }, [startMode, startNextStep]);
+  }, [startNextStep]);
+
+  useEffect(() => {
+    if (startMode === "none" || attempted.current) return;
+    attempted.current = true;
+    return startWhenReady(startMode === "manual");
+  }, [startMode, startWhenReady]);
+
+  // The Tutorial buttons restart the tour in place, any number of times.
+  useEffect(() => {
+    let cancel: (() => void) | null = null;
+    const onStart = () => {
+      cancel?.();
+      cancel = startWhenReady(false);
+    };
+    window.addEventListener(WEBSITE_TOUR_START_EVENT, onStart);
+    return () => {
+      window.removeEventListener(WEBSITE_TOUR_START_EVENT, onStart);
+      cancel?.();
+    };
+  }, [startWhenReady]);
 
   return null;
 }

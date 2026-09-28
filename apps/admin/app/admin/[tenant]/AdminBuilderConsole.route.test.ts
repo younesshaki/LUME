@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.push, refresh: mocks.refresh }),
+  usePathname: () => "/admin/sandbox/website",
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -124,7 +125,6 @@ describe("admin website-builder surfaces", () => {
       publicReport: null,
       launchLoadError: false,
       websiteTourStart: "none",
-      websiteTourEnabled: false,
     }));
     expect(consoleError).not.toHaveBeenCalled();
   });

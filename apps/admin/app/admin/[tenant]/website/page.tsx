@@ -5,7 +5,6 @@ import { evaluateLaunchReadiness, type LaunchReadinessReport, type TenantLaunchS
 import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
 import {
   hasWebsiteTourReplayRequest,
-  isWebsiteTourEligibleTenant,
   websiteTourStartMode,
 } from "@/lib/websiteTour";
 import { websiteTourPreferenceFromRow } from "@/lib/websiteTour.server";
@@ -87,7 +86,6 @@ export default async function WebsitePage({ params, searchParams }: PageProps) {
       publicReport={publicReport}
       launchLoadError={launchLoadError}
       websiteTourStart={websiteTourStart}
-      websiteTourEnabled={isWebsiteTourEligibleTenant(tenant.slug)}
     />
   );
 }
