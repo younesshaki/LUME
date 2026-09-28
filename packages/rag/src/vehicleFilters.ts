@@ -640,6 +640,9 @@ function catalogModelFromText(
       tokens.some(
         (token) =>
           !MODEL_FUZZY_STOPWORDS.has(token) &&
+          // A make is never a misspelled model: "fords" → "Forte" (Kia)
+          // turned every Ford question into a zero-result model search.
+          !isMakeToken(token) &&
           // Require the first three characters to agree, exactly as the make
           // fuzzy path does. Otherwise a different word two edits away — e.g.
           // "caddy" (Cadillac) → "Camry" — becomes a fabricated model filter.
@@ -696,6 +699,13 @@ function canonicalMakeFromValue(value: string): string | null {
     }
   }
   return null;
+}
+
+function isMakeToken(token: string): boolean {
+  return (
+    canonicalMakeFromValue(token) !== null ||
+    (token.endsWith("s") && canonicalMakeFromValue(token.slice(0, -1)) !== null)
+  );
 }
 
 function formatCanonicalMake(canonical: string): string {

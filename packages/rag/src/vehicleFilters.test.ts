@@ -312,6 +312,14 @@ describe("vehicle query intent", () => {
     ).toEqual({ make: "Cadillac" });
   });
 
+  it("does not fuzzy-match a make name into a similarly spelled model", () => {
+    // Live on demo-sean: "fords" became Ford + Kia "Forte", a zero-result search.
+    const vocabulary = { makes: ["FORD", "KIA"], models: ["Forte", "Escape", "Focus"] };
+    for (const query of ["how about fords ?", "do you have ford", "you have any fords ?"]) {
+      expect(extractVehicleFilters(query, [], vocabulary)).toEqual({ make: "FORD" });
+    }
+  });
+
   it("still fuzzy-matches a real model typo that shares the prefix", () => {
     expect(
       extractVehicleFilters("do you have a cayene?", [], { models: ["Cayenne"] }),
