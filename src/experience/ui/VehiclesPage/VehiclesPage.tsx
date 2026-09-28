@@ -253,7 +253,9 @@ function VehicleCard({
               `${vehicle.year} ${vehicle.make} ${vehicle.model}`
             }
             loading={prioritizeImage ? "eager" : "lazy"}
-            fetchPriority={prioritizeImage ? "high" : "low"}
+            // React 18 does not know the camelCase prop and logs a console
+            // error for it; the lowercase HTML attribute behaves the same.
+            {...{ fetchpriority: prioritizeImage ? "high" : "low" }}
             decoding="async"
           />
         ) : (

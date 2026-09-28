@@ -8,11 +8,13 @@ import { DualModeProvider } from './lib/DualModeContext'
 import { SoundProvider } from './lib/sound'
 import { getLeadAttribution } from './lib/leadAttribution'
 import { initializeLumePostHog } from './lib/posthog'
+import { installStaleDeployRecovery } from './app-shell/staleDeployRecovery'
 import './index.css'
 
 // Capture first-touch query/referrer data before BrowserRouter can replace the URL.
 getLeadAttribution()
 initializeLumePostHog()
+installStaleDeployRecovery()
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

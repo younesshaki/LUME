@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/publicTenant", () => ({
+  DEFAULT_PUBLIC_TENANT_SLUG: "default",
   get publicTenantSlug() {
     return state.slug;
   },
@@ -16,6 +17,8 @@ vi.mock("@/lib/publicTenant", () => ({
 }));
 vi.mock("@/lib/TenantThemeProvider", () => ({
   useTenantTheme: () => ({ footer: state.footer, branding: {} }),
+  // The tenant's design has loaded.
+  useTenantSiteDesign: () => ({}),
 }));
 vi.mock("../siteNavigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../siteNavigation")>();

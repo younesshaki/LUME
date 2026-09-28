@@ -1,8 +1,8 @@
-import { mediaUrl } from "@/config/cdn";
 import { openCookiePreferences } from "@/components/CookieBanner/CookieBanner";
 import { Separator } from "@/components/ui/separator";
 import { useNavigate } from "react-router-dom";
 import { isSiteScreen, useSiteNavItems, type SiteScreen } from "../siteNavigation";
+import { useSiteLogo } from "../siteLogo";
 import { preloadRouteModule } from "@/app-shell/routeModules";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
 import { publicTenantSlug } from "@/lib/publicTenant";
@@ -45,12 +45,11 @@ type SiteFooterProps = {
   onNavigate: (screen: SiteScreen) => void;
 };
 
-const lumeLogoImage = mediaUrl("LUMElogo.png");
 
 /** The tenant's display name for the copyright line; null until known. */
 export function SiteFooter({ onNavigate }: SiteFooterProps) {
   const tenantTheme = useTenantTheme();
-  const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
+  const logoImage = useSiteLogo();
   const navItems = useSiteNavItems();
   const routerNavigate = useNavigate();
   const tenantName = usePublicTenantName();
@@ -110,12 +109,16 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
       <div className="relative z-10 max-w-6xl mx-auto px-6 md:px-10 py-14 md:py-20">
         {/* Brand */}
         <div className="flex flex-col items-center gap-3 mb-12">
-          <img
-            src={logoImage}
-            alt="Site logo"
-            className="h-10 w-auto object-contain opacity-90"
-            draggable={false}
-          />
+          {logoImage ? (
+            <img
+              src={logoImage}
+              alt={tenantName ? `${tenantName} logo` : "Site logo"}
+              className="h-10 w-auto object-contain opacity-90"
+              draggable={false}
+            />
+          ) : (
+            <span aria-hidden="true" className="block h-10 w-24" />
+          )}
           {content.tagline && (
             <p className="text-[11px] tracking-[0.25em] uppercase text-[var(--theme-lume-soft)]"
               style={{ fontFamily: "Mileast, serif" }}>
