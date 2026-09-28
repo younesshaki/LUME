@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isNavigablePageSlug, clampMaxNavItems, selectHeaderNav } from "./headerNav";
+import {
+  clampMaxNavItems,
+  isNavigablePageSlug,
+  navPlacements,
+  selectHeaderNav,
+  withPageNavVisibility,
+} from "./headerNav";
 
 const page = (slug: string, navOrder: number) => ({ slug, title: slug, navOrder });
 
@@ -68,5 +74,59 @@ describe("template pages are never navigable", () => {
     expect(isNavigablePageSlug("VEHICLE")).toBe(false);
     // Not the same page as the inventory listing, which IS navigable.
     expect(isNavigablePageSlug("vehicles")).toBe(true);
+  });
+});
+
+describe("pages hidden from navigation", () => {
+  // Header holds 3: home, vehicles, contact. More: about, financing. faq hidden.
+  const pages = [
+    { slug: "home", title: "Home", navOrder: 0 },
+    { slug: "vehicles", title: "Inventory", navOrder: 1 },
+    { slug: "contact", title: "Contact", navOrder: 2 },
+    { slug: "faq", title: "FAQ", navOrder: 3 },
+    { slug: "about", title: "About", navOrder: 4 },
+    { slug: "financing", title: "Financing", navOrder: 5 },
+    { slug: "vehicle", title: "Vehicle", navOrder: 6 },
+  ];
+  const header = { maxNavItems: 3, hiddenNavSlugs: ["faq"] };
+
+  it("places each page in the header, More, or hidden — never counting hidden pages", () => {
+    expect(Object.fromEntries(navPlacements(pages, header))).toEqual({
+      home: "header",
+      vehicles: "header",
+      contact: "header",
+      about: "more",
+      financing: "more",
+      faq: "hidden",
+    });
+  });
+
+  it("hiding a header page lets the next page move up from More", () => {
+    const placements = navPlacements(pages, withPageNavVisibility(header, "contact", false));
+    expect(placements.get("contact")).toBe("hidden");
+    expect(placements.get("about")).toBe("header");
+  });
+
+  it("a page shown again joins the header when it has room", () => {
+    const roomy = { maxNavItems: 10, hiddenNavSlugs: ["faq"] };
+    expect(navPlacements(pages, withPageNavVisibility(roomy, "faq", true)).get("faq")).toBe("header");
+  });
+
+  it("a page shown again falls into More when the header is full", () => {
+    expect(navPlacements(pages, withPageNavVisibility(header, "faq", true)).get("faq")).toBe("more");
+  });
+
+  it("keeps the vehicle layout out of navigation entirely", () => {
+    expect(navPlacements(pages, header).has("vehicle")).toBe(false);
+  });
+
+  it("stores slugs once, lowercased, and leaves other header settings alone", () => {
+    const hidden = withPageNavVisibility({ maxNavItems: 4, variant: "split" }, "About", false);
+    expect(withPageNavVisibility(hidden, "about", false)).toEqual({
+      maxNavItems: 4,
+      variant: "split",
+      hiddenNavSlugs: ["about"],
+    });
+    expect(withPageNavVisibility(hidden, "ABOUT", true).hiddenNavSlugs).toEqual([]);
   });
 });

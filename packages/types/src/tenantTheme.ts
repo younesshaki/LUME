@@ -41,6 +41,11 @@ export type TenantHeaderConfig = {
   ctas?: TenantHeaderCta[];
   /** Show the visitor account button. Defaults to true. */
   showVisitorTab?: boolean;
+  /**
+   * Published pages kept out of the header, More menu, mobile menu and footer
+   * navigation. They stay live and reachable by direct URL. See headerNav.ts.
+   */
+  hiddenNavSlugs?: string[];
 };
 
 /**

@@ -105,9 +105,11 @@ export default function NavigationClient({
   const hasConfiguredSocialLinks = Boolean(initialTheme.footer?.socialLinks?.length);
   const [saving, setSaving] = useState(false);
 
+  // Same selection the live header uses, including pages hidden from nav in
+  // the Pages list — otherwise this preview would count them.
   const { visible, overflow } = useMemo(
-    () => selectHeaderNav(navPages, { maxNavItems }),
-    [navPages, maxNavItems]
+    () => selectHeaderNav(navPages, { ...initialTheme.header, maxNavItems }),
+    [navPages, maxNavItems, initialTheme.header]
   );
 
   async function save() {

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { listPages } from "@lume/db";
+import type { TenantHeaderConfig } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import PagesListClient from "./PagesListClient";
 
@@ -11,7 +12,7 @@ export default async function PagesListPage({ params }: PageProps) {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, slug, name")
+    .select("id, slug, name, theme")
     .eq("slug", slug)
     .maybeSingle();
   if (!tenant) notFound();
@@ -46,6 +47,9 @@ export default async function PagesListPage({ params }: PageProps) {
       }
     : null;
 
+  // Nav placement is computed from the same header config the live site reads.
+  const initialHeader = ((tenant.theme ?? {}) as { header?: TenantHeaderConfig }).header ?? {};
+
   const publicSiteBaseUrl =
     process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? "https://lume-jade-three.vercel.app";
 
@@ -61,6 +65,7 @@ export default async function PagesListPage({ params }: PageProps) {
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
         initialPages={pages}
+        initialHeader={initialHeader}
         publicSiteBaseUrl={publicSiteBaseUrl}
         sampleVehicle={sampleVehicle}
       />
