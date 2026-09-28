@@ -192,7 +192,7 @@ export default function WebsiteClient({
         ))}
       </section>
 
-      <div data-tour="website-launch-readiness">
+      <div>
         <LaunchReadinessSection
           pilotReport={pilotReport}
           publicReport={publicReport}
@@ -202,7 +202,7 @@ export default function WebsiteClient({
         />
       </div>
 
-      <section data-tour="website-published-preview" className="rounded-xl border border-neutral-200 dark:border-neutral-800">
+      <section className="rounded-xl border border-neutral-200 dark:border-neutral-800">
         <div className="flex items-start justify-between gap-4 p-4">
           <div>
             <label htmlFor="site-nav-loader" className="text-sm font-semibold">
@@ -223,8 +223,8 @@ export default function WebsiteClient({
         </div>
       </section>
 
-      <section className="rounded-xl border border-neutral-200 dark:border-neutral-800">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 p-3 dark:border-neutral-800">
+      <section data-tour="website-published-preview" className="rounded-xl border border-neutral-200 dark:border-neutral-800">
+        <div data-tour-anchor className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 p-3 dark:border-neutral-800">
           <div>
             <h2 className="text-sm font-semibold">Published website preview</h2>
             <p className="text-xs text-muted-foreground">Draft template and design changes appear only after publishing.</p>

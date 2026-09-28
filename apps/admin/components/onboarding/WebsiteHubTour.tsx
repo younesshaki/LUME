@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   NextStep,
   NextStepProvider,
@@ -12,6 +12,7 @@ import { Button } from "../ui/button";
 import { recordWebsiteTourOutcome } from "../../app/admin/[tenant]/website/actions";
 import {
   WEBSITE_HUB_TOUR_STEPS,
+  compactTourSelector,
   WEBSITE_HUB_TOUR_OVERLAY_OPTIONS,
   WEBSITE_TOUR_NAME,
   WEBSITE_TOUR_START_EVENT,
@@ -24,16 +25,33 @@ type WebsiteHubTourProps = {
   startMode: WebsiteTourStart;
 };
 
-const tours: Tour[] = [{
-  tour: WEBSITE_TOUR_NAME,
-  steps: WEBSITE_HUB_TOUR_STEPS.map(({ id: _id, ...step }) => ({
-    ...step,
-    cardOffset: 16,
-    scrollOffset: 88,
-    selectorRetryAttempts: 4,
-    selectorRetryDelay: 100,
-  })),
-}];
+/**
+ * The tour definition. `selectorFor` lets a start-time pass swap a target that
+ * is too tall for the screen for a compact anchor inside it, so the card is
+ * never scrolled out of view (see compactTourSelector).
+ */
+function buildTours(
+  selectorFor: (step: (typeof WEBSITE_HUB_TOUR_STEPS)[number]) => string = (step) => step.selector,
+): Tour[] {
+  return [{
+    tour: WEBSITE_TOUR_NAME,
+    steps: WEBSITE_HUB_TOUR_STEPS.map((definition) => {
+      const { id: _id, ...step } = definition;
+      return {
+        ...step,
+        selector: selectorFor(definition),
+        cardOffset: 16,
+        scrollOffset: 88,
+        selectorRetryAttempts: 4,
+        selectorRetryDelay: 100,
+      };
+    }),
+  }];
+}
+
+function fitToViewport(): Tour[] {
+  return buildTours((step) => compactTourSelector(step.selector, step.id, window.innerHeight));
+}
 
 /**
  * Client-only NextStep wrapper for the route-local Website Hub tour. It owns no
@@ -41,6 +59,7 @@ const tours: Tour[] = [{
  * authenticated server action.
  */
 export function WebsiteHubTour({ tenantSlug, startMode }: WebsiteHubTourProps) {
+  const [tours, setTours] = useState<Tour[]>(() => buildTours());
   return (
     <NextStepProvider>
       <NextStep
@@ -57,19 +76,32 @@ export function WebsiteHubTour({ tenantSlug, startMode }: WebsiteHubTourProps) {
           if (tourName === WEBSITE_TOUR_NAME) void saveOutcome(tenantSlug, "skipped");
         }}
       >
-        <WebsiteHubTourStarter startMode={startMode} />
+        <WebsiteHubTourStarter startMode={startMode} onFitSteps={setTours} />
       </NextStep>
     </NextStepProvider>
   );
 }
 
-function WebsiteHubTourStarter({ startMode }: { startMode: WebsiteTourStart }) {
+function WebsiteHubTourStarter({
+  startMode,
+  onFitSteps,
+}: {
+  startMode: WebsiteTourStart;
+  onFitSteps: (tours: Tour[]) => void;
+}) {
   const { startNextStep } = useNextStep();
   const attempted = useRef(false);
+  // Bumped once the steps are fitted to this screen; the tour starts on the
+  // next render, after NextStep has received the fitted steps.
+  const [startRequest, setStartRequest] = useState(0);
+
+  useEffect(() => {
+    if (startRequest > 0) startNextStep(WEBSITE_TOUR_NAME);
+  }, [startRequest, startNextStep]);
 
   // Waits for every step's target to be on the page (and no modal open), then
   // starts the tour. Returns a cancel function.
-  const startWhenReady = useCallback((clearQuery: boolean) => {
+  const startWhenReady = useCallback((clearQuery: boolean, onStarted?: () => void) => {
     let observer: MutationObserver | null = null;
     let started = false;
 
@@ -81,9 +113,11 @@ function WebsiteHubTourStarter({ startMode }: { startMode: WebsiteTourStart }) {
       if (!everyTargetExists) return;
 
       started = true;
+      onStarted?.();
       observer?.disconnect();
       if (clearQuery) clearReplayQuery();
-      startNextStep(WEBSITE_TOUR_NAME);
+      onFitSteps(fitToViewport());
+      setStartRequest((request) => request + 1);
     };
 
     const frame = requestAnimationFrame(() => {
@@ -98,12 +132,15 @@ function WebsiteHubTourStarter({ startMode }: { startMode: WebsiteTourStart }) {
       cancelAnimationFrame(frame);
       observer?.disconnect();
     };
-  }, [startNextStep]);
+  }, [onFitSteps]);
 
+  // Marked only once the tour really starts: a cancelled attempt (React's
+  // development double-run, or leaving the page) must not block the next one.
   useEffect(() => {
     if (startMode === "none" || attempted.current) return;
-    attempted.current = true;
-    return startWhenReady(startMode === "manual");
+    return startWhenReady(startMode === "manual", () => {
+      attempted.current = true;
+    });
   }, [startMode, startWhenReady]);
 
   // The Tutorial buttons restart the tour in place, any number of times.
