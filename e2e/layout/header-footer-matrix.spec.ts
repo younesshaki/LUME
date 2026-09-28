@@ -214,6 +214,24 @@ for (const footerVariant of FOOTER_VARIANTS) {
         await expect(footer).toContainText(`${TENANT_NAME}.`);
         await expect(footer.getByRole("link", { name: "Instagram" })).toBeVisible();
         await expect(footer.getByRole("link", { name: "Imprint" })).toBeVisible();
+        // At the very end of the page nothing in the footer may sit under the
+        // floating bottom dock (shown from 768px).
+        // Pages scroll inside their own container, so scroll the footer itself.
+        await footer.evaluate((node) => node.scrollIntoView({ block: "end", behavior: "instant" }));
+        const covered = await page.evaluate(() => {
+          const dock = document.querySelector(".siteDock__panel");
+          const box = dock?.getBoundingClientRect();
+          if (!box || box.width === 0 || !(dock as HTMLElement).checkVisibility()) return [];
+          return [...document.querySelectorAll<HTMLElement>("footer a, footer button, footer p")]
+            .filter((el) => el.checkVisibility())
+            .filter((el) => {
+              const rect = el.getBoundingClientRect();
+              return rect.width > 0 && rect.left < box.right && rect.right > box.left &&
+                rect.top < box.bottom && rect.bottom > box.top;
+            })
+            .map((el) => (el.textContent ?? "").trim().slice(0, 30));
+        });
+        expect(covered, `${width}px: footer content under the bottom dock`).toEqual([]);
         const footerNav = footer.getByRole("navigation", { name: "Footer navigation" });
         if (footerVariant === "minimal") {
           await expect(footerNav).toHaveCount(0);

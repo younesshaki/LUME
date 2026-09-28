@@ -58,9 +58,18 @@ type GalleryImage = {
   sortOrder: number;
 };
 
+type PriceSignal = { enabled: boolean; reductions: number };
+
 type VehicleDetailResponse = {
   vehicle: Vehicle;
   images: GalleryImage[];
+  /**
+   * Returned here rather than from a separate route: the public site calls
+   * its own origin, where `/api/vehicles/:id/price-signal` never existed (it
+   * lives on the admin app), so every vehicle page logged a 404 and the
+   * signal never showed. Fetched in parallel with the gallery.
+   */
+  priceSignal: PriceSignal;
 };
 
 type ManagedVehicleImageRow = {
@@ -164,7 +173,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // The anonymous query above is the visibility authority. Image RLS is
   // intentionally stricter, so the server-only client may read metadata only
   // after that visible row is found and only for its exact tenant + vehicle.
-  const managedImages = await loadManagedGallery(imageClient, tenant.tenantId, vehicleId);
+  const [managedImages, priceSignal] = await Promise.all([
+    loadManagedGallery(imageClient, tenant.tenantId, vehicleId),
+    loadPriceSignal(supabase, tenant.tenantId, vehicleId),
+  ]);
   const gallery: GalleryImage[] = managedImages.flatMap((image) => {
       const src = managedVehicleImageUrl(r2PublicBaseUrl, image.r2_key);
       if (!src) return [];
@@ -179,7 +191,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const resolvedGallery = gallery.length > 0 ? gallery : feedGallery(row);
   const primary = resolvedGallery[0];
   const vehicle = rowToVehicle(row, primary);
-  const response: VehicleDetailResponse = { vehicle, images: resolvedGallery };
+  const response: VehicleDetailResponse = { vehicle, images: resolvedGallery, priceSignal };
 
   res.setHeader("Cache-Control", "private, no-store");
   return json(req, res, response, 200);
@@ -233,6 +245,22 @@ async function loadManagedGallery(
     return [];
   }
   return (data ?? []) as ManagedVehicleImageRow[];
+}
+
+/** Mirrors the admin app's price-signal route: anon RPC, and any failure hides the signal. */
+async function loadPriceSignal(supabase: any, tenantId: string, vehicleId: string): Promise<PriceSignal> {
+  try {
+    const { data, error } = await supabase.rpc("get_public_vehicle_price_signal", {
+      p_tenant_id: tenantId,
+      p_vehicle_id: vehicleId,
+    });
+    const signal = error ? null : (data as Array<{ enabled?: boolean; reductions?: number }> | null)?.[0];
+    if (signal?.enabled !== true) return { enabled: false, reductions: 0 };
+    const reductions = Number(signal.reductions);
+    return { enabled: true, reductions: Number.isFinite(reductions) ? Math.max(0, Math.floor(reductions)) : 0 };
+  } catch {
+    return { enabled: false, reductions: 0 };
+  }
 }
 
 function managedVehicleImageUrl(baseUrl: string, r2Key: string): string | undefined {

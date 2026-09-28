@@ -1,12 +1,12 @@
 import { mediaUrl } from "@/config/cdn";
 import { openCookiePreferences } from "@/components/CookieBanner/CookieBanner";
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isSiteScreen, useSiteNavItems, type SiteScreen } from "../siteNavigation";
 import { preloadRouteModule } from "@/app-shell/routeModules";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
-import { publicTenantSlug, resolvePublicTenant } from "@/lib/publicTenant";
+import { publicTenantSlug } from "@/lib/publicTenant";
+import { usePublicTenantName } from "@/lib/usePublicTenantName";
 import { footerContent } from "./footerContent";
 
 const SOCIAL_LINKS = [
@@ -48,22 +48,6 @@ type SiteFooterProps = {
 const lumeLogoImage = mediaUrl("LUMElogo.png");
 
 /** The tenant's display name for the copyright line; null until known. */
-function usePublicTenantName(): string | null {
-  const [name, setName] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    void resolvePublicTenant(publicTenantSlug)
-      .then((tenant) => {
-        if (!cancelled) setName(tenant?.name ?? null);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return name;
-}
-
 export function SiteFooter({ onNavigate }: SiteFooterProps) {
   const tenantTheme = useTenantTheme();
   const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
@@ -115,7 +99,7 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
     ) : null;
 
   return (
-    <footer className="relative bg-[var(--theme-lume-background,#000)] text-[var(--theme-lume-ink,#fff8ec)] border-t border-[var(--theme-lume-line)] mt-auto">
+    <footer className="siteFooter relative bg-[var(--theme-lume-background,#000)] text-[var(--theme-lume-ink,#fff8ec)] border-t border-[var(--theme-lume-line)] mt-auto">
       {/* Top gradient bleed */}
       <div
         className="absolute top-0 left-0 right-0 h-20 pointer-events-none"

@@ -8,6 +8,15 @@
   "functions": {
     "api/chat.ts": {
       "regions": ["dub1"]
+    },
+    "api/vehicles.ts": {
+      "regions": ["dub1"]
+    },
+    "api/vehicles/[id].ts": {
+      "regions": ["dub1"]
+    },
+    "api/vehicles/facets.ts": {
+      "regions": ["dub1"]
     }
   },
   "headers": [
