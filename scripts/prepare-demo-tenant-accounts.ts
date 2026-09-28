@@ -70,6 +70,11 @@ async function requiredWrite(label: string, value: PromiseLike<{ error: any }>):
   const { error } = await value;
   if (error) fail(`${label}: ${error.message}`);
 }
+async function optional<T>(label: string, value: PromiseLike<{ data: T | null; error: any }>): Promise<T | null> {
+  const { data, error } = await value;
+  if (error) fail(`${label}: ${error.message}`);
+  return data;
+}
 function extension(contentType: string, key: string) {
   if (contentType === "image/png") return "png";
   if (contentType === "image/webp") return "webp";
@@ -148,7 +153,7 @@ async function copyVehicles(service: any, source: any, target: any, targetSlug: 
     const vehicleId = idMap.get(image.vehicle_id); if (!vehicleId) fail("Managed image points to a missing demo vehicle.");
     const targetId = uuid(`demo-vehicle-image:${target.id}:${image.id}`);
     const targetKey = `${targetSlug}/vehicles/${vehicleId}/${targetId}.${extension(image.content_type, image.r2_key)}`;
-    const existing = await required<any>("Read copied managed image", service.from("vehicle_images").select("id").eq("id", targetId).maybeSingle());
+    const existing = await optional<any>("Read copied managed image", service.from("vehicle_images").select("id").eq("id", targetId).maybeSingle());
     if (!existing) {
       await copyR2Object(config, image.r2_key, targetKey, image.content_type, image.byte_size);
       const { id: _id, tenant_id: _tenant, vehicle_id: _vehicle, r2_key: _key, sort_order: _sort, is_primary: _primary, created_at: _created, updated_at: _updated, ...copy } = image;
