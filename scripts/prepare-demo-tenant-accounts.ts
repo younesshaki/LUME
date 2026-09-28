@@ -136,10 +136,13 @@ async function copyVehicles(service: any, source: any, target: any, targetSlug: 
   const images = await required<any[]>("Read demo managed images", service.from("vehicle_images").select("*").eq("tenant_id", source.id).order("vehicle_id").order("is_primary", { ascending: false }).order("sort_order"));
   const config = readR2StorageConfig(); if (!config) fail("R2 storage configuration is unavailable.");
   const idMap = new Map<string, string>();
-  for (const vehicle of vehicles) {
+  const vehicleCopies = vehicles.map((vehicle) => {
     const id = uuid(`demo-vehicle:${target.id}:${vehicle.id}`); idMap.set(vehicle.id, id);
     const { id: _id, tenant_id: _tenant, search_vector: _search, created_at: _created, updated_at: _updated, ...copy } = vehicle;
-    await requiredWrite("Copy demo vehicle", service.from("vehicles").upsert({ ...copy, id, tenant_id: target.id }, { onConflict: "id" }));
+    return { ...copy, id, tenant_id: target.id };
+  });
+  for (let start = 0; start < vehicleCopies.length; start += 200) {
+    await requiredWrite("Copy demo vehicle batch", service.from("vehicles").upsert(vehicleCopies.slice(start, start + 200), { onConflict: "id" }));
   }
   for (const image of images) {
     const vehicleId = idMap.get(image.vehicle_id); if (!vehicleId) fail("Managed image points to a missing demo vehicle.");
