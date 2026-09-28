@@ -1,5 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
-import { dismissConsent, NAV_PAGES, navLabels, stubTenant, TENANT_NAME } from "./stubTenant";
+import {
+  dismissConsent,
+  LAYOUT_TEMPLATES,
+  NAV_PAGES,
+  navLabels,
+  stubTenant,
+  templateLabel,
+  templateTheme,
+  TENANT_NAME,
+} from "./stubTenant";
 
 /**
  * Sprint task A1: the header and footer hold up for every configuration a
@@ -131,13 +140,15 @@ async function waitForTenantHeader(page: Page, navCount: number): Promise<void> 
     .toBe(true);
 }
 
+for (const template of LAYOUT_TEMPLATES)
 for (const variant of HEADER_VARIANTS) {
   for (const logoPlacement of PLACEMENTS) {
     for (const navCount of NAV_COUNTS) {
       for (const mode of MODES) {
-        test(`header ${variant} · logo ${logoPlacement} · ${navCount} items · ${mode}`, async ({ page }) => {
+        test(`header ${variant} · logo ${logoPlacement} · ${navCount} items · ${mode}${templateLabel(template)}`, async ({ page }, testInfo) => {
+          test.skip(template === "glo3d" && testInfo.project.name === "gooey-nav", "Glo3D always uses the plain nav");
           await stubTenant(page, {
-            theme: { header: { variant, logoPlacement, maxNavItems: 10 } },
+            theme: { ...templateTheme(template), header: { variant, logoPlacement, maxNavItems: 10 } },
             navCount,
             mode,
           });
@@ -168,11 +179,14 @@ for (const variant of HEADER_VARIANTS) {
   }
 }
 
+for (const template of LAYOUT_TEMPLATES)
 for (const footerVariant of FOOTER_VARIANTS) {
   for (const mode of MODES) {
-    test(`footer ${footerVariant} · ${mode}`, async ({ page }) => {
+    test(`footer ${footerVariant} · ${mode}${templateLabel(template)}`, async ({ page }, testInfo) => {
+      test.skip(template === "glo3d" && testInfo.project.name === "gooey-nav", "Glo3D always uses the plain nav");
       await stubTenant(page, {
         theme: {
+          ...templateTheme(template),
           header: { maxNavItems: 10 },
           footer: {
             variant: footerVariant,

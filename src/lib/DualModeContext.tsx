@@ -74,3 +74,15 @@ export function useDualMode(): DualModeContextValue {
 
   return value;
 }
+
+const noop = () => undefined;
+
+/**
+ * Pins the experience mode for everything below it, without touching the
+ * visitor's saved preference. Used by templates that have no cinematic mode
+ * (Template Glo3D renders every block in its standard, flat form).
+ */
+export function FixedDualMode({ mode, children }: { mode: DualMode; children: ReactNode }) {
+  const value = useMemo(() => ({ mode, toggleMode: noop }), [mode]);
+  return <DualModeContext.Provider value={value}>{children}</DualModeContext.Provider>;
+}

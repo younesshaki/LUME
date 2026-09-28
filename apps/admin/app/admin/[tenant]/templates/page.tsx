@@ -60,6 +60,7 @@ export default async function TemplatesPage({ params }: PageProps) {
 
   return (
     <TemplatesClient
+        mediaBaseUrl={process.env.R2_PUBLIC_BASE_URL ?? ""}
       tenantSlug={tenant.slug}
       tenantName={tenant.name}
       publishedDesign={design ?? createDefaultSiteDesign(getSiteTemplate("luxury"))}

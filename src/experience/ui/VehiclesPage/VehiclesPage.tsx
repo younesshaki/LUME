@@ -169,6 +169,8 @@ function useDialogKeyboard(open: boolean, onClose: () => void) {
 }
 
 function DemoNotice() {
+  // LUME's own concept inventory only; a dealership's listings are real.
+  if (!houseOrTenantLabel("house", "")) return null;
   return (
     <p className="vehiclesPage__demoNotice">
       Concept demo: prices and imagery are representative until verified listing

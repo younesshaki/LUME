@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { stubTenant } from "./stubTenant";
+import { LAYOUT_TEMPLATES, stubTenant, templateLabel, templateTheme, type LayoutTemplate } from "./stubTenant";
 // Editor defaults for these block types (from @lume/blocks), so every block
 // validates and renders exactly as a freshly added block would.
 import defaults from "./fixtures/blockDefaults.json" with { type: "json" };
@@ -47,9 +47,9 @@ async function watch(page: Page): Promise<Problems> {
   return problems;
 }
 
-async function stub(page: Page) {
+async function stub(page: Page, template: LayoutTemplate) {
   await stubTenant(page, {
-    theme: { header: { maxNavItems: 10 } },
+    theme: { ...templateTheme(template), header: { maxNavItems: 10 } },
     navCount: 6,
     mode: "dark",
     publishedPages: CUSTOM_PAGES,
@@ -71,6 +71,7 @@ async function stub(page: Page) {
   await page.route("**/api/consent*", (route) => route.fulfill({ status: 204, body: "" }));
 }
 
+for (const template of LAYOUT_TEMPLATES)
 for (const preview of [false, true]) {
   const query = preview ? "?preview=lume" : "";
   for (const [path, ready] of [
@@ -82,8 +83,9 @@ for (const preview of [false, true]) {
     ["/faq", "header"],
     ["/about", "text=About us. >> visible=true"],
   ] as const) {
-    test(`${path}${preview ? " (page builder)" : ""} is console-clean`, async ({ page }) => {
-      await stub(page);
+    test(`${path}${preview ? " (page builder)" : ""} is console-clean${templateLabel(template)}`, async ({ page }, testInfo) => {
+      test.skip(template === "glo3d" && testInfo.project.name === "gooey-nav", "Glo3D always uses the plain nav");
+      await stub(page, template);
       const problems = await watch(page);
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto(`${path}${query}`);

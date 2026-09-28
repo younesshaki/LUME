@@ -173,6 +173,7 @@ import {
 import {
   writeInternalConciergeTrace,
   type ConciergeTraceSource,
+  type ConciergeTraceStatus,
 } from "@/lib/conciergeTrace.server";
 import {
   type DeterministicAnswers,
@@ -372,6 +373,11 @@ export async function POST(request: Request): Promise<Response> {
   const finalizeDeferredTiming = (): void => {
     if (deferredTimingOutcome) queueServerTiming(deferredTimingOutcome);
   };
+  // Assigned once the turn's conversation identity exists (below). Earlier
+  // failures have no conversation to attach a trace to.
+  let traceTurnFailure:
+    | ((status: number, errorStage: string) => void)
+    | null = null;
   const reportTurnError = (status: number, errorStage: string): void => {
     reportTurnTiming({
       conversationId: null,
@@ -380,6 +386,7 @@ export async function POST(request: Request): Promise<Response> {
       status,
       errorStage,
     });
+    traceTurnFailure?.(status, errorStage);
   };
 
   // Build the tenant-scoped system prompt. Keyword + fuzzy retrieval over
@@ -675,6 +682,37 @@ export async function POST(request: Request): Promise<Response> {
   // actually reaches the model.
   let selectedVehicleChunk: RetrievedChunk | null = null;
   let groundSelectedVehicleChunk = false;
+  // One stable id per turn's log lines (transcript + conversation-state +
+  // actions debug) so independent anonymous sessions can be distinguished
+  // during state-isolation investigations.
+  const transcriptSessionId =
+    visitorTurn?.sessionId ?? anonymousConversationId ?? "unknown";
+  // A failed turn otherwise leaves no record of what the visitor asked.
+  // Registered before state construction so a state_build failure is traced.
+  traceTurnFailure = (status, errorStage) => {
+    queueInternalConciergeTrace({
+      client: supabase,
+      tenantId: tenant.tenantId,
+      requestId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      source: "error",
+      status: "failed",
+      userMessage: lastUser.content,
+      assistantResponse: null,
+      stateBefore: conversationStateBefore,
+      stateAfter: conversationState,
+      actions: [],
+      retrieval: { totalMatched: totalMatched ?? null },
+      model: {
+        ...(chatProvider
+          ? { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id }
+          : {}),
+        errorStage,
+        httpStatus: status,
+      },
+    });
+  };
   try {
     // Only the reads a deterministic rule can actually need happen here. The
     // document corpus, loyalty context and visitor preferences feed the model
@@ -1170,11 +1208,6 @@ export async function POST(request: Request): Promise<Response> {
       : (totalMatched ?? matchedVehicles.length) === 0
         ? "empty"
         : "success";
-  // One stable id per turn's log lines (transcript + conversation-state +
-  // actions debug) so independent anonymous sessions can be distinguished
-  // during state-isolation investigations.
-  const transcriptSessionId =
-    visitorTurn?.sessionId ?? anonymousConversationId ?? "unknown";
   captureDebug("api/chat/conversation-state", {
     tenantId: tenant.tenantId,
     conversationSessionId: transcriptSessionId,
@@ -2392,8 +2425,9 @@ function queueInternalConciergeTrace(input: {
   conversationId: string;
   turn: number;
   source: ConciergeTraceSource;
+  status?: ConciergeTraceStatus;
   userMessage: string;
-  assistantResponse: string;
+  assistantResponse: string | null;
   stateBefore: ConversationInventoryState;
   stateAfter: ConversationInventoryState;
   actions: readonly BotAction[];
@@ -2410,6 +2444,7 @@ function queueInternalConciergeTrace(input: {
       conversationId: input.conversationId,
       turn: input.turn,
       source: input.source,
+      status: input.status,
       userMessage: input.userMessage,
       assistantResponse: input.assistantResponse,
       stateBefore: input.stateBefore as unknown as Record<string, unknown>,

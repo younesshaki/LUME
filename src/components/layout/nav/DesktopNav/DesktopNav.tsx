@@ -48,7 +48,9 @@ export function DesktopNav({
         {inlineItems.map((item) => (
           <span
             key={item.screen}
-            className="px-1 py-0.5 text-sm tracking-widest uppercase whitespace-nowrap"
+            // Same hook class as NavLink, so a template restyling the labels
+            // (Glo3D drops the uppercase) is measured at its real width.
+            className="siteNavLink px-1 py-0.5 text-sm tracking-widest uppercase whitespace-nowrap"
           >
             {item.label}
           </span>
