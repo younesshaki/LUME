@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import handler from "./consent";
+import handler from "../consent";
 
 function response() {
   const res = {
