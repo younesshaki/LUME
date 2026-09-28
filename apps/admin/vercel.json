@@ -3,5 +3,10 @@
   "buildCommand": "node ../../scripts/verify-deployment-env.mjs --app=admin && next build",
   "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs",
   "outputDirectory": ".next",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "app/api/chat/route.ts": {
+      "regions": ["dub1"]
+    }
+  }
 }

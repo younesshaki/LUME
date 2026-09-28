@@ -13,7 +13,13 @@
  * does NOT own (`header` from Navigation, `branding` uploads, `vehiclePricing`,
  * and any unknown future keys) round-trip untouched.
  */
-import type { TenantDockVariant, TenantHeaderConfig, TenantTheme } from "./tenantTheme";
+import type {
+  TenantDockVariant,
+  TenantFooterConfig,
+  TenantHeaderConfig,
+  TenantHeaderCta,
+  TenantTheme,
+} from "./tenantTheme";
 
 export const SITE_DESIGN_SCHEMA_VERSION = 2 as const;
 
@@ -78,6 +84,7 @@ export type SiteDesign = {
 
   // Preserved verbatim on every save (not owned by the design editor):
   header?: TenantHeaderConfig;
+  footer?: TenantFooterConfig;
   branding?: {
     logoUrl?: string;
     favicon32Url?: string;
@@ -232,7 +239,87 @@ function normalizeHeader(value: unknown): TenantHeaderConfig | undefined {
   if (typeof value.showCta === "boolean") out.showCta = value.showCta;
   const ctaLabel = safeCssToken(value.ctaLabel);
   if (ctaLabel) out.ctaLabel = ctaLabel;
+  // Everything below was dropped here until 2026-09-26, so the public site
+  // rendered the defaults (centred, logo left, sticky, one legacy CTA) no
+  // matter what the admin saved. The stored theme was never affected.
+  if (isOneOf(value.variant, HEADER_VARIANTS)) out.variant = value.variant;
+  if (isOneOf(value.logoPlacement, LOGO_PLACEMENTS)) out.logoPlacement = value.logoPlacement;
+  if (typeof value.sticky === "boolean") out.sticky = value.sticky;
+  if (typeof value.showVisitorTab === "boolean") out.showVisitorTab = value.showVisitorTab;
+  if (Array.isArray(value.hiddenNavSlugs)) {
+    // Page slugs only; anything else is dropped rather than trusted.
+    out.hiddenNavSlugs = value.hiddenNavSlugs
+      .filter((slug): slug is string => typeof slug === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(slug.trim()))
+      .map((slug) => slug.trim().toLowerCase())
+      .slice(0, 100);
+  }
+  if (Array.isArray(value.ctas)) {
+    // An explicit empty array means "no CTA" and must survive normalization.
+    out.ctas = value.ctas.flatMap((raw): TenantHeaderCta[] => {
+      if (!isRecord(raw)) return [];
+      const label = safeCssToken(raw.label);
+      const href = safeNavHref(raw.href);
+      if (!label || !href) return [];
+      return [{ label, href, ...(isOneOf(raw.style, CTA_STYLES) && { style: raw.style }) }];
+    });
+  }
   return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function normalizeFooter(value: unknown): TenantFooterConfig | undefined {
+  if (!isRecord(value)) return undefined;
+  const out: TenantFooterConfig = {};
+  if (isOneOf(value.variant, FOOTER_VARIANTS)) out.variant = value.variant;
+  if (typeof value.columns === "number" && Number.isFinite(value.columns)) {
+    out.columns = value.columns;
+  }
+  if (typeof value.showSocial === "boolean") out.showSocial = value.showSocial;
+  if (typeof value.showNewsletter === "boolean") out.showNewsletter = value.showNewsletter;
+  const socialLinks = normalizeLinks(value.socialLinks);
+  if (socialLinks) out.socialLinks = socialLinks;
+  const legalLinks = normalizeLinks(value.legalLinks);
+  if (legalLinks) out.legalLinks = legalLinks;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+const HEADER_VARIANTS = ["centred", "left", "split", "minimal"] as const;
+const LOGO_PLACEMENTS = ["left", "centre"] as const;
+const CTA_STYLES = ["primary", "ghost"] as const;
+const FOOTER_VARIANTS = ["columns", "stacked", "minimal"] as const;
+const MAX_LINKS = 12;
+
+function isOneOf<T extends string>(value: unknown, allowed: readonly T[]): value is T {
+  return typeof value === "string" && (allowed as readonly string[]).includes(value);
+}
+
+function normalizeLinks(value: unknown): Array<{ label: string; href: string }> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.slice(0, MAX_LINKS).flatMap((raw) => {
+    if (!isRecord(raw)) return [];
+    const label = safeCssToken(raw.label);
+    const href = safeNavHref(raw.href);
+    return label && href ? [{ label, href }] : [];
+  });
+}
+
+/**
+ * Hrefs from tenant config end up in `<a href>` on the public site, so only
+ * same-site paths, fragments and http(s)/mailto/tel URLs pass — never
+ * `javascript:` or protocol-relative `//host` links.
+ */
+export function safeNavHref(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 2048) return undefined;
+  if ((trimmed.startsWith("/") && !trimmed.startsWith("//")) || trimmed.startsWith("#")) {
+    return trimmed;
+  }
+  try {
+    const url = new URL(trimmed);
+    return ["https:", "http:", "mailto:", "tel:"].includes(url.protocol) ? trimmed : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -311,8 +398,10 @@ export function normalizeSiteDesign(value: unknown, template: SiteDesignDefaults
 
 function withPreservedKeys(design: SiteDesign, source: Record<string, unknown>): SiteDesign {
   const header = normalizeHeader(source.header);
+  const footer = normalizeFooter(source.footer);
   const branding = normalizeBranding(source.branding);
   if (header) design.header = header;
+  if (footer) design.footer = footer;
   if (branding) design.branding = branding;
   if (isRecord(source.vehiclePricing)) {
     design.vehiclePricing = {
@@ -412,6 +501,7 @@ export function siteDesignToTenantTheme(
   const shared = resolveShared(design, template);
   return {
     ...(design.header && { header: design.header }),
+    ...(design.footer && { footer: design.footer }),
     colors: resolveModeColors(design, template, mode),
     fonts: shared.fonts,
     dockVariant: shared.dockVariant,

@@ -52,3 +52,23 @@
     display: none;
   }
 }
+
+/*
+ * The dock floats over the page, so the footer reserves room for it: without
+ * this, at the end of the page the dock covered the footer's last rows of
+ * links (seen on production, 2026-09-27). Height of the dock panel plus its
+ * offset and a gap; phones have no dock and a `hidden` dock needs no room.
+ */
+@media (min-width: 768px) {
+  .siteFooter {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
+
+  :root[data-lume-dock-variant="floating"] .siteFooter {
+    padding-bottom: calc(122px + env(safe-area-inset-bottom));
+  }
+
+  :root[data-lume-dock-variant="hidden"] .siteFooter {
+    padding-bottom: 0;
+  }
+}

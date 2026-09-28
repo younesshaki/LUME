@@ -21,6 +21,8 @@ const inventoryVehicle = {
 };
 
 async function stubAnonymousVisitor(page: Page) {
+  // Analytics beacons would otherwise escape to the (absent) admin proxy.
+  await page.route("**/api/events*", (route) => route.fulfill({ status: 204, body: "" }));
   await page.route("**/api/visitor/me", (route) =>
     route.fulfill({
       status: 401,
@@ -47,9 +49,10 @@ test("uses the persisted website mode before paint and switches resolved tokens"
   const toggle = page.getByRole("button", { name: /Switch website color theme to dark/i });
   await toggle.click();
   await expect(root).toHaveAttribute("data-theme", "dark");
+  // The default dark background is stored as "#000000"; either spelling is black.
   await expect.poll(() => root.evaluate((element) =>
     getComputedStyle(element).getPropertyValue("--theme-lume-background").trim(),
-  )).toBe("#000");
+  )).toMatch(/^#000(000)?$/);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("lume.color-theme.v1"))).toBe("dark");
 });
 

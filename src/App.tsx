@@ -38,8 +38,15 @@ import {
   resolveBotNavigationRoute,
   storePendingLeadFormPrefill,
   storePendingVehicleComparison,
+  vehicleFiltersFromBotAction,
+  vehicleResultLimitFromBotAction,
   vehicleRouteFromBotAction,
 } from "./lib/botActionConsumers";
+import {
+  prefetchVehicleResults,
+  primeVehicleResultsFromConcierge,
+  type VehicleSort,
+} from "./experience/vehicles/catalog";
 import { noteConciergeRouteRendered } from "./lib/conciergeSpeed";
 import {
   inAppHistory,
@@ -374,7 +381,11 @@ export default function App() {
 
   const handleMediaQualityChange = useCallback((quality: ShowcaseVideoQuality) => {
     setMediaQuality(quality);
-    window.localStorage.setItem(MEDIA_QUALITY_STORAGE_KEY, quality);
+    try {
+      window.localStorage.setItem(MEDIA_QUALITY_STORAGE_KEY, quality);
+    } catch {
+      // Storage unavailable: the choice still applies for this visit.
+    }
   }, []);
 
   useBotAction("navigate", (action) => {
@@ -461,6 +472,15 @@ export default function App() {
   });
 
   useBotAction("filter_inventory", (action) => {
+    // Start the exact filtered-page request while React downloads/renders the
+    // destination route. When the server already included that verified first
+    // page, consume it directly; otherwise share an in-flight request.
+    const resultLimit = vehicleResultLimitFromBotAction(action);
+    const filters = vehicleFiltersFromBotAction(action);
+    const sort = (action.sort ?? "recommended") as VehicleSort;
+    if (!primeVehicleResultsFromConcierge(action, filters, sort, resultLimit ?? 24)) {
+      void prefetchVehicleResults(filters, sort, 1, resultLimit ?? 24).catch(() => undefined);
+    }
     setShowcaseChapterRevealed(false);
     navigateTo(
       vehicleRouteFromBotAction(action),
@@ -514,11 +534,27 @@ export default function App() {
   // The live-preview iframe endpoint: no site chrome or audio — just
   // the block canvas the admin editor streams into. Kept out of the route-config
   // union on purpose; it is an internal surface, not a navigable page.
+  //
+  // It still needs the providers the live pages get. Without them the preview
+  // was not the live site: the tenant's colours, fonts and template were never
+  // applied, and blocks that read story or saved-vehicle context (showcase
+  // gallery, vehicle detail — both on the demo tenant) rendered nothing
+  // (found 2026-09-28).
   if (location.pathname === PAGE_PREVIEW_PATH) {
     return (
-      <Suspense fallback={null}>
-        <PagePreviewBridge />
-      </Suspense>
+      <ThemeProvider>
+        <TenantThemeProvider>
+          <VisitorAuthProvider>
+            <SavedVehiclesProvider>
+              <Suspense fallback={null}>
+                <StoryProvider>
+                  <PagePreviewBridge />
+                </StoryProvider>
+              </Suspense>
+            </SavedVehiclesProvider>
+          </VisitorAuthProvider>
+        </TenantThemeProvider>
+      </ThemeProvider>
     );
   }
 

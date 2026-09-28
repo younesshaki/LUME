@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildFallbackGallery,
+  clearVehicleDetailCacheForTests,
   loadVehicleById,
+  loadVehiclePriceSignal,
   normalizeVehicleGallery,
   type Vehicle,
 } from "./catalog";
@@ -39,6 +41,7 @@ function mockFetchOnce(status: number, body: unknown) {
 }
 
 afterEach(() => {
+  clearVehicleDetailCacheForTests();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -134,5 +137,51 @@ describe("loadVehicleById", () => {
     expect(detail?.vehicle.id).toBe(baseVehicle.id);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(fetchSpy.mock.calls.every(([url]) => !String(url).includes("offset="))).toBe(true);
+  });
+});
+
+describe("shared detail request", () => {
+  it("serves concurrent and follow-up callers from one request", async () => {
+    mockFetchOnce(200, { vehicle: baseVehicle, images: [] });
+    // The built-in page (loading fallback) and the layout's vehicle block
+    // both ask for the same car.
+    const [first, second] = await Promise.all([
+      loadVehicleById(baseVehicle.id),
+      loadVehicleById(baseVehicle.id),
+    ]);
+    const third = await loadVehicleById(baseVehicle.id);
+    expect(first?.vehicle.id).toBe(baseVehicle.id);
+    expect(second).toBe(first);
+    expect(third).toBe(first);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not keep a miss or a failure for the next caller", async () => {
+    mockFetchOnce(404, {});
+    // A 404 falls back to the legacy CSV, which also fails here: a rejection.
+    await loadVehicleById("22222222-2222-4222-8222-222222222222").catch(() => null);
+    const callsAfterFirst = vi.mocked(fetch).mock.calls.length;
+    await loadVehicleById("22222222-2222-4222-8222-222222222222").catch(() => null);
+    expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(callsAfterFirst);
+  });
+});
+
+describe("price signal", () => {
+  it("is read from the detail response — no request to the missing /price-signal route", async () => {
+    mockFetchOnce(200, {
+      vehicle: baseVehicle,
+      images: [],
+      priceSignal: { enabled: true, reductions: 2 },
+    });
+    expect(await loadVehiclePriceSignal(baseVehicle.id)).toEqual({ enabled: true, reductions: 2 });
+    expect((await loadVehicleById(baseVehicle.id))?.priceSignal).toEqual({ enabled: true, reductions: 2 });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const urls = vi.mocked(fetch).mock.calls.map(([url]) => String(url));
+    expect(urls.some((url) => url.includes("price-signal"))).toBe(false);
+  });
+
+  it("is hidden when an older endpoint does not return it", async () => {
+    mockFetchOnce(200, { vehicle: baseVehicle, images: [] });
+    expect(await loadVehiclePriceSignal(baseVehicle.id)).toBeNull();
   });
 });

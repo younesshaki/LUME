@@ -2,66 +2,26 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/app-shell/NavigationProvider";
 import { preloadRouteModule } from "@/app-shell/routeModules";
-import { mediaUrl } from "@/config/cdn";
 import { loadHeaderConfig, type PublicHeaderConfig } from "@/lib/publicNav";
-import type { TenantHeaderVariant } from "@lume/types";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
+import { usePublicTenantName } from "@/lib/usePublicTenantName";
 import { play } from "@/lib/sound";
 import { DesktopNav } from "../nav/DesktopNav";
 import { GooeyDesktopNav } from "../nav/GooeyDesktopNav";
+import { deriveActiveNavKey } from "../nav/activeNav";
 import { MobileNav } from "../nav/MobileNav";
 import { InvitationCTA } from "../nav/InvitationCTA";
 import { ThemeToggle } from "../ThemeToggle";
 import { VisitorAccountButton } from "../VisitorAccountButton";
 import { isSiteScreen, useSiteNavItems, type SiteNavItem } from "../siteNavigation";
+import { useSiteLogo } from "../siteLogo";
 import { useSiteHeaderLayoutState } from "./SiteHeader.animations";
 import { getHeaderNavigationSound } from "./SiteHeader.sounds";
-import { useSiteHeaderState } from "./SiteHeader.state";
 import "./SiteHeader.css";
+import { headerLayout } from "./headerLayout";
 
 const useGooeyNav = import.meta.env.VITE_ENABLE_GOOEY_NAV === 'true';
 
-const lumeLogoImage = mediaUrl("LUMElogo.png");
-
-/**
- * Grid tracks per header variant. Every one is a three-track grid, so the
- * overlap fix from Phase 1 holds for all of them — a variant changes the track
- * *sizes*, never whether the nav participates in flow.
- *
- * - centred: nav takes the flexible middle track (the historical look).
- * - left:    nav sits next to the logo, actions pushed right.
- * - split:   nav and actions share the remaining space evenly.
- * - minimal: nav collapses entirely to the "More" menu via a narrow track.
- */
-const HEADER_TRACKS: Record<TenantHeaderVariant, string> = {
-  centred: "grid-cols-[auto_1fr_auto]",
-  left: "grid-cols-[auto_auto_1fr]",
-  split: "grid-cols-[auto_1fr_1fr]",
-  minimal: "grid-cols-[auto_minmax(0,4rem)_auto]",
-};
-
-const NAV_JUSTIFY: Record<TenantHeaderVariant, string> = {
-  centred: "justify-center",
-  left: "justify-start",
-  split: "justify-center",
-  minimal: "justify-end",
-};
-
-/**
- * Which nav item is active. Cinematic screens come from the route section;
- * custom published pages are matched from the /:pageSlug pathname.
- */
-function deriveActiveNavKey(
-  currentPath: string,
-  currentScreen: string,
-  items: SiteNavItem[]
-): string {
-  const slug = currentPath.replace(/^\/+|\/+$/g, "");
-  if (slug && !isSiteScreen(slug) && items.some((item) => item.screen === slug)) {
-    return slug;
-  }
-  return currentScreen;
-}
 
 function useHeaderConfig(): PublicHeaderConfig {
   // Optimistic default matches the historical look, so the header does not
@@ -90,14 +50,18 @@ function useHeaderConfig(): PublicHeaderConfig {
 export function SiteHeader() {
   const { navigateTo, currentPath } = useNavigation();
   const routerNavigate = useNavigate();
-  const { currentScreen } = useSiteHeaderState();
   const { hasOverlayPressure } = useSiteHeaderLayoutState();
   const items = useSiteNavItems();
   const headerConfig = useHeaderConfig();
   const tenantTheme = useTenantTheme();
-  const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
+  const logoImage = useSiteLogo();
+  const tenantName = usePublicTenantName();
 
-  const activeKey = deriveActiveNavKey(currentPath, currentScreen, items);
+  // Only a page that is actually in the nav is marked; an unmatched page (for
+  // example a published page left out of the nav) marks nothing rather than
+  // falsely claiming "Home". See nav/activeNav.ts.
+  const activeKey = deriveActiveNavKey(currentPath, items) ?? "";
+  const layout = headerLayout(headerConfig.variant, headerConfig.logoPlacement);
 
   const onNavigate = (key: string) => {
     if (isSiteScreen(key)) {
@@ -127,8 +91,9 @@ export function SiteHeader() {
     // "More" panel is portalled to <body> precisely so this clip can stay.
     <header
       data-header-variant={headerConfig.variant}
+      data-header-logo-placement={headerConfig.logoPlacement}
       className={`siteHeader ${headerConfig.sticky ? "fixed" : "absolute"} top-0 left-0 right-0 z-50
-        grid items-center gap-4 ${HEADER_TRACKS[headerConfig.variant]}
+        grid items-center gap-4 ${layout.tracks}
         px-6 md:px-10 h-16 md:h-[72px]
         backdrop-blur-md border-b overflow-hidden
         transition-colors duration-200 ${hasOverlayPressure ? "siteHeader--overlayPressure" : ""}`}
@@ -136,31 +101,43 @@ export function SiteHeader() {
       {/* Logo */}
       <button
         aria-label="Go to LUME home"
+        data-header-slot="logo"
         onClick={() => onNavigate("home")}
         onMouseEnter={() => preloadRouteModule("home")}
         onFocus={() => preloadRouteModule("home")}
         onPointerDown={() => preloadRouteModule("home")}
-        className="flex-shrink-0 cursor-pointer focus-visible:outline-none
-          focus-visible:ring-1 focus-visible:ring-[#C9A84C] rounded"
+        className={`flex-shrink-0 cursor-pointer focus-visible:outline-none
+          focus-visible:ring-1 focus-visible:ring-[#C9A84C] rounded ${layout.order.logo}`}
       >
-        <img
-          src={logoImage}
-          alt="Site logo"
-          className="h-8 md:h-9 w-auto object-contain"
-          draggable={false}
-        />
+        {logoImage ? (
+          <img
+            src={logoImage}
+            alt={tenantName ? `${tenantName} logo` : "Site logo"}
+            className="h-8 md:h-9 w-auto object-contain"
+            draggable={false}
+          />
+        ) : (
+          // Holds the logo's space while the dealer's theme loads.
+          <span aria-hidden="true" className="block h-8 md:h-9 w-24" />
+        )}
       </button>
 
       {/* Desktop nav — the flexible middle track. min-w-0 lets it shrink below
           its content width so the action cluster is never pushed off-screen. */}
-      <div className={`min-w-0 flex ${NAV_JUSTIFY[headerConfig.variant]}`}>
+      <div
+        data-header-slot="nav"
+        className={`min-w-0 flex ${layout.navJustify} ${layout.navSlot} ${layout.order.nav}`}
+      >
         {useGooeyNav
           ? <GooeyDesktopNav currentScreen={activeKey} onNavigate={onNavigate} onIntent={preloadRouteModule} items={items} />
           : <DesktopNav currentScreen={activeKey} onNavigate={onNavigate} onIntent={preloadRouteModule} items={items} />}
       </div>
 
       {/* Right slot */}
-      <div className="flex items-center justify-end gap-3 md:gap-4">
+      <div
+        data-header-slot="actions"
+        className={`flex items-center justify-end gap-3 md:gap-4 ${layout.order.actions}`}
+      >
         {headerConfig.showVisitorTab && <VisitorAccountButton />}
         <ThemeToggle />
         {headerConfig.ctas.map((cta, index) => (

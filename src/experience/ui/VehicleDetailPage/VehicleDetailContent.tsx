@@ -20,6 +20,11 @@ import VehicleGallery from "./VehicleGallery";
 import { vehicleDetailSoundActions } from "./VehicleDetailPage.sounds";
 import { MakeLogo } from "@/components/vehicles/MakeLogo";
 import { noteConciergeDestinationReady } from "@/lib/conciergeSpeed";
+import {
+  houseOrTenantLabel,
+  usePublicTenantName,
+  vehiclePageTitle,
+} from "@/lib/usePublicTenantName";
 
 /**
  * The shared vehicle-detail surface: gallery, title/price, action row, specs,
@@ -54,7 +59,13 @@ function readStoredIds(key: string): string[] {
 
 function writeStoredIds(key: string, ids: string[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(ids));
+  // Storage can throw (private browsing, blocked site data, quota); a
+  // remembered comparison list is a convenience, never worth a crashed page.
+  try {
+    window.localStorage.setItem(key, JSON.stringify(ids));
+  } catch {
+    // keep going without persistence
+  }
 }
 
 function useDialogKeyboard(open: boolean, onClose: () => void) {
@@ -302,7 +313,7 @@ export type VehicleDetailContentProps = {
 export default function VehicleDetailContent({
   vehicleId,
   onBackToVehicles,
-  eyebrow = "Marketplace Concept",
+  eyebrow,
   overviewTitle = "",
   overviewText = "",
   showGallery = true,
@@ -310,6 +321,10 @@ export default function VehicleDetailContent({
   showActions = true,
 }: VehicleDetailContentProps) {
   const { play } = useSound();
+  const tenantName = usePublicTenantName();
+  // An explicit block eyebrow wins; otherwise LUME's site keeps its concept
+  // label and a dealership's site shows its own name.
+  const eyebrowLabel = eyebrow ?? houseOrTenantLabel("Marketplace Concept", tenantName);
   const { savedIds, toggleSaved, error: savedError } = useSavedVehicles();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [images, setImages] = useState<VehicleGalleryImage[]>([]);
@@ -389,11 +404,13 @@ export default function VehicleDetailContent({
   useEffect(() => {
     if (!vehicle) return;
     const previous = document.title;
-    document.title = `${vehicle.year} ${vehicle.make} ${vehicle.model} - LUME Marketplace`;
+    // The dealership's name, never "LUME Marketplace": this page is the
+    // tenant's own site.
+    document.title = vehiclePageTitle(vehicle, tenantName);
     return () => {
       document.title = previous || "LUME";
     };
-  }, [vehicle]);
+  }, [vehicle, tenantName]);
 
   useEffect(() => {
     writeStoredIds(COMPARE_STORAGE_KEY, compareIds);
@@ -477,7 +494,7 @@ export default function VehicleDetailContent({
                 resolve instead of turning to mush. Decorative — the make is in
                 the heading directly below. */}
             <MakeLogo make={vehicle.make} size={32} className="vehicleDetail__mark" />
-            <span>{eyebrow}</span>
+            <span>{eyebrowLabel}</span>
           </p>
           <h1>{vehicle.year} {vehicle.make} {vehicle.model}</h1>
           {vehicle.trim && <p className="vehicleDetail__trim">{vehicle.trim}</p>}

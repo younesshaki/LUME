@@ -127,8 +127,13 @@
   top: max(80px, calc(env(safe-area-inset-top) + 80px));
 }
 
+/* Doubled class on purpose: the generic phone rule below (`.mediaQualitySettings
+   { top: 14px }`) has equal specificity and comes later, so it used to win and
+   lift the gear INTO the 64px header — on top of the navigation menu button,
+   which then could not be tapped (confirmed on the live demo tenant at 390px,
+   2026-09-26). This keeps the gear below the header on phones. */
 @media (max-width: 640px) {
-  .mediaQualitySettings--belowHeader {
+  .mediaQualitySettings.mediaQualitySettings--belowHeader {
     top: max(74px, calc(env(safe-area-inset-top) + 74px));
   }
 }

@@ -17,17 +17,26 @@ describe("public API quota adapter", () => {
       limit: () => builder,
       maybeSingle,
     };
-    const rpc = vi.fn(async () => ({
-      data: [{ allowed: true, usage_count: 1, period_start: "2026-07-01" }],
-      error: null,
-    }));
+    const rpc = vi.fn(async (name: string) => {
+      expect(name).toBe("check_and_consume_usage_quota");
+      return {
+        data: [{
+          allowed: true,
+          reason: "unconfigured",
+          usage_count: 1,
+          quota_limit: null,
+          resets_at: null,
+        }],
+        error: null,
+      };
+    });
 
     await expect(checkPublicApiQuota(
       "tenant-1",
       "vehicle_requests",
       { from: () => builder, rpc } as never,
     )).resolves.toMatchObject({ allowed: true, reason: "unconfigured" });
-    expect(rpc).toHaveBeenCalledWith("consume_usage_event", expect.objectContaining({
+    expect(rpc).toHaveBeenCalledWith("check_and_consume_usage_quota", expect.objectContaining({
       p_tenant_id: "tenant-1",
       p_event_type: "vehicle_requests",
     }));

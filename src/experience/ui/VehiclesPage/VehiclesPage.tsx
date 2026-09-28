@@ -47,6 +47,7 @@ import { AdvancedFilters, MarketplaceToolbar } from "./VehicleFilters";
 import "./VehiclesPage.css";
 import { MakeLogo } from "@/components/vehicles/MakeLogo";
 import { noteConciergeDestinationReady } from "@/lib/conciergeSpeed";
+import { houseOrTenantLabel, usePublicTenantName } from "@/lib/usePublicTenantName";
 
 const PAGE_SIZE = 24;
 const COMPARE_STORAGE_KEY = "lume.vehicle-compare.v1";
@@ -78,7 +79,13 @@ function readStoredIds(key: string): string[] {
 
 function writeStoredIds(key: string, ids: string[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(ids));
+  // Storage can throw (private browsing, blocked site data, quota); a
+  // remembered comparison list is a convenience, never worth a crashed page.
+  try {
+    window.localStorage.setItem(key, JSON.stringify(ids));
+  } catch {
+    // keep going without persistence
+  }
 }
 
 function mergeVehicleLookup(
@@ -246,7 +253,9 @@ function VehicleCard({
               `${vehicle.year} ${vehicle.make} ${vehicle.model}`
             }
             loading={prioritizeImage ? "eager" : "lazy"}
-            fetchPriority={prioritizeImage ? "high" : "low"}
+            // React 18 does not know the camelCase prop and logs a console
+            // error for it; the lowercase HTML attribute behaves the same.
+            {...{ fetchpriority: prioritizeImage ? "high" : "low" }}
             decoding="async"
           />
         ) : (
@@ -561,6 +570,13 @@ export default function VehiclesPage({
     useSavedVehicles();
   const { mode } = useDualMode();
   const isStandard = mode === "standard";
+  // LUME's own site keeps its concept copy; a dealership's shows its name.
+  const tenantName = usePublicTenantName();
+  const heroEyebrow = houseOrTenantLabel("Marketplace Concept", tenantName);
+  const heroSubtitle = houseOrTenantLabel(
+    "Browse a demo marketplace of new and used vehicles with search, filters, and comparison tools.",
+    "Browse our current inventory. Search, filter, and compare vehicles side by side.",
+  );
   const initialState = useMemo(() => readVehicleUrlState(), []);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleLookup, setVehicleLookup] = useState<Record<string, Vehicle>>(
@@ -841,12 +857,9 @@ export default function VehiclesPage({
         >
           <div className="vehiclesPage__hero">
             <div className="vehiclesPage__lamp" aria-hidden="true" />
-            <p className="vehiclesPage__eyebrow">Marketplace Concept</p>
+            {heroEyebrow ? <p className="vehiclesPage__eyebrow">{heroEyebrow}</p> : null}
             <h1 className="vehiclesPage__title">Vehicles</h1>
-            <p className="vehiclesPage__subtitle">
-              Browse a demo marketplace of new and used vehicles with search,
-              filters, and comparison tools.
-            </p>
+            <p className="vehiclesPage__subtitle">{heroSubtitle}</p>
           </div>
 
           {loadError ? (

@@ -38,8 +38,10 @@ describe("public visitor proxy", () => {
       query: { path: ["me"], tenant: "demo" },
     }, res);
 
-    expect(res.statusCode).toBe(401);
-    expect(res.payload).toEqual({ error: "Unauthorized" });
+    // 200 + null, not 401: browsers log every 4xx as a console error, and
+    // every public page asks.
+    expect(res.statusCode).toBe(200);
+    expect(res.payload).toEqual({ visitor: null });
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

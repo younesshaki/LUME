@@ -89,6 +89,22 @@ export async function checkQuota(
     return failOpenQuotaDecision(input.eventType);
   }
 
+  // 089_atomic_quota_check folds plan lookup and the concurrency-sensitive
+  // reservation into one service-role RPC. Keep the legacy path only while a
+  // rolling deployment may run newer application code against an older schema.
+  const atomic = await reserveQuotaAtomically(client, tenantId, input.eventType);
+  if (atomic !== "missing") return atomic ?? failOpenQuotaDecision(input.eventType);
+
+  return checkQuotaLegacy(client, input, tenantId, now);
+}
+
+async function checkQuotaLegacy(
+  client: DbClient,
+  input: CheckQuotaInput,
+  tenantId: string,
+  now: Date,
+): Promise<QuotaDecision> {
+
   const configuration = await loadQuotaConfiguration(client, tenantId, input.eventType, now);
   const reservation = await reserveUsage(client, {
     tenantId,
@@ -154,6 +170,61 @@ export async function checkQuota(
     limit: configuration.limit,
     resetsAt: configuration.resetsAt,
   };
+}
+
+async function reserveQuotaAtomically(
+  client: DbClient,
+  tenantId: string,
+  eventType: QuotaEventType,
+): Promise<QuotaDecision | "missing" | null> {
+  try {
+    const { data, error } = await client.rpc("check_and_consume_usage_quota", {
+      p_tenant_id: tenantId,
+      p_event_type: eventType,
+    });
+    if (error) return isMissingAtomicQuotaFunctionError(error) ? "missing" : null;
+    return normalizeAtomicQuotaDecision(data, eventType);
+  } catch {
+    // A transport failure can happen after PostgreSQL commits. Do not retry an
+    // ambiguous reservation: failing open is safer than counting a turn twice.
+    return null;
+  }
+}
+
+function normalizeAtomicQuotaDecision(
+  value: unknown,
+  eventType: QuotaEventType,
+): QuotaDecision | null {
+  if (!Array.isArray(value) || value.length !== 1 || !isRecord(value[0])) return null;
+  const row = value[0];
+  const allowed = row.allowed;
+  const reason = row.reason;
+  const used = nonnegativeSafeInteger(row.usage_count);
+  const limit = nullableSafeInteger(row.quota_limit);
+  const resetsAt = nullableTimestamp(row.resets_at);
+  if (
+    typeof allowed !== "boolean" ||
+    used === null ||
+    !isQuotaDecisionReason(reason) ||
+    (reason === "within_limit" && (!allowed || limit === null)) ||
+    (reason === "quota_exceeded" && (allowed || limit === null))
+  ) {
+    return null;
+  }
+  return {
+    allowed,
+    reason,
+    warning: reason === "within_limit" && limit !== null && isQuotaWarning(used, limit),
+    limitType: eventType,
+    used,
+    limit,
+    resetsAt,
+  };
+}
+
+function isQuotaDecisionReason(value: unknown): value is QuotaDecisionReason {
+  return value === "within_limit" || value === "quota_exceeded" || value === "unlimited" ||
+    value === "unconfigured" || value === "fail_open";
 }
 
 export function resolveQuotaLimit(
@@ -369,6 +440,25 @@ function nonnegativeSafeInteger(value: unknown): number | null {
   return null;
 }
 
+function nullableSafeInteger(value: unknown): number | null {
+  return value === null || value === undefined ? null : nonnegativeOrNegativeSafeInteger(value);
+}
+
+function nonnegativeOrNegativeSafeInteger(value: unknown): number | null {
+  if (typeof value === "number" && Number.isSafeInteger(value)) return value;
+  if (typeof value === "string" && /^-?\d+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function nullableTimestamp(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string" || Number.isNaN(new Date(value).getTime())) return null;
+  return new Date(value).toISOString();
+}
+
 function normalizePeriodStart(value: string | null): string | null {
   if (!value) return null;
   const parsed = new Date(value);
@@ -413,6 +503,14 @@ function isMissingQuotaFunctionError(error: unknown): boolean {
   if (error.code === "PGRST202" || error.code === "42883") return true;
   const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
   return message.includes("consume_usage_event") &&
+    (message.includes("not find") || message.includes("does not exist"));
+}
+
+function isMissingAtomicQuotaFunctionError(error: unknown): boolean {
+  if (!isRecord(error)) return false;
+  if (error.code === "PGRST202" || error.code === "42883") return true;
+  const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
+  return message.includes("check_and_consume_usage_quota") &&
     (message.includes("not find") || message.includes("does not exist"));
 }
 

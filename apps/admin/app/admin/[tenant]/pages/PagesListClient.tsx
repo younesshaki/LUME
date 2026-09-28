@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -12,16 +12,21 @@ import {
   validateNewPageSlug,
 } from "@lume/db";
 import { LayoutGrid, LayoutList, PanelsTopLeft } from "lucide-react";
-import type { Page } from "@lume/types";
+import { withPageNavVisibility, type Page, type TenantHeaderConfig } from "@lume/types";
 import Carousel, { type CarouselSlide } from "@/components/ui/carousel";
 import { VehicleLayoutPanel } from "./VehicleLayoutPanel";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { NAV_STATE_HINT, NAV_STATE_LABEL, pageNavStates, type PageNavState } from "./navPlacement";
 
 type PagesListClientProps = {
   tenantId: string;
   tenantSlug: string;
   initialPages: Page[];
+  /** The tenant's stored header config — the input to live nav placement. */
+  initialHeader: TenantHeaderConfig;
+  publicSiteBaseUrl: string;
+  sampleVehicle: { id: string; label: string } | null;
 };
 
 type StatusState =
@@ -40,9 +45,17 @@ export default function PagesListClient({
   tenantId,
   tenantSlug,
   initialPages,
+  initialHeader,
+  publicSiteBaseUrl,
+  sampleVehicle,
 }: PagesListClientProps) {
   const router = useRouter();
   const [pages, setPages] = useState(initialPages);
+  const [header, setHeader] = useState<TenantHeaderConfig>(initialHeader);
+  // Recomputed from local state after every reorder or visibility change, so
+  // the list never shows a placement the site would not render.
+  const navStates = useMemo(() => pageNavStates(pages, header), [pages, header]);
+  const navStateOf = (page: Page): PageNavState => navStates.get(page.id) ?? "not-live";
 
   // The vehicle-detail layout is surfaced by its own panel, not as a list row:
   // it is a template applied to every /vehicles/:id rather than a destination,
@@ -72,6 +85,53 @@ export default function PagesListClient({
       setStatus({ type: "error", message: errorMessage(error, "Unable to save page order.") });
     }
   }
+
+  async function setNavVisibility(page: Page, visible: boolean) {
+    const previous = header;
+    setHeader(withPageNavVisibility(previous, page.slug, visible));
+    setStatus({ type: "saving", message: visible ? "Adding page to navigation..." : "Hiding page from navigation..." });
+    try {
+      const supabase = createSupabaseBrowserClient();
+      // Re-read the stored theme right before writing: other settings (and
+      // other editors) may have changed it since this page loaded.
+      const { data: tenant, error: readError } = await supabase
+        .from("tenants")
+        .select("theme")
+        .eq("id", tenantId)
+        .single();
+      if (readError) throw new Error(readError.message);
+      const theme = (tenant?.theme ?? {}) as { header?: TenantHeaderConfig } & Record<string, unknown>;
+      const nextHeader = withPageNavVisibility(theme.header, page.slug, visible);
+      const { error: writeError } = await supabase
+        .from("tenants")
+        .update({ theme: { ...theme, header: nextHeader } } as never)
+        .eq("id", tenantId);
+      if (writeError) throw new Error(writeError.message);
+      setHeader(nextHeader);
+      setStatus({ type: "idle", message: "" });
+      toast.success(visible ? `/${page.slug} is back in navigation` : `/${page.slug} is hidden from navigation`);
+      router.refresh();
+    } catch (error) {
+      setHeader(previous);
+      setStatus({ type: "error", message: errorMessage(error, "Unable to change navigation.") });
+    }
+  }
+
+  const navToggle = (page: Page, className: string) => {
+    const state = navStateOf(page);
+    if (page.archivedAt) return null;
+    const hidden = state === "hidden" || (state === "not-live" && headerHides(header, page.slug));
+    return (
+      <button
+        type="button"
+        onClick={() => void setNavVisibility(page, hidden)}
+        className={className}
+        aria-label={hidden ? `Show /${page.slug} in navigation` : `Hide /${page.slug} from navigation`}
+      >
+        {hidden ? "Show in nav" : "Hide from nav"}
+      </button>
+    );
+  };
 
   async function handleDuplicate(page: Page) {
     const suggestion = nextCopySlug(page.slug, pages.map((item) => item.slug));
@@ -154,6 +214,7 @@ export default function PagesListClient({
       >
         Duplicate
       </button>
+      {navToggle(page, "text-xs font-medium text-neutral-200 hover:text-white")}
       <ConfirmActionDialog
         title={`Archive /${page.slug}?`}
         description="The page disappears from public navigation and stops rendering on the site. Its content and revisions are kept, so it can be restored later."
@@ -189,7 +250,7 @@ export default function PagesListClient({
   const carouselSlides: CarouselSlide[] = listedPages.map((page) => ({
     id: page.id,
     title: page.title || page.slug,
-    description: `/${page.slug} · ${pageStatus(page)}${page.isReserved ? " · Reserved" : ""}`,
+    description: `/${page.slug} · ${pageStatus(page)} · ${NAV_STATE_LABEL[navStateOf(page)]}${page.isReserved ? " · Reserved" : ""}`,
     imageSrc: pagePreviewSrc(tenantSlug, page.slug),
     footer: pageActions(page),
   }));
@@ -200,6 +261,11 @@ export default function PagesListClient({
         <div>
           <p className="text-sm text-muted-foreground">
             Drag rows to reorder public navigation. Reserved pages cannot be deleted.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Navigation shows where each live page appears on your site. The header holds the
+            first {header.maxNavItems ?? "6"} shown pages (set in Navigation); the rest go in More.
+            On narrow screens, header pages that do not fit also move into More.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -261,6 +327,8 @@ export default function PagesListClient({
         tenantId={tenantId}
         existingPageId={vehicleLayoutPage?.id ?? null}
         isPublished={Boolean(vehicleLayoutPage?.publishedRevisionId)}
+        publicSiteBaseUrl={publicSiteBaseUrl}
+        sampleVehicle={sampleVehicle}
       />
 
       {view === "carousel" ? (
@@ -322,6 +390,7 @@ export default function PagesListClient({
                     <p className="text-xs text-neutral-400">
                       /{page.slug} · {pageStatus(page)}
                     </p>
+                    <NavStateBadge state={navStateOf(page)} className="self-start" />
                   </div>
                   <div className="mt-auto flex flex-wrap items-center gap-3 border-t border-neutral-800 px-4 py-3">
                     {pageActions(page)}
@@ -340,13 +409,14 @@ export default function PagesListClient({
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Page</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Slug</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Navigation</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {listedPages.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                   No pages found for this tenant.
                 </td>
               </tr>
@@ -354,6 +424,7 @@ export default function PagesListClient({
             {listedPages.map((page, index) => (
               <tr
                 key={page.id}
+                data-nav-state={navStateOf(page)}
                 draggable
                 onDragStart={() => setDraggingPageId(page.id)}
                 onDragOver={(event) => event.preventDefault()}
@@ -361,7 +432,10 @@ export default function PagesListClient({
                   if (draggingPageId) void reorderPages(draggingPageId, page.id);
                   setDraggingPageId(null);
                 }}
-                className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900/50"
+                className={`border-b border-neutral-100 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900/50 ${
+                  // Muted, not disabled: a hidden page is still live and editable.
+                  navStateOf(page) === "hidden" ? "opacity-60" : ""
+                }`}
               >
                 <td className="px-4 py-3 text-muted-foreground">
                   <span className="cursor-grab rounded border border-neutral-200 px-2 py-1 text-xs dark:border-neutral-800">
@@ -387,6 +461,9 @@ export default function PagesListClient({
                   <code className="text-xs text-muted-foreground">/{page.slug}</code>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{pageStatus(page)}</td>
+                <td className="px-4 py-3">
+                  <NavStateBadge state={navStateOf(page)} />
+                </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-3">
                     <Link
@@ -402,6 +479,10 @@ export default function PagesListClient({
                     >
                       Duplicate
                     </button>
+                    {navToggle(
+                      page,
+                      "text-xs font-medium text-neutral-600 hover:text-neutral-950 dark:text-muted-foreground dark:hover:text-white",
+                    )}
                     <ConfirmActionDialog
                       title={`Archive /${page.slug}?`}
                       description="The page disappears from public navigation and stops rendering on the site. Its content and revisions are kept, so it can be restored later."
@@ -440,6 +521,28 @@ export default function PagesListClient({
       </div>
       )}
     </div>
+  );
+}
+
+function headerHides(header: TenantHeaderConfig, slug: string): boolean {
+  return (header.hiddenNavSlugs ?? []).includes(slug.toLowerCase());
+}
+
+const NAV_STATE_STYLE: Record<PageNavState, string> = {
+  header: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  more: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
+  hidden: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400",
+  "not-live": "bg-transparent text-neutral-400 dark:text-neutral-500",
+};
+
+function NavStateBadge({ state, className = "" }: { state: PageNavState; className?: string }) {
+  return (
+    <span
+      title={NAV_STATE_HINT[state]}
+      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${NAV_STATE_STYLE[state]} ${className}`}
+    >
+      {NAV_STATE_LABEL[state]}
+    </span>
   );
 }
 

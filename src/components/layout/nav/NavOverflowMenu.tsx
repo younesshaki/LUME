@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useLocation } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import type { SiteNavItem } from "../siteNavigation";
+import { overflowPanelPosition } from "./navOverflow";
+
+/** The panel's `min-w-[12rem]`, used before it has rendered and can be measured. */
+const PANEL_MIN_WIDTH = 192;
 
 type NavOverflowMenuProps = {
   items: readonly SiteNavItem[];
@@ -27,7 +32,7 @@ export function NavOverflowMenu({
   triggerRef,
 }: NavOverflowMenuProps) {
   const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -45,15 +50,35 @@ export function NavOverflowMenu({
   const positionPanel = useCallback(() => {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setAnchor({ top: rect.bottom + 12, right: window.innerWidth - rect.right });
+    const next = overflowPanelPosition({
+      trigger: rect,
+      panelWidth: panelRef.current?.offsetWidth || PANEL_MIN_WIDTH,
+      viewportWidth: window.innerWidth,
+    });
+    setAnchor((previous) =>
+      previous && previous.top === next.top && previous.left === next.left ? previous : next,
+    );
   }, [triggerRef]);
+
+  // Any navigation closes the menu — not only picking one of its items, but
+  // also back/forward and concierge-driven moves, which never touch it.
+  const location = useLocation();
+  useEffect(() => {
+    setOpen(false);
+  }, [location.key]);
 
   // Close on outside pointer or Escape, and return focus to the trigger so
   // keyboard users are not dropped at the top of the document.
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+      // The panel is portalled to <body>, so it is NOT inside containerRef.
+      // Checking only the container treated a press on a menu item as an
+      // outside click and unmounted the panel before the click landed: mouse
+      // and touch users could open "More" but never follow its links.
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -70,9 +95,11 @@ export function NavOverflowMenu({
   }, [open, triggerRef]);
 
   // Position before paint so the panel never appears at the wrong place first.
+  // Re-run once the panel exists, so a label wider than the min-width is
+  // measured rather than assumed.
   useLayoutEffect(() => {
     if (open) positionPanel();
-  }, [open, positionPanel]);
+  }, [open, anchor, positionPanel]);
 
   // The header is fixed, so the trigger moves with the viewport, not the page.
   useEffect(() => {
@@ -86,10 +113,18 @@ export function NavOverflowMenu({
   }, [open, positionPanel]);
 
   // Move focus into the panel on open so the menu is operable from the keyboard.
+  // The panel only mounts once it has a position, which is after `open` flips,
+  // so wait for it to exist and move focus exactly once per opening.
+  const focusedOnOpen = useRef(false);
   useEffect(() => {
-    if (!open) return;
-    panelRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
-  }, [open]);
+    if (!open) {
+      focusedOnOpen.current = false;
+      return;
+    }
+    if (focusedOnOpen.current || !panelRef.current) return;
+    focusedOnOpen.current = true;
+    panelRef.current.querySelector<HTMLButtonElement>("button")?.focus();
+  }, [open, anchor]);
 
   if (items.length === 0) return null;
 
@@ -121,7 +156,7 @@ export function NavOverflowMenu({
           id={menuId}
           role="group"
           aria-label="More navigation"
-          style={{ position: "fixed", top: anchor.top, right: anchor.right }}
+          style={{ position: "fixed", top: anchor.top, left: anchor.left }}
           className="min-w-[12rem] rounded-md border
             border-[var(--theme-lume-line,rgba(255,255,255,.12))]
             bg-[var(--theme-lume-panel,rgba(12,12,12,.96))]
@@ -140,11 +175,12 @@ export function NavOverflowMenu({
                 onMouseEnter={() => onIntent?.(item.screen)}
                 onFocus={() => onIntent?.(item.screen)}
                 aria-current={active ? "page" : undefined}
-                className={`block w-full text-left px-4 py-2 text-sm tracking-widest uppercase
+                className={`relative block w-full text-left px-4 py-2 text-sm tracking-widest uppercase
                   transition-colors duration-150 cursor-pointer
+                  before:absolute before:left-1.5 before:top-1/2 before:h-4 before:w-[3px] before:-translate-y-1/2 before:rounded-full
                   ${active
-                    ? "text-[var(--theme-lume-gold,#C9A84C)]"
-                    : "text-[var(--theme-lume-muted,rgba(255,255,255,.7))] hover:text-[var(--theme-lume-ink,#fff)]"}
+                    ? "font-semibold text-[var(--theme-lume-gold,#C9A84C)] before:bg-[var(--theme-lume-gold,#C9A84C)]"
+                    : "text-[var(--theme-lume-muted,rgba(255,255,255,.7))] hover:text-[var(--theme-lume-ink,#fff)] before:bg-transparent"}
                   hover:bg-[var(--theme-lume-soft,rgba(255,255,255,.06))]`}
               >
                 {item.label}

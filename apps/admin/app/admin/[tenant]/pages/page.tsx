@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { listPages } from "@lume/db";
+import type { TenantHeaderConfig } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import PagesListClient from "./PagesListClient";
 
@@ -11,12 +12,46 @@ export default async function PagesListPage({ params }: PageProps) {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, slug, name")
+    .select("id, slug, name, theme")
     .eq("slug", slug)
     .maybeSingle();
   if (!tenant) notFound();
 
-  const pages = await listPages(supabase, tenant.id);
+  // The vehicle-detail layout is only meaningful with actual inventory data.
+  // Keep this read tenant-scoped and pass one real record to the editor list so
+  // an author can inspect the layout against a genuine vehicle, rather than a
+  // generic mockup.
+  const [pages, sampleVehicleResult] = await Promise.all([
+    listPages(supabase, tenant.id),
+    supabase
+      .from("vehicles")
+      .select("id, year, make, model, trim")
+      .eq("tenant_id", tenant.id)
+      .neq("status", "archived")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const sampleVehicle = sampleVehicleResult.data
+    ? {
+        id: sampleVehicleResult.data.id,
+        label: [
+          sampleVehicleResult.data.year,
+          sampleVehicleResult.data.make,
+          sampleVehicleResult.data.model,
+          sampleVehicleResult.data.trim,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      }
+    : null;
+
+  // Nav placement is computed from the same header config the live site reads.
+  const initialHeader = ((tenant.theme ?? {}) as { header?: TenantHeaderConfig }).header ?? {};
+
+  const publicSiteBaseUrl =
+    process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? "https://lume-jade-three.vercel.app";
 
   return (
     <div className="space-y-6">
@@ -26,7 +61,14 @@ export default async function PagesListPage({ params }: PageProps) {
           Edit draft page content and publish changes for {tenant.name}.
         </p>
       </header>
-      <PagesListClient tenantId={tenant.id} tenantSlug={tenant.slug} initialPages={pages} />
+      <PagesListClient
+        tenantId={tenant.id}
+        tenantSlug={tenant.slug}
+        initialPages={pages}
+        initialHeader={initialHeader}
+        publicSiteBaseUrl={publicSiteBaseUrl}
+        sampleVehicle={sampleVehicle}
+      />
     </div>
   );
 }

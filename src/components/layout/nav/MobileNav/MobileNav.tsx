@@ -51,7 +51,13 @@ export function MobileNav({
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="w-72 bg-[var(--theme-lume-panel)] text-[var(--theme-lume-ink)] border-l border-[var(--theme-lume-line)] p-0 flex flex-col"
+        // The menu has its own labelled "Close menu" button in its header row;
+        // the sheet's default corner ✕ drew a second, overlapping ✕ beside it.
+        showCloseButton={false}
+        // Above the site's floating controls (media-quality gear and chat
+        // launcher, both at z-index ~2147483000): at z-50 they drew on top of
+        // the open menu, next to its close button and over its CTA.
+        className="z-[2147483100] w-72 bg-[var(--theme-lume-panel)] text-[var(--theme-lume-ink)] border-l border-[var(--theme-lume-line)] p-0 flex flex-col"
       >
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--theme-lume-line)]">
@@ -73,9 +79,12 @@ export function MobileNav({
                 onClick={() => handleNavigate(item.screen)}
                 onFocus={() => onIntent?.(item.screen)}
                 onPointerDown={() => onIntent?.(item.screen)}
-                className={`text-left py-4 text-base tracking-[0.15em] uppercase border-b border-[var(--theme-lume-line)]
+                className={`relative text-left py-4 pl-4 text-base tracking-[0.15em] uppercase border-b border-[var(--theme-lume-line)]
                   transition-colors duration-150 cursor-pointer
-                  ${isActive ? "text-[var(--theme-lume-gold)]" : "text-[var(--theme-lume-muted)] hover:text-[var(--theme-lume-ink)]"}`}
+                  before:absolute before:left-0 before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full
+                  ${isActive
+                    ? "font-semibold text-[var(--theme-lume-gold)] before:bg-[var(--theme-lume-gold)]"
+                    : "text-[var(--theme-lume-muted)] hover:text-[var(--theme-lume-ink)] before:bg-transparent"}`}
                 aria-current={isActive ? "page" : undefined}
               >
                 {item.label}

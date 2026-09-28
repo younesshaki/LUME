@@ -313,13 +313,9 @@ export const BLOCK_DESCRIPTORS = {
       { name: "primaryCtaHref", label: "Primary CTA href", type: "url" },
       { name: "secondaryCtaLabel", label: "Secondary CTA label", type: "text" },
       { name: "secondaryCtaHref", label: "Secondary CTA href", type: "url" },
-      {
-        name: "backgroundImageKey",
-        label: "Background image key",
-        type: "text",
-        helpText: "Use an existing public media key when available.",
-      },
-      { name: "mediaUrl", label: "Media URL", type: "url" },
+      // `backgroundImageKey` and `mediaUrl` stay in the schema (stored pages
+      // keep validating) but are not offered in the editor: no renderer ever
+      // read them, so editing them changed nothing on the site (2026-09-28).
       {
         name: "alignment",
         label: "Alignment",

@@ -19,6 +19,7 @@ import {
   selectHeaderNav,
   type NavPageEntry,
   type TenantFooterVariant,
+  type TenantHeaderConfig,
   type TenantHeaderVariant,
   type TenantTheme,
 } from "@lume/types";
@@ -85,6 +86,9 @@ export default function NavigationClient({
   const [headerVariant, setHeaderVariant] = useState<TenantHeaderVariant>(
     initialTheme.header?.variant ?? "centred"
   );
+  const [logoPlacement, setLogoPlacement] = useState<NonNullable<TenantHeaderConfig["logoPlacement"]>>(
+    initialTheme.header?.logoPlacement ?? "left"
+  );
   const [sticky, setSticky] = useState<boolean>(initialTheme.header?.sticky ?? true);
   const [showVisitorTab, setShowVisitorTab] = useState<boolean>(
     initialTheme.header?.showVisitorTab ?? true
@@ -98,11 +102,14 @@ export default function NavigationClient({
   const [showSocial, setShowSocial] = useState<boolean>(
     initialTheme.footer?.showSocial ?? true
   );
+  const hasConfiguredSocialLinks = Boolean(initialTheme.footer?.socialLinks?.length);
   const [saving, setSaving] = useState(false);
 
+  // Same selection the live header uses, including pages hidden from nav in
+  // the Pages list — otherwise this preview would count them.
   const { visible, overflow } = useMemo(
-    () => selectHeaderNav(navPages, { maxNavItems }),
-    [navPages, maxNavItems]
+    () => selectHeaderNav(navPages, { ...initialTheme.header, maxNavItems }),
+    [navPages, maxNavItems, initialTheme.header]
   );
 
   async function save() {
@@ -111,6 +118,7 @@ export default function NavigationClient({
       const theme: TenantTheme = {
         ...initialTheme,
         header: {
+          ...initialTheme.header,
           maxNavItems: clampMaxNavItems(maxNavItems),
           // showCta/ctaLabel are deliberately still written. resolveHeaderCtas
           // reads them whenever `ctas` is absent, and this screen does not yet
@@ -119,6 +127,7 @@ export default function NavigationClient({
           showCta,
           ctaLabel: ctaLabel.trim() || defaults.ctaLabel,
           variant: headerVariant,
+          logoPlacement,
           sticky,
           showVisitorTab,
         },
@@ -211,6 +220,33 @@ export default function NavigationClient({
             </div>
             <p className="text-xs text-muted-foreground">
               {HEADER_VARIANTS.find((option) => option.id === headerVariant)?.description}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-sm font-medium">Logo placement</span>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ["left", "Left"],
+                ["centre", "Centre"],
+              ] as const).map(([placement, label]) => (
+                <button
+                  key={placement}
+                  type="button"
+                  aria-pressed={logoPlacement === placement}
+                  onClick={() => setLogoPlacement(placement)}
+                  className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                    logoPlacement === placement
+                      ? "border-neutral-950 bg-neutral-950 text-white dark:border-white dark:bg-white dark:text-neutral-950"
+                      : "border-neutral-300 text-muted-foreground hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Choose where the dealership logo sits in the header. The preview updates immediately.
             </p>
           </div>
 
@@ -334,64 +370,131 @@ export default function NavigationClient({
               />
               <span className="font-medium">Show social links</span>
             </label>
+            <p className="text-xs text-muted-foreground">
+              Links appear only when this website has social destinations configured.
+            </p>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Header preview</CardTitle>
+          <CardTitle>Header &amp; footer preview</CardTitle>
           <CardDescription>
             {visible.length.toLocaleString()} page{visible.length === 1 ? "" : "s"} in the header
             {overflow.length > 0
               ? `, ${overflow.length.toLocaleString()} beyond the limit`
               : ""}
-            .
+            . This preview updates immediately; save to use these settings on your website.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {navPages.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No published pages yet — publish pages on the Pages screen and they&apos;ll appear
-              here.
-            </p>
-          ) : (
-            <>
-              <ol className="space-y-1">
-                {visible.map((page, index) => (
+          <HeaderFooterPreview
+            headerVariant={headerVariant}
+            logoPlacement={logoPlacement}
+            showCta={showCta}
+            ctaLabel={ctaLabel.trim() || defaults.ctaLabel}
+            footerVariant={footerVariant}
+            footerColumns={clampFooterColumns(footerColumns)}
+            showSocial={showSocial}
+            hasConfiguredSocialLinks={hasConfiguredSocialLinks}
+            pages={visible}
+          />
+          {overflow.length > 0 && (
+            <div className="rounded-lg border border-dashed p-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                Not shown in the header
+              </p>
+              <ul className="space-y-1">
+                {overflow.map((page) => (
                   <li key={page.slug} className="flex items-center gap-3 text-sm">
-                    <span className="w-5 text-right tabular-nums text-muted-foreground">
-                      {index + 1}.
+                    <Badge variant="outline" className="text-muted-foreground">
+                      overflow
+                    </Badge>
+                    <span>{page.title || page.slug}</span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      /{page.slug}
                     </span>
-                    <span className="font-medium">{page.title || page.slug}</span>
-                    <span className="font-mono text-xs text-muted-foreground">/{page.slug}</span>
                   </li>
                 ))}
-              </ol>
-              {overflow.length > 0 && (
-                <div className="rounded-lg border border-dashed p-3">
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">
-                    Not shown in the header
-                  </p>
-                  <ul className="space-y-1">
-                    {overflow.map((page) => (
-                      <li key={page.slug} className="flex items-center gap-3 text-sm">
-                        <Badge variant="outline" className="text-muted-foreground">
-                          overflow
-                        </Badge>
-                        <span>{page.title || page.slug}</span>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          /{page.slug}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
+              </ul>
+            </div>
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function HeaderFooterPreview({
+  headerVariant,
+  logoPlacement,
+  showCta,
+  ctaLabel,
+  footerVariant,
+  footerColumns,
+  showSocial,
+  hasConfiguredSocialLinks,
+  pages,
+}: {
+  headerVariant: TenantHeaderVariant;
+  logoPlacement: "left" | "centre";
+  showCta: boolean;
+  ctaLabel: string;
+  footerVariant: TenantFooterVariant;
+  footerColumns: number;
+  showSocial: boolean;
+  hasConfiguredSocialLinks: boolean;
+  pages: NavPageEntry[];
+}) {
+  const displayPages = pages.length ? pages : [{ slug: "home", title: "Home", navOrder: 0 }];
+  const headerTracks: Record<TenantHeaderVariant, string> = {
+    centred: "grid-cols-[auto_1fr_auto]",
+    left: "grid-cols-[auto_1fr_auto]",
+    split: "grid-cols-[auto_1fr_auto]",
+    minimal: "grid-cols-[auto_1fr_auto]",
+  };
+  const logoClass = logoPlacement === "centre"
+    ? "order-2 justify-self-center"
+    : "order-1 justify-self-start";
+  const navClass = logoPlacement === "centre"
+    ? "order-1 justify-self-start"
+    : "order-2";
+
+  return (
+    <div
+      data-testid="navigation-live-preview"
+      data-header-variant={headerVariant}
+      data-logo-placement={logoPlacement}
+      data-footer-variant={footerVariant}
+      className="overflow-hidden rounded-lg border bg-neutral-950 text-white shadow-sm"
+    >
+      <div className={`grid min-h-14 items-center gap-3 border-b border-white/10 px-4 text-xs ${headerTracks[headerVariant]}`}>
+        <span className={`rounded border border-amber-300/60 px-2 py-1 text-[10px] font-semibold tracking-[0.16em] text-amber-200 ${logoClass}`}>
+          LOGO
+        </span>
+        <nav aria-label="Header preview navigation" className={`flex min-w-0 items-center gap-3 overflow-hidden whitespace-nowrap text-neutral-300 ${navClass}`}>
+          {headerVariant === "minimal" ? <span>Menu</span> : displayPages.map((page) => (
+            <span key={page.slug} className="truncate">{page.title || page.slug}</span>
+          ))}
+        </nav>
+        <div className="order-3 flex items-center justify-self-end gap-2">
+          {showCta ? <span className="rounded bg-amber-200 px-2 py-1 text-[10px] font-medium text-neutral-950">{ctaLabel}</span> : null}
+        </div>
+      </div>
+      <div className="min-h-20 px-4 py-5 text-xs text-neutral-500">Your page content</div>
+      <footer className="border-t border-white/10 px-4 py-4 text-xs text-neutral-300">
+        {footerVariant === "minimal" ? (
+          <div className="flex items-center justify-between"><span>LOGO</span><span>Privacy · Legal</span></div>
+        ) : (
+          <div className={footerVariant === "columns" ? "grid gap-2" : "flex flex-wrap items-center justify-between gap-3"} style={footerVariant === "columns" ? { gridTemplateColumns: `repeat(${footerColumns}, minmax(0, 1fr))` } : undefined}>
+            {displayPages.map((page) => <span key={page.slug}>{page.title || page.slug}</span>)}
+            {showSocial && hasConfiguredSocialLinks ? (
+              <span className="whitespace-nowrap text-neutral-500">Social links</span>
+            ) : null}
+          </div>
+        )}
+      </footer>
     </div>
   );
 }

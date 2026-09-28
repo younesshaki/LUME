@@ -4,12 +4,13 @@ import { preloadRouteModule } from "@/app-shell/routeModules";
 import { SITE_NAV_ITEMS } from "../siteNavigation";
 import { useBottomDockLayoutState } from "./BottomDock.animations";
 import { getBottomDockNavigationSound } from "./BottomDock.sounds";
-import { useBottomDockState } from "./BottomDock.state";
+import { deriveActiveNavKey } from "../nav/activeNav";
 import "./BottomDock.css";
 
 export function BottomDock() {
-  const { navigateTo } = useNavigation();
-  const { currentScreen } = useBottomDockState();
+  const { navigateTo, currentPath } = useNavigation();
+  // Same rule as the header: an unmatched page marks nothing, not "Home".
+  const currentScreen = deriveActiveNavKey(currentPath, SITE_NAV_ITEMS) ?? "";
   const { isCompetingWithOverlay } = useBottomDockLayoutState();
 
   return (

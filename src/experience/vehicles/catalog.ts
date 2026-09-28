@@ -1,5 +1,6 @@
 import { publicTenantSlug } from "@/lib/publicTenant";
 import { R2, mediaUrl, fallbackMediaUrl } from "@/config/cdn";
+import type { BotInventoryFilterAction } from "@lume/types";
 
 const CSV_KEY = "vehicles-with-generated-images.csv";
 const VEHICLES_API_PATH = "/api/vehicles";
@@ -53,6 +54,13 @@ export type VehicleFacets = {
   };
 };
 
+const EMPTY_VEHICLE_FACETS: VehicleFacets = {
+  makes: [],
+  models: [],
+  states: [],
+  cities: [],
+};
+
 export type VehicleResults = {
   vehicles: Vehicle[];
   totalCount: number | null;
@@ -71,11 +79,18 @@ export type VehicleGalleryImage = {
 export type VehicleDetail = {
   vehicle: Vehicle;
   images: VehicleGalleryImage[];
+  /**
+   * The public price-reduction signal, returned by the detail endpoint itself.
+   * Absent when the endpoint predates it or the lookup failed — callers hide
+   * the signal then, exactly as for `enabled: false`.
+   */
+  priceSignal?: VehiclePriceSignal | null;
 };
 
 type VehicleDetailApiResponse = {
   vehicle?: Vehicle & { tenantId?: string; externalId?: string };
   images?: Array<{ src?: string; alt?: string; isPrimary?: boolean; sortOrder?: number }>;
+  priceSignal?: unknown;
 };
 
 export type VehiclePriceSignal = {
@@ -406,6 +421,43 @@ export function prefetchVehicleResults(
   return request;
 }
 
+/**
+ * Accept a bounded first page that the chat server just obtained through the
+ * same tenant-scoped query. This is deliberately a very short route handoff,
+ * not a durable catalog cache: a later visit still fetches current inventory.
+ */
+export function primeVehicleResultsFromConcierge(
+  action: BotInventoryFilterAction,
+  filters: VehicleFilters,
+  sort: VehicleSort,
+  pageSize: number,
+): boolean {
+  const preview = action.initialResults;
+  if (!preview || !Number.isSafeInteger(preview.totalCount) || preview.totalCount < 0) {
+    return false;
+  }
+  if (!Array.isArray(preview.vehicles) || preview.vehicles.length > pageSize) return false;
+  const vehicles = preview.vehicles
+    .map((vehicle) => normalizeApiVehicle(vehicle))
+    .filter((vehicle): vehicle is Vehicle => Boolean(vehicle));
+  if (vehicles.length !== preview.vehicles.length || preview.totalCount < vehicles.length) {
+    return false;
+  }
+  const requestKey = vehicleResultRequestKey(filters, sort, 1, pageSize);
+  const request = Promise.resolve({
+    vehicles,
+    totalCount: preview.totalCount,
+    hasMore: Boolean(preview.hasMore),
+    facets: EMPTY_VEHICLE_FACETS,
+    source: "api" as const,
+  });
+  prefetchedVehicleResults.set(requestKey, {
+    request,
+    expiresAt: Date.now() + VEHICLE_PREFETCH_RESULT_TTL_MS,
+  });
+  return true;
+}
+
 function vehicleResultRequestKey(
   filters: VehicleFilters,
   sort: VehicleSort,
@@ -508,24 +560,20 @@ export function normalizeVehiclePriceSignalPayload(
   return { enabled: true, reductions: Math.floor(payload.reductions) };
 }
 
+/**
+ * The price-reduction signal for a vehicle.
+ *
+ * It used to be a second request to `/api/vehicles/:id/price-signal`, a route
+ * that only exists on the admin app. The public site calls its own origin, so
+ * on production every vehicle page logged a 404 and the signal never showed
+ * (found 2026-09-27). The public detail function now returns the signal with
+ * the vehicle, so this reads it from the shared detail request instead.
+ */
 export async function loadVehiclePriceSignal(
   vehicleId: string,
 ): Promise<VehiclePriceSignal | null> {
   try {
-    const params = new URLSearchParams({ tenant: TENANT_SLUG });
-    const origin =
-      typeof window !== "undefined" && window.location?.origin
-        ? window.location.origin
-        : "http://localhost";
-    const path = `${VEHICLES_API_PATH}/${encodeURIComponent(vehicleId)}/price-signal`;
-    const url = new URL(`${ADMIN_API_HOST ?? ""}${path}`, origin);
-    params.forEach((value, key) => url.searchParams.set(key, value));
-    const response = await fetch(
-      ADMIN_API_HOST ? url.toString() : `${url.pathname}${url.search}`,
-      { headers: { "X-Lume-Tenant": TENANT_SLUG } },
-    );
-    if (!response.ok) return null;
-    return normalizeVehiclePriceSignalPayload(await response.json());
+    return (await loadVehicleById(vehicleId))?.priceSignal ?? null;
   } catch {
     return null;
   }
@@ -537,8 +585,41 @@ export async function loadVehiclePriceSignal(
  * catalog (which itself falls back to the CSV for the default tenant), so the
  * detail page keeps working for legacy/special/fallback imagery.
  */
-export async function loadVehicleById(id: string): Promise<VehicleDetail | null> {
-  if (!id) return null;
+/**
+ * One detail request per vehicle, shared by every caller for a short while.
+ *
+ * With a published vehicle layout the built-in page renders first as the
+ * loading fallback, then the layout's vehicle block mounts and asks for the
+ * same car. Each did its own request, so the visitor saw the page, then a
+ * second wait for the same data (measured on production: specs at 3.9s, the
+ * layout's heading at 8.5s). The price signal rides on the same response.
+ */
+const DETAIL_REUSE_MS = 30_000;
+const detailRequests = new Map<string, { at: number; request: Promise<VehicleDetail | null> }>();
+
+export function clearVehicleDetailCacheForTests(): void {
+  detailRequests.clear();
+}
+
+export function loadVehicleById(id: string): Promise<VehicleDetail | null> {
+  if (!id) return Promise.resolve(null);
+  const key = `${TENANT_SLUG}:${id}`;
+  const existing = detailRequests.get(key);
+  if (existing && Date.now() - existing.at < DETAIL_REUSE_MS) return existing.request;
+
+  const request = loadVehicleByIdUncached(id);
+  detailRequests.set(key, { at: Date.now(), request });
+  // A failure or a miss must not be served to the next caller.
+  request.then(
+    (detail) => {
+      if (!detail) detailRequests.delete(key);
+    },
+    () => detailRequests.delete(key),
+  );
+  return request;
+}
+
+async function loadVehicleByIdUncached(id: string): Promise<VehicleDetail | null> {
 
   try {
     const detail = await loadVehicleDetailFromApi(id);
@@ -589,6 +670,7 @@ async function loadVehicleDetailFromApi(id: string): Promise<VehicleDetail | nul
   return {
     vehicle,
     images: managed.length > 0 ? managed : buildFallbackGallery(vehicle),
+    priceSignal: normalizeVehiclePriceSignalPayload(payload.priceSignal),
   };
 }
 

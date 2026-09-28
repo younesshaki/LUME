@@ -1,22 +1,27 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { SoundProvider } from "@/lib/sound";
 import { DualModeProvider } from "@/lib/DualModeContext";
 import ProductsPage from "./ProductsPage";
 
 function renderProductsPage() {
+  // The site footer routes custom pages, so the page renders inside a Router,
+  // as it always does in the app.
   return render(
-    <DualModeProvider>
-      <SoundProvider>
-        <ProductsPage
-          onGoHome={vi.fn()}
-          onSelectProduct={vi.fn()}
-          onNavigateToVehicles={vi.fn()}
-          onNavigateToShowcase={vi.fn()}
-          onNavigateToContact={vi.fn()}
-        />
-      </SoundProvider>
-    </DualModeProvider>
+    <MemoryRouter>
+      <DualModeProvider>
+        <SoundProvider>
+          <ProductsPage
+            onGoHome={vi.fn()}
+            onSelectProduct={vi.fn()}
+            onNavigateToVehicles={vi.fn()}
+            onNavigateToShowcase={vi.fn()}
+            onNavigateToContact={vi.fn()}
+          />
+        </SoundProvider>
+      </DualModeProvider>
+    </MemoryRouter>,
   );
 }
 

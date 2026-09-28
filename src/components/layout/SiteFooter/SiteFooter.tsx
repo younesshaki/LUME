@@ -1,10 +1,13 @@
-import { mediaUrl } from "@/config/cdn";
 import { openCookiePreferences } from "@/components/CookieBanner/CookieBanner";
 import { Separator } from "@/components/ui/separator";
-import { SITE_NAV_ITEMS, type SiteScreen } from "../siteNavigation";
+import { useNavigate } from "react-router-dom";
+import { isSiteScreen, useSiteNavItems, type SiteScreen } from "../siteNavigation";
+import { useSiteLogo } from "../siteLogo";
 import { preloadRouteModule } from "@/app-shell/routeModules";
 import { useTenantTheme } from "@/lib/TenantThemeProvider";
-import { clampFooterColumns } from "@lume/types";
+import { publicTenantSlug } from "@/lib/publicTenant";
+import { usePublicTenantName } from "@/lib/usePublicTenantName";
+import { footerContent } from "./footerContent";
 
 const SOCIAL_LINKS = [
   {
@@ -42,31 +45,60 @@ type SiteFooterProps = {
   onNavigate: (screen: SiteScreen) => void;
 };
 
-const lumeLogoImage = mediaUrl("LUMElogo.png");
 
+/** The tenant's display name for the copyright line; null until known. */
 export function SiteFooter({ onNavigate }: SiteFooterProps) {
   const tenantTheme = useTenantTheme();
-  const logoImage = tenantTheme.branding?.logoUrl ?? lumeLogoImage;
+  const logoImage = useSiteLogo();
+  const navItems = useSiteNavItems();
+  const routerNavigate = useNavigate();
+  const tenantName = usePublicTenantName();
 
-  // Until Phase 4 the footer had no configuration at all. Every default below
-  // reproduces the previous hardcoded layout, so a tenant with no `footer` key
-  // renders exactly as it did.
-  const footer = tenantTheme.footer;
-  const variant = footer?.variant ?? "stacked";
-  const showSocial = footer?.showSocial ?? true;
-  const columns = clampFooterColumns(footer?.columns);
-  const socialLinks = footer?.socialLinks?.length
-    ? footer.socialLinks.map((link) => ({ ...link, icon: null }))
-    : SOCIAL_LINKS;
-  const legalLinks = footer?.legalLinks?.length
-    ? footer.legalLinks
-    : [{ label: "Privacy", href: "/privacy" }, { label: "Legal", href: "/privacy" }];
-  // `minimal` drops the nav and address entirely; the legal bar always stays,
-  // because cookie preferences and copyright are not optional.
-  const isMinimal = variant === "minimal";
+  // See footerContent.ts: LUME's house copy and default social links are the
+  // LUME site's only; every other tenant shows its own name and links.
+  const content = footerContent({
+    tenantSlug: publicTenantSlug,
+    tenantName,
+    footer: tenantTheme.footer,
+  });
+  const { variant, columns } = content;
+  const socialLinks = content.useDefaultSocial
+    ? SOCIAL_LINKS
+    : content.socialLinks.map((link) => ({ ...link, icon: null }));
+  const legalLinks = content.legalLinks;
+  const isMinimal = !content.showNav;
+
+  // Built-in screens keep each page's own handler; the tenant's custom pages
+  // (Trade-in, Specials, …) are plain route changes, as in the header.
+  const navigateTo = (key: string) => {
+    if (isSiteScreen(key)) onNavigate(key);
+    else routerNavigate(`/${key}`);
+  };
+
+  // Social links follow `showSocial` in every variant; `minimal` drops the
+  // nav row, so it renders them on their own line instead of losing them.
+  const socialRow =
+    socialLinks.length > 0 ? (
+      <div className="flex items-center gap-5">
+        {socialLinks.map((social) => (
+          <a
+            key={social.label}
+            href={social.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={social.label}
+            className="text-[11px] tracking-widest uppercase text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-gold)] transition-colors duration-200"
+          >
+            {/* Configured links have no bundled icon, so they fall back to
+                their label rather than rendering an empty anchor. */}
+            {social.icon ?? social.label}
+          </a>
+        ))}
+      </div>
+    ) : null;
 
   return (
-    <footer className="relative bg-[var(--theme-lume-background,#000)] text-[var(--theme-lume-ink,#fff8ec)] border-t border-[var(--theme-lume-line)] mt-auto">
+    <footer className="siteFooter relative bg-[var(--theme-lume-background,#000)] text-[var(--theme-lume-ink,#fff8ec)] border-t border-[var(--theme-lume-line)] mt-auto">
       {/* Top gradient bleed */}
       <div
         className="absolute top-0 left-0 right-0 h-20 pointer-events-none"
@@ -77,16 +109,22 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
       <div className="relative z-10 max-w-6xl mx-auto px-6 md:px-10 py-14 md:py-20">
         {/* Brand */}
         <div className="flex flex-col items-center gap-3 mb-12">
-          <img
-            src={logoImage}
-            alt="Site logo"
-            className="h-10 w-auto object-contain opacity-90"
-            draggable={false}
-          />
-          <p className="text-[11px] tracking-[0.25em] uppercase text-[var(--theme-lume-soft)]"
-            style={{ fontFamily: "Mileast, serif" }}>
-            The only hotel you cannot book.
-          </p>
+          {logoImage ? (
+            <img
+              src={logoImage}
+              alt={tenantName ? `${tenantName} logo` : "Site logo"}
+              className="h-10 w-auto object-contain opacity-90"
+              draggable={false}
+            />
+          ) : (
+            <span aria-hidden="true" className="block h-10 w-24" />
+          )}
+          {content.tagline && (
+            <p className="text-[11px] tracking-[0.25em] uppercase text-[var(--theme-lume-soft)]"
+              style={{ fontFamily: "Mileast, serif" }}>
+              {content.tagline}
+            </p>
+          )}
         </div>
 
         {/* Separator with gold center accent */}
@@ -113,10 +151,10 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
                 : undefined
             }
           >
-            {SITE_NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <button
                 key={item.screen}
-                onClick={() => onNavigate(item.screen)}
+                onClick={() => navigateTo(item.screen)}
                 onMouseEnter={() => preloadRouteModule(item.screen)}
                 onFocus={() => preloadRouteModule(item.screen)}
                 onPointerDown={() => preloadRouteModule(item.screen)}
@@ -128,31 +166,16 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
             ))}
           </nav>
 
-          {showSocial && (
-            <div className="flex items-center gap-5">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={social.label}
-                  className="text-[11px] tracking-widest uppercase text-[var(--theme-lume-soft)] hover:text-[var(--theme-lume-gold)] transition-colors duration-200"
-                >
-                  {/* Configured links have no bundled icon, so they fall back to
-                      their label rather than rendering an empty anchor. */}
-                  {social.icon ?? social.label}
-                </a>
-              ))}
-            </div>
-          )}
+          {socialRow}
         </div>
         )}
 
-        {/* Address */}
-        {!isMinimal && (
+        {isMinimal && socialRow && <div className="flex justify-center mb-8">{socialRow}</div>}
+
+        {/* Address (LUME house site only) */}
+        {content.address && (
           <p className="text-center text-[11px] tracking-widest uppercase text-[var(--theme-lume-soft)] mb-10">
-            Monaco, Principauté de Monaco &nbsp;·&nbsp; Invitation by referral only
+            {content.address}
           </p>
         )}
 
@@ -160,7 +183,7 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
         <Separator className="bg-[var(--theme-lume-line)] mb-5" />
         <div className="flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-[11px] text-[var(--theme-lume-soft)] tracking-wide">
-            © {new Date().getFullYear()} LUME. All rights reserved.
+            © {new Date().getFullYear()}{content.copyrightName ? ` ${content.copyrightName}` : ""}. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             {legalLinks.map((link) => (

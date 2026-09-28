@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeNavOverflow, splitNavForOverflow } from "./navOverflow";
+import { computeNavOverflow, splitNavForOverflow, overflowPanelPosition } from "./navOverflow";
 
 const base = { moreTriggerWidth: 70, gap: 32 } as const;
 
@@ -8,6 +8,17 @@ describe("computeNavOverflow", () => {
     expect(
       computeNavOverflow({ ...base, containerWidth: 1000, itemWidths: [80, 80, 80] }),
     ).toEqual({ visibleCount: 3, hasOverflow: false });
+  });
+
+  it("reserves the More trigger when tenant settings force overflow", () => {
+    expect(
+      computeNavOverflow({
+        ...base,
+        containerWidth: 1000,
+        itemWidths: [80, 80, 80],
+        forceOverflow: true,
+      }),
+    ).toEqual({ visibleCount: 3, hasOverflow: true });
   });
 
   // The regression this whole module exists for: ten tabs used to expand out of
@@ -140,5 +151,42 @@ describe("splitNavForOverflow", () => {
     const { visible, overflow } = splitNavForOverflow(items, 2, "nonexistent");
     expect(visible.map((i) => i.screen)).toEqual(["home", "vehicles"]);
     expect(overflow).toHaveLength(3);
+  });
+
+  it("keeps tenant-configured overflow pages in More, even when one is active", () => {
+    const configuredItems = items.map((item, index) => ({
+      ...item,
+      headerOverflow: index >= 3,
+    }));
+    const { visible, overflow } = splitNavForOverflow(configuredItems, 3, "about");
+
+    expect(visible.map((item) => item.screen)).toEqual(["home", "vehicles", "financing"]);
+    expect(overflow.map((item) => item.screen)).toEqual(["trade-in", "about"]);
+  });
+});
+
+describe("overflowPanelPosition", () => {
+  it("right-aligns the panel to the trigger when there is room", () => {
+    expect(
+      overflowPanelPosition({ trigger: { bottom: 50, right: 900 }, panelWidth: 192, viewportWidth: 1440 }),
+    ).toEqual({ top: 62, left: 708 });
+  });
+
+  it("shifts right instead of opening past the left edge (trigger at the far left)", () => {
+    expect(
+      overflowPanelPosition({ trigger: { bottom: 50, right: 90 }, panelWidth: 192, viewportWidth: 768 }),
+    ).toEqual({ top: 62, left: 8 });
+  });
+
+  it("never runs past the right edge either", () => {
+    expect(
+      overflowPanelPosition({ trigger: { bottom: 50, right: 1000 }, panelWidth: 192, viewportWidth: 800 }),
+    ).toEqual({ top: 62, left: 600 });
+  });
+
+  it("pins to the left edge when the viewport is narrower than the panel", () => {
+    expect(
+      overflowPanelPosition({ trigger: { bottom: 50, right: 100 }, panelWidth: 400, viewportWidth: 300 }).left,
+    ).toBe(8);
   });
 });

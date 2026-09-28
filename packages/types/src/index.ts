@@ -75,8 +75,12 @@ export {
   HEADER_NAV_LIMITS,
   NON_NAV_PAGE_SLUGS,
   clampMaxNavItems,
+  hiddenNavSlugs,
   isNavigablePageSlug,
+  livePagesForNav,
+  navPlacements,
   selectHeaderNav,
+  withPageNavVisibility,
 } from "./headerNav";
 export type * from "./lead";
 export type * from "./tenantDomain";
