@@ -391,7 +391,9 @@ export const BLOCK_DESCRIPTORS = {
     category: "content",
     modes: ["experience", "standard"],
     palette: true,
-    defaultProps: { body: "" },
+    // A fresh block must satisfy its own schema so it remains visible in the
+    // editor preview before an author starts typing.
+    defaultProps: { body: "Tell your dealership's story here." },
     schema: z.object({ body: z.string().min(1, "Body is required") }),
     fields: [{ name: "body", label: "Body", type: "textarea" }],
   }),
