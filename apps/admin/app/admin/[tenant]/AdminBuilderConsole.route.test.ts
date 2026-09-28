@@ -85,6 +85,7 @@ describe("admin website-builder surfaces", () => {
       tenantId: "tenant-1",
       tenantSlug: "sandbox",
       initialPages: [PAGE],
+      initialHeader: {},
       publicSiteBaseUrl: "https://public.example.test",
       sampleVehicle: null,
     }));

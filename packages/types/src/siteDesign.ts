@@ -246,6 +246,13 @@ function normalizeHeader(value: unknown): TenantHeaderConfig | undefined {
   if (isOneOf(value.logoPlacement, LOGO_PLACEMENTS)) out.logoPlacement = value.logoPlacement;
   if (typeof value.sticky === "boolean") out.sticky = value.sticky;
   if (typeof value.showVisitorTab === "boolean") out.showVisitorTab = value.showVisitorTab;
+  if (Array.isArray(value.hiddenNavSlugs)) {
+    // Page slugs only; anything else is dropped rather than trusted.
+    out.hiddenNavSlugs = value.hiddenNavSlugs
+      .filter((slug): slug is string => typeof slug === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(slug.trim()))
+      .map((slug) => slug.trim().toLowerCase())
+      .slice(0, 100);
+  }
   if (Array.isArray(value.ctas)) {
     // An explicit empty array means "no CTA" and must survive normalization.
     out.ctas = value.ctas.flatMap((raw): TenantHeaderCta[] => {
