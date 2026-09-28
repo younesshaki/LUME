@@ -8,6 +8,8 @@ import { useTenantTheme } from "@/lib/TenantThemeProvider";
 import { publicTenantSlug } from "@/lib/publicTenant";
 import { usePublicTenantName } from "@/lib/usePublicTenantName";
 import { footerContent } from "./footerContent";
+import { SiteFooterGlo3D } from "./SiteFooterGlo3D";
+import { isAutomotiveEditorial, useActiveSiteTemplate } from "@/lib/useActiveSiteTemplate";
 
 const SOCIAL_LINKS = [
   {
@@ -53,6 +55,7 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
   const navItems = useSiteNavItems();
   const routerNavigate = useNavigate();
   const tenantName = usePublicTenantName();
+  const siteTemplate = useActiveSiteTemplate();
 
   // See footerContent.ts: LUME's house copy and default social links are the
   // LUME site's only; every other tenant shows its own name and links.
@@ -74,6 +77,20 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
     if (isSiteScreen(key)) onNavigate(key);
     else routerNavigate(`/${key}`);
   };
+
+  if (isAutomotiveEditorial(siteTemplate)) {
+    return (
+      <SiteFooterGlo3D
+        content={content}
+        logoImage={logoImage}
+        tenantName={tenantName}
+        navItems={navItems}
+        socialLinks={socialLinks}
+        legalLinks={legalLinks}
+        onNavigate={navigateTo}
+      />
+    );
+  }
 
   // Social links follow `showSocial` in every variant; `minimal` drops the
   // nav row, so it renders them on their own line instead of losing them.

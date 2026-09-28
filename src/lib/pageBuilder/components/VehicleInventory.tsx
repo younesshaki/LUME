@@ -45,6 +45,7 @@ import {
   MarketplaceToolbar,
 } from "@/experience/ui/VehiclesPage/VehicleFilters";
 import type { BlockComponentProps } from "../registry";
+import { houseOrTenantLabel } from "@/lib/usePublicTenantName";
 import { usePageBuilderRenderContext } from "../renderContext";
 import { booleanProp, stringProp } from "./props";
 import "@/experience/ui/VehiclesPage/VehiclesPage.css";
@@ -562,7 +563,7 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   };
 
   return (
-    <section>
+    <section className="vehicleInventoryBlock">
       {title && (
         <div className="vehiclesPage__hero">
           <div className="vehiclesPage__lamp" aria-hidden="true" />
@@ -633,10 +634,13 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
             </div>
           )}
 
-          <p className="vehiclesPage__demoNotice">
-            Concept demo: prices and imagery are representative until verified
-            listing data is connected.
-          </p>
+          {/* LUME's own concept inventory only; a dealership's listings are real. */}
+          {houseOrTenantLabel("house", "") ? (
+            <p className="vehiclesPage__demoNotice">
+              Concept demo: prices and imagery are representative until verified
+              listing data is connected.
+            </p>
+          ) : null}
 
           <div className="vehiclesPage__resultsBar" ref={gridRef}>
             {!loading && visibleTotalCount !== null && (

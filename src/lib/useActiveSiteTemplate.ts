@@ -4,7 +4,7 @@ import { useTenantSiteDesign } from "./TenantThemeProvider";
 /** The active website template, or null until the tenant's design has loaded. */
 export function useActiveSiteTemplate(): SiteTemplate | null {
   const design = useTenantSiteDesign();
-  return design ? getSiteTemplate(design.template.key) : null;
+  return design ? getSiteTemplate(design.template?.key) : null;
 }
 
 /** True when the tenant's site uses Template Glo3D (automotive-editorial). */

@@ -61,7 +61,7 @@ export function MobileNav({
       >
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--theme-lume-line)]">
-          <span className="text-xs tracking-[0.25em] uppercase text-[var(--theme-lume-soft)]">Menu</span>
+          <span className="mobileNav__title text-xs tracking-[0.25em] uppercase text-[var(--theme-lume-soft)]">Menu</span>
           <button
             onClick={() => setMenuOpen(false)}
             aria-label="Close menu"
@@ -79,7 +79,7 @@ export function MobileNav({
                 onClick={() => handleNavigate(item.screen)}
                 onFocus={() => onIntent?.(item.screen)}
                 onPointerDown={() => onIntent?.(item.screen)}
-                className={`relative text-left py-4 pl-4 text-base tracking-[0.15em] uppercase border-b border-[var(--theme-lume-line)]
+                className={`mobileNav__item relative text-left py-4 pl-4 text-base tracking-[0.15em] uppercase border-b border-[var(--theme-lume-line)]
                   transition-colors duration-150 cursor-pointer
                   before:absolute before:left-0 before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full
                   ${isActive

@@ -1,0 +1,802 @@
+/*
+ * Template Glo3D — automotive editorial + inventory utility.
+ *
+ * Every rule is scoped to the template key set by tenantTheme.ts, so the other
+ * templates are untouched. Flat solid surfaces, 1px dividers, small radii, and
+ * sentence-case type: the cinematic art, blur, glow and letter-spaced capitals
+ * of the Luxury shell are switched off here, not deleted.
+ *
+ * Header proportions follow HyperUI marketing header 1 (MIT): 64–72px bar,
+ * 14–15px medium nav, compact solid call to action.
+ * Plan: docs/website-builder/template-glo3d-plan.md · Sources:
+ * docs/template-glo3d-sources.md.
+ */
+
+html:root[data-lume-template="glo3d"] {
+  --glo3d-radius: 4px;
+  --glo3d-radius-card: 6px;
+  --glo3d-container: 80rem;
+  /* Blocks run edge to edge; each block owns its container and spacing. */
+  --page-builder-main-bottom: 0px;
+}
+
+/* ── Shell: flat page colour, no cinematic artwork ─────────────────── */
+html:root[data-lume-template="glo3d"] :is(
+  .cinematicShell__image,
+  .cinematicShell__overlay,
+  .storyHome__background,
+  .storyHome__tracingBeam,
+  .storyHome__lamp,
+  .productsPage__lamp,
+  .vehiclesPage__lamp
+) {
+  display: none;
+}
+
+html:root[data-lume-template="glo3d"] .cinematicShell,
+html:root[data-lume-template="glo3d"] body {
+  background: var(--theme-lume-background);
+}
+
+/* The media-quality control belongs to the cinematic video experience. */
+html:root[data-lume-template="glo3d"] .mediaQualitySettings {
+  display: none;
+}
+
+/* ── Header: solid bar, thin bottom border, plain type ─────────────── */
+html:root[data-lume-template="glo3d"] .siteHeader {
+  background: var(--theme-lume-background);
+  border-bottom: 1px solid var(--theme-lume-line);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+}
+
+html:root[data-lume-template="glo3d"] .siteHeader--overlayPressure {
+  background: var(--theme-lume-background);
+}
+
+/* Probe and visible links share this, so overflow is measured correctly. */
+html:root[data-lume-template="glo3d"] :is(.siteNavLink, .siteNavMore) {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .siteNavLink {
+  color: var(--theme-lume-muted);
+}
+
+html:root[data-lume-template="glo3d"] .siteNavLink:hover,
+html:root[data-lume-template="glo3d"] .siteNavMore:hover {
+  color: var(--theme-lume-ink);
+}
+
+html:root[data-lume-template="glo3d"] .siteNavLink[aria-current="page"] {
+  color: var(--theme-lume-ink);
+  font-weight: 600;
+}
+
+/* A square 2px underline, flush with the bar's bottom border. */
+html:root[data-lume-template="glo3d"] .siteNavLink__indicator {
+  bottom: -1.45rem;
+  border-radius: 0;
+  background: var(--theme-lume-gold);
+}
+
+html:root[data-lume-template="glo3d"] .siteHeaderCta {
+  min-height: 2.5rem;
+  padding: 0 1.125rem;
+  border: 1px solid var(--theme-lume-gold);
+  border-radius: var(--glo3d-radius);
+  background: var(--theme-lume-gold);
+  color: var(--theme-lume-background);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .siteHeaderCta:hover {
+  filter: brightness(1.08);
+  border-color: var(--theme-lume-gold);
+}
+
+html:root[data-lume-template="glo3d"] .siteHeaderCta__shine {
+  display: none;
+}
+
+html:root[data-lume-template="glo3d"] .visitorAccountButton,
+html:root[data-lume-template="glo3d"] .themeToggle {
+  border-radius: var(--glo3d-radius);
+  box-shadow: none;
+  background: transparent;
+}
+
+/* ── More menu and phone menu: same plain type, flat panels ────────── */
+html:root[data-lume-template="glo3d"] .siteNavMorePanel {
+  border-radius: var(--glo3d-radius-card);
+  background: var(--theme-lume-background);
+  box-shadow: 0 8px 24px rgb(15 17 21 / 0.12);
+  backdrop-filter: none;
+}
+
+html:root[data-lume-template="glo3d"] .siteNavMorePanel__item {
+  font-size: 0.9375rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .mobileNav__title {
+  letter-spacing: 0.04em;
+}
+
+html:root[data-lume-template="glo3d"] .mobileNav__item {
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ── Sections: editorial type on the page background ───────────────── */
+html:root[data-lume-template="glo3d"] .dealershipBlock__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+html:root[data-lume-template="glo3d"] :is(.dealershipBlock__title, .dealershipContact h2) {
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .dealershipBlock {
+  padding-block: clamp(3rem, 6vw, 5.5rem);
+  border-top: 1px solid var(--theme-lume-line);
+}
+
+html:root[data-lume-template="glo3d"] .dealershipBlock__inner {
+  width: min(100%, var(--glo3d-container));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:root[data-lume-template="glo3d"] :is(.siteNavLink, .siteHeaderCta, .autoHero__button) {
+    transition: none;
+  }
+}
+
+/* No cinematic mode in Glo3D (TemplateModeScope pins "standard"). */
+html:root[data-lume-template="glo3d"] .modeToggle {
+  display: none;
+}
+
+/* Centre the label; `display` stays with the header's own responsive
+   classes (hidden on phones, where the menu carries the call to action). */
+html:root[data-lume-template="glo3d"] .siteHeaderCta {
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Inventory (page + block): listing cards ───────────────────────────
+ * Card structure after HyperUI marketing card 5 (MIT), a listing card:
+ * photo → title/trim → price → a plain details row → action. The existing
+ * markup and behaviour (save, compare, details) are kept; CSS `order` moves
+ * the price above the specs. No glow, spotlight, lift or pills. */
+html:root[data-lume-template="glo3d"] .vehiclesPage__hero {
+  max-width: none;
+  text-align: left;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__title {
+  margin-top: 0.35rem;
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(2rem, 1.4rem + 2.4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  text-transform: none;
+  text-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__subtitle {
+  margin-left: 0;
+}
+
+html:root[data-lume-template="glo3d"] :is(.vehiclesPage__eyebrow, .vehiclesPage__eyebrowSmall) {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__toolbar {
+  border: 1px solid var(--theme-lume-line);
+  border-radius: var(--glo3d-radius-card);
+  background: var(--theme-lume-panel);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__toolbarField span {
+  color: var(--theme-lume-muted);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] :is(
+  .vehiclesPage__filterToggle,
+  .vehiclesPage__detailsBtn,
+  .vehiclesPage__applyBtn,
+  .vehiclesPage__clearBtn,
+  .vehiclesPage__pageBtn
+) {
+  border-radius: var(--glo3d-radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] :is(.vehiclesPage__filterToggle, .vehiclesPage__detailsBtn, .vehiclesPage__applyBtn) {
+  border-color: var(--theme-lume-ink);
+  background: var(--theme-lume-ink);
+  color: var(--theme-lume-background);
+}
+
+html:root[data-lume-template="glo3d"] :is(.vehiclesPage__filterToggle, .vehiclesPage__detailsBtn, .vehiclesPage__applyBtn):hover {
+  border-color: var(--theme-lume-gold);
+  background: var(--theme-lume-gold);
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__grid {
+  gap: 1.5rem;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__card {
+  border: 1px solid var(--theme-lume-line);
+  border-radius: var(--glo3d-radius-card);
+  background: var(--theme-lume-background);
+  box-shadow: none;
+  transition: border-color 150ms ease;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__card::before {
+  display: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__card:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--theme-lume-ink) 35%, var(--theme-lume-line));
+  box-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardImage {
+  aspect-ratio: 4 / 3;
+  background: var(--theme-lume-panel);
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__card:hover .vehiclesPage__cardImage img {
+  transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardImagePlaceholder {
+  background: var(--theme-lume-panel);
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardImagePlaceholder span {
+  color: var(--theme-lume-soft);
+  font-family: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Real state only (New / Used / Special): a small square label. */
+html:root[data-lume-template="glo3d"] .vehiclesPage__badge {
+  top: 0.75rem;
+  left: 0.75rem;
+  right: auto;
+  padding: 0.2rem 0.45rem;
+  border: 0;
+  border-radius: 3px;
+  background: var(--theme-lume-background);
+  color: var(--theme-lume-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__badge--stockOffset {
+  top: 2.25rem;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardBody {
+  order: 1;
+  padding: 1rem 1rem 0;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardYear {
+  color: var(--theme-lume-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardTitle {
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardTrim {
+  font-size: 0.875rem;
+  letter-spacing: 0;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardFooter {
+  order: 2;
+  padding-top: 0.75rem;
+  padding-bottom: 0.25rem;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardPrice {
+  color: var(--theme-lume-ink);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardLocation {
+  color: var(--theme-lume-muted);
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+}
+
+/* Details as one plain line: 3,000 mi · Gasoline · RWD */
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardMeta {
+  order: 3;
+  gap: 0;
+  padding: 0.25rem 1rem 0.875rem;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardStat {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--theme-lume-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardStat + .vehiclesPage__cardStat::before {
+  content: "·";
+  margin: 0 0.45rem;
+  color: var(--theme-lume-soft);
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardActions {
+  order: 4;
+  margin-top: auto;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--theme-lume-line);
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__iconBtn {
+  border-color: var(--theme-lume-line);
+  border-radius: var(--glo3d-radius);
+  background: transparent;
+  color: var(--theme-lume-muted);
+}
+
+/* ── Vehicle detail: flat marketplace columns, separators not cards ── */
+html:root[data-lume-template="glo3d"] :is(.vehicleDetail__media, .vehicleDetail__panel, .vehicleDetail__state) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__panel {
+  padding: 0;
+}
+
+html:root[data-lume-template="glo3d"] .vehicleGallery__stage {
+  border-radius: var(--glo3d-radius-card);
+  overflow: hidden;
+}
+
+html:root[data-lume-template="glo3d"] :is(.vehicleDetail__eyebrow, .vehicleDetail__backLink) {
+  color: var(--theme-lume-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__panel h1 {
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__price {
+  color: var(--theme-lume-ink);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__priceSignal {
+  border-radius: 3px;
+}
+
+html:root[data-lume-template="glo3d"] :is(.vehicleDetail__primaryBtn, .vehicleDetail__secondaryBtn, .vehicleDetail__iconBtn) {
+  border-radius: var(--glo3d-radius);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__primaryBtn {
+  border-color: var(--theme-lume-gold);
+  background: var(--theme-lume-gold);
+  color: var(--theme-lume-background);
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__primaryBtn:hover {
+  filter: brightness(1.08);
+}
+
+html:root[data-lume-template="glo3d"] :is(.vehicleDetail__secondaryBtn, .vehicleDetail__iconBtn) {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__fact {
+  border-top-color: var(--theme-lume-line);
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__fact dt {
+  color: var(--theme-lume-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__fact dd {
+  color: var(--theme-lume-ink);
+  font-size: 0.9375rem;
+}
+
+html:root[data-lume-template="glo3d"] .vehicleDetail__overview {
+  border-top-color: var(--theme-lume-line);
+}
+
+/* ── Blocks without their own container ────────────────────────────────
+ * These relied on the page frame's column. Glo3D runs the frame edge to
+ * edge (for full-bleed photos), so they get the template container here —
+ * inside page-builder pages only; hand-built pages keep their own layout. */
+html:root[data-lume-template="glo3d"] .pageBuilderMain :is(
+  .vehicleInventoryBlock,
+  .contactPage__body,
+  .contactPage__closing,
+  .contactPage__hero,
+  .storyHome__hero,
+  .storyHome__featureBand,
+  .storyHome__showcaseCards,
+  .showcasePage__cards,
+  .showcasePage__hero,
+  .productsPage__hero,
+  .vehiclesPage__hero
+) {
+  width: min(100% - 2rem, var(--glo3d-container));
+  margin-inline: auto;
+}
+
+html:root[data-lume-template="glo3d"] .pageBuilderMain :is(.vehicleInventoryBlock, .contactPage__body) {
+  padding-block: clamp(2.5rem, 5vw, 4.5rem);
+}
+
+@media (min-width: 640px) {
+  html:root[data-lume-template="glo3d"] .pageBuilderMain :is(
+    .vehicleInventoryBlock,
+    .contactPage__body,
+    .contactPage__closing,
+    .storyHome__featureBand
+  ) {
+    width: min(100% - 3rem, var(--glo3d-container));
+  }
+}
+
+/* ── Feature band: photo beside copy, no shadow, sentence case ─────────
+ * After HyperUI marketing section 1 (MIT): a two-column image/text row. */
+html:root[data-lume-template="glo3d"] .storyHome__featureBand {
+  gap: clamp(1.5rem, 4vw, 4rem);
+  padding-block: clamp(3rem, 6vw, 5.5rem);
+  border-top: 1px solid var(--theme-lume-line);
+}
+
+@media (min-width: 768px) {
+  html:root[data-lume-template="glo3d"] .storyHome__featureBand {
+    grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+    align-items: center;
+  }
+}
+
+html:root[data-lume-template="glo3d"] .storyHome__featureMedia img {
+  aspect-ratio: 3 / 2;
+  width: 100%;
+  object-fit: cover;
+  border-radius: var(--glo3d-radius-card);
+  box-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] .storyHome__sectionKicker {
+  color: var(--theme-lume-gold);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+html:root[data-lume-template="glo3d"] .storyHome__featureCopy h2 {
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .storyHome__featureCopy p {
+  color: var(--theme-lume-muted);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+/* ── Card-style sections become flat panels ────────────────────────── */
+html:root[data-lume-template="glo3d"] :is(
+  .dealershipBlock--cta,
+  .dealershipBlock--calculator,
+  .dealershipBlock--form,
+  .dealershipBlock--newsletter,
+  .dealershipBlock--reviews,
+  .dealershipBlock--search,
+  .dealershipBlock--specs,
+  .dealershipBlock--video,
+  .dealershipBlock--location
+) .dealershipBlock__inner {
+  border-radius: var(--glo3d-radius-card);
+  background: var(--theme-lume-panel);
+  box-shadow: none;
+}
+
+/* The CTA banner is a solid band: dark in light mode, raised in dark mode. */
+html:root[data-lume-template="glo3d"] .dealershipBlock--cta .dealershipBlock__inner {
+  border-color: transparent;
+  background: var(--theme-lume-ink);
+}
+
+html:root[data-lume-template="glo3d"] .dealershipBlock--cta :is(.dealershipBlock__title, .dealershipBlock__body, p) {
+  color: var(--theme-lume-background);
+}
+
+html:root[data-lume-template="glo3d"] .dealershipBlock--cta .dealershipBlock__eyebrow {
+  color: color-mix(in srgb, var(--theme-lume-background) 72%, var(--theme-lume-ink));
+}
+
+html:root[data-theme="dark"][data-lume-template="glo3d"] .dealershipBlock--cta .dealershipBlock__inner {
+  border-color: var(--theme-lume-line);
+  background: var(--theme-lume-panel);
+}
+
+html:root[data-theme="dark"][data-lume-template="glo3d"] .dealershipBlock--cta :is(.dealershipBlock__title, .dealershipBlock__body, p) {
+  color: var(--theme-lume-ink);
+}
+
+html:root[data-theme="dark"][data-lume-template="glo3d"] .dealershipBlock--cta .dealershipBlock__eyebrow {
+  color: var(--theme-lume-gold);
+}
+
+/* Buttons: small radius, sentence case. */
+html:root[data-lume-template="glo3d"] :is(
+  .dealershipBlock__action,
+  .dealershipForm__submit,
+  .newsletterForm button,
+  .vehicleSearchBand__submit,
+  .pageBuilderHero__cta
+) {
+  border-radius: var(--glo3d-radius);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] :is(
+  .dealershipForm__field input,
+  .dealershipForm__field select,
+  .dealershipForm__field textarea,
+  .newsletterForm input,
+  .vehicleSearchBand select,
+  .vehicleSearchBand input
+) {
+  border-radius: var(--glo3d-radius);
+}
+
+html:root[data-lume-template="glo3d"] :is(.dealershipForm legend, .announcementBlock a) {
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .announcementBlock {
+  background: var(--theme-lume-ink);
+  border-color: transparent;
+}
+
+html:root[data-lume-template="glo3d"] .announcementBlock p {
+  color: var(--theme-lume-background);
+}
+
+html:root[data-lume-template="glo3d"] .announcementBlock a {
+  color: var(--theme-lume-background);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+html:root[data-lume-template="glo3d"] .announcementBlock button {
+  border-color: transparent;
+  border-radius: var(--glo3d-radius);
+  background: transparent;
+  color: var(--theme-lume-background);
+}
+
+html:root[data-lume-template="glo3d"] :is(
+  .dealershipBlock__empty,
+  .financeCalculator__result,
+  .vehicleCarousel__card,
+  .vehicleSpecTable,
+  .testimonialGrid figure,
+  .serviceGrid article,
+  .teamGrid article,
+  .splitFeature,
+  .videoEmbed,
+  .galleryMasonry figure,
+  .mapHours__map
+) {
+  border-radius: var(--glo3d-radius-card);
+  box-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] :is(.vehicleCarousel__controls button, .teamGrid__monogram) {
+  border-radius: var(--glo3d-radius);
+}
+
+html:root[data-lume-template="glo3d"] :is(
+  .vehicleSpecTable dt,
+  .testimonialGrid figcaption,
+  .teamGrid__role,
+  .trustStats dt,
+  .logoMarquee__item,
+  .dealershipContact__contact h3,
+  .dealershipContact__hours h3,
+  .contactPage__statement span
+) {
+  letter-spacing: 0.04em;
+}
+
+/* Facts read as facts, not as a hero: ink, bold, measured size. */
+html:root[data-lume-template="glo3d"] .trustStats dd {
+  color: var(--theme-lume-ink);
+  font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+/* Statement list: numbered-feeling editorial rows. */
+html:root[data-lume-template="glo3d"] .contactPage__statement span {
+  color: var(--theme-lume-ink);
+  font-weight: 700;
+}
+
+html:root[data-lume-template="glo3d"] .contactPage__statement p,
+html:root[data-lume-template="glo3d"] .contactPage__closing p {
+  color: var(--theme-lume-muted);
+  line-height: 1.7;
+}
+
+html:root[data-lume-template="glo3d"] .contactPage__closing {
+  max-width: 44rem;
+}
+
+/* Page-builder pages run edge to edge: the frame's own column (1080px and
+   side padding, from the contact/products/… frames) would box in full-bleed
+   photos and bands. Blocks bring their own containers (see above). */
+html:root[data-lume-template="glo3d"] .pageBuilderMain {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding-inline: 0;
+}
+
+/* CTA band: the secondary action sits on the dark band. */
+html:root[data-lume-template="glo3d"] .dealershipBlock--cta .dealershipBlock__action--secondary {
+  border-color: color-mix(in srgb, var(--theme-lume-background) 45%, transparent);
+  background: transparent;
+  color: var(--theme-lume-background);
+}
+
+html:root[data-theme="dark"][data-lume-template="glo3d"] .dealershipBlock--cta .dealershipBlock__action--secondary {
+  border-color: var(--theme-lume-line);
+  color: var(--theme-lume-ink);
+}
+
+/* Light-mode page rules add panels, gradients and shadows; Glo3D is flat. */
+html:root[data-lume-template="glo3d"] :is(.vehicleDetail__media, .vehicleDetail__panel, .vehicleDetail__state, .vehicleDetail__facts, .vehicleDetail__fact) {
+  box-shadow: none;
+  background: transparent;
+}
+
+html:root[data-lume-template="glo3d"] .vehicleGallery__thumbs,
+html:root[data-lume-template="glo3d"] .vehicleGallery {
+  background: transparent;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__cardStat {
+  background: transparent;
+}
+
+html:root[data-lume-template="glo3d"] .vehiclesPage__hero {
+  text-shadow: none;
+  filter: none;
+}
+
+/* Account button: plain label like the nav. */
+html:root[data-lume-template="glo3d"] .visitorAccountButton {
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+
+html:root[data-lume-template="glo3d"] .visitorAccountButton {
+  border-color: var(--theme-lume-line);
+}
+
+html:root[data-lume-template="glo3d"] .visitorAccountButton:hover {
+  transform: none;
+  border-color: var(--theme-lume-ink);
+}
+
+html:root[data-lume-template="glo3d"] .visitorAccountButton span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] :is(.vehicleDetail__badge, .vehicleGallery .vehicleDetail__badge) {
+  border: 0;
+  border-radius: 3px;
+  background: var(--theme-lume-background);
+  color: var(--theme-lume-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
