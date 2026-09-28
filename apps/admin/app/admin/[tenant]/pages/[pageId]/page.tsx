@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { fetchDraftPage, listPageRevisions, resolveTenantPlan } from "@lume/db";
 import { createServiceClient } from "@lume/db/server";
-import { listEditorBlockDescriptors } from "@lume/blocks";
+import { listEditorBlockDescriptors, templateNewBlockDefaults } from "@lume/blocks";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getConciergeProviderAvailability } from "@/lib/chatProvider.server";
 import PageEditorClient from "./PageEditorClient";
@@ -14,7 +14,7 @@ export default async function PageEditorPage({ params }: PageProps) {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, slug, name")
+    .select("id, slug, name, theme")
     .eq("slug", slug)
     .maybeSingle();
   if (!tenant) notFound();
@@ -45,8 +45,14 @@ export default async function PageEditorPage({ params }: PageProps) {
       initialBlocks={draft.blocks}
       initialRevisions={revisions}
       blockDescriptors={listEditorBlockDescriptors()}
+      newBlockDefaults={templateNewBlockDefaults(templateKeyOf(tenant.theme))}
       premiumModelsEnabled={plan.entitlements["chat.premium_models"]}
       providerAvailability={getConciergeProviderAvailability()}
     />
   );
+}
+
+function templateKeyOf(theme: unknown): string | null {
+  const template = (theme as { template?: { key?: unknown } } | null)?.template;
+  return typeof template?.key === "string" ? template.key : null;
 }
