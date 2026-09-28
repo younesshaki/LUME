@@ -189,7 +189,12 @@ async function copyConciergeRuntime(service: any, source: any, target: any) {
   const subscription = await optional<any>("Read demo subscription", service.from("subscriptions").select("plan_id, current_period_end").eq("tenant_id", source.id).eq("status", "active").maybeSingle());
   if (!subscription) return;
   const existing = await optional<any[]>("Read target subscriptions", service.from("subscriptions").select("id").eq("tenant_id", target.id).in("status", ["active", "trialing", "past_due", "incomplete"]));
-  if (existing?.length) return;
+  // Re-point an existing operational row too: a copy left on Basic (or an
+  // older source plan) keeps clamping the model and disabling tools.
+  if (existing?.length) {
+    await requiredWrite("Sync subscription plan", service.from("subscriptions").update({ plan_id: subscription.plan_id, status: "active", current_period_end: subscription.current_period_end }).in("id", existing.map((row) => row.id)));
+    return;
+  }
   await requiredWrite("Copy subscription", service.from("subscriptions").insert({ tenant_id: target.id, plan_id: subscription.plan_id, status: "active", current_period_start: new Date().toISOString(), current_period_end: subscription.current_period_end }));
 }
 

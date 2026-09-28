@@ -682,6 +682,37 @@ export async function POST(request: Request): Promise<Response> {
   // actually reaches the model.
   let selectedVehicleChunk: RetrievedChunk | null = null;
   let groundSelectedVehicleChunk = false;
+  // One stable id per turn's log lines (transcript + conversation-state +
+  // actions debug) so independent anonymous sessions can be distinguished
+  // during state-isolation investigations.
+  const transcriptSessionId =
+    visitorTurn?.sessionId ?? anonymousConversationId ?? "unknown";
+  // A failed turn otherwise leaves no record of what the visitor asked.
+  // Registered before state construction so a state_build failure is traced.
+  traceTurnFailure = (status, errorStage) => {
+    queueInternalConciergeTrace({
+      client: supabase,
+      tenantId: tenant.tenantId,
+      requestId,
+      conversationId: transcriptSessionId,
+      turn: conversationState.turn,
+      source: "error",
+      status: "failed",
+      userMessage: lastUser.content,
+      assistantResponse: null,
+      stateBefore: conversationStateBefore,
+      stateAfter: conversationState,
+      actions: [],
+      retrieval: { totalMatched: totalMatched ?? null },
+      model: {
+        ...(chatProvider
+          ? { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id }
+          : {}),
+        errorStage,
+        httpStatus: status,
+      },
+    });
+  };
   try {
     // Only the reads a deterministic rule can actually need happen here. The
     // document corpus, loyalty context and visitor preferences feed the model
@@ -1177,36 +1208,6 @@ export async function POST(request: Request): Promise<Response> {
       : (totalMatched ?? matchedVehicles.length) === 0
         ? "empty"
         : "success";
-  // One stable id per turn's log lines (transcript + conversation-state +
-  // actions debug) so independent anonymous sessions can be distinguished
-  // during state-isolation investigations.
-  const transcriptSessionId =
-    visitorTurn?.sessionId ?? anonymousConversationId ?? "unknown";
-  // A failed turn otherwise leaves no record of what the visitor asked.
-  traceTurnFailure = (status, errorStage) => {
-    queueInternalConciergeTrace({
-      client: supabase,
-      tenantId: tenant.tenantId,
-      requestId,
-      conversationId: transcriptSessionId,
-      turn: conversationState.turn,
-      source: "error",
-      status: "failed",
-      userMessage: lastUser.content,
-      assistantResponse: null,
-      stateBefore: conversationStateBefore,
-      stateAfter: conversationState,
-      actions: [],
-      retrieval: { totalMatched: totalMatched ?? null },
-      model: {
-        ...(chatProvider
-          ? { provider: chatProvider.profile.provider, modelId: chatProvider.profile.id }
-          : {}),
-        errorStage,
-        httpStatus: status,
-      },
-    });
-  };
   captureDebug("api/chat/conversation-state", {
     tenantId: tenant.tenantId,
     conversationSessionId: transcriptSessionId,

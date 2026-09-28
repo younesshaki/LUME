@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   /** Streamed body of the follow-up (tool) model call. */
   phase2Body: "",
   fetchThrows: false,
+  inventoryThrows: false,
   allowedTools: [] as string[],
   providerMalformed: false,
   providerCalls: 0,
@@ -132,6 +133,7 @@ vi.mock("@lume/db", async (importOriginal) => {
       _tenantId: string,
       q: { make?: string; priceMin?: number; sort?: string; limit?: number },
     ) => {
+      if (state.inventoryThrows) throw new Error("inventory unavailable");
       let rows = INVENTORY.filter(
         (candidate) =>
           (!q.make || candidate.make.toLowerCase() === q.make.toLowerCase()) &&
@@ -240,6 +242,7 @@ beforeEach(() => {
   state.toolCall = null;
   state.phase2Body = "";
   state.fetchThrows = false;
+  state.inventoryThrows = false;
   state.allowedTools = [];
   state.providerCalls = 0;
   state.afterTasks.length = 0;
@@ -407,6 +410,20 @@ describe("speed telemetry — turns that do not answer", () => {
       userMessage: "what are your opening hours?",
       assistantResponse: null,
       model: { errorStage: "provider_phase_1", httpStatus: 502 },
+    });
+  });
+
+  it("a state-build failure also leaves a failed trace", async () => {
+    state.inventoryThrows = true;
+    const chat = new Conversation();
+    const turn = await chat.say("do you have any Porsches?");
+    expect(turn.status).toBe(500);
+    expect(state.traces).toHaveLength(1);
+    expect(state.traces[0]).toMatchObject({
+      source: "error",
+      status: "failed",
+      userMessage: "do you have any Porsches?",
+      model: { errorStage: "state_build", httpStatus: 500 },
     });
   });
 
