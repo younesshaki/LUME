@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  applyTenantFavicons,
   applyTenantSiteDesign,
   applyTenantTheme,
   clearTenantThemeCacheForTests,
@@ -155,5 +156,28 @@ describe("tenant theme", () => {
 
     applyTenantTheme({}, document.documentElement);
     expect(document.querySelector("link[data-lume-tenant-favicon]")).toBeNull();
+  });
+});
+
+describe("applyTenantFavicons", () => {
+  const TENANT_ICON = "https://atsgdjwjtmqvtotbrowu.supabase.co/storage/v1/object/public/tenant-logos/t/branding/favicon-32";
+
+  beforeEach(() => {
+    document.head.innerHTML =
+      '<link rel="icon" type="image/png" href="https://pub-da3069790c6443f883e3991be965f766.r2.dev/LUMElogo.png" data-lume-default-favicon />';
+  });
+
+  const activeIcons = () =>
+    [...document.head.querySelectorAll<HTMLLinkElement>('link[rel="icon"]')].map((link) => link.href);
+
+  it("replaces the LUME icon with the tenant's favicons", () => {
+    applyTenantFavicons({ branding: { favicon32Url: TENANT_ICON } });
+    expect(activeIcons()).toEqual([TENANT_ICON]);
+  });
+
+  it("keeps the LUME icon for a tenant without favicons, and restores it", () => {
+    applyTenantFavicons({ branding: { favicon32Url: TENANT_ICON } });
+    applyTenantFavicons({ branding: {} });
+    expect(activeIcons()).toEqual(["https://pub-da3069790c6443f883e3991be965f766.r2.dev/LUMElogo.png"]);
   });
 });

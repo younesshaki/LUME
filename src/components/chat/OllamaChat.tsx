@@ -15,6 +15,8 @@ import {
   newChatRequestId,
 } from "@/lib/chatTurnSequencer";
 import { publicTenantSlug } from "@/lib/publicTenant";
+import { houseOrTenantLabel, usePublicTenantName } from "@/lib/usePublicTenantName";
+import { chatAssistantLabels, chatCopyFor } from "./OllamaChat.copy";
 import { botActionBus } from "@/lib/botActionBus";
 import { preloadConciergeDestinationModules } from "@/app-shell/routeModules";
 import {
@@ -50,12 +52,8 @@ const BOT_NAME_STORAGE_KEY = "lume.chat.bot-name.v1";
 const CHAT_CAPABILITIES_STORAGE_KEY = `lume.chat.capabilities.v1.${publicTenantSlug}`;
 const CHAT_SESSION_STORAGE_KEY = `lume.chat.session.v1.${publicTenantSlug}`;
 
-const SUGGESTIONS = [
-  "What is LUME?",
-  "What products does LUME have?",
-  "Do you have any Ferraris?",
-  "How do I get access to LUME?",
-];
+const CHAT_COPY = chatCopyFor(publicTenantSlug);
+const SUGGESTIONS = CHAT_COPY.suggestions;
 
 const CATEGORY_LABELS: Record<string, string> = {
   brand: "Brand",
@@ -68,7 +66,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 const welcomeMessage: ChatMessage = {
   id: "welcome",
   role: "assistant",
-  content: "Ask me anything about LUME — our products, philosophy, or how access works.",
+  content: CHAT_COPY.welcome,
 };
 
 const WELCOME_WORDS = welcomeMessage.content
@@ -91,7 +89,9 @@ function loadStoredMessages(): ChatMessage[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [welcomeMessage];
-    const parsed = sanitizeStoredChatMessages(JSON.parse(stored) as unknown);
+    const parsed = sanitizeStoredChatMessages(JSON.parse(stored) as unknown)
+      // A stored welcome keeps the copy it was saved with; show today's.
+      .map((message) => (message.id === welcomeMessage.id ? welcomeMessage : message));
     return parsed.length > 0 ? parsed : [welcomeMessage];
   } catch {
     return [welcomeMessage];
@@ -118,13 +118,14 @@ export function OllamaChat() {
     }
   });
   const [startNewSession, setStartNewSession] = useState(false);
+  const labels = chatAssistantLabels(houseOrTenantLabel("LUME", usePublicTenantName()));
   // Persona display name; served in the chat stream's meta event so each
   // tenant's configured bot identity shows without a client rebuild.
   const [botName, setBotName] = useState(() => {
     try {
-      return localStorage.getItem(BOT_NAME_STORAGE_KEY) ?? "LUME";
+      return localStorage.getItem(BOT_NAME_STORAGE_KEY) ?? CHAT_COPY.defaultBotName;
     } catch {
-      return "LUME";
+      return CHAT_COPY.defaultBotName;
     }
   });
   // Capability level served in the stream's meta event; shown as a plain-language
@@ -540,8 +541,8 @@ export function OllamaChat() {
             key="toggle"
             className="ollamaChat__toggle"
             type="button"
-            aria-label="Open LUME assistant"
-            title="Open LUME assistant"
+            aria-label={labels.open}
+            title={labels.open}
             variants={toggleVariants}
             initial="hidden"
             animate="visible"
@@ -561,7 +562,7 @@ export function OllamaChat() {
           <motion.section
             key="panel"
             className="ollamaChat__panel"
-            aria-label="LUME assistant"
+            aria-label={labels.panel}
             variants={panelVariants}
             initial="hidden"
             animate="visible"
@@ -770,8 +771,8 @@ export function OllamaChat() {
             <form className="ollamaChat__composer" onSubmit={handleSubmit}>
               <textarea
                 className="ollamaChat__input"
-                aria-label="Message LUME assistant"
-                placeholder="Message LUME"
+                aria-label={labels.input}
+                placeholder={labels.placeholder}
                 rows={1}
                 value={input}
                 disabled={isActive}

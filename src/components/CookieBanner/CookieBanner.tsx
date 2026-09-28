@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useDualMode } from "@/lib/DualModeContext";
 import { reportConsentChoice } from "@/lib/consentReporting";
+import { houseOrTenantLabel, usePublicTenantName } from "@/lib/usePublicTenantName";
 import "./CookieBanner.css";
 
 export const COOKIE_CONSENT_STORAGE_KEY = "lume-cookie-consent";
@@ -27,6 +28,7 @@ export function CookieBanner({
   onConsentChange?: (consent: CookieConsent) => void;
 }) {
   const { mode } = useDualMode();
+  const tenantName = usePublicTenantName();
   const [consent, setConsent] = useState<CookieConsent | null | undefined>(undefined);
 
   useEffect(() => {
@@ -71,8 +73,8 @@ export function CookieBanner({
         <p className="cookieBanner__eyebrow">Your privacy</p>
         <h2 className="cookieBanner__title">Choose your cookie preference</h2>
         <p className="cookieBanner__description">
-          LUME uses essential storage to remember your experience. With permission, analytics
-          help us understand how the site is used.
+          {houseOrTenantLabel("LUME", tenantName) || "This site"} uses essential storage to remember
+          your experience. With permission, analytics help us understand how the site is used.
         </p>
       </div>
 
