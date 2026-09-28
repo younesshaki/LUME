@@ -46,6 +46,13 @@ const DEALERSHIP_BLOCK_TYPES = [
 ] as const;
 
 describe("block descriptors", () => {
+  it("gives a freshly added Rich Text block a previewable body", () => {
+    const descriptor = getBlockDescriptor("rich-text");
+
+    expect(descriptor?.validate(descriptor.defaultProps)).toEqual({ ok: true });
+    expect((descriptor?.defaultProps as { body?: string }).body?.trim()).not.toBe("");
+  });
+
   it("exposes the original seven and exactly 27 dealership blocks in the palette", () => {
     expect(listPaletteBlockDescriptors().map((descriptor) => descriptor.type)).toEqual([
       ...EXISTING_BLOCK_TYPES,
