@@ -36,6 +36,7 @@ test("uses the persisted website mode before paint and switches resolved tokens"
   await page.addInitScript(() => {
     window.sessionStorage.setItem("lume.gate-passed.v1", "1");
     window.localStorage.setItem("lume.color-theme.v1", "light");
+    window.localStorage.setItem("lume.color-theme.chosen.v1", "1");
   });
   await stubAnonymousVisitor(page);
 
@@ -60,6 +61,7 @@ test("keeps core public surfaces readable in Luxury light mode", async ({ page }
   await page.addInitScript(() => {
     window.sessionStorage.setItem("lume.gate-passed.v1", "1");
     window.localStorage.setItem("lume.color-theme.v1", "light");
+    window.localStorage.setItem("lume.color-theme.chosen.v1", "1");
   });
   await stubAnonymousVisitor(page);
 
@@ -78,6 +80,7 @@ test("renders inventory cards and the global header with the active light palett
   await page.addInitScript(() => {
     window.sessionStorage.setItem("lume.gate-passed.v1", "1");
     window.localStorage.setItem("lume.color-theme.v1", "light");
+    window.localStorage.setItem("lume.color-theme.chosen.v1", "1");
     window.localStorage.setItem("lume-cookie-consent", "accepted");
   });
   await stubAnonymousVisitor(page);

@@ -65,6 +65,11 @@ export type SiteTemplate = SiteDesignDefaults & {
   specialty: SiteTemplateSpecialty;
   visual: SiteTemplateVisual;
   conversion: SiteTemplateConversion;
+  /**
+   * The website colour mode a first-time visitor sees. A visitor's own toggle
+   * choice always wins; unset keeps the site-wide default (dark).
+   */
+  defaultColorMode?: "light" | "dark";
 };
 
 /**
@@ -423,6 +428,7 @@ const GLO3D: SiteTemplate = {
   // Shares the test-drive conversion strategy; Glo3D's difference is its
   // presentation, not a new buying journey.
   specialty: "test-drive",
+  defaultColorMode: "light",
   visual: {
     layout: "automotive-editorial",
     corners: "structured",

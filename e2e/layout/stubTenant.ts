@@ -64,6 +64,7 @@ export async function stubTenant(
   await page.addInitScript((colorMode) => {
     try {
       window.localStorage.setItem("lume.color-theme.v1", colorMode);
+      window.localStorage.setItem("lume.color-theme.chosen.v1", "1");
     } catch {
       /* storage unavailable: the app falls back to dark */
     }
