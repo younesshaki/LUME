@@ -82,3 +82,33 @@ describe("TemplatesClient current-template panel", () => {
     expect(screen.getByRole("button", { name: /Continue Capital draft/i })).toBeTruthy();
   });
 });
+
+describe("TemplatesClient — Template Glo3D", () => {
+  afterEach(cleanup);
+
+  it("offers Template Glo3D as the sixth template, with its own preview", () => {
+    renderTemplates({ mediaBaseUrl: "https://media.example" });
+    const cards = [...document.querySelectorAll("[data-template-card]")].map((card) => card.getAttribute("data-template-card"));
+    expect(cards).toContain("glo3d");
+    expect(cards).toHaveLength(6);
+    const glo3dCard = document.querySelector('[data-template-card="glo3d"]')!;
+    expect(within(glo3dCard as HTMLElement).getAllByText("Template Glo3D").length).toBeGreaterThan(0);
+    const preview = glo3dCard.querySelector('[data-template-layout="automotive-editorial"]');
+    expect(preview).toBeTruthy();
+    // The preview shows the template's real showroom photo.
+    expect(preview!.querySelector("img")?.getAttribute("src")).toBe(
+      "https://media.example/templates/glo3d/hero-showroom-1200.webp",
+    );
+  });
+
+  it("shows its current-template panel when a tenant runs Glo3D", () => {
+    renderTemplates({ publishedDesign: createDefaultSiteDesign(getSiteTemplate("glo3d")) });
+    expect(screen.getByRole("heading", { name: "Your current template: Template Glo3D" })).toBeTruthy();
+  });
+
+  it("renders without a media base (no photo, no broken image)", () => {
+    renderTemplates({ mediaBaseUrl: "" });
+    const preview = document.querySelector('[data-template-card="glo3d"] [data-template-layout="automotive-editorial"]');
+    expect(preview?.querySelector("img")).toBeNull();
+  });
+});
