@@ -19,6 +19,8 @@ export type NavOverflowInput = {
   moreTriggerWidth: number;
   /** Horizontal gap between items, in px. */
   gap: number;
+  /** Reserve More for pages deliberately placed there by tenant settings. */
+  forceOverflow?: boolean;
 };
 
 export type NavOverflowResult = {
@@ -45,6 +47,7 @@ export function computeNavOverflow({
   itemWidths,
   moreTriggerWidth,
   gap,
+  forceOverflow = false,
 }: NavOverflowInput): NavOverflowResult {
   const count = itemWidths.length;
   if (count === 0) return { visibleCount: 0, hasOverflow: false };
@@ -63,7 +66,7 @@ export function computeNavOverflow({
   };
 
   // Everything fits: no trigger, no reserved width.
-  if (widthOf(count) <= containerWidth) {
+  if (!forceOverflow && widthOf(count) <= containerWidth) {
     return { visibleCount: count, hasOverflow: false };
   }
 
@@ -77,7 +80,7 @@ export function computeNavOverflow({
 
   // A "More" menu holding one item is pointless churn. Prefer dropping the
   // trigger and letting that last item sit inline if it can.
-  if (visibleCount === count - 1 && widthOf(count) <= containerWidth) {
+  if (!forceOverflow && visibleCount === count - 1 && widthOf(count) <= containerWidth) {
     return { visibleCount: count, hasOverflow: false };
   }
 
@@ -85,38 +88,44 @@ export function computeNavOverflow({
 }
 
 /**
- * Split nav items into inline and overflow, keeping the active item inline.
+ * Split nav items into inline and overflow, keeping a responsively-overflowed
+ * active item inline.
  *
  * If the page you are currently on collapses into "More", the header stops
  * telling you where you are — the active indicator has nothing to attach to.
- * So when the active item falls past the cut, it swaps into the last visible
- * slot and the item it displaces moves into the menu instead.
+ * So when the active item falls past the responsive cut, it swaps into the
+ * last visible slot and the item it displaces moves into the menu instead.
+ * Pages marked `headerOverflow` are intentionally kept in More by the
+ * tenant's configured limit; the More trigger itself carries their active
+ * state rather than silently defeating that limit.
  *
  * Order is otherwise preserved. Both navs share this: the gooey nav in
  * particular queries `<li>` positions by index, so the rendered list and the
  * computed active index have to agree or the particle effect anchors to the
  * wrong tab.
  */
-export function splitNavForOverflow<T extends { screen: string }>(
+export function splitNavForOverflow<T extends { screen: string; headerOverflow?: boolean }>(
   items: readonly T[],
   visibleCount: number,
   activeScreen: string,
 ): { visible: T[]; overflow: T[] } {
-  const clamped = Math.max(0, Math.min(visibleCount, items.length));
-  const visible = items.slice(0, clamped);
-  const overflow = items.slice(clamped);
+  const configuredVisible = items.filter((item) => !item.headerOverflow);
+  const configuredOverflow = items.filter((item) => item.headerOverflow);
+  const clamped = Math.max(0, Math.min(visibleCount, configuredVisible.length));
+  const visible = configuredVisible.slice(0, clamped);
+  const overflow = configuredVisible.slice(clamped);
 
   const activeInOverflow = overflow.findIndex((item) => item.screen === activeScreen);
   // Nothing to do when the active item is already inline, or when there is no
   // inline slot to trade with.
   if (activeInOverflow === -1 || visible.length === 0) {
-    return { visible, overflow };
+    return { visible, overflow: [...overflow, ...configuredOverflow] };
   }
 
   const displaced = visible[visible.length - 1];
   visible[visible.length - 1] = overflow[activeInOverflow];
   overflow[activeInOverflow] = displaced;
-  return { visible, overflow };
+  return { visible, overflow: [...overflow, ...configuredOverflow] };
 }
 
 export type OverflowPanelInput = {

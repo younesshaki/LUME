@@ -14,6 +14,8 @@ export type SiteNavItem = {
   label: string;
   screen: SiteScreen | (string & {});
   icon: React.ReactNode;
+  /** Kept in the desktop header's More menu by tenant configuration. */
+  headerOverflow?: boolean;
 };
 
 const SCREEN_ICONS: Record<SiteScreen, React.ReactNode> = {
@@ -60,6 +62,7 @@ export function useSiteNavItems(): SiteNavItem[] {
           label: page.title || page.slug,
           screen: page.slug,
           icon: isSiteScreen(page.slug) ? SCREEN_ICONS[page.slug] : customPageIcon,
+          headerOverflow: page.headerOverflow,
         }))
       );
     });

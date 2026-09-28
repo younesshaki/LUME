@@ -19,6 +19,8 @@ import { loadTenantTheme } from "./tenantTheme";
 export type PublicNavEntry = NavPageEntry & {
   /** True when the slug has a dedicated cinematic route/screen. */
   isScreen: boolean;
+  /** Kept in the desktop header's More menu by tenant configuration. */
+  headerOverflow: boolean;
 };
 
 /** Slugs with dedicated cinematic routes (see App.tsx / SiteScreen). */
@@ -93,12 +95,32 @@ async function lookupPublishedNav(slug: string): Promise<PublicNavEntry[] | null
     );
     if (pages.length === 0) return null;
 
-    const { visible } = selectHeaderNav(pages, theme.header);
-    return visible.map((page) => ({ ...page, isScreen: isScreenSlug(page.slug) }));
+    return buildPublishedNavEntries(pages, theme.header);
   } catch (error) {
     console.warn("[publicNav] falling back to default nav", error);
     return null;
   }
+}
+
+/**
+ * Preserve every published, navigable page for public navigation. The header
+ * limit controls its initial More-menu placement; it must not discard a page
+ * from desktop, mobile, or footer navigation.
+ */
+export function buildPublishedNavEntries(
+  pages: readonly NavPageEntry[],
+  header: Parameters<typeof selectHeaderNav>[1],
+): PublicNavEntry[] {
+  const { visible, overflow } = selectHeaderNav(pages, header);
+  const toEntry = (page: NavPageEntry, headerOverflow: boolean): PublicNavEntry => ({
+    ...page,
+    isScreen: isScreenSlug(page.slug),
+    headerOverflow,
+  });
+  return [
+    ...visible.map((page) => toEntry(page, false)),
+    ...overflow.map((page) => toEntry(page, true)),
+  ];
 }
 
 export async function loadHeaderConfig(slug = publicTenantSlug): Promise<PublicHeaderConfig> {

@@ -10,6 +10,17 @@ describe("computeNavOverflow", () => {
     ).toEqual({ visibleCount: 3, hasOverflow: false });
   });
 
+  it("reserves the More trigger when tenant settings force overflow", () => {
+    expect(
+      computeNavOverflow({
+        ...base,
+        containerWidth: 1000,
+        itemWidths: [80, 80, 80],
+        forceOverflow: true,
+      }),
+    ).toEqual({ visibleCount: 3, hasOverflow: true });
+  });
+
   // The regression this whole module exists for: ten tabs used to expand out of
   // an absolutely-centred nav and overlap the logo and action cluster. Now they
   // must collapse instead.
@@ -140,6 +151,17 @@ describe("splitNavForOverflow", () => {
     const { visible, overflow } = splitNavForOverflow(items, 2, "nonexistent");
     expect(visible.map((i) => i.screen)).toEqual(["home", "vehicles"]);
     expect(overflow).toHaveLength(3);
+  });
+
+  it("keeps tenant-configured overflow pages in More, even when one is active", () => {
+    const configuredItems = items.map((item, index) => ({
+      ...item,
+      headerOverflow: index >= 3,
+    }));
+    const { visible, overflow } = splitNavForOverflow(configuredItems, 3, "about");
+
+    expect(visible.map((item) => item.screen)).toEqual(["home", "vehicles", "financing"]);
+    expect(overflow.map((item) => item.screen)).toEqual(["trade-in", "about"]);
   });
 });
 
