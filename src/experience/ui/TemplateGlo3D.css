@@ -1004,8 +1004,60 @@ html:root[data-lume-template="glo3d"] .storyHome__flatCard :is(h3, p, span, butt
   text-transform: none;
 }
 
-/* The hand-built home's template panel repeats the hero's actions; Glo3D's
-   home blocks already carry them. */
-html:root[data-lume-template="glo3d"] .templateHome {
+/* ── Template home (tenants without a page-builder home) ───────────────
+ * The whole home page for a Glo3D tenant that has not published a home yet:
+ * restyled flat, never hidden. The decorative motif graphic is dropped. */
+html:root[data-lume-template="glo3d"] :is(.templateHome__background, .templateHome__motifWrap, .templateConversion__ornament) {
   display: none;
+}
+
+html:root[data-lume-template="glo3d"] .templateHome__hero {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(100% - 2rem, var(--glo3d-container));
+  margin-inline: auto;
+  text-align: left;
+}
+
+html:root[data-lume-template="glo3d"] :is(.templateHome__eyebrow, .templateHome__principlesIntro > span, .templateConversion__eyebrow, .templateLeadDialog__eyebrow) {
+  color: var(--theme-lume-gold);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+html:root[data-lume-template="glo3d"] :is(.templateHome__hero h1, .templateHome__principlesIntro h2, .templateConversion h2, .templateLeadDialog h2) {
+  font-family: var(--theme-body-font-family, ui-sans-serif, system-ui, sans-serif);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .templateHome__hero h1 {
+  font-size: clamp(2rem, 1.35rem + 2.6vw, 3.5rem);
+}
+
+html:root[data-lume-template="glo3d"] :is(
+  .templateHome__actions button,
+  .templateConversion__primary,
+  .templateConversion__secondary,
+  .templateLeadDialog__submit
+) {
+  border-radius: var(--glo3d-radius);
+  box-shadow: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html:root[data-lume-template="glo3d"] .templateConversion__surface {
+  border: 1px solid var(--theme-lume-line);
+  border-radius: var(--glo3d-radius-card);
+  background: var(--theme-lume-panel);
+  box-shadow: none;
+}
+
+html:root[data-lume-template="glo3d"] .templateLeadDialog {
+  border-radius: var(--glo3d-radius-card);
 }
