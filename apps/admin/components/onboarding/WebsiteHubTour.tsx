@@ -10,6 +10,7 @@ import {
 } from "nextstepjs";
 import { Button } from "../ui/button";
 import { recordWebsiteTourOutcome } from "../../app/admin/[tenant]/website/actions";
+import { captureAdminEvent } from "../analytics/AdminAnalytics";
 import {
   WEBSITE_HUB_TOUR_STEPS,
   compactTourSelector,
@@ -89,11 +90,26 @@ export function WebsiteHubTour({ tenantSlug, startMode, dismissible = false }: W
         shadowOpacity="0.58"
         {...WEBSITE_HUB_TOUR_OVERLAY_OPTIONS}
         disableConsoleLogs
-        onComplete={(tourName) => {
-          if (tourName === WEBSITE_TOUR_NAME) void saveOutcome(tenantSlug, "completed");
+        onStepChange={(step, tourName) => {
+          if (tourName !== WEBSITE_TOUR_NAME) return;
+          captureAdminEvent("admin_tour_step_viewed", {
+            step_number: step + 1,
+            step_id: WEBSITE_HUB_TOUR_STEPS[step]?.id,
+            total_steps: WEBSITE_HUB_TOUR_STEPS.length,
+          });
         }}
-        onSkip={(_step, tourName) => {
-          if (tourName === WEBSITE_TOUR_NAME) void saveOutcome(tenantSlug, "skipped");
+        onComplete={(tourName) => {
+          if (tourName !== WEBSITE_TOUR_NAME) return;
+          captureAdminEvent("admin_tour_completed", { total_steps: WEBSITE_HUB_TOUR_STEPS.length });
+          void saveOutcome(tenantSlug, "completed");
+        }}
+        onSkip={(step, tourName) => {
+          if (tourName !== WEBSITE_TOUR_NAME) return;
+          captureAdminEvent("admin_tour_skipped", {
+            step_number: step + 1,
+            step_id: WEBSITE_HUB_TOUR_STEPS[step]?.id,
+          });
+          void saveOutcome(tenantSlug, "skipped");
         }}
       >
         <WebsiteHubTourStarter startMode={startMode} onFitSteps={setTours} />
@@ -116,9 +132,19 @@ function WebsiteHubTourStarter({
   // Bumped once the steps are fitted to this screen; the tour starts on the
   // next render, after NextStep has received the fitted steps.
   const [startRequest, setStartRequest] = useState(0);
+  // How the pending start was triggered, for admin_tour_started.
+  const trigger = useRef<"automatic" | "replay_link" | "tutorial_button">("automatic");
 
   useEffect(() => {
-    if (startRequest > 0) startNextStep(WEBSITE_TOUR_NAME);
+    if (startRequest === 0) return;
+    startNextStep(WEBSITE_TOUR_NAME);
+    captureAdminEvent("admin_tour_started", { trigger: trigger.current });
+    // NextStep reports step changes only from the second step on.
+    captureAdminEvent("admin_tour_step_viewed", {
+      step_number: 1,
+      step_id: WEBSITE_HUB_TOUR_STEPS[0]?.id,
+      total_steps: WEBSITE_HUB_TOUR_STEPS.length,
+    });
   }, [startRequest, startNextStep]);
 
   // Waits for every step's target to be on the page (and no modal open), then
@@ -160,6 +186,7 @@ function WebsiteHubTourStarter({
   // development double-run, or leaving the page) must not block the next one.
   useEffect(() => {
     if (startMode === "none" || attempted.current) return;
+    trigger.current = startMode === "manual" ? "replay_link" : "automatic";
     return startWhenReady(startMode === "manual", () => {
       attempted.current = true;
     });
@@ -170,6 +197,7 @@ function WebsiteHubTourStarter({
     let cancel: (() => void) | null = null;
     const onStart = () => {
       cancel?.();
+      trigger.current = "tutorial_button";
       cancel = startWhenReady(false);
     };
     window.addEventListener(WEBSITE_TOUR_START_EVENT, onStart);
@@ -250,6 +278,7 @@ function DismissTourBridge({ tenantSlug, onDismissed }: { tenantSlug: string; on
       // could race this one.
       closeNextStep();
       onDismissed();
+      captureAdminEvent("admin_tour_dismissed");
       void saveOutcome(tenantSlug, "dismissed");
     };
     window.addEventListener(WEBSITE_TOUR_DISMISS_EVENT, onDismiss);
