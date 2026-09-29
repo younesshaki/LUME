@@ -4,6 +4,7 @@ import {
   WEBSITE_SECTION_TOURS,
   dismissWebsiteSectionTour,
   hasWebsiteSectionTourReplayRequest,
+  sectionTourViewportPlacement,
   websiteSectionTourDismissalsFromRow,
   websiteSectionTourHref,
   websiteSectionTourStartMode,
@@ -66,5 +67,43 @@ describe("Website section tour definitions", () => {
       pages: "one",
       navigation: "two",
     });
+  });
+
+  it("uses the visible viewport, not document height, when selecting a card side", () => {
+    const target = document.createElement("button");
+    target.setAttribute("data-tour", "website-pages-create");
+    Object.defineProperty(target, "getBoundingClientRect", {
+      value: () => ({ left: 960, right: 1060, top: 560, bottom: 596, width: 100, height: 36 }),
+    });
+    document.body.append(target);
+
+    const placement = sectionTourViewportPlacement(
+      '[data-tour="website-pages-create"]',
+      "create",
+      "left-top",
+      { width: 1280, height: 720 },
+    );
+
+    // Left-top would extend below this 720px viewport. The top placement is
+    // fully visible, so navigation controls remain reachable.
+    expect(placement).toEqual({ selector: '[data-tour="website-pages-create"]', side: "top" });
+  });
+
+  it("uses an available lateral lane instead of placing a card below the fold", () => {
+    const target = document.createElement("h2");
+    target.setAttribute("data-tour", "website-navigation-header");
+    Object.defineProperty(target, "getBoundingClientRect", {
+      value: () => ({ left: 440, right: 700, top: 170, bottom: 202, width: 260, height: 32 }),
+    });
+    document.body.append(target);
+
+    const placement = sectionTourViewportPlacement(
+      '[data-tour="website-navigation-header"]',
+      "header",
+      "right-top",
+      { width: 1280, height: 720 },
+    );
+
+    expect(placement).toEqual({ selector: '[data-tour="website-navigation-header"]', side: "right-top" });
   });
 });
