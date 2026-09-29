@@ -2,12 +2,21 @@ import { notFound } from "next/navigation";
 import { listPages } from "@lume/db";
 import type { TenantHeaderConfig } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  hasWebsiteSectionTourReplayRequest,
+  websiteSectionTourStartMode,
+} from "@/lib/websiteSectionTour";
+import { websiteSectionTourDismissalsFromPreference } from "@/lib/websiteSectionTour.server";
 import PagesListClient from "./PagesListClient";
 
-type PageProps = { params: Promise<{ tenant: string }> };
+type PageProps = {
+  params: Promise<{ tenant: string }>;
+  searchParams: Promise<{ tour?: string | string[] }>;
+};
 
-export default async function PagesListPage({ params }: PageProps) {
+export default async function PagesListPage({ params, searchParams }: PageProps) {
   const { tenant: slug } = await params;
+  const { tour } = await searchParams;
   const supabase = await createSupabaseServerClient();
 
   const { data: tenant } = await supabase
@@ -21,7 +30,8 @@ export default async function PagesListPage({ params }: PageProps) {
   // Keep this read tenant-scoped and pass one real record to the editor list so
   // an author can inspect the layout against a genuine vehicle, rather than a
   // generic mockup.
-  const [pages, sampleVehicleResult] = await Promise.all([
+  const [{ data: userData }, pages, sampleVehicleResult] = await Promise.all([
+    supabase.auth.getUser(),
     listPages(supabase, tenant.id),
     supabase
       .from("vehicles")
@@ -32,6 +42,22 @@ export default async function PagesListPage({ params }: PageProps) {
       .limit(1)
       .maybeSingle(),
   ]);
+
+  const user = userData.user;
+  const { data: preference } = user
+    ? await supabase
+      .from("tenant_member_preferences")
+      .select("website_section_tour_dismissals")
+      .eq("tenant_id", tenant.id)
+      .eq("user_id", user.id)
+      .maybeSingle()
+    : { data: null };
+  const websiteSectionTourStart = websiteSectionTourStartMode({
+    tenantSlug: tenant.slug,
+    tourKey: "pages",
+    dismissals: websiteSectionTourDismissalsFromPreference(preference),
+    replayRequested: hasWebsiteSectionTourReplayRequest(tour, "pages"),
+  });
 
   const sampleVehicle = sampleVehicleResult.data
     ? {
@@ -55,7 +81,7 @@ export default async function PagesListPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header>
+      <header data-tour="website-pages-overview">
         <h1 className="text-2xl font-semibold">Pages</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Edit draft page content and publish changes for {tenant.name}.
@@ -68,6 +94,8 @@ export default async function PagesListPage({ params }: PageProps) {
         initialHeader={initialHeader}
         publicSiteBaseUrl={publicSiteBaseUrl}
         sampleVehicle={sampleVehicle}
+        websiteSectionTourStart={websiteSectionTourStart}
+        websiteSectionTourDismissible={websiteSectionTourStart === "automatic"}
       />
     </div>
   );

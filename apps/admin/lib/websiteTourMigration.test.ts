@@ -28,3 +28,17 @@ describe("Website Hub tour dismissal migration", () => {
     expect(dismissal).not.toMatch(/create table|drop |delete |update /i);
   });
 });
+
+describe("Website section tour dismissal migration", () => {
+  const dismissal = readFileSync(
+    resolve(process.cwd(), "supabase/migrations/092_website_section_tour_dismissals.sql"),
+    "utf8",
+  );
+
+  it("uses the existing member preference row with a defaulted keyed object", () => {
+    expect(dismissal).toMatch(/alter table public\.tenant_member_preferences/i);
+    expect(dismissal).toMatch(/add column if not exists website_section_tour_dismissals jsonb not null default '\{\}'::jsonb/i);
+    expect(dismissal).toMatch(/jsonb_typeof\(website_section_tour_dismissals\) = 'object'/i);
+    expect(dismissal).not.toMatch(/create table|drop |delete |update /i);
+  });
+});

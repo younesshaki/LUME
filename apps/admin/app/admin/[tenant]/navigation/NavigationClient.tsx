@@ -7,6 +7,7 @@
  * tenants.theme.header (merged — other theme keys are preserved).
  */
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ import {
 import type { Database } from "@lume/db";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/page-header";
+import { WebsiteSectionTutorialButton } from "@/components/onboarding/WebsiteSectionTutorialButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +39,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { WebsiteTourStart } from "@/lib/websiteTour";
+
+const WebsiteSectionTour = dynamic(
+  () => import("@/components/onboarding/WebsiteSectionTour").then((module) => module.WebsiteSectionTour),
+  { ssr: false },
+);
 
 type NavigationClientProps = {
   tenantId: string;
@@ -44,6 +52,8 @@ type NavigationClientProps = {
   tenantName: string;
   initialTheme: TenantTheme;
   navPages: NavPageEntry[];
+  websiteSectionTourStart?: WebsiteTourStart;
+  websiteSectionTourDismissible?: boolean;
 };
 
 const HEADER_VARIANTS: ReadonlyArray<{
@@ -73,6 +83,8 @@ export default function NavigationClient({
   tenantName,
   initialTheme,
   navPages,
+  websiteSectionTourStart,
+  websiteSectionTourDismissible,
 }: NavigationClientProps) {
   const router = useRouter();
   const defaults = DEFAULT_TENANT_THEME.header;
@@ -157,17 +169,28 @@ export default function NavigationClient({
 
   return (
     <div className="max-w-3xl space-y-6">
-      <PageHeader
-        title="Navigation"
-        description={`How ${tenantName}'s public site header presents your published pages.`}
-        actions={
-          <Button onClick={() => void save()} disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        }
+      <WebsiteSectionTour
+        tenantSlug={tenantSlug}
+        tourKey="navigation"
+        startMode={websiteSectionTourStart ?? "none"}
+        dismissible={websiteSectionTourDismissible ?? false}
       />
+      <div data-tour="website-navigation-overview">
+        <PageHeader
+          title="Navigation"
+          description={`How ${tenantName}'s public site header presents your published pages.`}
+          actions={
+            <div className="flex items-center gap-2">
+              <WebsiteSectionTutorialButton tenantSlug={tenantSlug} tourKey="navigation" />
+              <Button data-tour="website-navigation-save" onClick={() => void save()} disabled={saving}>
+            {saving ? "Saving…" : "Save changes"}
+              </Button>
+            </div>
+          }
+        />
+      </div>
 
-      <Card>
+      <Card data-tour="website-navigation-header">
         <CardHeader>
           <CardTitle>Header settings</CardTitle>
           <CardDescription>
@@ -309,7 +332,7 @@ export default function NavigationClient({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-tour="website-navigation-footer">
         <CardHeader>
           <CardTitle>Footer settings</CardTitle>
           <CardDescription>
@@ -377,7 +400,7 @@ export default function NavigationClient({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-tour="website-navigation-preview">
         <CardHeader>
           <CardTitle>Header &amp; footer preview</CardTitle>
           <CardDescription>

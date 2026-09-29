@@ -18,6 +18,38 @@ on): it closes the tour and records `website_tour_dismissed_at` (migration
 automatic start. The Tutorial button still works afterwards, and
 `npm run reset:website-tour` clears the opt-out too.
 
+### Update (2026-09-29): four route-local Website tutorials
+
+The same small-cohort pattern now extends to the four Website routes that can
+be understood without navigating away or changing a draft:
+
+- **Pages** — page status, creation, navigation order, and the shared vehicle
+  layout;
+- **Templates** — visual starting points, safe previews, and working drafts;
+- **Website Design** — draft-vs-published design, mode scopes, controls, and
+  previews;
+- **Navigation** — header, footer, visibility preview, and explicit save.
+
+Each is a short, route-local `nextstepjs` tour. It waits for real semantic
+`data-tour` targets on that route, blocks click-through, and never clicks,
+saves, publishes, opens a template, or changes a setting. The route's own
+**Tutorial** button is a manual replay link (`?tour=<route>`), available to
+every authorized member. No cross-route continuation is introduced.
+
+For the three demo tenants only, an automatic run occurs whenever the specific
+route is opened until the member chooses **Don't show again** on *that route*.
+Finishing or skipping is intentionally non-persistent. A Pages dismissal does
+not hide Templates, Design, Navigation, or the existing Website Hub tour.
+
+Migration `092_website_section_tour_dismissals.sql` adds a single defaulted
+JSONB object to the existing tenant/member preference row. It stores stable
+route-key → timestamp opt-outs, retains the established RLS scope, and avoids
+a second onboarding table. `npm run reset:website-tour -- --tenant <demo>
+--apply` resets both the Hub fields and this route-local opt-out object before
+a presentation. As with the prior migrations, it must be reviewed and applied
+through the normal deployment flow; it has not been applied by this feature
+branch.
+
 ### Update (2026-09-28): last step points at the sidebar's View website
 
 The final step now highlights the admin sidebar's **View website** link
@@ -213,8 +245,9 @@ These are valuable, but explicitly out of v1:
 
 1. **Page editor tour** — only after the editor has a tested unsaved-change
    contract that safely blocks or confirms navigation.
-2. **Branding, Navigation, and Domain mini-tours** — short route-local tours
-   launched only from their own pages.
+2. **Branding and Domain mini-tours** — short route-local tours launched only
+   from their own pages. Pages, Templates, Website Design, and Navigation now
+   have the route-local coverage described above.
 3. **Cross-route continuation/resume** — only after route and dirty-state
    behavior are robust.
 4. **Step-level analytics** — the admin currently lacks an approved browser

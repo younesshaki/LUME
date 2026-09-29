@@ -1,5 +1,5 @@
 /**
- * Reset a single demo tenant's Website Hub tour state before a presentation.
+ * Reset a single demo tenant's Website tutorial state before a presentation.
  *
  * Dry run (default): npm run reset:website-tour -- --tenant demo-sean
  * Apply:             npm run reset:website-tour -- --tenant demo-sean --apply
@@ -59,7 +59,7 @@ async function main() {
   }
 
   if (!args.apply) {
-    console.log(`Dry run: would reset Website Hub tour state for tenant "${tenant.slug}".`);
+    console.log(`Dry run: would reset Website tutorial state for tenant "${tenant.slug}".`);
     console.log("Re-run with --apply to make this one preference-row change.");
     return;
   }
@@ -71,11 +71,12 @@ async function main() {
       website_tour_completed_at: null,
       website_tour_skipped_at: null,
       website_tour_dismissed_at: null,
+      website_section_tour_dismissals: {},
     })
     .eq("tenant_id", tenant.id)
     .eq("user_id", members[0].user_id);
-  if (updateError) throw new Error("Unable to reset Website Hub tour state.");
-  console.log(`Reset Website Hub tour state for tenant "${tenant.slug}".`);
+  if (updateError) throw new Error("Unable to reset Website tutorial state.");
+  console.log(`Reset Website tutorial state for tenant "${tenant.slug}".`);
 }
 
 main().catch((error: unknown) => {
