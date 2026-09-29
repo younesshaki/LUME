@@ -15,9 +15,11 @@ type ActionResult = { error?: string };
  */
 export async function recordWebsiteTourOutcome(
   slug: string,
-  outcome: "completed" | "skipped",
+  outcome: "completed" | "skipped" | "dismissed",
 ): Promise<ActionResult> {
-  if (outcome !== "completed" && outcome !== "skipped") return { error: "Invalid tour outcome." };
+  if (outcome !== "completed" && outcome !== "skipped" && outcome !== "dismissed") {
+    return { error: "Invalid tour outcome." };
+  }
 
   const supabase = await createSupabaseServerClient();
   const [{ data: tenant }, userResult] = await Promise.all([

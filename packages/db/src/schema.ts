@@ -70,14 +70,16 @@ export type Database = {
           website_tour_version: number | null;
           website_tour_completed_at: string | null;
           website_tour_skipped_at: string | null;
+          website_tour_dismissed_at: string | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["tenant_member_preferences"]["Row"], "sidebar_single_expand" | "website_tour_version" | "website_tour_completed_at" | "website_tour_skipped_at" | "created_at" | "updated_at"> & {
+        Insert: Omit<Database["public"]["Tables"]["tenant_member_preferences"]["Row"], "sidebar_single_expand" | "website_tour_version" | "website_tour_completed_at" | "website_tour_skipped_at" | "website_tour_dismissed_at" | "created_at" | "updated_at"> & {
           sidebar_single_expand?: boolean;
           website_tour_version?: number | null;
           website_tour_completed_at?: string | null;
           website_tour_skipped_at?: string | null;
+          website_tour_dismissed_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

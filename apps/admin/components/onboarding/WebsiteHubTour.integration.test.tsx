@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { recordWebsiteTourOutcome } from "../../app/admin/[tenant]/website/actions";
 import { WebsiteHubTour } from "./WebsiteHubTour";
 import { WEBSITE_TOUR_TARGETS } from "../../lib/websiteTour";
 
@@ -52,5 +53,23 @@ describe("WebsiteHubTour with NextStep", () => {
     });
     expect((document.querySelector('[data-name="nextstep-pointer"]') as HTMLElement).style.pointerEvents)
       .toBe("auto");
+  });
+
+  it("offers \"Don't show again\", which closes the tour and saves the opt-out only", async () => {
+    vi.mocked(recordWebsiteTourOutcome).mockClear();
+    render(<WebsiteHubTour tenantSlug="demo-sean" startMode="automatic" dismissible />);
+
+    await screen.findByRole("dialog", { name: "Website tour" });
+    fireEvent.click(screen.getByRole("button", { name: "Don’t show again" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Website tour" })).toBeNull());
+    expect(recordWebsiteTourOutcome).toHaveBeenCalledTimes(1);
+    expect(recordWebsiteTourOutcome).toHaveBeenCalledWith("demo-sean", "dismissed");
+  });
+
+  it("hides \"Don't show again\" when the tour does not open by itself", async () => {
+    render(<WebsiteHubTour tenantSlug="default" startMode="manual" />);
+    await screen.findByRole("dialog", { name: "Website tour" });
+    expect(screen.queryByRole("button", { name: "Don’t show again" })).toBeNull();
   });
 });

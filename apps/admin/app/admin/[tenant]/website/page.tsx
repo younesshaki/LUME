@@ -5,6 +5,7 @@ import { evaluateLaunchReadiness, type LaunchReadinessReport, type TenantLaunchS
 import { loadTenantLaunchSnapshot } from "@/lib/launchReadiness.server";
 import {
   hasWebsiteTourReplayRequest,
+  websiteTourAutoStartEnabled,
   websiteTourStartMode,
 } from "@/lib/websiteTour";
 import { websiteTourPreferenceFromRow } from "@/lib/websiteTour.server";
@@ -32,14 +33,15 @@ export default async function WebsitePage({ params, searchParams }: PageProps) {
   const { data: websiteTourPreference } = user
     ? await supabase
       .from("tenant_member_preferences")
-      .select("website_tour_version, website_tour_completed_at, website_tour_skipped_at")
+      .select("website_tour_version, website_tour_completed_at, website_tour_skipped_at, website_tour_dismissed_at")
       .eq("tenant_id", tenant.id)
       .eq("user_id", user.id)
       .maybeSingle()
     : { data: null };
+  const tourPreference = websiteTourPreferenceFromRow(websiteTourPreference);
   const websiteTourStart = websiteTourStartMode({
     tenantSlug: tenant.slug,
-    preference: websiteTourPreferenceFromRow(websiteTourPreference),
+    preference: tourPreference,
     replayRequested: hasWebsiteTourReplayRequest(tour),
   });
 
@@ -86,6 +88,7 @@ export default async function WebsitePage({ params, searchParams }: PageProps) {
       publicReport={publicReport}
       launchLoadError={launchLoadError}
       websiteTourStart={websiteTourStart}
+      websiteTourDismissible={websiteTourAutoStartEnabled(tenant.slug, tourPreference)}
     />
   );
 }

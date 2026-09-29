@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   NextStep,
   NextStepProvider,
@@ -18,13 +18,18 @@ import {
   WEBSITE_TOUR_NAME,
   WEBSITE_TOUR_START_EVENT,
   WEBSITE_TOUR_TARGETS,
+  type WebsiteTourOutcome,
   type WebsiteTourStart,
 } from "../../lib/websiteTour";
 
 type WebsiteHubTourProps = {
   tenantSlug: string;
   startMode: WebsiteTourStart;
+  /** Offer "Don't show again" (the tour opens by itself for this member). */
+  dismissible?: boolean;
 };
+
+const TourDismissibleContext = createContext(false);
 
 /**
  * The tour definition. `selectorFor` lets a start-time pass swap a target that
@@ -69,9 +74,13 @@ function fitToViewport(): Tour[] {
  * dealer data: finish and skip only write a terminal member preference via the
  * authenticated server action.
  */
-export function WebsiteHubTour({ tenantSlug, startMode }: WebsiteHubTourProps) {
+export function WebsiteHubTour({ tenantSlug, startMode, dismissible = false }: WebsiteHubTourProps) {
   const [tours, setTours] = useState<Tour[]>(() => buildTours());
+  // Hidden for the rest of the visit once used, even before the page reloads.
+  const [dismissed, setDismissed] = useState(false);
+  const markDismissed = useCallback(() => setDismissed(true), []);
   return (
+    <TourDismissibleContext.Provider value={dismissible && !dismissed}>
     <NextStepProvider>
       <NextStep
         steps={tours}
@@ -88,8 +97,10 @@ export function WebsiteHubTour({ tenantSlug, startMode }: WebsiteHubTourProps) {
         }}
       >
         <WebsiteHubTourStarter startMode={startMode} onFitSteps={setTours} />
+        <DismissTourBridge tenantSlug={tenantSlug} onDismissed={markDismissed} />
       </NextStep>
     </NextStepProvider>
+    </TourDismissibleContext.Provider>
   );
 }
 
@@ -180,6 +191,7 @@ function WebsiteHubTourCard({
   skipTour,
 }: CardComponentProps) {
   const lastStep = currentStep === totalSteps - 1;
+  const dismissible = useContext(TourDismissibleContext);
   return (
     <section
       role="dialog"
@@ -213,11 +225,40 @@ function WebsiteHubTourCard({
           </Button>
         </div>
       </div>
+      {dismissible ? (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(WEBSITE_TOUR_DISMISS_EVENT))}
+          className="mt-3 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Don&rsquo;t show again
+        </button>
+      ) : null}
     </section>
   );
 }
 
-async function saveOutcome(tenantSlug: string, outcome: "completed" | "skipped"): Promise<void> {
+// The card is rendered by NextStep outside this component's props, so it asks
+// the bridge (which knows the tenant) to save the opt-out and close the tour.
+const WEBSITE_TOUR_DISMISS_EVENT = "lume:dismiss-website-tour";
+
+function DismissTourBridge({ tenantSlug, onDismissed }: { tenantSlug: string; onDismissed: () => void }) {
+  const { closeNextStep } = useNextStep();
+  useEffect(() => {
+    const onDismiss = () => {
+      // Close directly (not skipTour): a skip would save a second outcome that
+      // could race this one.
+      closeNextStep();
+      onDismissed();
+      void saveOutcome(tenantSlug, "dismissed");
+    };
+    window.addEventListener(WEBSITE_TOUR_DISMISS_EVENT, onDismiss);
+    return () => window.removeEventListener(WEBSITE_TOUR_DISMISS_EVENT, onDismiss);
+  }, [closeNextStep, onDismissed, tenantSlug]);
+  return null;
+}
+
+async function saveOutcome(tenantSlug: string, outcome: WebsiteTourOutcome): Promise<void> {
   try {
     const result = await recordWebsiteTourOutcome(tenantSlug, outcome);
     if (result.error) throw new Error(result.error);

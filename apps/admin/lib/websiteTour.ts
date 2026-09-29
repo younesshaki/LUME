@@ -135,7 +135,11 @@ export type WebsiteTourPreference = {
   websiteTourVersion: number | null;
   websiteTourCompletedAt: string | null;
   websiteTourSkippedAt: string | null;
+  /** Set by "Don't show again": the only thing that stops the automatic tour. */
+  websiteTourDismissedAt?: string | null;
 };
+
+export type WebsiteTourOutcome = "completed" | "skipped" | "dismissed";
 
 export type WebsiteTourStart = "automatic" | "manual" | "none";
 
@@ -196,21 +200,21 @@ export function isWebsiteTourEligibleTenant(tenantSlug: string): boolean {
   return WEBSITE_TOUR_DEMO_TENANTS.has(tenantSlug);
 }
 
+/** Whether the tour still opens by itself for this member (the opt-out applies). */
+export function websiteTourAutoStartEnabled(tenantSlug: string, preference: WebsiteTourPreference | null): boolean {
+  return isWebsiteTourEligibleTenant(tenantSlug) && !preference?.websiteTourDismissedAt;
+}
+
 export function websiteTourStartMode(input: {
   tenantSlug: string;
   preference: WebsiteTourPreference | null;
   replayRequested: boolean;
 }): WebsiteTourStart {
-  // Anyone can start the tutorial on demand; only the demo cohort gets it
-  // automatically on a first visit.
+  // Anyone can start the tutorial on demand. The demo cohort gets it
+  // automatically every time the Website section opens, until the member
+  // chooses "Don't show again"; finishing or skipping a run does not stop it.
   if (input.replayRequested) return "manual";
-  if (!isWebsiteTourEligibleTenant(input.tenantSlug)) return "none";
-
-  const preference = input.preference;
-  const settledCurrentVersion = preference?.websiteTourVersion === WEBSITE_TOUR_VERSION
-    && (preference.websiteTourCompletedAt !== null || preference.websiteTourSkippedAt !== null);
-
-  return settledCurrentVersion ? "none" : "automatic";
+  return websiteTourAutoStartEnabled(input.tenantSlug, input.preference) ? "automatic" : "none";
 }
 
 /**
@@ -223,15 +227,17 @@ export function hasWebsiteTourReplayRequest(value: string | string[] | undefined
 
 export function websiteTourOutcomeUpdate(
   previous: WebsiteTourPreference | null,
-  outcome: "completed" | "skipped",
+  outcome: WebsiteTourOutcome,
   at: string,
 ): Required<WebsiteTourPreference> {
   return {
     websiteTourVersion: WEBSITE_TOUR_VERSION,
+    websiteTourDismissedAt:
+      outcome === "dismissed" ? at : previous?.websiteTourDismissedAt ?? null,
     // A replay must not erase historical completion merely because it is later skipped.
     websiteTourCompletedAt:
       outcome === "completed" ? at : previous?.websiteTourCompletedAt ?? null,
     websiteTourSkippedAt:
-      outcome === "skipped" ? at : previous?.websiteTourSkippedAt ?? null,
+      outcome === "skipped" || outcome === "dismissed" ? at : previous?.websiteTourSkippedAt ?? null,
   };
 }
