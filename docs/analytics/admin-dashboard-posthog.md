@@ -30,6 +30,8 @@ Nothing loads for anyone else, and LUME platform admins are never tracked.
 | `admin_tour_step_viewed` | each tour step | `step_number`, `step_id`, `total_steps` |
 | `admin_tour_completed` / `admin_tour_skipped` | Finish / Skip | `step_number`, `step_id` (skip) |
 | `admin_tour_dismissed` | "Don't show again" | — |
+| `admin_section_tour_started` | a section tutorial (Pages, Templates, Design, Navigation…) opens | `tour_key`, `trigger`: `automatic` \| `tutorial_button` |
+| `admin_section_tour_step_viewed` / `_completed` / `_skipped` / `_dismissed` | section tutorial progress | `tour_key`, `step_number`, `total_steps` |
 | `admin_block_added` | page editor: block added | `page_slug`, `block_type` |
 | `admin_page_draft_saved` / `admin_page_published` | page editor | `page_slug`, `block_count` |
 

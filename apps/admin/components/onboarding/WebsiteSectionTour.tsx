@@ -10,6 +10,7 @@ import {
 } from "nextstepjs";
 import { Button } from "../ui/button";
 import { dismissWebsiteSectionTour } from "../../app/admin/[tenant]/website/actions";
+import { captureAdminEvent } from "../analytics/AdminAnalytics";
 import {
   WEBSITE_SECTION_TOUR_OVERLAY_OPTIONS,
   WEBSITE_SECTION_TOURS,
@@ -81,6 +82,7 @@ export function WebsiteSectionTour({
   const definition = WEBSITE_SECTION_TOURS[tourKey];
   const dismiss = useCallback(() => {
     setDismissed(true);
+    captureAdminEvent("admin_section_tour_dismissed", { tour_key: tourKey });
     // Persistence is deliberately best-effort: an unavailable preference row
     // must never keep an informational overlay open or interrupt the route.
     void dismissWebsiteSectionTour(tenantSlug, tourKey).catch(() => undefined);
@@ -96,6 +98,22 @@ export function WebsiteSectionTour({
           shadowOpacity="0.58"
           {...WEBSITE_SECTION_TOUR_OVERLAY_OPTIONS}
           disableConsoleLogs
+          onStepChange={(step, tourName) => {
+            if (tourName !== definition.name) return;
+            captureAdminEvent("admin_section_tour_step_viewed", {
+              tour_key: tourKey,
+              step_number: step + 1,
+              total_steps: definition.steps.length,
+            });
+          }}
+          onComplete={(tourName) => {
+            if (tourName !== definition.name) return;
+            captureAdminEvent("admin_section_tour_completed", { tour_key: tourKey, total_steps: definition.steps.length });
+          }}
+          onSkip={(step, tourName) => {
+            if (tourName !== definition.name) return;
+            captureAdminEvent("admin_section_tour_skipped", { tour_key: tourKey, step_number: step + 1 });
+          }}
         >
           <WebsiteSectionTourStarter
             tourKey={tourKey}
@@ -124,8 +142,19 @@ function WebsiteSectionTourStarter({
   const definition = WEBSITE_SECTION_TOURS[tourKey];
 
   useEffect(() => {
-    if (startRequest > 0) startNextStep(definition.name);
-  }, [definition.name, startNextStep, startRequest]);
+    if (startRequest === 0) return;
+    startNextStep(definition.name);
+    captureAdminEvent("admin_section_tour_started", {
+      tour_key: tourKey,
+      trigger: startMode === "manual" ? "tutorial_button" : "automatic",
+    });
+    // NextStep reports step changes only from the second step on.
+    captureAdminEvent("admin_section_tour_step_viewed", {
+      tour_key: tourKey,
+      step_number: 1,
+      total_steps: definition.steps.length,
+    });
+  }, [definition.name, definition.steps.length, startMode, startNextStep, startRequest, tourKey]);
 
   useEffect(() => {
     if (startMode === "none" || attempted.current) return;
