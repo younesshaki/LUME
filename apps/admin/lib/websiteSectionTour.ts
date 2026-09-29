@@ -14,7 +14,8 @@ export type WebsiteSectionTourStep = {
   side: NonNullable<Step["side"]>;
   title: string;
   content: string;
-  disableInteraction: true;
+  /** Block only a highlighted control that could persist or publish work. */
+  disableInteraction: boolean;
   pointerPadding: number;
   pointerRadius: number;
 };
@@ -33,13 +34,14 @@ const step = (
   side: WebsiteSectionTourStep["side"],
   title: string,
   content: string,
+  disableInteraction = false,
 ): WebsiteSectionTourStep => ({
   id,
   selector,
   side,
   title,
   content,
-  disableInteraction: true,
+  disableInteraction,
   pointerPadding: 8,
   pointerRadius: 12,
 });
@@ -53,9 +55,9 @@ export const WEBSITE_SECTION_TOURS: Record<WebsiteSectionTourKey, WebsiteSection
     steps: [
       step("overview", '[data-tour="website-pages-overview"]', "bottom", "Manage your pages", "Create, edit, publish, and organize the public pages that make up your dealership website."),
       step("create", '[data-tour="website-pages-create"]', "left-top", "Create a page", "Use New Page to begin a new page. This tutorial will not create or change anything."),
-      step("order", '[data-tour="website-pages-order"]', "bottom", "Order your navigation", "Drag rows to set the order of public navigation. Reserved pages cannot be deleted."),
-      step("status", '[data-tour="website-pages-status"]', "top", "Check page status", "Use each row to see whether a page is a draft, published, archived, or has unpublished work."),
-      step("vehicle-layout", '[data-tour="website-pages-vehicle-layout"]', "bottom", "Design every vehicle page", "This layout applies to every vehicle in your inventory. Keep its copy general rather than describing one specific car."),
+      step("order", '[data-tour="website-pages-order"]', "bottom", "Order your navigation", "Drag rows to set the order of public navigation. Reserved pages cannot be deleted.", true),
+      step("status", '[data-tour="website-pages-status"]', "top", "Check page status", "Use each row to see whether a page is a draft, published, archived, or has unpublished work.", true),
+      step("vehicle-layout", '[data-tour="website-pages-vehicle-layout"]', "bottom", "Design every vehicle page", "This layout applies to every vehicle in your inventory. Keep its copy general rather than describing one specific car.", true),
     ],
   },
   templates: {
@@ -67,7 +69,7 @@ export const WEBSITE_SECTION_TOURS: Record<WebsiteSectionTourKey, WebsiteSection
       step("overview", '[data-tour="website-templates-overview"]', "bottom", "Choose a visual direction", "Templates change visual design and conversion emphasis. They do not replace your inventory, pages, contact details, or navigation."),
       step("template-grid", '[data-tour="website-templates-grid"]', "top", "Compare templates", "Live marks the current published template. Draft saved means a separate working design is ready to continue."),
       step("preview", '[data-tour="website-templates-preview"]', "bottom", "Preview safely", "Open Preview to inspect a template in dark and light modes without changing your public website."),
-      step("draft", '[data-tour="website-templates-draft"]', "bottom", "Prepare a working draft", "Use template or Customize opens a working draft in Website Design. Nothing becomes public until you explicitly publish there."),
+      step("draft", '[data-tour="website-templates-draft"]', "bottom", "Prepare a working draft", "Use template or Customize opens a working draft in Website Design. Nothing becomes public until you explicitly publish there.", true),
     ],
   },
   design: {
@@ -77,9 +79,9 @@ export const WEBSITE_SECTION_TOURS: Record<WebsiteSectionTourKey, WebsiteSection
     path: (tenantSlug) => `/admin/${tenantSlug}/design`,
     steps: [
       step("overview", '[data-tour="website-design-overview"]', "bottom", "Design your public site", "These controls change the dealership website, never the Admin dashboard."),
-      step("publish", '[data-tour="website-design-publish"]', "bottom", "Work in drafts", "Changes save as a working draft. Publish website design is the explicit step that makes the draft live."),
+      step("publish", '[data-tour="website-design-publish"]', "bottom", "Work in drafts", "Changes save as a working draft. Publish website design is the explicit step that makes the draft live.", true),
       step("modes", '[data-tour="website-design-modes"]', "bottom", "Choose a design scope", "Shared settings affect both website modes. Dark and light tabs let you tune each mode separately."),
-      step("settings", '[data-tour="website-design-settings"]', "top", "Adjust the visual details", "Set backgrounds, colors, typography, and shared presentation settings here. The tutorial does not change them."),
+      step("settings", '[data-tour="website-design-settings"]', "top", "Adjust the visual details", "Set backgrounds, colors, typography, and shared presentation settings here. The tutorial does not change them.", true),
       step("preview", '[data-tour="website-design-preview"]', "left", "Compare draft and live", "The design preview reflects your current draft. The published preview below it shows only what visitors can see today."),
     ],
   },
@@ -93,7 +95,7 @@ export const WEBSITE_SECTION_TOURS: Record<WebsiteSectionTourKey, WebsiteSection
       step("header", '[data-tour="website-navigation-header"]', "right-top", "Set the header", "Choose how many published pages appear, the header layout, sticky behavior, visitor access, and the contact call to action."),
       step("footer", '[data-tour="website-navigation-footer"]', "top", "Set the footer", "Choose its layout, optional columns, and whether social links appear."),
       step("preview", '[data-tour="website-navigation-preview"]', "top", "Review what fits", "This preview lists pages shown in the header and clearly identifies pages beyond the current limit."),
-      step("save", '[data-tour="website-navigation-save"]', "bottom", "Save when ready", "Save changes writes the header and footer settings. Page order and visibility still come from Pages."),
+      step("save", '[data-tour="website-navigation-save"]', "bottom", "Save when ready", "Save changes writes the header and footer settings. Page order and visibility still come from Pages.", true),
     ],
   },
 };
@@ -101,7 +103,7 @@ export const WEBSITE_SECTION_TOURS: Record<WebsiteSectionTourKey, WebsiteSection
 export type WebsiteSectionTourDismissals = Partial<Record<WebsiteSectionTourKey, string>>;
 
 export const WEBSITE_SECTION_TOUR_OVERLAY_OPTIONS = {
-  clickThroughOverlay: false,
+  clickThroughOverlay: true,
   displayArrow: false,
   scrollToTop: false,
   overlayZIndex: 999,

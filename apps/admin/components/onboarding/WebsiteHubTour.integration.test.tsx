@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 describe("WebsiteHubTour with NextStep", () => {
-  it("mounts the real modal overlay with a keyboard-operable card and click blocking", async () => {
+  it("mounts an interactive overlay with a keyboard-operable card", async () => {
     render(<WebsiteHubTour tenantSlug="demo-sean" startMode="automatic" />);
 
     const dialog = await screen.findByRole("dialog", { name: "Website tour" });
@@ -48,11 +48,11 @@ describe("WebsiteHubTour with NextStep", () => {
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Next" }));
 
     await waitFor(() => {
-      expect(document.querySelector('[data-name="nextstep-prevent-click-overlay"]')).not.toBeNull();
+      expect(document.querySelector('[data-name="nextstep-prevent-click-overlay"]')).toBeNull();
       expect(document.querySelector('[data-name="nextstep-pointer"]')).not.toBeNull();
     });
     expect((document.querySelector('[data-name="nextstep-pointer"]') as HTMLElement).style.pointerEvents)
-      .toBe("auto");
+      .toBe("none");
   });
 
   it("offers \"Don't show again\", which closes the tour and saves the opt-out only", async () => {
