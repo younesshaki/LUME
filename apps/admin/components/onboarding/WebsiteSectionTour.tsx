@@ -13,7 +13,7 @@ import { dismissWebsiteSectionTour } from "../../app/admin/[tenant]/website/acti
 import {
   WEBSITE_SECTION_TOUR_OVERLAY_OPTIONS,
   WEBSITE_SECTION_TOURS,
-  sectionTourCompactSelector,
+  sectionTourViewportPlacement,
   type WebsiteSectionTourKey,
 } from "../../lib/websiteSectionTour";
 import type { WebsiteTourStart } from "../../lib/websiteTour";
@@ -54,8 +54,10 @@ function fitTours(tourKey: WebsiteSectionTourKey): Tour[] {
     tour: definition.name,
     steps: definition.steps.map(({ id, ...step }) => ({
       ...step,
-      selector: sectionTourCompactSelector(step.selector, id, window.innerHeight),
-      side: step.side,
+      ...sectionTourViewportPlacement(step.selector, id, step.side, {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }),
       cardOffset: 16,
       scrollOffset: 88,
       selectorRetryAttempts: 4,
@@ -191,14 +193,14 @@ function WebsiteSectionTourCard({
       role="dialog"
       aria-label={context.label}
       aria-live="polite"
-      className="w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-border bg-card p-4 text-card-foreground shadow-xl"
+      className="flex max-h-[calc(100dvh-2rem)] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-card p-4 text-card-foreground shadow-xl"
     >
       <p className="text-xs font-medium text-muted-foreground">
         {context.label} · {currentStep + 1} of {totalSteps}
       </p>
       <h2 className="mt-2 text-base font-semibold">{step.title}</h2>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.content}</p>
-      <div className="mt-4 flex items-center justify-between gap-2">
+      <p className="mt-2 min-h-0 overflow-y-auto text-sm leading-6 text-muted-foreground">{step.content}</p>
+      <div className="mt-4 flex shrink-0 items-center justify-between gap-2">
         {skipTour && !lastStep ? (
           <Button type="button" variant="ghost" size="sm" onClick={skipTour}>Skip tutorial</Button>
         ) : <span />}
@@ -211,7 +213,7 @@ function WebsiteSectionTourCard({
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event(DISMISS_SECTION_TOUR_EVENT))}
-          className="mt-3 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          className="mt-3 shrink-0 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
         >
           Don&rsquo;t show again
         </button>
