@@ -15,7 +15,7 @@ import {
 } from "./websiteTour";
 
 describe("Website Hub tour eligibility and state", () => {
-  it("defines six non-destructive Hub steps against stable controls", () => {
+  it("defines six interactive Hub steps against stable controls", () => {
     expect(WEBSITE_HUB_TOUR_STEPS).toHaveLength(6);
     expect(WEBSITE_HUB_TOUR_STEPS.map((step) => step.id)).toEqual([
       "overview",
@@ -25,7 +25,7 @@ describe("Website Hub tour eligibility and state", () => {
       "navigation",
       "view-website",
     ]);
-    expect(WEBSITE_HUB_TOUR_STEPS.every((step) => step.disableInteraction)).toBe(true);
+    expect(WEBSITE_HUB_TOUR_STEPS.every((step) => !step.disableInteraction)).toBe(true);
     expect(WEBSITE_HUB_TOUR_STEPS.map((step) => step.selector)).not.toContain(
       '[data-tour="site-nav-loader"]',
     );
@@ -33,9 +33,9 @@ describe("Website Hub tour eligibility and state", () => {
       .not.toMatch(/footer|CTA|click|drag/i);
   });
 
-  it("uses an explicitly modal overlay instead of allowing click-through", () => {
+  it("allows dashboard interaction around the tour card", () => {
     expect(WEBSITE_HUB_TOUR_OVERLAY_OPTIONS).toMatchObject({
-      clickThroughOverlay: false,
+      clickThroughOverlay: true,
       scrollToTop: false,
     });
   });

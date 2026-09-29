@@ -49,7 +49,8 @@ export type WebsiteHubTourStep = {
   side: "top" | "bottom" | "left" | "right";
   title: string;
   content: string;
-  disableInteraction: true;
+  /** Prevent clicks only when a highlighted target is an externally visible action. */
+  disableInteraction: boolean;
   pointerPadding: number;
   pointerRadius: number;
 };
@@ -61,7 +62,7 @@ export const WEBSITE_HUB_TOUR_STEPS: readonly WebsiteHubTourStep[] = [
     side: "bottom",
     title: "Your dealership website",
     content: "Manage the pages, visual identity, navigation, and launch checks for your public site here.",
-    disableInteraction: true,
+    disableInteraction: false,
     pointerPadding: 8,
     pointerRadius: 12,
   },
@@ -71,7 +72,7 @@ export const WEBSITE_HUB_TOUR_STEPS: readonly WebsiteHubTourStep[] = [
     side: "bottom",
     title: "Choose a template",
     content: "Preview and prepare a versioned visual starting point without changing the live site.",
-    disableInteraction: true,
+    disableInteraction: false,
     pointerPadding: 8,
     pointerRadius: 12,
   },
@@ -81,7 +82,7 @@ export const WEBSITE_HUB_TOUR_STEPS: readonly WebsiteHubTourStep[] = [
     side: "bottom",
     title: "Manage pages",
     content: "Add, edit, and publish pages, then arrange the blocks that make up each page.",
-    disableInteraction: true,
+    disableInteraction: false,
     pointerPadding: 8,
     pointerRadius: 12,
   },
@@ -91,7 +92,7 @@ export const WEBSITE_HUB_TOUR_STEPS: readonly WebsiteHubTourStep[] = [
     side: "bottom",
     title: "Shape your visual identity",
     content: "Website design manages shared visual settings. Logo & favicons and Media assets keep dealership identity and page images organized separately.",
-    disableInteraction: true,
+    disableInteraction: false,
     pointerPadding: 8,
     pointerRadius: 12,
   },
@@ -101,7 +102,7 @@ export const WEBSITE_HUB_TOUR_STEPS: readonly WebsiteHubTourStep[] = [
     side: "bottom",
     title: "Set your header",
     content: "Choose which pages appear in the header and how the top bar behaves.",
-    disableInteraction: true,
+    disableInteraction: false,
     pointerPadding: 8,
     pointerRadius: 12,
   },
@@ -113,19 +114,18 @@ export const WEBSITE_HUB_TOUR_STEPS: readonly WebsiteHubTourStep[] = [
     side: "right",
     title: "View your website",
     content: "Open your live website in a new tab to see exactly what visitors see. Replay this tour anytime with the Tutorial button at the top.",
-    disableInteraction: true,
+    disableInteraction: false,
     pointerPadding: 6,
     pointerRadius: 10,
   },
 ];
 
 /**
- * Explicit rather than relying on NextStep defaults: the tour is view-only and
- * must intercept clicks outside its own card. This protects Hub controls that
- * persist immediately, including the Loading animation switch.
+ * The guide is click-through so a member can learn by using the dashboard.
+ * Individual steps can still protect their highlighted target when needed.
  */
 export const WEBSITE_HUB_TOUR_OVERLAY_OPTIONS = {
-  clickThroughOverlay: false,
+  clickThroughOverlay: true,
   displayArrow: false,
   scrollToTop: false,
   overlayZIndex: 999,
