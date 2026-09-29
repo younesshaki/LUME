@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -18,6 +19,13 @@ import { VehicleLayoutPanel } from "./VehicleLayoutPanel";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { NAV_STATE_HINT, NAV_STATE_LABEL, pageNavStates, type PageNavState } from "./navPlacement";
+import { WebsiteSectionTutorialButton } from "@/components/onboarding/WebsiteSectionTutorialButton";
+import type { WebsiteTourStart } from "@/lib/websiteTour";
+
+const WebsiteSectionTour = dynamic(
+  () => import("@/components/onboarding/WebsiteSectionTour").then((module) => module.WebsiteSectionTour),
+  { ssr: false },
+);
 
 type PagesListClientProps = {
   tenantId: string;
@@ -27,6 +35,8 @@ type PagesListClientProps = {
   initialHeader: TenantHeaderConfig;
   publicSiteBaseUrl: string;
   sampleVehicle: { id: string; label: string } | null;
+  websiteSectionTourStart?: WebsiteTourStart;
+  websiteSectionTourDismissible?: boolean;
 };
 
 type StatusState =
@@ -48,6 +58,8 @@ export default function PagesListClient({
   initialHeader,
   publicSiteBaseUrl,
   sampleVehicle,
+  websiteSectionTourStart,
+  websiteSectionTourDismissible,
 }: PagesListClientProps) {
   const router = useRouter();
   const [pages, setPages] = useState(initialPages);
@@ -257,8 +269,14 @@ export default function PagesListClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
+      <WebsiteSectionTour
+        tenantSlug={tenantSlug}
+        tourKey="pages"
+        startMode={websiteSectionTourStart ?? "none"}
+        dismissible={websiteSectionTourDismissible ?? false}
+      />
+      <div data-tour="website-pages-order" className="flex items-center justify-between gap-3">
+        <div data-tour-anchor>
           <p className="text-sm text-muted-foreground">
             Drag rows to reorder public navigation. Reserved pages cannot be deleted.
           </p>
@@ -269,6 +287,7 @@ export default function PagesListClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <WebsiteSectionTutorialButton tenantSlug={tenantSlug} tourKey="pages" />
           <div className="flex rounded-md border border-neutral-200 p-0.5 dark:border-neutral-800" aria-label="Pages view">
             <button
               type="button"
@@ -299,6 +318,7 @@ export default function PagesListClient({
             </button>
           </div>
           <Link
+            data-tour="website-pages-create"
             href={`/admin/${tenantSlug}/pages/new`}
             className="rounded-md bg-neutral-950 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
           >
@@ -322,14 +342,16 @@ export default function PagesListClient({
         </div>
       )}
 
-      <VehicleLayoutPanel
-        tenantSlug={tenantSlug}
-        tenantId={tenantId}
-        existingPageId={vehicleLayoutPage?.id ?? null}
-        isPublished={Boolean(vehicleLayoutPage?.publishedRevisionId)}
-        publicSiteBaseUrl={publicSiteBaseUrl}
-        sampleVehicle={sampleVehicle}
-      />
+      <div data-tour="website-pages-vehicle-layout">
+        <VehicleLayoutPanel
+          tenantSlug={tenantSlug}
+          tenantId={tenantId}
+          existingPageId={vehicleLayoutPage?.id ?? null}
+          isPublished={Boolean(vehicleLayoutPage?.publishedRevisionId)}
+          publicSiteBaseUrl={publicSiteBaseUrl}
+          sampleVehicle={sampleVehicle}
+        />
+      </div>
 
       {view === "carousel" ? (
         carouselSlides.length === 0 ? (
@@ -401,7 +423,7 @@ export default function PagesListClient({
           </div>
         )
       ) : (
-      <div className="overflow-hidden rounded-xl border">
+      <div data-tour="website-pages-status" className="overflow-hidden rounded-xl border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
