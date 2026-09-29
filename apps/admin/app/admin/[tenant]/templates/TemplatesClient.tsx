@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState, type CSSProperties } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -53,9 +54,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/page-header";
+import { WebsiteSectionTutorialButton } from "@/components/onboarding/WebsiteSectionTutorialButton";
 import type { DesignDraftSummary } from "@/lib/siteDesign.server";
+import type { WebsiteTourStart } from "@/lib/websiteTour";
 import { saveDesignDraft } from "@/lib/siteDesignDraft";
 import { prepareWebsiteTemplateDraftAction } from "./actions";
+
+const WebsiteSectionTour = dynamic(
+  () => import("@/components/onboarding/WebsiteSectionTour").then((module) => module.WebsiteSectionTour),
+  { ssr: false },
+);
 
 type TemplatesClientProps = {
   tenantSlug: string;
@@ -72,6 +80,8 @@ type TemplatesClientProps = {
   canManage: boolean;
   /** Public media base (R2) for template preview photos; empty hides them. */
   mediaBaseUrl?: string;
+  websiteSectionTourStart?: WebsiteTourStart;
+  websiteSectionTourDismissible?: boolean;
 };
 
 /** Public media base for preview photos, provided once for every preview. */
@@ -108,6 +118,8 @@ export default function TemplatesClient({
   initialDrafts,
   canManage,
   mediaBaseUrl = "",
+  websiteSectionTourStart,
+  websiteSectionTourDismissible,
 }: TemplatesClientProps) {
   const router = useRouter();
   const templates = listSiteTemplates();
@@ -167,10 +179,19 @@ export default function TemplatesClient({
   return (
     <PreviewMediaContext.Provider value={mediaBaseUrl}>
     <div className="space-y-6">
-      <PageHeader
-        title="Website Templates"
-        description={`Choose the conversion strategy and visual starting point for ${tenantName}. Nothing changes publicly until you publish.`}
+      <WebsiteSectionTour
+        tenantSlug={tenantSlug}
+        tourKey="templates"
+        startMode={websiteSectionTourStart ?? "none"}
+        dismissible={websiteSectionTourDismissible ?? false}
       />
+      <div data-tour="website-templates-overview">
+        <PageHeader
+          title="Website Templates"
+          description={`Choose the conversion strategy and visual starting point for ${tenantName}. Nothing changes publicly until you publish.`}
+          actions={<WebsiteSectionTutorialButton tenantSlug={tenantSlug} tourKey="templates" />}
+        />
+      </div>
 
       <div className="grid gap-4 rounded-2xl border bg-gradient-to-br from-muted/55 to-background p-5 md:grid-cols-[1fr_auto] md:items-center">
         <div>
@@ -264,7 +285,7 @@ export default function TemplatesClient({
         )}
       </section>
 
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3" data-tour="website-templates-grid">
         {orderedTemplates.map((template) => {
           const selected = currentTemplate?.key === template.key;
           const savedDraft = draftsByTemplate.get(template.key);
@@ -308,10 +329,15 @@ export default function TemplatesClient({
                 ) : null}
               </CardHeader>
               <CardFooter className="mt-auto flex-wrap justify-end gap-2">
-                <Button variant="outline" onClick={() => openPreview(template.key)}>
+                <Button
+                  variant="outline"
+                  data-tour={template.key === orderedTemplates[0]?.key ? "website-templates-preview" : undefined}
+                  onClick={() => openPreview(template.key)}
+                >
                   <Eye /> Preview
                 </Button>
                 <Button
+                  data-tour={template.key === orderedTemplates[0]?.key ? "website-templates-draft" : undefined}
                   disabled={!canManage || working}
                   onClick={() => savedDraft ? continueDraft(template.key) : setPendingKey(template.key)}
                 >

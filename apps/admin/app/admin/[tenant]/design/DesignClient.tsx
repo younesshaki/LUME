@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -34,6 +35,7 @@ import {
 import { TENANT_BUCKETS, validateUploadWithBytes } from "@lume/db";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/page-header";
+import { WebsiteSectionTutorialButton } from "@/components/onboarding/WebsiteSectionTutorialButton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -69,12 +71,18 @@ import {
   validateSiteBackgroundCandidate,
 } from "@/lib/siteDesignAssets";
 import type { DesignRevisionSummary } from "@/lib/siteDesign.server";
+import type { WebsiteTourStart } from "@/lib/websiteTour";
 import {
   prepareWebsiteBackgroundUploadAction,
   publishWebsiteDesignAction,
   restoreWebsiteDesignAction,
   saveWebsiteDesignDraftAction,
 } from "./actions";
+
+const WebsiteSectionTour = dynamic(
+  () => import("@/components/onboarding/WebsiteSectionTour").then((module) => module.WebsiteSectionTour),
+  { ssr: false },
+);
 
 type DesignTab = "shared" | SiteMode;
 type ConfirmAction =
@@ -95,6 +103,8 @@ type DesignClientProps = {
   initialRevisions: DesignRevisionSummary[];
   canManage: boolean;
   livePreviewUrl: string;
+  websiteSectionTourStart?: WebsiteTourStart;
+  websiteSectionTourDismissible?: boolean;
 };
 
 const COLOR_LABELS: Record<SiteColorKey, string> = {
@@ -128,6 +138,8 @@ export default function DesignClient({
   initialRevisions,
   canManage,
   livePreviewUrl,
+  websiteSectionTourStart,
+  websiteSectionTourDismissible,
 }: DesignClientProps) {
   const router = useRouter();
   const [published, setPublished] = useState(initialPublishedDesign);
@@ -306,21 +318,30 @@ export default function DesignClient({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Website Design"
-        description={`Customize ${tenantName}'s public website. These settings do not change the Admin dashboard appearance.`}
-        actions={
-          <div className="flex flex-wrap items-center justify-end gap-2">
+      <WebsiteSectionTour
+        tenantSlug={tenantSlug}
+        tourKey="design"
+        startMode={websiteSectionTourStart ?? "none"}
+        dismissible={websiteSectionTourDismissible ?? false}
+      />
+      <div data-tour="website-design-overview">
+        <PageHeader
+          title="Website Design"
+          description={`Customize ${tenantName}'s public website. These settings do not change the Admin dashboard appearance.`}
+          actions={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <WebsiteSectionTutorialButton tenantSlug={tenantSlug} tourKey="design" />
             <Badge variant="outline">{template.name} template</Badge>
             <DraftStatusBadge status={draftSaveStatus} />
             <Badge variant={dirty ? "default" : "secondary"}>{dirty ? "Unpublished changes" : "Published"}</Badge>
-            <Button disabled={!canManage || !dirty || status.type === "working"} onClick={() => setConfirmAction({ kind: "publish" })}>
+            <Button data-tour="website-design-publish" disabled={!canManage || !dirty || status.type === "working"} onClick={() => setConfirmAction({ kind: "publish" })}>
               {status.type === "working" ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />}
               Publish website design
             </Button>
-          </div>
-        }
-      />
+            </div>
+          }
+        />
+      </div>
 
       {!canManage ? (
         <Alert><AlertCircle /><AlertTitle>View only</AlertTitle><AlertDescription>Owner or admin access is required to publish website design changes.</AlertDescription></Alert>
@@ -336,6 +357,7 @@ export default function DesignClient({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div>
+          <div data-tour="website-design-modes">
           <FluidTabs
             activeIndex={DESIGN_TABS.indexOf(tab)}
             onActiveIndexChange={(index) => {
@@ -360,6 +382,7 @@ export default function DesignClient({
               </FluidTabs.Tab>
             </FluidTabs.List>
           </FluidTabs>
+          </div>
 
           {tab === "shared" ? (
             <div
@@ -367,6 +390,7 @@ export default function DesignClient({
               role="tabpanel"
               aria-labelledby="website-design-tab-shared"
               className="space-y-4 pt-4"
+              data-tour="website-design-settings"
             >
             <SharedSettings design={draft} onChange={updateShared} />
             <Card className="border-destructive/30">
@@ -384,6 +408,7 @@ export default function DesignClient({
               role="tabpanel"
               aria-labelledby={`website-design-tab-${mode}`}
               className="space-y-4 pt-4"
+              data-tour="website-design-settings"
             >
               <ModeSettings
                 design={draft}
@@ -408,7 +433,7 @@ export default function DesignClient({
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
-          <Card>
+          <Card data-tour="website-design-preview">
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
                 <div><CardTitle>Design preview</CardTitle><CardDescription>Previewing website {previewMode} mode</CardDescription></div>

@@ -5,6 +5,11 @@ import { createServiceClient } from "@lume/db/server";
 import { auditWrite } from "@/lib/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { persistWebsiteTourOutcome } from "@/lib/websiteTour.server";
+import { persistWebsiteSectionTourDismissal } from "@/lib/websiteSectionTour.server";
+import {
+  isWebsiteSectionTourKey,
+  WEBSITE_SECTION_TOURS,
+} from "@/lib/websiteSectionTour";
 
 type ActionResult = { error?: string };
 
@@ -45,6 +50,44 @@ export async function recordWebsiteTourOutcome(
   if (!persisted) return { error: "Unable to save tour progress." };
 
   revalidatePath(`/admin/${slug}/website`);
+  return {};
+}
+
+/**
+ * Saves the explicit opt-out for one route-local Website tutorial. This is a
+ * member preference only; it never changes pages, designs, navigation, or any
+ * other dealership content.
+ */
+export async function dismissWebsiteSectionTour(
+  slug: string,
+  tourKey: string,
+): Promise<ActionResult> {
+  if (!isWebsiteSectionTourKey(tourKey)) return { error: "Invalid Website tutorial." };
+
+  const supabase = await createSupabaseServerClient();
+  const [{ data: tenant }, userResult] = await Promise.all([
+    supabase.from("tenants").select("id").eq("slug", slug).maybeSingle(),
+    supabase.auth.getUser(),
+  ]);
+  const user = userResult.data.user;
+  if (!tenant || !user) return { error: "Sign in to save tutorial progress." };
+
+  const { data: membership } = await supabase
+    .from("tenant_members")
+    .select("tenant_id")
+    .eq("tenant_id", tenant.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!membership) return { error: "You do not have access to this workspace." };
+
+  const persisted = await persistWebsiteSectionTourDismissal(supabase, {
+    tenantId: tenant.id,
+    userId: user.id,
+    tourKey,
+  });
+  if (!persisted) return { error: "Unable to save tutorial progress." };
+
+  revalidatePath(WEBSITE_SECTION_TOURS[tourKey].path(slug));
   return {};
 }
 

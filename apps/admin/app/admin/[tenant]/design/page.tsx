@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { createDefaultSiteDesign, getSiteTemplate } from "@lume/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  hasWebsiteSectionTourReplayRequest,
+  websiteSectionTourStartMode,
+} from "@/lib/websiteSectionTour";
+import { websiteSectionTourDismissalsFromPreference } from "@/lib/websiteSectionTour.server";
+import {
   listSiteDesignDrafts,
   listSiteDesignRevisions,
   loadSiteDesign,
@@ -10,7 +15,7 @@ import DesignClient from "./DesignClient";
 
 type PageProps = {
   params: Promise<{ tenant: string }>;
-  searchParams: Promise<{ template?: string }>;
+  searchParams: Promise<{ template?: string; tour?: string | string[] }>;
 };
 
 export default async function DesignPage({ params, searchParams }: PageProps) {
@@ -24,7 +29,8 @@ export default async function DesignPage({ params, searchParams }: PageProps) {
     .maybeSingle();
   if (!tenant) notFound();
 
-  const [design, drafts, revisions, manageResult] = await Promise.all([
+  const [userResult, design, drafts, revisions, manageResult] = await Promise.all([
+    supabase.auth.getUser(),
     loadSiteDesign(tenant.slug),
     listSiteDesignDrafts(tenant.slug),
     listSiteDesignRevisions(tenant.slug),
@@ -33,6 +39,21 @@ export default async function DesignPage({ params, searchParams }: PageProps) {
       p_roles: ["owner", "admin"],
     }),
   ]);
+  const user = userResult.data.user;
+  const { data: preference } = user
+    ? await supabase
+      .from("tenant_member_preferences")
+      .select("website_section_tour_dismissals")
+      .eq("tenant_id", tenant.id)
+      .eq("user_id", user.id)
+      .maybeSingle()
+    : { data: null };
+  const websiteSectionTourStart = websiteSectionTourStartMode({
+    tenantSlug: tenant.slug,
+    tourKey: "design",
+    dismissals: websiteSectionTourDismissalsFromPreference(preference),
+    replayRequested: hasWebsiteSectionTourReplayRequest(query.tour, "design"),
+  });
   const publicSiteBaseUrl =
     process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? "https://lume-jade-three.vercel.app";
   const previewUrl = `${publicSiteBaseUrl.replace(/\/+$/, "")}/home?tenant=${encodeURIComponent(tenant.slug)}&preview=lume`;
@@ -58,6 +79,8 @@ export default async function DesignPage({ params, searchParams }: PageProps) {
       initialRevisions={revisions}
       canManage={manageResult.data === true}
       livePreviewUrl={previewUrl}
+      websiteSectionTourStart={websiteSectionTourStart}
+      websiteSectionTourDismissible={websiteSectionTourStart === "automatic"}
     />
   );
 }
