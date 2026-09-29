@@ -10,6 +10,7 @@ import type { BlockCategory, BlockField, EditorBlockDescriptor } from "@lume/blo
 import { validatePageBlocksDocument } from "@lume/blocks";
 import { AssetPicker } from "@/components/asset-picker";
 import { BlockBackgroundPanel } from "./BlockBackgroundPanel";
+import { captureAdminEvent } from "@/components/analytics/AdminAnalytics";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   PALETTE_DRAG_MIME,
@@ -153,6 +154,7 @@ export default function PageEditorClient({
     );
     setSelectedBlockId(block.id);
     setState({ type: "idle", message: "" });
+    captureAdminEvent("admin_block_added", { page_slug: page.slug, block_type: descriptor.type });
   }
 
   function moveBlock(blockId: string, direction: -1 | 1) {
@@ -314,6 +316,7 @@ export default function PageEditorClient({
       const supabase = createPageServiceClient();
       await updateDraftBlocks(supabase, page.id, doc);
       setState({ type: "success", message: "Draft saved." });
+      captureAdminEvent("admin_page_draft_saved", { page_slug: page.slug, block_count: doc.blocks.length });
       router.refresh();
       return true;
     } catch (error) {
@@ -333,6 +336,7 @@ export default function PageEditorClient({
       await publishDraft(supabase, page.id);
       setIsPublished(true);
       setState({ type: "success", message: "Draft published." });
+      captureAdminEvent("admin_page_published", { page_slug: page.slug, block_count: doc.blocks.length });
       router.refresh();
     } catch (error) {
       setState({ type: "error", message: errorMessage(error, "Unable to publish draft.") });

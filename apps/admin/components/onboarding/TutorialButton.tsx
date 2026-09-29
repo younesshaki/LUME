@@ -4,6 +4,7 @@ import { GraduationCap } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import { WEBSITE_TOUR_START_EVENT, websiteTourHref } from "../../lib/websiteTour";
+import { captureAdminEvent } from "../analytics/AdminAnalytics";
 
 /**
  * Starts the Website tutorial on demand. On the Website Hub it restarts the
@@ -30,6 +31,7 @@ export function TutorialButton({
       className={className ?? "gap-2 text-muted-foreground"}
       aria-label="Start the Website tutorial"
       onClick={() => {
+        captureAdminEvent("admin_tutorial_clicked", { from_path: pathname, label });
         if (onHub) window.dispatchEvent(new Event(WEBSITE_TOUR_START_EVENT));
         else router.push(websiteTourHref(tenantSlug));
       }}

@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { adminAnalyticsIdentity, publishablePostHogToken } from "@/lib/adminAnalytics";
+import { AdminAnalytics } from "@/components/analytics/AdminAnalytics";
 import {
   AdminShell,
   type ShellNotification,
@@ -102,7 +104,31 @@ export default async function AdminLayout({
   }
   shellTenants.sort((a, b) => a.name.localeCompare(b.name));
 
+  // Dashboard analytics for the demo dealership accounts only (never platform
+  // admins); nothing loads for anyone else.
+  const analyticsToken = publishablePostHogToken(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN ?? process.env.POSTHOG_PROJECT_TOKEN,
+  );
+  const analyticsHost = (process.env.NEXT_PUBLIC_POSTHOG_HOST ?? process.env.POSTHOG_HOST)?.trim();
+  const analyticsIdentity = analyticsToken && analyticsHost
+    ? adminAnalyticsIdentity({
+        userId: user.id,
+        email: user.email ?? null,
+        isPlatformAdmin: Boolean(isPlatformAdmin),
+        memberships: shellTenants.map(({ slug, name, role }) => ({ slug, name, role })),
+      })
+    : null;
+
   return (
+    <>
+    {analyticsIdentity && analyticsToken && analyticsHost ? (
+      <AdminAnalytics
+        token={analyticsToken}
+        host={analyticsHost}
+        identity={analyticsIdentity}
+        release={process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ?? "local"}
+      />
+    ) : null}
     <AdminShell
       email={user.email ?? "account"}
       tenants={shellTenants}
@@ -113,5 +139,6 @@ export default async function AdminLayout({
     >
       {children}
     </AdminShell>
+    </>
   );
 }
