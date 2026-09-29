@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   WEBSITE_SECTION_TOUR_KEYS,
+  WEBSITE_SECTION_TOUR_OVERLAY_OPTIONS,
   WEBSITE_SECTION_TOURS,
   dismissWebsiteSectionTour,
   hasWebsiteSectionTourReplayRequest,
@@ -11,7 +12,7 @@ import {
 } from "./websiteSectionTour";
 
 describe("Website section tour definitions", () => {
-  it("keeps each tutorial route-local, visual-only, and backed by stable selectors", () => {
+  it("keeps each tutorial route-local, interactive where safe, and backed by stable selectors", () => {
     expect(WEBSITE_SECTION_TOUR_KEYS).toEqual(["pages", "templates", "design", "navigation"]);
     for (const key of WEBSITE_SECTION_TOUR_KEYS) {
       const tour = WEBSITE_SECTION_TOURS[key];
@@ -19,9 +20,16 @@ describe("Website section tour definitions", () => {
       expect(tour.steps.length).toBeGreaterThanOrEqual(4);
       for (const step of tour.steps) {
         expect(step.selector).toMatch(/^\[data-tour="website-/);
-        expect(step.disableInteraction).toBe(true);
+        expect(typeof step.disableInteraction).toBe("boolean");
       }
     }
+    expect(WEBSITE_SECTION_TOURS.pages.steps.find((step) => step.id === "create")?.disableInteraction).toBe(false);
+    expect(WEBSITE_SECTION_TOURS.pages.steps.find((step) => step.id === "order")?.disableInteraction).toBe(true);
+    expect(WEBSITE_SECTION_TOURS.design.steps.find((step) => step.id === "modes")?.disableInteraction).toBe(false);
+    expect(WEBSITE_SECTION_TOURS.design.steps.find((step) => step.id === "publish")?.disableInteraction).toBe(true);
+    expect(WEBSITE_SECTION_TOURS.navigation.steps.find((step) => step.id === "header")?.disableInteraction).toBe(false);
+    expect(WEBSITE_SECTION_TOURS.navigation.steps.find((step) => step.id === "save")?.disableInteraction).toBe(true);
+    expect(WEBSITE_SECTION_TOUR_OVERLAY_OPTIONS.clickThroughOverlay).toBe(true);
   });
 
   it("starts each route for the demo cohort until that exact route is dismissed", () => {
