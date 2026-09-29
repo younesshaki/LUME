@@ -2,12 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@lume/db";
 import {
   websiteTourOutcomeUpdate,
+  type WebsiteTourOutcome,
   type WebsiteTourPreference,
 } from "./websiteTour";
 
 type PreferenceRow = Pick<
   Database["public"]["Tables"]["tenant_member_preferences"]["Row"],
-  "website_tour_version" | "website_tour_completed_at" | "website_tour_skipped_at"
+  "website_tour_version" | "website_tour_completed_at" | "website_tour_skipped_at" | "website_tour_dismissed_at"
 >;
 
 export function websiteTourPreferenceFromRow(row: PreferenceRow | null): WebsiteTourPreference | null {
@@ -16,6 +17,7 @@ export function websiteTourPreferenceFromRow(row: PreferenceRow | null): Website
     websiteTourVersion: row.website_tour_version,
     websiteTourCompletedAt: row.website_tour_completed_at,
     websiteTourSkippedAt: row.website_tour_skipped_at,
+    websiteTourDismissedAt: row.website_tour_dismissed_at,
   };
 }
 
@@ -29,13 +31,13 @@ export async function persistWebsiteTourOutcome(
   input: {
     tenantId: string;
     userId: string;
-    outcome: "completed" | "skipped";
+    outcome: WebsiteTourOutcome;
     at?: string;
   },
 ): Promise<boolean> {
   const { data: current, error: readError } = await supabase
     .from("tenant_member_preferences")
-    .select("website_tour_version, website_tour_completed_at, website_tour_skipped_at")
+    .select("website_tour_version, website_tour_completed_at, website_tour_skipped_at, website_tour_dismissed_at")
     .eq("tenant_id", input.tenantId)
     .eq("user_id", input.userId)
     .maybeSingle();
@@ -53,6 +55,7 @@ export async function persistWebsiteTourOutcome(
       website_tour_version: next.websiteTourVersion,
       website_tour_completed_at: next.websiteTourCompletedAt,
       website_tour_skipped_at: next.websiteTourSkippedAt,
+      website_tour_dismissed_at: next.websiteTourDismissedAt,
     },
     { onConflict: "tenant_id,user_id" },
   );

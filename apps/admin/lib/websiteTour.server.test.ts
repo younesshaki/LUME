@@ -43,10 +43,12 @@ describe("Website Hub tour persistence", () => {
       website_tour_version: 1,
       website_tour_completed_at: "2026-09-28T12:00:00Z",
       website_tour_skipped_at: null,
+      website_tour_dismissed_at: null,
     })).toEqual({
       websiteTourVersion: 1,
       websiteTourCompletedAt: "2026-09-28T12:00:00Z",
       websiteTourSkippedAt: null,
+      websiteTourDismissedAt: null,
     });
   });
 
@@ -64,6 +66,7 @@ describe("Website Hub tour persistence", () => {
       website_tour_version: 1,
       website_tour_completed_at: "2026-09-28T12:00:00Z",
       website_tour_skipped_at: null,
+      website_tour_dismissed_at: null,
     }, { onConflict: "tenant_id,user_id" });
   });
 
