@@ -8,6 +8,16 @@ no production data has been changed or deployed. The visual layer uses
 `nextstepjs` 2.3.0, is lazy-loaded only by the admin Website Hub, and has unit
 and real-overlay integration coverage.
 
+### Update (2026-09-29): opens every visit until "Don't show again"
+
+Per the owner, the automatic tour now opens every time a demo-cohort member
+opens the Website section; finishing or skipping a run no longer stops it.
+The card has a small **Don't show again** link (only while automatic start is
+on): it closes the tour and records `website_tour_dismissed_at` (migration
+`091_website_tour_dismissed.sql`), which is the only thing that stops the
+automatic start. The Tutorial button still works afterwards, and
+`npm run reset:website-tour` clears the opt-out too.
+
 ### Update (2026-09-28): last step points at the sidebar's View website
 
 The final step now highlights the admin sidebar's **View website** link

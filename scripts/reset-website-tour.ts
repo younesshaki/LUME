@@ -70,6 +70,7 @@ async function main() {
       website_tour_version: null,
       website_tour_completed_at: null,
       website_tour_skipped_at: null,
+      website_tour_dismissed_at: null,
     })
     .eq("tenant_id", tenant.id)
     .eq("user_id", members[0].user_id);

@@ -40,6 +40,8 @@ type WebsiteClientProps = {
   publicReport: LaunchReadinessReport | null;
   launchLoadError: boolean;
   websiteTourStart: WebsiteTourStart;
+  /** Show "Don't show again" (the tour opens by itself for this member). */
+  websiteTourDismissible?: boolean;
 };
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -71,6 +73,7 @@ export default function WebsiteClient({
   publicReport,
   launchLoadError,
   websiteTourStart,
+  websiteTourDismissible = false,
 }: WebsiteClientProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [reloadKey, setReloadKey] = useState(0);
@@ -148,7 +151,7 @@ export default function WebsiteClient({
 
   return (
     <>
-      <WebsiteHubTour tenantSlug={tenantSlug} startMode={websiteTourStart} />
+      <WebsiteHubTour tenantSlug={tenantSlug} startMode={websiteTourStart} dismissible={websiteTourDismissible} />
       <div className="space-y-6">
       <header data-tour="website-overview" className="flex flex-wrap items-end justify-between gap-3">
         <div>

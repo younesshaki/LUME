@@ -8,6 +8,7 @@ import {
   WEBSITE_TOUR_VERSION,
   hasWebsiteTourReplayRequest,
   isWebsiteTourEligibleTenant,
+  websiteTourAutoStartEnabled,
   websiteTourHref,
   websiteTourOutcomeUpdate,
   websiteTourStartMode,
@@ -49,30 +50,29 @@ describe("Website Hub tour eligibility and state", () => {
     expect(websiteTourStartMode({ tenantSlug: "default", preference: null, replayRequested: false })).toBe("none");
   });
 
-  it("suppresses an automatic launch only after the current version settles", () => {
-    expect(websiteTourStartMode({
-      tenantSlug: "demo-sean",
-      preference: { websiteTourVersion: WEBSITE_TOUR_VERSION, websiteTourCompletedAt: "2026-09-28T12:00:00Z", websiteTourSkippedAt: null },
-      replayRequested: false,
-    })).toBe("none");
-    expect(websiteTourStartMode({
-      tenantSlug: "demo-sean",
-      preference: { websiteTourVersion: WEBSITE_TOUR_VERSION, websiteTourCompletedAt: null, websiteTourSkippedAt: "2026-09-28T12:00:00Z" },
-      replayRequested: false,
-    })).toBe("none");
-    expect(websiteTourStartMode({
-      tenantSlug: "demo-sean",
-      preference: { websiteTourVersion: WEBSITE_TOUR_VERSION, websiteTourCompletedAt: null, websiteTourSkippedAt: null },
-      replayRequested: false,
-    })).toBe("automatic");
+  it("opens every visit for the cohort, even after finishing or skipping", () => {
+    for (const preference of [
+      { websiteTourVersion: WEBSITE_TOUR_VERSION, websiteTourCompletedAt: "2026-09-28T12:00:00Z", websiteTourSkippedAt: null },
+      { websiteTourVersion: WEBSITE_TOUR_VERSION, websiteTourCompletedAt: null, websiteTourSkippedAt: "2026-09-28T12:00:00Z" },
+      null,
+    ]) {
+      expect(websiteTourStartMode({ tenantSlug: "demo-sean", preference, replayRequested: false })).toBe("automatic");
+    }
   });
 
-  it("treats a new version as an explicit opportunity to make a rollout decision", () => {
-    expect(websiteTourStartMode({
-      tenantSlug: "demo-max",
-      preference: { websiteTourVersion: WEBSITE_TOUR_VERSION - 1, websiteTourCompletedAt: "2026-09-28T12:00:00Z", websiteTourSkippedAt: null },
-      replayRequested: false,
-    })).toBe("automatic");
+  it("stops opening by itself only after \"Don't show again\"", () => {
+    const dismissed = {
+      websiteTourVersion: WEBSITE_TOUR_VERSION,
+      websiteTourCompletedAt: null,
+      websiteTourSkippedAt: "2026-09-28T12:00:00Z",
+      websiteTourDismissedAt: "2026-09-28T12:00:00Z",
+    };
+    expect(websiteTourStartMode({ tenantSlug: "demo-sean", preference: dismissed, replayRequested: false })).toBe("none");
+    expect(websiteTourAutoStartEnabled("demo-sean", dismissed)).toBe(false);
+    expect(websiteTourAutoStartEnabled("demo-sean", null)).toBe(true);
+    expect(websiteTourAutoStartEnabled("default", null)).toBe(false);
+    // The Tutorial button still works afterwards.
+    expect(websiteTourStartMode({ tenantSlug: "demo-sean", preference: dismissed, replayRequested: true })).toBe("manual");
   });
 
   it("starts on demand for any tenant, automatically only for the cohort", () => {
@@ -97,7 +97,15 @@ describe("Website Hub tour eligibility and state", () => {
       websiteTourVersion: WEBSITE_TOUR_VERSION,
       websiteTourCompletedAt: "2026-09-28T12:00:00Z",
       websiteTourSkippedAt: "2026-09-28T13:00:00Z",
+      websiteTourDismissedAt: null,
     });
+  });
+
+  it("records \"Don't show again\" and keeps it across later runs", () => {
+    const dismissed = websiteTourOutcomeUpdate(null, "dismissed", "2026-09-29T09:00:00Z");
+    expect(dismissed.websiteTourDismissedAt).toBe("2026-09-29T09:00:00Z");
+    expect(websiteTourOutcomeUpdate(dismissed, "completed", "2026-09-29T10:00:00Z").websiteTourDismissedAt)
+      .toBe("2026-09-29T09:00:00Z");
   });
 });
 
