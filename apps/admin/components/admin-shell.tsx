@@ -101,6 +101,10 @@ import { AdminConciergePanel } from "@/components/admin-concierge-panel";
 import { TutorialButton } from "@/components/onboarding/TutorialButton";
 import { NavLoaderProvider, useNavLoader } from "@/components/navigation-loader";
 import {
+  demoDashboardThemeStorageKey,
+  shouldInitializeDemoDashboardLightMode,
+} from "@/lib/demoDashboardTheme";
+import {
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
 } from "@/app/admin/notification-actions";
@@ -206,6 +210,34 @@ function useActiveTenant(tenants: ShellTenant[], pathname: string): ShellTenant 
   return tenants.find((tenant) => tenant.slug === fromPath) ?? tenants[0] ?? null;
 }
 
+/**
+ * next-themes stores its setting per browser, not per LUME member. Give each
+ * isolated demo tenant one light-mode first visit without overriding a choice
+ * the demo user makes later through the normal theme toggle.
+ */
+function DemoLightThemeDefault({ tenantSlug }: { tenantSlug: string | undefined }) {
+  const { setTheme } = useTheme();
+
+  React.useEffect(() => {
+    if (!tenantSlug || typeof window === "undefined") return;
+
+    const storageKey = demoDashboardThemeStorageKey(tenantSlug);
+    try {
+      const hasInitialized = window.localStorage.getItem(storageKey) === "true";
+      if (!shouldInitializeDemoDashboardLightMode(tenantSlug, hasInitialized)) return;
+
+      setTheme("light");
+      window.localStorage.setItem(storageKey, "true");
+    } catch {
+      // Storage can be unavailable in privacy modes. The light-mode default is
+      // still useful for this visit, but failure must never block the shell.
+      if (shouldInitializeDemoDashboardLightMode(tenantSlug, false)) setTheme("light");
+    }
+  }, [setTheme, tenantSlug]);
+
+  return null;
+}
+
 export function AdminShell({
   email,
   tenants,
@@ -259,6 +291,7 @@ export function AdminShell({
         the collapsed-rail tooltips crash without one. */}
     <TooltipProvider delayDuration={0}>
     <SidebarProvider>
+      <DemoLightThemeDefault tenantSlug={activeTenant?.slug} />
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <TenantSwitcher tenants={tenants} active={activeTenant} />
