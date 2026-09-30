@@ -6,6 +6,7 @@ import { Marquee } from "@/components/ui/marquee";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { getBlockComponent } from "../registry";
 import { registerBlocks } from "../registerBlocks";
+import { PageBuilderRenderProvider } from "../renderContext";
 import {
   LeadCaptureForm,
   NewsletterSignup,
@@ -203,15 +204,24 @@ function defaultBlock(type: string): PageBlock {
   };
 }
 
+function renderBlock(type: string, preview: boolean) {
+  const Component = getBlockComponent(type);
+  if (!Component) throw new Error(`Unregistered block: ${type}`);
+  return render(
+    <PageBuilderRenderProvider value={{ pageSlug: "contact", preview }}>
+      <Component block={defaultBlock(type)} mode="standard" />
+    </PageBuilderRenderProvider>,
+  );
+}
+
 describe("dealership block renderers", () => {
   it.each(DEALERSHIP_BLOCK_TYPES)(
     "renders the validated %s defaults without throwing",
     async (type) => {
       const descriptor = getBlockDescriptor(type);
-      const Component = getBlockComponent(type);
-      if (!descriptor || !Component) throw new Error(`Unregistered block: ${type}`);
+      if (!descriptor) throw new Error(`Missing descriptor for ${type}`);
 
-      render(<Component block={defaultBlock(type)} mode="standard" />);
+      renderBlock(type, true);
 
       if (type === "announcement-bar") {
         expect(screen.getByText(String(descriptor.defaultProps.message)))
@@ -562,6 +572,51 @@ describe("dealership conversion forms", () => {
       source: "contact-form",
     });
   });
+});
+
+describe("unconfigured media blocks", () => {
+  const SETUP_HINTS = {
+    "split-feature": "Add an image to complete this feature.",
+    "video-embed": "Add a valid YouTube or Vimeo URL to display the film.",
+    "gallery-masonry": "Add public showroom or vehicle images to build this gallery.",
+    "map-hours": "Add a supported map embed URL for an interactive map.",
+  } as const;
+  const MEDIA_TYPES = Object.keys(SETUP_HINTS) as Array<keyof typeof SETUP_HINTS>;
+
+  it.each(MEDIA_TYPES)("shows the %s setup hint in the editor preview", (type) => {
+    renderBlock(type, true);
+    expect(screen.getByText(SETUP_HINTS[type])).toBeInTheDocument();
+  });
+
+  it("keeps the address, hours, and maps link when the public map has no embed", () => {
+    const { container } = renderBlock("map-hours", false);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByText("1250 Motor Row, Beverly Hills, CA 90210")).toBeInTheDocument();
+    expect(screen.getByText("Saturday")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open in maps" })).toHaveAttribute(
+      "href",
+      "https://maps.google.com/",
+    );
+    expect(container.querySelector(".mapHours__map")).toBeNull();
+    expect(container.querySelector(".mapHours--noMap")).not.toBeNull();
+  });
+
+  it("keeps the split feature copy when the public block has no image", () => {
+    const { container } = renderBlock("split-feature", false);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Every vehicle is presented with its story intact." }),
+    ).toBeInTheDocument();
+    expect(container.querySelector(".splitFeature__media")).toBeNull();
+  });
+
+  it.each(["video-embed", "gallery-masonry"])(
+    "renders nothing for an empty %s block on the public site",
+    (type) => {
+      const { container } = renderBlock(type, false);
+      expect(container).toBeEmptyDOMElement();
+    },
+  );
 });
 
 describe("registry motion primitives", () => {

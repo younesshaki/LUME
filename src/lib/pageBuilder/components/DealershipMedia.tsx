@@ -1,6 +1,7 @@
 import { useId } from "react";
 import { ArrowRight, Clock3, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import type { BlockComponentProps } from "../registry";
+import { usePageBuilderRenderContext } from "../renderContext";
 import { DealershipActionLink, DealershipSection } from "./DealershipSection";
 import { labelBodyItemsProp, stringProp } from "./props";
 import {
@@ -21,6 +22,8 @@ export function SplitFeature({ block }: BlockComponentProps) {
   const eyebrow = stringProp(block, "eyebrow");
   const title = stringProp(block, "title");
   const body = stringProp(block, "body");
+  const { preview } = usePageBuilderRenderContext();
+  const showMedia = Boolean(media) || preview;
 
   return (
     <section
@@ -28,19 +31,23 @@ export function SplitFeature({ block }: BlockComponentProps) {
       aria-labelledby={headingId}
     >
       <div className="dealershipBlock__inner">
-        <div className={`splitFeature splitFeature--media-${mediaPosition}`}>
-          <div className="splitFeature__media">
-            {media ? (
-              <img
-                src={media}
-                alt={mediaAlt}
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <span role="status">Add an image to complete this feature.</span>
-            )}
-          </div>
+        <div
+          className={`splitFeature splitFeature--media-${mediaPosition}${showMedia ? "" : " splitFeature--noMedia"}`}
+        >
+          {showMedia ? (
+            <div className="splitFeature__media">
+              {media ? (
+                <img
+                  src={media}
+                  alt={mediaAlt}
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <span role="status">Add an image to complete this feature.</span>
+              )}
+            </div>
+          ) : null}
           <div className="splitFeature__copy">
             {eyebrow ? <p className="dealershipBlock__eyebrow">{eyebrow}</p> : null}
             <h2 id={headingId} className="dealershipBlock__title">{title}</h2>
@@ -61,6 +68,8 @@ export function SplitFeature({ block }: BlockComponentProps) {
 export function VideoEmbed({ block }: BlockComponentProps) {
   const embedUrl = youtubeOrVimeoEmbedUrl(stringProp(block, "videoUrl"));
   const title = stringProp(block, "caption") || stringProp(block, "title") || "Dealership video";
+  const { preview } = usePageBuilderRenderContext();
+  if (!embedUrl && !preview) return null;
 
   return (
     <DealershipSection block={block} className="dealershipBlock--video">
@@ -89,6 +98,8 @@ export function GalleryMasonry({ block }: BlockComponentProps) {
     const src = safeMediaSource(item.body);
     return src ? [{ src, alt: item.label }] : [];
   });
+  const { preview } = usePageBuilderRenderContext();
+  if (images.length === 0 && !preview) return null;
 
   return (
     <DealershipSection block={block} className="dealershipBlock--gallery">
@@ -120,10 +131,12 @@ export function MapHours({ block }: BlockComponentProps) {
   const mapHref = safeLink(stringProp(block, "mapUrl"));
   const mapEmbed = safeMapEmbedUrl(stringProp(block, "mapEmbedUrl"));
   const address = stringProp(block, "address");
+  const { preview } = usePageBuilderRenderContext();
+  const showMap = Boolean(mapEmbed) || preview;
 
   return (
     <DealershipSection block={block} className="dealershipBlock--location">
-      <div className="mapHours">
+      <div className={showMap ? "mapHours" : "mapHours mapHours--noMap"}>
         <div className="mapHours__details">
           <div className="mapHours__address">
             <MapPin aria-hidden="true" />
@@ -144,22 +157,24 @@ export function MapHours({ block }: BlockComponentProps) {
             </DealershipActionLink>
           ) : null}
         </div>
-        <div className="mapHours__map">
-          {mapEmbed ? (
-            <iframe
-              src={mapEmbed}
-              title={`Map showing ${address}`}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
-            />
-          ) : (
-            <div className="mapHours__placeholder" role="status">
-              <MapPin aria-hidden="true" />
-              <span>Add a supported map embed URL for an interactive map.</span>
-            </div>
-          )}
-        </div>
+        {showMap ? (
+          <div className="mapHours__map">
+            {mapEmbed ? (
+              <iframe
+                src={mapEmbed}
+                title={`Map showing ${address}`}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            ) : (
+              <div className="mapHours__placeholder" role="status">
+                <MapPin aria-hidden="true" />
+                <span>Add a supported map embed URL for an interactive map.</span>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </DealershipSection>
   );
