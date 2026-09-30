@@ -1010,6 +1010,10 @@
   color: var(--theme-lume-gold);
 }
 
+.mapHours--noMap .mapHours__details {
+  max-width: 36rem;
+}
+
 .dealershipContact {
   border-top: 1px solid var(--theme-lume-line);
   padding: clamp(3.5rem, 8vw, 6rem) clamp(1rem, 4vw, 3rem) 1.5rem;
@@ -1185,8 +1189,17 @@
     order: 1;
   }
 
+  .splitFeature--noMedia {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
   .mapHours {
     grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .mapHours--noMap {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dealershipContact__inner {
