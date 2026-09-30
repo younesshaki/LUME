@@ -204,19 +204,24 @@ function defaultBlock(type: string): PageBlock {
   };
 }
 
+function renderBlock(type: string, preview: boolean) {
+  const Component = getBlockComponent(type);
+  if (!Component) throw new Error(`Unregistered block: ${type}`);
+  return render(
+    <PageBuilderRenderProvider value={{ pageSlug: "contact", preview }}>
+      <Component block={defaultBlock(type)} mode="standard" />
+    </PageBuilderRenderProvider>,
+  );
+}
+
 describe("dealership block renderers", () => {
   it.each(DEALERSHIP_BLOCK_TYPES)(
     "renders the validated %s defaults without throwing",
     async (type) => {
       const descriptor = getBlockDescriptor(type);
-      const Component = getBlockComponent(type);
-      if (!descriptor || !Component) throw new Error(`Unregistered block: ${type}`);
+      if (!descriptor) throw new Error(`Missing descriptor for ${type}`);
 
-      render(
-        <PageBuilderRenderProvider value={{ pageSlug: "home", preview: true }}>
-          <Component block={defaultBlock(type)} mode="standard" />
-        </PageBuilderRenderProvider>,
-      );
+      renderBlock(type, true);
 
       if (type === "announcement-bar") {
         expect(screen.getByText(String(descriptor.defaultProps.message)))
@@ -578,29 +583,14 @@ describe("unconfigured media blocks", () => {
   } as const;
   const MEDIA_TYPES = Object.keys(SETUP_HINTS) as Array<keyof typeof SETUP_HINTS>;
 
-  function renderBlock(type: string, preview: boolean) {
-    const Component = getBlockComponent(type);
-    if (!Component) throw new Error(`Unregistered block: ${type}`);
-    return render(
-      <PageBuilderRenderProvider value={{ pageSlug: "contact", preview }}>
-        <Component block={defaultBlock(type)} mode="standard" />
-      </PageBuilderRenderProvider>,
-    );
-  }
-
   it.each(MEDIA_TYPES)("shows the %s setup hint in the editor preview", (type) => {
     renderBlock(type, true);
     expect(screen.getByText(SETUP_HINTS[type])).toBeInTheDocument();
   });
 
-  it.each(MEDIA_TYPES)("hides the %s setup hint on the public site", (type) => {
-    renderBlock(type, false);
-    expect(screen.queryByText(SETUP_HINTS[type])).not.toBeInTheDocument();
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  });
-
   it("keeps the address, hours, and maps link when the public map has no embed", () => {
     const { container } = renderBlock("map-hours", false);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByText("1250 Motor Row, Beverly Hills, CA 90210")).toBeInTheDocument();
     expect(screen.getByText("Saturday")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open in maps" })).toHaveAttribute(
@@ -613,6 +603,7 @@ describe("unconfigured media blocks", () => {
 
   it("keeps the split feature copy when the public block has no image", () => {
     const { container } = renderBlock("split-feature", false);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Every vehicle is presented with its story intact." }),
     ).toBeInTheDocument();

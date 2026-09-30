@@ -8,7 +8,8 @@ export type PageBuilderRenderContextValue = {
   /**
    * True inside the admin editor's live-preview iframe. Route-driven blocks
    * (the vehicle detail) use a sample from the tenant's own data there, so
-   * edits to them are visible instead of a placeholder.
+   * edits to them are visible instead of a placeholder. Media blocks show
+   * their setup hints only here, and hide unset media on the public site.
    */
   preview?: boolean;
 };
