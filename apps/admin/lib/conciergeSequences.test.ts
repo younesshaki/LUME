@@ -75,6 +75,7 @@ function matchFixture(filters: VehicleQueryFilters): Vehicle[] {
     if (filters.make && vehicle.make.toLowerCase() !== filters.make.toLowerCase()) return false;
     if (filters.model && !vehicle.model.toLowerCase().includes(filters.model.toLowerCase())) return false;
     if (filters.bodyStyle && vehicle.bodyStyle.toLowerCase() !== filters.bodyStyle.toLowerCase()) return false;
+    if (filters.drivetrain && vehicle.drivetrain.toLowerCase() !== filters.drivetrain.toLowerCase()) return false;
     if (filters.year !== undefined && vehicle.year !== filters.year) return false;
     if (filters.priceMax !== undefined && vehicle.price > filters.priceMax) return false;
     if (filters.priceMin !== undefined && vehicle.price < filters.priceMin) return false;
@@ -195,6 +196,32 @@ describe("sequence: an explicit new search does not inherit the old one", () => 
     ]);
     expect(refined!.state.activeFilters.make).toBe("BMW");
     expect(refined!.matched.map((v) => v.id)).toEqual(["bmw-x3"]);
+  });
+});
+
+describe("sequence: an explicit budget is never lost during an inventory refinement", () => {
+  it("narrows an AWD search when the visitor says 'within a 20k budget'", () => {
+    // Live-reproduced on demo-sean: AWD was recognised, but the article in
+    // "within a 20k budget" made the price ceiling disappear. That left the
+    // visitor on the old AWD set while the reply implied their budget applied.
+    const [, narrowed] = runSequence([
+      { text: "AWD cars", filters: { drivetrain: "AWD" } },
+      {
+        text: "an AWD within a 20k budget",
+        filters: { drivetrain: "AWD", priceMax: 20_000 },
+      },
+    ]);
+
+    expect(narrowed!.state.activeFilters).toEqual({
+      drivetrain: "AWD",
+      priceMax: 20_000,
+    });
+    expect(narrowed!.matched.map((vehicle) => vehicle.id)).toEqual(["civic-1"]);
+    expect(narrowed!.action).toMatchObject({
+      type: "filter_inventory",
+      drivetrain: "AWD",
+      priceMax: 20_000,
+    });
   });
 });
 

@@ -836,7 +836,7 @@ function extractPriceRange(
   const budget = extractBudgetMaximum(query);
   if (budget !== null) return { priceMax: budget };
 
-  const comparison = /\b(no more than|not more than|no greater than|less than or equal to|under|below|less than|up to|at most|within|max(?:imum)?(?: of)?|cap(?:ped)? at|over|above|more than|at least|min(?:imum)?)\s+\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/gi;
+  const comparison = /\b(no more than|not more than|no greater than|less than or equal to|under|below|less than|up to|at most|within(?:\s+(?:a|an))?|max(?:imum)?(?: of)?|cap(?:ped)? at|over|above|more than|at least|min(?:imum)?)\s+\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/gi;
   for (const match of query.matchAll(comparison)) {
     const end = (match.index ?? 0) + match[0].length;
     if (/^\s*(?:miles?|mi)\b/i.test(query.slice(end))) continue;
@@ -859,7 +859,7 @@ function extractPriceRange(
       continue;
     }
     const direction = (match[1] ?? "").toLowerCase();
-    return /^(?:no more than|not more than|no greater than|less than or equal to|under|below|less than|up to|at most|within|max(?:imum)?(?: of)?|cap(?:ped)? at)$/.test(
+    return /^(?:no more than|not more than|no greater than|less than or equal to|under|below|less than|up to|at most|within(?:\s+(?:a|an))?|max(?:imum)?(?: of)?|cap(?:ped)? at)$/.test(
       direction,
     )
       ? { priceMax: amount }
@@ -986,6 +986,7 @@ function extractBudgetMaximum(query: string): number | null {
     /\b(?:looking\s+to\s+)?spend\s+\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/i,
     /\b(?:i(?:\s+am|'m)?\s+)?(?:have|got)\s+(?:about\s+)?\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\s+(?:to spend|available|set aside|all in)\b/i,
     /\b(?:my\s+)?(?:max(?:imum)?|ceiling|cap)\s*(?:is|of|at)?\s*\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/i,
+    /\b(?:with|on)\s+(?:a\s+|an\s+)?budget\s+(?:of\s+)?\$?\s*([\d][\d,\s]*(?:\.\d+)?)\s*(k|m|grand|thousand|large)?\b/i,
   ];
   const match = patterns.map((pattern) => pattern.exec(query)).find(Boolean);
   if (!match) return null;
