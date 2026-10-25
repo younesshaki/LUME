@@ -1,0 +1,27 @@
+{
+  "name": "lume-nextjs-disposable-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/prepare-draco.mjs && next dev --webpack --hostname 127.0.0.1 --port 3100",
+    "build": "node scripts/prepare-draco.mjs && next build --webpack",
+    "start": "next start --hostname 127.0.0.1 --port 3100",
+    "typecheck": "tsc --noEmit",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "server-only": "0.0.1",
+    "three": "0.164.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@types/node": "25.6.2",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@types/three": "0.164.0",
+    "typescript": "5.9.3"
+  }
+}
