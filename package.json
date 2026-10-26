@@ -37,7 +37,10 @@
     "seed:default-tenant": "tsx scripts/seed-default-tenant.ts",
     "create:tenant": "tsx scripts/create-tenant.ts",
     "reset:website-tour": "tsx scripts/reset-website-tour.ts",
-    "audit:tenant-launch": "tsx scripts/tenant-launch-audit.ts"
+    "audit:tenant-launch": "tsx scripts/tenant-launch-audit.ts",
+    "dev:web": "npm run dev --workspace=@lume/web",
+    "build:web": "npm run build --workspace=@lume/web",
+    "typecheck:web": "npm run typecheck --workspace=@lume/web"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

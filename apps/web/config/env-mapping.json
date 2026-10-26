@@ -1,0 +1,88 @@
+{
+  "VITE_SUPABASE_URL": [
+    "SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL",
+    "Phase 1 uses WEB_PREVIEW_SUPABASE_URL only; no browser database client"
+  ],
+  "VITE_SUPABASE_ANON_KEY": [
+    "SUPABASE_ANON_KEY / NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "Phase 1 uses WEB_PREVIEW_SUPABASE_ANON_KEY server-only"
+  ],
+  "VITE_R2_PUBLIC_BASE_URL": [
+    "R2_PUBLIC_BASE_URL / NEXT_PUBLIC_R2_PUBLIC_BASE_URL",
+    "Deferred; URL props from server when media routes arrive"
+  ],
+  "VITE_SUPABASE_STORAGE_URL": [
+    "NEXT_PUBLIC_SUPABASE_STORAGE_URL",
+    "Deferred public fallback URL"
+  ],
+  "VITE_LUME_TENANT": [
+    "LUME_DEFAULT_TENANT",
+    "WEB_PREVIEW_DEFAULT_TENANT; approved preview hosts only"
+  ],
+  "VITE_SUBDOMAIN_TENANT_ROUTING_ENABLED": [
+    "SUBDOMAIN_TENANT_ROUTING_ENABLED + LUME_ROOT_DOMAIN",
+    "WEB_PREVIEW_ROOT_DOMAIN explicitly enables the staging root"
+  ],
+  "VITE_ADMIN_API_HOST": [
+    "LUME_ADMIN_API_ORIGIN",
+    "Server-only; no Phase 1 API proxy"
+  ],
+  "VITE_ACCESS_PASSWORD": [
+    "Retire as security control",
+    "No password gate or browser secret in Phase 1"
+  ],
+  "VITE_USE_BACKEND": [
+    "NEXT_PUBLIC_USE_BACKEND",
+    "Deferred parity flag; Phase 1 identity is always server-side"
+  ],
+  "VITE_ENABLE_LOCAL_CHAT": [
+    "NEXT_PUBLIC_ENABLE_LOCAL_CHAT",
+    "Deferred; chat disabled"
+  ],
+  "VITE_OLLAMA_HOST": ["OLLAMA_HOST", "Server-only; absent in Phase 1"],
+  "VITE_OLLAMA_CHAT_URL": [
+    "NEXT_PUBLIC_OLLAMA_CHAT_URL",
+    "Deferred fixed same-origin route, not arbitrary upstream"
+  ],
+  "VITE_OLLAMA_MODEL": ["OLLAMA_MODEL", "Server-only; absent in Phase 1"],
+  "VITE_OLLAMA_EMBED_MODEL": [
+    "OLLAMA_EMBED_MODEL",
+    "Server-only; declaration-only legacy surface"
+  ],
+  "VITE_ENABLE_GOOEY_NAV": [
+    "NEXT_PUBLIC_ENABLE_GOOEY_NAV",
+    "Deferred client visual feature"
+  ],
+  "VITE_TURNSTILE_SITE_KEY": [
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+    "Deferred publishable site key; secret stays server-only"
+  ],
+  "VITE_PAGE_RENDERER": [
+    "LUME_PAGE_RENDERER_ENABLED",
+    "Server decision + serialized flag; Phase 3"
+  ],
+  "VITE_PREVIEW_TOKEN": [
+    "Retire public token; server-only draft-mode capability if drafts added",
+    "Not an auth mechanism; absent in Phase 1"
+  ],
+  "VITE_POSTHOG_ENABLED": [
+    "NEXT_PUBLIC_POSTHOG_ENABLED",
+    "Deferred; no analytics in preview"
+  ],
+  "VITE_POSTHOG_HOST": [
+    "NEXT_PUBLIC_POSTHOG_HOST",
+    "Deferred public ingest host"
+  ],
+  "VITE_POSTHOG_PROJECT_TOKEN": [
+    "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN",
+    "Publishable project token only; deferred, never personal API key"
+  ],
+  "VITE_POSTHOG_SESSION_REPLAY": [
+    "NEXT_PUBLIC_POSTHOG_SESSION_REPLAY",
+    "Deferred consent-controlled flag"
+  ],
+  "VITE_VERCEL_GIT_COMMIT_SHA": [
+    "VERCEL_GIT_COMMIT_SHA",
+    "Server build identifier; serialize only when needed"
+  ]
+}
