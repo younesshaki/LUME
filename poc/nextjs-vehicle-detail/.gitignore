@@ -1,0 +1,10 @@
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+artifacts/
+/public/draco/
+# Root ignores *.glb assets; this is a source route directory, not an asset.
+!/app/proof-model.glb/
+.env*
+!.env.example
