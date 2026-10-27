@@ -1,11 +1,21 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   streamChat,
   type BotAction,
   type ChatStreamConfig,
   type ChatTransportMessage,
 } from "@lume/blocks/chat-transport";
+import {
+  resolveActionOutcome,
+  type ActionNavigation,
+} from "../concierge/conciergeActions";
+import { inAppHistory, inAppHistorySummary } from "../concierge/inAppHistory";
+import {
+  recordActionDispatched,
+  recordActionSuppressed,
+} from "../concierge/conciergeAnalytics";
 import "../concierge/concierge.css";
 
 /**
@@ -52,10 +62,10 @@ export default function ChatEntry({
   tenant: string;
   close: () => void;
 }) {
+  const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const controller = useRef<AbortController | null>(null);
   const session = useRef<string | null>(null);
-  const actions = useRef<BotAction[]>([]); // buffered for Phase 4b
 
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
@@ -86,10 +96,7 @@ export default function ChatEntry({
     return {
       tenantSlug: tenant,
       pagePath: pathname,
-      navigation: {
-        hasPrevious: false,
-        hasResults: pathname.startsWith("/vehicles"),
-      },
+      navigation: inAppHistorySummary(),
     };
   }
 
@@ -116,6 +123,11 @@ export default function ChatEntry({
     const abort = new AbortController();
     controller.current = abort;
     const requestId = newId();
+    // The concierge streams actions before prose. Navigating mid-stream would
+    // unmount this page-scoped dialog and drop the reply, so we apply the
+    // winning navigation once the turn completes; the analytics event is still
+    // emitted once per action, as it arrives.
+    let pendingNav: ActionNavigation | null = null;
 
     const appendDelta = (textPart: string) =>
       setTurns((prev) =>
@@ -155,16 +167,27 @@ export default function ChatEntry({
           case "thinking":
             setThinking(event.text);
             break;
-          case "action":
-            // Validated by the transport; dispatch is Phase 4b.
-            actions.current.push(event.action);
+          case "action": {
+            if (abort.signal.aborted) {
+              recordActionSuppressed(event.action);
+              break;
+            }
+            recordActionDispatched(event.action);
+            const outcome = resolveActionOutcome(event.action, inAppHistory);
+            if (outcome.kind === "navigate") pendingNav = outcome;
             break;
+          }
           case "duplicate":
             dropEmptyAssistant();
             break;
           case "timing":
             break;
         }
+      }
+      if (pendingNav && !abort.signal.aborted) {
+        const { href, replace } = pendingNav;
+        if (replace) router.replace(href);
+        else router.push(href);
       }
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") {
