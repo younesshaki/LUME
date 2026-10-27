@@ -178,3 +178,124 @@ test("a client that has already disconnected cancels the upstream turn (SSE canc
   assert.equal(calls.length, 1);
   assert.equal(calls[0].options.signal?.aborted, true);
 });
+
+// --- Phase 4b: bot-action → Next navigation translation ---
+import { resolveActionOutcome } from "../components/concierge/conciergeActions.ts";
+
+const noHistory = { previous: () => null, lastResults: () => null };
+
+test("navigate actions map free-form routes to public Next hrefs and drop non-public ones", () => {
+  const nav = (route) =>
+    resolveActionOutcome({ type: "navigate", route }, noHistory);
+  assert.deepEqual(nav("home"), { kind: "navigate", href: "/" });
+  assert.deepEqual(nav("inventory"), { kind: "navigate", href: "/vehicles" });
+  assert.deepEqual(nav("/vehicles/abc-123"), {
+    kind: "navigate",
+    href: "/vehicles/abc-123",
+  });
+  assert.deepEqual(nav("/products/sku9"), {
+    kind: "navigate",
+    href: "/products/sku9",
+  });
+  assert.deepEqual(nav("/admin/secrets"), { kind: "ignored" });
+  assert.deepEqual(nav("https://evil.test"), { kind: "ignored" });
+});
+
+test("filter_inventory becomes real ?search params on /vehicles, not a hash", () => {
+  const outcome = resolveActionOutcome(
+    {
+      type: "filter_inventory",
+      make: "BMW",
+      priceMax: 50000,
+      sort: "price_asc",
+    },
+    noHistory,
+  );
+  assert.equal(outcome.kind, "navigate");
+  assert.equal(outcome.href, "/vehicles?make=BMW&priceMax=50000&sort=price_asc");
+  assert.equal(
+    resolveActionOutcome({ type: "filter_inventory" }, noHistory).href,
+    "/vehicles",
+  );
+});
+
+test("highlight-vehicle and navigate-target route/anchor resolve to internal paths", () => {
+  assert.deepEqual(
+    resolveActionOutcome(
+      { type: "highlight-vehicle", vehicleId: "v-9" },
+      noHistory,
+    ),
+    { kind: "navigate", href: "/vehicles/v-9" },
+  );
+  const routeTarget = {
+    type: "navigate-target",
+    targetKey: "book",
+    target: {
+      key: "book",
+      label: "Book",
+      destination: "/contact",
+      isConversion: true,
+      kind: "route",
+    },
+  };
+  assert.deepEqual(resolveActionOutcome(routeTarget, noHistory), {
+    kind: "navigate",
+    href: "/contact",
+  });
+  const anchor = {
+    ...routeTarget,
+    target: { ...routeTarget.target, destination: "/products#gallery", kind: "section-anchor" },
+  };
+  assert.deepEqual(resolveActionOutcome(anchor, noHistory), {
+    kind: "navigate",
+    href: "/products#gallery",
+  });
+  const modal = {
+    ...routeTarget,
+    target: { ...routeTarget.target, kind: "modal" },
+  };
+  assert.equal(resolveActionOutcome(modal, noHistory).kind, "deferred");
+});
+
+test("navigate-back resolves locally (never history.back): previous, results, fallback, inventory", () => {
+  const withPrev = { previous: () => "/products", lastResults: () => "/vehicles?make=Audi" };
+  assert.deepEqual(
+    resolveActionOutcome({ type: "navigate-back", destination: "previous" }, withPrev),
+    { kind: "navigate", href: "/products", replace: true },
+  );
+  assert.deepEqual(
+    resolveActionOutcome({ type: "navigate-back", destination: "results" }, withPrev),
+    { kind: "navigate", href: "/vehicles?make=Audi", replace: true },
+  );
+  // No history → grounded filter fallback.
+  assert.deepEqual(
+    resolveActionOutcome(
+      {
+        type: "navigate-back",
+        destination: "previous",
+        fallback: { type: "filter_inventory", make: "Ford" },
+      },
+      noHistory,
+    ),
+    { kind: "navigate", href: "/vehicles?make=Ford", replace: true },
+  );
+  // No history, no fallback → inventory.
+  assert.deepEqual(
+    resolveActionOutcome({ type: "navigate-back", destination: "previous" }, noHistory),
+    { kind: "navigate", href: "/vehicles", replace: true },
+  );
+});
+
+test("compare and lead-form actions are explicitly deferred (consumers land in 4c)", () => {
+  assert.equal(
+    resolveActionOutcome(
+      { type: "compare_vehicles", vehicleIds: ["a", "b"] },
+      noHistory,
+    ).kind,
+    "deferred",
+  );
+  assert.equal(
+    resolveActionOutcome({ type: "open-lead-form" }, noHistory).kind,
+    "deferred",
+  );
+});

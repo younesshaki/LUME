@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { contentContext } from "../server/content/context";
+import NavHistoryRecorder from "../components/concierge/NavHistoryRecorder";
 import "./tailwind.css";
 import "./style.css";
 import "@lume/blocks/styles.css";
@@ -33,6 +34,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
       style={ctx?.palette.variables}
     >
       <body className={ctx ? "standardMode" : "web-vehicle-shell"}>
+        <NavHistoryRecorder />
         {children}
       </body>
     </html>
