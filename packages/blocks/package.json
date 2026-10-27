@@ -28,7 +28,8 @@
     "./template-experience": "./src/templateExperience.ts",
     "./visibility": "./src/visibility.ts",
     "./product-sounds": "./src/productSounds.ts",
-    "./lead-attribution": "./src/leadAttribution.ts"
+    "./lead-attribution": "./src/leadAttribution.ts",
+    "./chat-transport": "./src/chatTransport.ts"
   },
   "dependencies": {
     "zod": "^3.25.76",

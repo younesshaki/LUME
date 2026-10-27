@@ -15,6 +15,7 @@
     "verify:vehicles": "node scripts/verify-vehicles.mjs",
     "verify:vehicle-browser": "node scripts/verify-vehicle-browser.mjs",
     "test:content": "node --import tsx --conditions=react-server --test checks/content.check.mjs",
+    "test:concierge": "node --import tsx --conditions=react-server --test checks/concierge.check.mjs",
     "verify:content": "node --import tsx scripts/verify-content.mjs"
   },
   "dependencies": {

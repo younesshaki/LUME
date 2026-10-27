@@ -2,7 +2,8 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 const ChatEntry = dynamic(() => import("./ChatEntry"), { ssr: false });
-/** Phase 2 boundary only. Real concierge and model adapters remain Phase 4/5 work. */
+/** Live concierge chat (Phase 4a) mounts on demand; the 3D/model viewer
+ * remains Phase 5 work. */
 export default function OptionalTools(props: {
   title: string;
   vehicleId: string;
@@ -17,7 +18,7 @@ export default function OptionalTools(props: {
       <p>Photos and specifications work without interactive tools.</p>
       <p>3D view unavailable: no vehicle model is configured.</p>
       <button type="button" onClick={() => setChat(true)}>
-        Vehicle concierge preview
+        Ask the concierge
       </button>
       {chat && <ChatEntry {...props} close={() => setChat(false)} />}
     </aside>
