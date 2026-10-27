@@ -16,7 +16,13 @@ export default async function Layout({ children }: { children: ReactNode }) {
   const isContent = !["/preview", "/vehicles", "/robots.txt"].some(
     (p) => path === p || path.startsWith(p + "/"),
   );
-  const ctx = isContent ? await contentContext() : null;
+  let ctx: Awaited<ReturnType<typeof contentContext>> | null = null;
+  if (isContent)
+    try {
+      ctx = await contentContext();
+    } catch {
+      /* Route loaders keep the actual 404/5xx status; the root document must still render. */
+    }
   return (
     <html
       lang="en"

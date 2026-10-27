@@ -97,6 +97,9 @@ export async function ContentPage({ slug }: { slug: string }) {
             mode={mode}
             template={template.key}
           />
+          {page.blocks.blocks.length === 0 && (
+            <p>This published page has no content yet.</p>
+          )}
           {slug === "contact" && (
             <InteractiveForms
               tenant={tenant.slug}

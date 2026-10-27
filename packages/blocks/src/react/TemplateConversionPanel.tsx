@@ -41,9 +41,11 @@ export function TemplateConversionPanel({
   design,
   navigateTo,
   progressive = false,
+  Reveal: RevealOverride,
 }: {
   design: SiteDesign | null;
   progressive?: boolean;
+  Reveal?: typeof BlurFade;
   navigateTo: (
     target: { route: "vehicles" },
     options?: { analytics?: { action: string } },
@@ -55,7 +57,7 @@ export function TemplateConversionPanel({
     Verification: TurnstileWidget,
   } = useLeadServices();
   const reduceMotion = useReducedMotion();
-  const Reveal = progressive ? StaticReveal : BlurFade;
+  const Reveal = RevealOverride ?? (progressive ? StaticReveal : BlurFade);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const firstNameRef = useRef<HTMLInputElement | null>(null);
   const [leadBehavior, setLeadBehavior] = useState<LeadBehavior | null>(null);

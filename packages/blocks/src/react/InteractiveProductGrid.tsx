@@ -27,6 +27,13 @@ function ProductCard({
 }) {
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const imageSrc = imageLoadFailed ? undefined : product.imageSrc;
+  const imageRef = useRef<HTMLImageElement>(null);
+  // A failed image can finish before hydration attaches onError. Preserve the
+  // existing placeholder in that case too, rather than leaving a broken image.
+  useEffect(() => {
+    const img = imageRef.current;
+    if (img?.complete && img.naturalWidth === 0) setImageLoadFailed(true);
+  }, []);
 
   const handleClick = () => {
     onSelectProduct(product.id);
@@ -49,6 +56,7 @@ function ProductCard({
       product={product}
       href={href}
       imageSrc={imageSrc}
+      imageRef={imageRef}
       onClick={handleClick}
       onHover={() => play(productsPageSoundActions.cardHover)}
       onMouseMove={

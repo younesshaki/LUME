@@ -1,3 +1,5 @@
+import { listBlockDescriptors } from "@lume/blocks";
+import { readFileSync } from "node:fs";
 import test, { afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { previewEnvironment } from "../config/environment.ts";
@@ -224,4 +226,21 @@ test("oversized body fails without an upstream mutation", async () => {
     413,
   );
   assert.equal(calls.length, 0);
+});
+
+test("every standard-mode shared descriptor has an explicit server adapter", () => {
+  const source = readFileSync(
+    new URL("../components/content/ServerBlocks.tsx", import.meta.url),
+    "utf8",
+  );
+  const adapters = [...source.matchAll(/case "([^"]+)"/g)].map((m) => m[1]);
+  const missing = listBlockDescriptors()
+    .filter(
+      (d) =>
+        d.modes.includes("standard") &&
+        !d.experienceOnly &&
+        !adapters.includes(d.type),
+    )
+    .map((d) => d.type);
+  assert.deepEqual(missing, []);
 });

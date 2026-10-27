@@ -8,3 +8,5 @@ body.standardMode { margin: 0; background: var(--theme-lume-background); color: 
 .productsPage__card[href],.storyHome__flatCard[href] {display:block;color:inherit;}
 
 body.standardMode > .cinematicShell {position:relative;min-height:100vh;overflow:clip;}
+
+body.standardMode .cinematicShell__image,body.standardMode .cinematicShell__overlay {position:fixed;}

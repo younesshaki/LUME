@@ -1,50 +1,49 @@
 "use client";
-import { useRef, type RefObject } from "react"
+import { useRef, type RefObject } from "react";
 import {
   motion,
   useInView,
   type MotionProps,
   type UseInViewOptions,
   type Variants,
-} from "motion/react"
+} from "motion/react";
 
-type MarginType = UseInViewOptions["margin"]
+type MarginType = UseInViewOptions["margin"];
 
 interface BlurFadeProps extends MotionProps {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
   variant?: {
-    hidden: { y: number }
-    visible: { y: number }
-  }
-  duration?: number
-  delay?: number
-  offset?: number
-  direction?: "up" | "down" | "left" | "right"
-  inView?: boolean
-  inViewMargin?: MarginType
-  blur?: string
+    hidden: { y: number };
+    visible: { y: number };
+  };
+  duration?: number;
+  delay?: number;
+  offset?: number;
+  direction?: "up" | "down" | "left" | "right";
+  inView?: boolean;
+  inViewMargin?: MarginType;
+  blur?: string;
 }
 
 const getFilter = (v: Variants[string]) =>
-  typeof v === "function" ? undefined : v.filter
+  typeof v === "function" ? undefined : v.filter;
 
-export function BlurFade({
-  inView = false,
-  ...props
-}: BlurFadeProps) {
-  return inView
-    ? <ObservedBlurFade {...props} inView />
-    : <BlurFadeMotion {...props} isVisible />
+export function BlurFade({ inView = false, ...props }: BlurFadeProps) {
+  return inView ? (
+    <ObservedBlurFade {...props} inView />
+  ) : (
+    <BlurFadeMotion {...props} isVisible />
+  );
 }
 
 function ObservedBlurFade(props: BlurFadeProps) {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLDivElement>(null);
   const isVisible = useInView(ref, {
     once: true,
     margin: props.inViewMargin ?? "-50px",
-  })
-  return <BlurFadeMotion {...props} motionRef={ref} isVisible={isVisible} />
+  });
+  return <BlurFadeMotion {...props} motionRef={ref} isVisible={isVisible} />;
 }
 
 function BlurFadeMotion({
@@ -62,8 +61,8 @@ function BlurFadeMotion({
   inViewMargin: _inViewMargin,
   ...props
 }: BlurFadeProps & {
-  motionRef?: RefObject<HTMLDivElement | null>
-  isVisible: boolean
+  motionRef?: RefObject<HTMLDivElement | null>;
+  isVisible: boolean;
 }) {
   const defaultVariants: Variants = {
     hidden: {
@@ -77,20 +76,26 @@ function BlurFadeMotion({
       opacity: 1,
       filter: `blur(0px)`,
     },
-  }
-  const combinedVariants = variant ?? defaultVariants
+  };
+  const combinedVariants = variant ?? defaultVariants;
 
-  const hiddenFilter = getFilter(combinedVariants.hidden)
-  const visibleFilter = getFilter(combinedVariants.visible)
+  const hiddenFilter = getFilter(combinedVariants.hidden);
+  const visibleFilter = getFilter(combinedVariants.visible);
 
   const shouldTransitionFilter =
     hiddenFilter != null &&
     visibleFilter != null &&
-    hiddenFilter !== visibleFilter
+    hiddenFilter !== visibleFilter;
 
   return (
     <motion.div
-      ref={motionRef}
+      ref={
+        motionRef
+          ? (node) => {
+              (motionRef as { current: HTMLDivElement | null }).current = node;
+            }
+          : undefined
+      }
       initial="hidden"
       animate={isVisible ? "visible" : "hidden"}
       variants={combinedVariants}
@@ -105,5 +110,5 @@ function BlurFadeMotion({
     >
       {children}
     </motion.div>
-  )
+  );
 }

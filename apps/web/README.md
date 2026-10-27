@@ -1,14 +1,18 @@
-# Isolated public web preview — Phase 2
+# Isolated public web preview — Phase 3
 
 This is a **preview-only** Next.js App Router workspace. Nothing routes live
 Vite traffic here. Vehicle inventory/detail and their three public read API
-transports are available. Lead submission, connected chat, published content
-and cinema remain on their existing owners.
+transports remain available. Home, contact, products, published services/custom
+slugs now render published documents with the shared @lume/blocks views. Lead
+and consent writes proxy to the existing staging contracts; the upstream must
+allow the exact preview Origin. Connected chat, visitor navigation and cinema
+remain on their existing owners.
 The disposable `poc/` remains reference work, not an application dependency.
 
 Read [the approved plan](../../docs/scalability/nextjs-migration-plan.md) and
 [Phase 1 evidence / setup](../../docs/scalability/phase-1-web-foundation.md), then
-[Phase 2 behavior, evidence and rollout limits](../../docs/scalability/phase-2-vehicle-vertical-slice.md).
+[Phase 2 behavior, evidence and rollout limits](../../docs/scalability/phase-2-vehicle-vertical-slice.md), and
+[Phase 3 implementation and evidence](../../docs/scalability/phase-3-published-content.md).
 
 From repository root, with Node 24:
 
@@ -83,3 +87,20 @@ records raw curl responses, staging-only bindings, single-tenant limitations and
 the actual Phase 1 function manifest. PR #95 is merged into staging. The
 [Phase 2 evidence](../../docs/scalability/phase-2-vehicle-vertical-slice.md) records
 the current deployment and function manifest. Phase 3 has not started.
+
+Phase 3 checks after `npm run build:web`:
+
+```sh
+npm run test:content --workspace=@lume/web
+npm run verify:content --workspace=@lume/web
+# Optional visual reproduction: serve original cff045f on 5174 and this Vite
+# checkout on 5175 using ONLY staging public settings. See Phase 3 evidence doc.
+CONTENT_BASELINE_ROOT=/path/to/cff045f-checkout NODE_USE_ENV_PROXY=1 node apps/web/scripts/verify-content-browser.mjs
+```
+
+The visual harness intercepts only public RPC/media reads for the Vite references.
+It uses an actual public staging snapshot for home/contact/products and explicit
+local published-document fixtures for services/our-story (neither exists in staging).
+Template overrides are preview presentation only; they never access drafts or write
+a tenant/template. `?template=luxury|glo3d&theme=light|dark` selects the presentation
+on content routes; canonical URLs omit both. Navigation/visitor adapters stay Phase 4.

@@ -1,3 +1,4 @@
+import { BlurFade } from "@/components/ui/blur-fade";
 import { TemplateConversionPanel as SharedPanel } from "@lume/blocks/react/TemplateConversionPanel";
 import { LeadServicesProvider } from "@lume/blocks/react/LeadServices";
 import { services } from "@/lib/pageBuilder/components/DealershipForms";
@@ -9,7 +10,7 @@ export function TemplateConversionPanel() {
   const { navigateTo } = useNavigation();
   return (
     <LeadServicesProvider value={services}>
-      <SharedPanel design={design} navigateTo={navigateTo} />
+      <SharedPanel design={design} navigateTo={navigateTo} Reveal={BlurFade} />
     </LeadServicesProvider>
   );
 }

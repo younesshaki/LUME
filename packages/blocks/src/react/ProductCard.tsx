@@ -1,4 +1,4 @@
-import type { MouseEventHandler } from "react";
+import type { Ref, MouseEventHandler } from "react";
 import type { Product } from "../productCatalog";
 import { hasDetailModel3D } from "../productModel";
 export function ProductCardView({
@@ -9,6 +9,7 @@ export function ProductCardView({
   onHover,
   onMouseMove,
   onImageError,
+  imageRef,
 }: {
   product: Product;
   imageSrc?: string;
@@ -17,6 +18,7 @@ export function ProductCardView({
   onHover?: () => void;
   onMouseMove?: MouseEventHandler<HTMLDivElement | HTMLAnchorElement>;
   onImageError?: () => void;
+  imageRef?: Ref<HTMLImageElement>;
 }) {
   const Root = href ? "a" : "div";
   return (
@@ -42,6 +44,7 @@ export function ProductCardView({
       <div className="productsPage__cardImage">
         {imageSrc ? (
           <img
+            ref={imageRef}
             src={imageSrc}
             alt={`${product.brand} ${product.name}`}
             onError={onImageError}

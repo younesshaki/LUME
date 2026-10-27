@@ -32,7 +32,7 @@ console.log(
   `PASS complete environment mapping: ${names.length} current VITE names; no credential values read`,
 );
 console.log(
-  "| Vite | Next semantic target | Phase 1 disposition |\n|---|---|---|",
+  "| Vite | Next semantic target | Preview disposition |\n|---|---|---|",
 );
 for (const name of names)
   console.log(`| \`${name}\` | ${mappings[name][0]} | ${mappings[name][1]} |`);
