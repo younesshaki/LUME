@@ -82,11 +82,12 @@ The Vercel config is for a **new separate preview project rooted at `apps/web`**
 Do not apply it to `lume` or `lume-admin`, assign customer domains, or remove the
 existing SPA fallback. Production builds are skipped and independently refused
 by the launcher. The separate `lume-web-preview` project is now deployed as a
-read-only Preview; [hosted evidence](../../docs/scalability/phase-1-hosted-exit-gates.md)
+noindex Preview; [hosted evidence](../../docs/scalability/phase-1-hosted-exit-gates.md)
 records raw curl responses, staging-only bindings, single-tenant limitations and
 the actual Phase 1 function manifest. PR #95 is merged into staging. The
 [Phase 2 evidence](../../docs/scalability/phase-2-vehicle-vertical-slice.md) records
-the current deployment and function manifest. Phase 3 has not started.
+the vehicle deployment and function manifest. The Phase 3 document records the
+current published-content deployment, stable alias and staging-only form origin.
 
 Phase 3 checks after `npm run build:web`:
 
@@ -104,3 +105,41 @@ local published-document fixtures for services/our-story (neither exists in stag
 Template overrides are preview presentation only; they never access drafts or write
 a tenant/template. `?template=luxury|glo3d&theme=light|dark` selects the presentation
 on content routes; canonical URLs omit both. Navigation/visitor adapters stay Phase 4.
+
+To reproduce the complete live Vite extraction comparison, keep the dedicated
+staging `WEB_PREVIEW_*` bindings in the process and use an external work directory.
+The scripts never deploy Vite or change its build configuration:
+
+```sh
+export LIVE_PARITY_WORK=/tmp/lume-phase3-evidence
+export CONTENT_BASELINE_ROOT=/tmp/lume-phase3-before
+git worktree add --detach "$CONTENT_BASELINE_ROOT" cff045f2479f4f8e6c741b3044af11356484ed6e
+ln -s "$PWD/node_modules" "$CONTENT_BASELINE_ROOT/node_modules"
+mkdir -p "$LIVE_PARITY_WORK"
+cp docs/scalability/evidence/phase-3/fixtures/*.json "$LIVE_PARITY_WORK/"
+NODE_USE_ENV_PROXY=1 node --import tsx apps/web/scripts/build-vite-parity.mjs
+node apps/web/scripts/serve-vite-parity.mjs
+# In another terminal with the same two directory variables:
+NODE_USE_ENV_PROXY=1 node apps/web/scripts/verify-live-parity.mjs
+CONTENT_EVIDENCE_DIR="$LIVE_PARITY_WORK/next-content" NODE_USE_ENV_PROXY=1 node apps/web/scripts/verify-content-browser.mjs
+```
+
+The live flag is false; the published-content harness separately enables Vite's
+existing public CMS preview mode. Services/custom publication reads are local
+fixtures; the committed snapshot identifies the real staging data.
+
+Hosted read-only mobile verification uses JavaScript-disabled Chromium with no
+media/API mocks:
+
+```sh
+WEB_PREVIEW_FORM_TEST_ORIGIN=https://lume-web-phase3-hakicsi89.vercel.app CONTENT_MOBILE_EVIDENCE_DIR="$LIVE_PARITY_WORK/mobile" NODE_USE_ENV_PROXY=1 node apps/web/scripts/verify-content-mobile.mjs
+```
+
+`verify-form-browser.mjs` performs actual staging consent writes only with
+`WEB_PREVIEW_WRITE_CONSENT_EVIDENCE=1`; a real lead POST additionally requires
+`WEB_PREVIEW_WRITE_LEAD_EVIDENCE=1`. Without that second flag its lead success is
+explicitly a local contract fixture. It preserves upstream 201 creation and 200
+recent-duplicate semantics. `FORM_TEMPLATE`, `FORM_THEME`, and
+`CONTENT_FORM_EVIDENCE_DIR` select presentation and output. Never run it against
+production. Committed evidence contains actual staging receipts for Glo3D/light
+and Luxury/dark; no further writes are needed to review this PR.

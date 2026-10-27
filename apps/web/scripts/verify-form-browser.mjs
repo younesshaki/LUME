@@ -23,9 +23,13 @@ if (process.env.WEB_PREVIEW_WRITE_CONSENT_EVIDENCE !== "1")
   );
 const realLead = process.env.WEB_PREVIEW_WRITE_LEAD_EVIDENCE === "1";
 console.log("Checking noindex Preview");
-const check = await fetch(new URL("/contact?tenant=demo", origin), {
-  signal: AbortSignal.timeout(20000),
-});
+const runId = Date.now().toString(36);
+const check = await fetch(
+  new URL(`/contact?tenant=demo&evidence=${runId}`, origin),
+  {
+    signal: AbortSignal.timeout(20000),
+  },
+);
 assert.equal(check.status, 200);
 assert.match(check.headers.get("x-robots-tag"), /noindex/);
 const args = ["--no-sandbox"];
@@ -97,7 +101,7 @@ try {
   );
   await p.goto(
     origin +
-      `contact?tenant=demo&template=${template}&theme=${theme}&utm_source=phase3-browser-check`,
+      `contact?tenant=demo&template=${template}&theme=${theme}&utm_source=phase3-browser-check&evidence=${runId}`,
     { waitUntil: "load", timeout: 45000 },
   );
   await p
@@ -189,7 +193,13 @@ try {
       window.__phase3Receipts.filter((r) => r.path === "/api/leads").at(-1)
         .body,
   );
-  assert.equal(receipt.status(), 201, JSON.stringify(receiptBody));
+  // The existing public contract returns 200 with the original leadId for a
+  // recent duplicate, and 201 for a newly created lead. Preserve both outcomes.
+  assert.ok(
+    (realLead ? [200, 201] : [201]).includes(receipt.status()),
+    JSON.stringify(receiptBody),
+  );
+  assert.equal(typeof receiptBody.leadId, "string");
   submitted = receipt.request().postDataJSON();
   tenantHeader = receipt.request().headers()["x-lume-tenant"];
   await p
@@ -223,7 +233,8 @@ try {
   assert.equal(validation.status, 400, JSON.stringify(validation));
   evidence.lead = {
     browserSuccessContractFixture: !realLead,
-    remoteLeadCreated: realLead,
+    remoteLeadCreated: realLead && receipt.status() === 201,
+    remoteDuplicateAccepted: realLead && receipt.status() === 200,
     receipt: { status: receipt.status(), body: receiptBody },
     tenantHeader,
     source: submitted.source,
@@ -232,12 +243,13 @@ try {
   };
   assert.deepEqual(errors, []);
   evidence.browserErrors = errors;
+  evidence.presentation = { template, theme };
   fs.writeFileSync(
     path.join(out, "report.json"),
     JSON.stringify(evidence, null, 2) + "\n",
   );
   console.log(
-    `PASS consent reject/accept/reopen/refresh with staging 201 receipts; lead ${realLead ? "actually created on staging" : "fixture"} with 201 receipt; invalid lead 400.`,
+    `PASS consent reject/accept/reopen/refresh with staging 201 receipts; lead ${realLead ? "accepted by staging" : "fixture"} with ${receipt.status()} receipt; invalid lead 400.`,
   );
 } catch (error) {
   fs.writeFileSync(
