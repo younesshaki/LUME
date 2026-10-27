@@ -6,6 +6,14 @@ import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const sharp = require("sharp");
+const {
+  utils: { getComparator },
+} = require(
+  path.join(
+    path.dirname(require.resolve("playwright-core/package.json")),
+    "lib/coreBundle.js",
+  ),
+);
 const dir = process.env.LIVE_PARITY_WORK;
 if (!dir)
   throw new Error(
@@ -33,6 +41,8 @@ const report = {
   dataSource:
     "Frozen actual public staging snapshots; services is a labelled local published-document fixture; no remote tenant or page edits",
   productionPageRendererEnabled: settings.pageRendererEnabled,
+  vehicleResponseOrder:
+    "Tenant SEO ready before vehicle response, equal for both builds; legacy competing metadata effects remain unchanged",
   viewport: { width: 1280, height: 900 },
   cases: [],
 };
@@ -116,9 +126,35 @@ async function pixels(a, b) {
     maxChannelDelta: max,
     meanChannelDelta: total / (pa.info.width * pa.info.height * 3),
     exactPngMatch: a.equals(b),
+    perceptualMatch:
+      getComparator("image/png")(a, b, { threshold: 0.1, maxDiffPixels: 0 }) ===
+      null,
+    perceptualThreshold: 0.1,
   };
 }
 async function capture(p, name) {
+  await p.waitForFunction(() =>
+    [...document.images]
+      .filter((i) => {
+        const r = i.getBoundingClientRect();
+        return (
+          r.width > 0 && r.height > 0 && r.top < innerHeight && r.bottom > 0
+        );
+      })
+      .every((i) => i.complete),
+  );
+  await p.evaluate(() =>
+    Promise.all(
+      [...document.images]
+        .filter((i) => {
+          const r = i.getBoundingClientRect();
+          return (
+            r.width > 0 && r.height > 0 && r.top < innerHeight && r.bottom > 0
+          );
+        })
+        .map((i) => i.decode().catch(() => {})),
+    ),
+  );
   await p.mouse.move(0, 0);
   return p.screenshot({
     path: path.join(out, name),
@@ -202,29 +238,33 @@ try {
                 errors.push(`asset ${pathname}: ${r.status()}`);
             }
           });
-          await p.route(
-            "https://pub-da3069790c6443f883e3991be965f766.r2.dev/**",
-            async (route) => {
-              const url = route.request().url();
-              if (!media.has(url))
-                media.set(
-                  url,
-                  (async () => {
-                    const r = await fetch(url, {
-                      signal: AbortSignal.timeout(20000),
-                    });
-                    return {
-                      status: r.status,
-                      contentType:
-                        r.headers.get("content-type") ??
-                        "application/octet-stream",
-                      body: Buffer.from(await r.arrayBuffer()),
-                    };
-                  })(),
-                );
-              await route.fulfill(await media.get(url));
-            },
-          );
+          await p.route("**/*", async (route) => {
+            if (
+              route.request().resourceType() !== "image" ||
+              new URL(route.request().url()).hostname === "127.0.0.1"
+            ) {
+              await route.fallback();
+              return;
+            }
+            const url = route.request().url();
+            if (!media.has(url))
+              media.set(
+                url,
+                (async () => {
+                  const r = await fetch(url, {
+                    signal: AbortSignal.timeout(20000),
+                  });
+                  return {
+                    status: r.status,
+                    contentType:
+                      r.headers.get("content-type") ??
+                      "application/octet-stream",
+                    body: Buffer.from(await r.arrayBuffer()),
+                  };
+                })(),
+              );
+            await route.fulfill(await media.get(url));
+          });
           await p.route("**/rest/v1/**", async (route) => {
             const request = route.request();
             if (request.method() === "OPTIONS") {
@@ -264,9 +304,17 @@ try {
             }
             let body = {},
               status = 200;
-            if (u.pathname === "/api/vehicles/" + vehicleId)
+            if (u.pathname === "/api/vehicles/" + vehicleId) {
+              // Control the existing two-writer Vite SEO race: the tenant's
+              // metadata effect completes before releasing the vehicle read.
+              // This changes fixture latency, never the rendered document.
+              await p.waitForFunction(
+                (name) => document.title === name,
+                publicData.tenant.name,
+              );
               body = vehicles.detail;
-            else if (u.pathname === "/api/vehicles") body = vehicles.inventory;
+            } else if (u.pathname === "/api/vehicles")
+              body = vehicles.inventory;
             else if (u.pathname === "/api/vehicles/facets")
               body = {
                 facets: {
@@ -493,6 +541,14 @@ try {
         fs.writeFileSync(
           path.join(out, "report.json"),
           JSON.stringify(report, null, 2) + "\n",
+        );
+        assert.ok(
+          result.initialContentEqual &&
+            result.behaviorEqual &&
+            result.requestsEqual &&
+            result.top.perceptualMatch &&
+            result.bottom.perceptualMatch,
+          `${template}/${mode}/${slug} live-app parity`,
         );
         console.log(
           `${template}/${mode}/${slug}: text=${result.initialContentEqual}, behavior=${result.behaviorEqual}, pixels=${result.top.changedPixels}/${result.bottom.changedPixels}`,

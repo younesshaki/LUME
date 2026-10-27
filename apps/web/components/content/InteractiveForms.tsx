@@ -29,7 +29,7 @@ export default function InteractiveForms({
   tenant: string;
   block?: PageBlock;
   siteKey?: string;
-  design?: SiteDesign;
+  design?: Pick<SiteDesign, "template">;
 }) {
   const services = useMemo<LeadServices>(
     () => ({

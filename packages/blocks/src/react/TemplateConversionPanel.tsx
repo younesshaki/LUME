@@ -43,7 +43,7 @@ export function TemplateConversionPanel({
   progressive = false,
   Reveal: RevealOverride,
 }: {
-  design: SiteDesign | null;
+  design: Pick<SiteDesign, "template"> | null;
   progressive?: boolean;
   Reveal?: typeof BlurFade;
   navigateTo: (

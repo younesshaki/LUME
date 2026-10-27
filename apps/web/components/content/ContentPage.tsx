@@ -33,7 +33,7 @@ export async function ContentPage({ slug }: { slug: string }) {
             <InteractiveForms
               tenant={tenant.slug}
               siteKey={process.env.WEB_PREVIEW_TURNSTILE_SITE_KEY}
-              design={design}
+              design={{ template: design.template }}
             />
           }
           Footer={
@@ -113,7 +113,7 @@ export async function ContentPage({ slug }: { slug: string }) {
           <InteractiveForms
             tenant={tenant.slug}
             siteKey={process.env.WEB_PREVIEW_TURNSTILE_SITE_KEY}
-            design={design}
+            design={{ template: design.template }}
           />
         ) : null}
         <footer className="web-preview-footer">

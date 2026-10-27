@@ -22,6 +22,7 @@ if (process.env.WEB_PREVIEW_WRITE_CONSENT_EVIDENCE !== "1")
     "This verifier writes two anonymous staging consent events; set WEB_PREVIEW_WRITE_CONSENT_EVIDENCE=1 explicitly. A lead is created only when WEB_PREVIEW_WRITE_LEAD_EVIDENCE=1 is also set.",
   );
 const realLead = process.env.WEB_PREVIEW_WRITE_LEAD_EVIDENCE === "1";
+console.log("Checking noindex Preview");
 const check = await fetch(new URL("/contact?tenant=demo", origin), {
   signal: AbortSignal.timeout(20000),
 });
@@ -38,6 +39,7 @@ if (!local && process.env.HTTPS_PROXY && fs.existsSync(caPath)) {
         .digest("base64"),
   );
 }
+console.log("Launching isolated browser");
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium",
   args,
@@ -52,23 +54,56 @@ const out =
 fs.mkdirSync(out, { recursive: true });
 const evidence = { origin: origin.origin, consent: [], lead: {} };
 try {
+  console.log("Browser launched; creating context");
   const c = await browser.newContext({
     viewport: { width: 390, height: 844 },
     javaScriptEnabled: true,
     reducedMotion: "reduce",
   });
+  // Observe actual response clones in the browser. Keepalive consent requests
+  // need not expose a finished CDP response body before a navigation.
+  await c.addInitScript(() => {
+    window.__phase3Receipts = [];
+    const send = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+      const response = await send(...args);
+      if (
+        ["/api/leads", "/api/consent"].includes(new URL(response.url).pathname)
+      ) {
+        void response
+          .clone()
+          .text()
+          .then((body) =>
+            window.__phase3Receipts.push({
+              path: new URL(response.url).pathname,
+              status: response.status,
+              body: JSON.parse(body),
+            }),
+          );
+      }
+      return response;
+    };
+  });
+  console.log("Context created; creating page");
   const p = await c.newPage();
   p.setDefaultTimeout(15000);
   const errors = [];
   p.on("pageerror", (e) => errors.push(e.message));
+  console.log("Loading contact");
+  const template = process.env.FORM_TEMPLATE ?? "glo3d",
+    theme = process.env.FORM_THEME ?? "light";
+  assert.ok(
+    ["luxury", "glo3d"].includes(template) && ["light", "dark"].includes(theme),
+  );
   await p.goto(
     origin +
-      "contact?tenant=demo&template=glo3d&theme=light&utm_source=phase3-browser-check",
+      `contact?tenant=demo&template=${template}&theme=${theme}&utm_source=phase3-browser-check`,
     { waitUntil: "load", timeout: 45000 },
   );
   await p
     .getByRole("dialog", { name: "Cookie consent", exact: true })
     .waitFor();
+  console.log("Consent UI hydrated");
   for (const choice of ["rejected", "accepted"]) {
     if (choice === "accepted") {
       await p.reload({ waitUntil: "load" });
@@ -91,8 +126,18 @@ try {
         exact: true,
       })
       .click();
+    console.log("Consent choice sent", choice);
     const r = await pending;
-    const body = await r.json();
+    console.log("Consent receipt headers", r.status());
+    await p.waitForFunction(
+      (path) => window.__phase3Receipts.some((r) => r.path === path),
+      "/api/consent",
+    );
+    const body = await p.evaluate(
+      () =>
+        window.__phase3Receipts.filter((r) => r.path === "/api/consent").at(-1)
+          .body,
+    );
     evidence.consent.push({ choice, status: r.status(), body });
     assert.equal(r.status(), 201, JSON.stringify(body));
     const storage = JSON.parse(
@@ -133,8 +178,17 @@ try {
       r.request().method() === "POST",
   );
   await p.getByRole("button", { name: "Submit request", exact: true }).click();
+  console.log("Lead submitted");
   const receipt = await pendingLead;
-  const receiptBody = await receipt.json();
+  console.log("Lead receipt headers", receipt.status());
+  await p.waitForFunction(() =>
+    window.__phase3Receipts.some((r) => r.path === "/api/leads"),
+  );
+  const receiptBody = await p.evaluate(
+    () =>
+      window.__phase3Receipts.filter((r) => r.path === "/api/leads").at(-1)
+        .body,
+  );
   assert.equal(receipt.status(), 201, JSON.stringify(receiptBody));
   submitted = receipt.request().postDataJSON();
   tenantHeader = receipt.request().headers()["x-lume-tenant"];

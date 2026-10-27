@@ -244,3 +244,37 @@ test("every standard-mode shared descriptor has an explicit server adapter", () 
     .map((d) => d.type);
   assert.deepEqual(missing, []);
 });
+
+test("outage HTML escapes tenant content, has one heading and cannot redirect to an external path", async () => {
+  const { unavailableResponse } =
+    await import("../server/content/unavailable.ts");
+  globalThis.fetch = async () =>
+    ok([
+      {
+        id: tenantId,
+        slug: "demo",
+        name: "Demo <script>alert(1)</script>",
+        status: "active",
+      },
+    ]);
+  const request = new Request(
+    "http://localhost:3200/preview/unavailable?tenant=demo&path=%2Fcontact",
+    { headers: { host: "localhost:3200" } },
+  );
+  const response = await unavailableResponse(request);
+  const html = await response.text();
+  assert.equal(response.status, 503);
+  assert.equal((html.match(/<h1>/g) ?? []).length, 1);
+  assert.ok(!html.includes("<script>"));
+  assert.ok(html.includes("&lt;script&gt;"));
+  assert.match(html, /href="\/contact\?tenant=demo"/);
+  assert.match(response.headers.get("cache-control"), /no-store/);
+  const bad = await unavailableResponse(
+    new Request(
+      "http://localhost:3200/preview/unavailable?tenant=demo&path=%2F%2Fevil.test",
+      { headers: { host: "localhost:3200" } },
+    ),
+  );
+  assert.equal(bad.status, 404);
+  assert.ok(!(await bad.text()).includes("href="));
+});
