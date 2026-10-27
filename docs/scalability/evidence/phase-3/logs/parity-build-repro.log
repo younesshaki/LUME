@@ -1,0 +1,181 @@
+vite v5.4.21 building for production...
+(node:29054) [vite-plugin-glsl] Warning: 'esbuild' was not found.
+Please install it as a dev dependency if your vite version does not use rolldown.
+(Use `node --trace-warnings ...` to show where the warning was created)
+transforming...
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+
+../assets/fonts/montserrat/Montserrat-Regular.otf referenced in ../assets/fonts/montserrat/Montserrat-Regular.otf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+
+../assets/fonts/montserrat/Montserrat-Light.otf referenced in ../assets/fonts/montserrat/Montserrat-Light.otf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+✓ 3438 modules transformed.
+rendering chunks...
+computing gzip size...
+../vite-before/index.html                                             4.25 kB │ gzip:   1.63 kB
+../vite-before/assets/Bat - Halloween-aYto_G6d.webm                  28.20 kB
+../vite-before/assets/Mileast-B7B0Spo_.otf                           29.98 kB
+../vite-before/assets/Moralana DEMO-BVrLp7YT.otf                     38.84 kB
+../vite-before/assets/Higher Jump-ByqZXRv_.ttf                    1,854.79 kB
+../vite-before/assets/lume-homepage-background-BgUjzgvS.png       1,906.38 kB
+../vite-before/assets/AdminRouter-dvv3f2xV.css                        0.78 kB │ gzip:   0.39 kB
+../vite-before/assets/CinematicShell-x5mxCGUx.css                     1.39 kB │ gzip:   0.52 kB
+../vite-before/assets/index-D3KoXjLi.css                              1.74 kB │ gzip:   0.67 kB
+../vite-before/assets/PageRenderer-Bc_LQATc.css                       2.06 kB │ gzip:   0.70 kB
+../vite-before/assets/index-CYn16e2o.css                              2.08 kB │ gzip:   0.86 kB
+../vite-before/assets/ShowcasePage-j6fZTK9b.css                       2.34 kB │ gzip:   0.93 kB
+../vite-before/assets/SiteFooter-IA7JJ_AV.css                         2.73 kB │ gzip:   0.86 kB
+../vite-before/assets/index-DSkFyNft.css                              4.05 kB │ gzip:   1.34 kB
+../vite-before/assets/index-DERObB8X.css                              4.77 kB │ gzip:   1.37 kB
+../vite-before/assets/ContactPage-BDh44sam.css                        4.82 kB │ gzip:   1.40 kB
+../vite-before/assets/index-Dgm8k8VC.css                              8.36 kB │ gzip:   2.10 kB
+../vite-before/assets/selectors-Ckvam-TT.css                          9.13 kB │ gzip:   2.63 kB
+../vite-before/assets/index-CPHn-8jp.css                              9.25 kB │ gzip:   2.21 kB
+../vite-before/assets/index-DpRP0A4t.css                              9.75 kB │ gzip:   2.30 kB
+../vite-before/assets/TemplateConversionPanel-DVWWECoR.css            9.89 kB │ gzip:   2.33 kB
+../vite-before/assets/ProductsPage-BWv_FkVP.css                      10.53 kB │ gzip:   2.85 kB
+../vite-before/assets/OllamaChat-CwT49HH_.css                        11.19 kB │ gzip:   2.65 kB
+../vite-before/assets/VehicleFilters-C2UgtaEH.css                    23.91 kB │ gzip:   5.11 kB
+../vite-before/assets/Experience-CxDvi_H0.css                        35.04 kB │ gzip:   7.51 kB
+../vite-before/assets/registerBlocks-DS29ycuc.css                    39.56 kB │ gzip:   7.50 kB
+../vite-before/assets/index-B2NKuAeQ.css                            232.43 kB │ gzip:  37.22 kB
+../vite-before/assets/ShowcasePage.sounds-CZyeptLK.js                 0.09 kB │ gzip:   0.09 kB
+../vite-before/assets/model3d-CYRf-olS.js                             0.11 kB │ gzip:   0.11 kB
+../vite-before/assets/ProductsPage-BPIM_4AA.js                        0.12 kB │ gzip:   0.11 kB
+../vite-before/assets/ContactPage-DyIFwzdU.js                         0.15 kB │ gzip:   0.15 kB
+../vite-before/assets/prefetch-Dy1MV3lp.js                            0.16 kB │ gzip:   0.15 kB
+../vite-before/assets/arrow-right-fQ9RXWyF.js                         0.34 kB │ gzip:   0.27 kB
+../vite-before/assets/CinematicShell-CVBI1PBa.js                      0.53 kB │ gzip:   0.33 kB
+../vite-before/assets/use-in-view-Dy6tJRqw.js                         0.81 kB │ gzip:   0.48 kB
+../vite-before/assets/send-Di3fhJ4y.js                                1.09 kB │ gzip:   0.48 kB
+../vite-before/assets/VehiclesPageRendererRoute-B0714rev.js           1.20 kB │ gzip:   0.61 kB
+../vite-before/assets/index-C5C-ko5b.js                               1.46 kB │ gzip:   0.66 kB
+../vite-before/assets/VehicleDetailPageRendererRoute-o4fAtbS3.js      1.66 kB │ gzip:   0.74 kB
+../vite-before/assets/hover-border-gradient-DMvUuONG.js               1.68 kB │ gzip:   0.85 kB
+../vite-before/assets/AdminRouter-DU4MVNIR.js                         2.29 kB │ gzip:   1.07 kB
+../vite-before/assets/index-1GK2WLvX.js                               2.40 kB │ gzip:   1.06 kB
+../vite-before/assets/selectors-CUaT8QQJ.js                           2.53 kB │ gzip:   1.13 kB
+../vite-before/assets/PagePreviewBridge-XIdsliuP.js                   2.58 kB │ gzip:   1.38 kB
+../vite-before/assets/PageRendererRoutes-CZwrcw4s.js                  3.02 kB │ gzip:   1.03 kB
+../vite-before/assets/ConciergeLeadForm-llWUKE6Y.js                   3.36 kB │ gzip:   1.35 kB
+../vite-before/assets/index-CAeNiTAd.js                               3.41 kB │ gzip:   1.29 kB
+../vite-before/assets/index-CuemGzns.js                               3.70 kB │ gzip:   1.48 kB
+../vite-before/assets/index-ChGPT_TH.js                               3.84 kB │ gzip:   1.63 kB
+../vite-before/assets/catalog-D_m2QKdD.js                             4.74 kB │ gzip:   1.67 kB
+../vite-before/assets/index-CbhbGrIa.js                               7.45 kB │ gzip:   2.80 kB
+../vite-before/assets/TemplateConversionPanel-BaLzCRvC.js             7.94 kB │ gzip:   2.86 kB
+../vite-before/assets/SiteFooter-BXUSDzox.js                          8.19 kB │ gzip:   3.01 kB
+../vite-before/assets/PageRenderer-C6CZuNft.js                        8.82 kB │ gzip:   3.48 kB
+../vite-before/assets/StoryProvider-BQLig6Uu.js                       9.48 kB │ gzip:   2.66 kB
+../vite-before/assets/glowing-effect-ji0mXHV8.js                      9.94 kB │ gzip:   4.15 kB
+../vite-before/assets/index-DYwlXmoo.js                              11.77 kB │ gzip:   3.24 kB
+../vite-before/assets/index-DgUqjcZD.js                              12.00 kB │ gzip:   3.94 kB
+../vite-before/assets/index-B6WdzjzC.js                              15.09 kB │ gzip:   5.20 kB
+../vite-before/assets/index-Be2IIylQ.js                              16.56 kB │ gzip:   6.48 kB
+../vite-before/assets/OllamaChat-CBrrA5nn.js                         23.82 kB │ gzip:   8.73 kB
+../vite-before/assets/index-B86YlGBY.js                              45.17 kB │ gzip:  14.73 kB
+../vite-before/assets/index-SFc2wnMY.js                              70.44 kB │ gzip:  27.81 kB
+../vite-before/assets/Experience-uzYD3El9.js                        126.05 kB │ gzip:  45.18 kB
+../vite-before/assets/VehicleFilters-CMHAickr.js                    131.29 kB │ gzip:  51.31 kB
+../vite-before/assets/registerBlocks-BGDAdLLI.js                    183.09 kB │ gzip:  49.08 kB
+../vite-before/assets/CanvasErrorBoundary-BD6EtGet.js               892.33 kB │ gzip: 242.38 kB
+../vite-before/assets/index-CxzlJqhg.js                           1,072.90 kB │ gzip: 335.42 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.43s
+vite v5.4.21 building for production...
+(node:29146) [vite-plugin-glsl] Warning: 'esbuild' was not found.
+Please install it as a dev dependency if your vite version does not use rolldown.
+(Use `node --trace-warnings ...` to show where the warning was created)
+transforming...
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+
+../assets/fonts/montserrat/Montserrat-Regular.otf referenced in ../assets/fonts/montserrat/Montserrat-Regular.otf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+
+../assets/fonts/montserrat/Montserrat-Light.otf referenced in ../assets/fonts/montserrat/Montserrat-Light.otf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+✓ 3487 modules transformed.
+rendering chunks...
+computing gzip size...
+../lume-phase3-work/vite-after/index.html                                             4.25 kB │ gzip:   1.63 kB
+../lume-phase3-work/vite-after/assets/Bat - Halloween-aYto_G6d.webm                  28.20 kB
+../lume-phase3-work/vite-after/assets/Mileast-B7B0Spo_.otf                           29.98 kB
+../lume-phase3-work/vite-after/assets/Moralana DEMO-BVrLp7YT.otf                     38.84 kB
+../lume-phase3-work/vite-after/assets/Higher Jump-ByqZXRv_.ttf                    1,854.79 kB
+../lume-phase3-work/vite-after/assets/lume-homepage-background-BgUjzgvS.png       1,906.38 kB
+../lume-phase3-work/vite-after/assets/AdminRouter-dvv3f2xV.css                        0.78 kB │ gzip:   0.39 kB
+../lume-phase3-work/vite-after/assets/CinematicShell-x5mxCGUx.css                     1.39 kB │ gzip:   0.52 kB
+../lume-phase3-work/vite-after/assets/index-D3KoXjLi.css                              1.74 kB │ gzip:   0.67 kB
+../lume-phase3-work/vite-after/assets/PageRenderer-Bc_LQATc.css                       2.06 kB │ gzip:   0.70 kB
+../lume-phase3-work/vite-after/assets/index-CYn16e2o.css                              2.08 kB │ gzip:   0.86 kB
+../lume-phase3-work/vite-after/assets/ShowcasePage-j6fZTK9b.css                       2.34 kB │ gzip:   0.93 kB
+../lume-phase3-work/vite-after/assets/SiteFooter-IA7JJ_AV.css                         2.73 kB │ gzip:   0.86 kB
+../lume-phase3-work/vite-after/assets/index-DSkFyNft.css                              4.05 kB │ gzip:   1.34 kB
+../lume-phase3-work/vite-after/assets/index-DERObB8X.css                              4.77 kB │ gzip:   1.37 kB
+../lume-phase3-work/vite-after/assets/ContactPage-BDh44sam.css                        4.82 kB │ gzip:   1.40 kB
+../lume-phase3-work/vite-after/assets/index-Dgm8k8VC.css                              8.36 kB │ gzip:   2.10 kB
+../lume-phase3-work/vite-after/assets/selectors-Ckvam-TT.css                          9.13 kB │ gzip:   2.63 kB
+../lume-phase3-work/vite-after/assets/index-CPHn-8jp.css                              9.25 kB │ gzip:   2.21 kB
+../lume-phase3-work/vite-after/assets/index-DpRP0A4t.css                              9.75 kB │ gzip:   2.30 kB
+../lume-phase3-work/vite-after/assets/TemplateConversionPanel-DVWWECoR.css            9.89 kB │ gzip:   2.33 kB
+../lume-phase3-work/vite-after/assets/ProductsPage-BWv_FkVP.css                      10.53 kB │ gzip:   2.85 kB
+../lume-phase3-work/vite-after/assets/OllamaChat-CwT49HH_.css                        11.19 kB │ gzip:   2.65 kB
+../lume-phase3-work/vite-after/assets/registerBlocks-C1U5GOZZ.css                    19.32 kB │ gzip:   4.17 kB
+../lume-phase3-work/vite-after/assets/DealershipForms-oEqU5tWH.css                   20.24 kB │ gzip:   4.04 kB
+../lume-phase3-work/vite-after/assets/VehicleFilters-C2UgtaEH.css                    23.91 kB │ gzip:   5.11 kB
+../lume-phase3-work/vite-after/assets/Experience-CxDvi_H0.css                        35.04 kB │ gzip:   7.51 kB
+../lume-phase3-work/vite-after/assets/index-B2NKuAeQ.css                            232.43 kB │ gzip:  37.22 kB
+../lume-phase3-work/vite-after/assets/ShowcasePage.sounds-CZyeptLK.js                 0.09 kB │ gzip:   0.09 kB
+../lume-phase3-work/vite-after/assets/productModel-CYRf-olS.js                        0.11 kB │ gzip:   0.11 kB
+../lume-phase3-work/vite-after/assets/ProductsPage-BPIM_4AA.js                        0.12 kB │ gzip:   0.11 kB
+../lume-phase3-work/vite-after/assets/ContactPage-DzI4y6Yt.js                         0.14 kB │ gzip:   0.15 kB
+../lume-phase3-work/vite-after/assets/prefetch-CvKLr-WR.js                            0.16 kB │ gzip:   0.16 kB
+../lume-phase3-work/vite-after/assets/CinematicShell-BRe2Q-f2.js                      0.68 kB │ gzip:   0.37 kB
+../lume-phase3-work/vite-after/assets/use-in-view-Dlsr6xpy.js                         0.81 kB │ gzip:   0.48 kB
+../lume-phase3-work/vite-after/assets/send-Cd39Hxae.js                                1.09 kB │ gzip:   0.48 kB
+../lume-phase3-work/vite-after/assets/VehiclesPageRendererRoute-1TZZiBZj.js           1.21 kB │ gzip:   0.62 kB
+../lume-phase3-work/vite-after/assets/index-DKZYMLhG.js                               1.46 kB │ gzip:   0.66 kB
+../lume-phase3-work/vite-after/assets/VehicleDetailPageRendererRoute-B60vbShw.js      1.66 kB │ gzip:   0.74 kB
+../lume-phase3-work/vite-after/assets/hover-border-gradient-B7dbkn0n.js               1.68 kB │ gzip:   0.85 kB
+../lume-phase3-work/vite-after/assets/AdminRouter-DGergTLP.js                         2.29 kB │ gzip:   1.07 kB
+../lume-phase3-work/vite-after/assets/index-BpeMphYC.js                               2.40 kB │ gzip:   1.06 kB
+../lume-phase3-work/vite-after/assets/selectors-B6WrUVSx.js                           2.53 kB │ gzip:   1.13 kB
+../lume-phase3-work/vite-after/assets/PagePreviewBridge-C6WpFH15.js                   2.60 kB │ gzip:   1.38 kB
+../lume-phase3-work/vite-after/assets/PageRendererRoutes-BR0Masyc.js                  3.03 kB │ gzip:   1.04 kB
+../lume-phase3-work/vite-after/assets/index-Dbcerk0s.js                               3.41 kB │ gzip:   1.29 kB
+../lume-phase3-work/vite-after/assets/ConciergeLeadForm-C4ggTVmS.js                   3.62 kB │ gzip:   1.44 kB
+../lume-phase3-work/vite-after/assets/index-BKwXhpYC.js                               3.82 kB │ gzip:   1.53 kB
+../lume-phase3-work/vite-after/assets/index-BHXvrP0R.js                               3.85 kB │ gzip:   1.64 kB
+../lume-phase3-work/vite-after/assets/catalog-cl2R69u4.js                             4.97 kB │ gzip:   1.78 kB
+../lume-phase3-work/vite-after/assets/index-BUTWx1sp.js                               7.45 kB │ gzip:   2.80 kB
+../lume-phase3-work/vite-after/assets/SiteFooter-Dke0MTq3.js                          8.18 kB │ gzip:   3.01 kB
+../lume-phase3-work/vite-after/assets/TemplateConversionPanel-B9Qlpi6R.js             8.33 kB │ gzip:   3.03 kB
+../lume-phase3-work/vite-after/assets/PageRenderer-CwB0TtBd.js                        8.94 kB │ gzip:   3.50 kB
+../lume-phase3-work/vite-after/assets/StoryProvider-BH0dw_Ow.js                       9.48 kB │ gzip:   2.66 kB
+../lume-phase3-work/vite-after/assets/GlowingEffect-BdtActSk.js                       9.94 kB │ gzip:   4.15 kB
+../lume-phase3-work/vite-after/assets/index-SNEBLZpl.js                              11.77 kB │ gzip:   3.24 kB
+../lume-phase3-work/vite-after/assets/index-BZVouDIX.js                              12.34 kB │ gzip:   4.10 kB
+../lume-phase3-work/vite-after/assets/index-BBdDCUDB.js                              15.10 kB │ gzip:   5.20 kB
+../lume-phase3-work/vite-after/assets/index-CE2_bazo.js                              16.56 kB │ gzip:   6.48 kB
+../lume-phase3-work/vite-after/assets/DealershipForms-P4npQUL8.js                    17.94 kB │ gzip:   4.81 kB
+../lume-phase3-work/vite-after/assets/OllamaChat-B8o8u_0o.js                         23.82 kB │ gzip:   8.73 kB
+../lume-phase3-work/vite-after/assets/index-BHK2OQ5u.js                              45.17 kB │ gzip:  14.72 kB
+../lume-phase3-work/vite-after/assets/index-SFc2wnMY.js                              70.44 kB │ gzip:  27.81 kB
+../lume-phase3-work/vite-after/assets/Experience-DD5Hp__r.js                        126.05 kB │ gzip:  45.18 kB
+../lume-phase3-work/vite-after/assets/VehicleFilters-CHrcEWZ3.js                    131.28 kB │ gzip:  51.30 kB
+../lume-phase3-work/vite-after/assets/registerBlocks-C1wq5IqD.js                    173.47 kB │ gzip:  47.48 kB
+../lume-phase3-work/vite-after/assets/CanvasErrorBoundary-DtPQsYTg.js               892.33 kB │ gzip: 242.38 kB
+../lume-phase3-work/vite-after/assets/index-zB7cCa5q.js                           1,073.16 kB │ gzip: 335.47 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.11s

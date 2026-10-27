@@ -1,0 +1,11 @@
+<title>Products — LUME</title>
+<meta name="description" content="Objects that exist only within LUME. Collaborations with the world&#x27;s most recognised brands."/>
+<meta name="robots" content="noindex, nofollow, nocache"/>
+<link rel="canonical" href="https://lume-web-phase3-hakicsi89.vercel.app/products?tenant=demo"/>
+<meta property="og:title" content="Products — LUME"/>
+<meta property="og:description" content="Objects that exist only within LUME. Collaborations with the world&#x27;s most recognised brands."/>
+<meta property="og:url" content="https://lume-web-phase3-hakicsi89.vercel.app/products?tenant=demo"/>
+<meta property="og:image" content="https://lume-web-phase3-hakicsi89.vercel.app/logo.svg"/>
+<meta property="og:image:alt" content="Products"/>
+<meta property="og:type" content="website"/>
+<h1 class="productsPage__title">Products</h1>

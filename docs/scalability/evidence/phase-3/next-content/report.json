@@ -1,0 +1,3273 @@
+{
+  "scope": "Published main content; scrolling ancestors flattened only for complete screenshots (text/styles/geometry sampled before flattening); global navigation/footer/visitor adaptation is Phase 4 and excluded. Template override only; staging remains Luxury/demo.",
+  "evidence": [
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "home",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-light-home-vite.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 4491.3125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgba(33, 29, 22, 0.66)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "56.32px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "color(srgb 0.999021 0.987078 0.963192 / 0.880863)",
+              "borderRadius": "12px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-light-home-vite-shared.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 4491.3125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgba(33, 29, 22, 0.66)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "56.32px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "color(srgb 0.999021 0.987078 0.963192 / 0.880863)",
+              "borderRadius": "12px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-light-home-next.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 4491.3125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgba(33, 29, 22, 0.66)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "56.32px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "color(srgb 0.999021 0.987078 0.963192 / 0.880863)",
+              "borderRadius": "12px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "contact",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-light-contact-vite.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1080,
+            "height": 1914.171875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "89.6px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(154, 117, 39)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-light-contact-vite-shared.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1080,
+            "height": 1914.171875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "89.6px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(154, 117, 39)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-light-contact-next.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1080,
+            "height": 1914.171875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "89.6px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(154, 117, 39)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "products",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-light-products-vite.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1885.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "102.4px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(154, 117, 39)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "10px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-light-products-vite-shared.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1885.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "102.4px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(154, 117, 39)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "10px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-light-products-next.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1885.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "102.4px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(154, 117, 39)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "10px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "services",
+      "dataSource": "Local published-document fixture using the existing demo identity; no staging writes",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-light-services-vite.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 732.15625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgba(33, 29, 22, 0.66)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-light-services-vite-shared.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 732.15625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgba(33, 29, 22, 0.66)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-light-services-next.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 732.15625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgba(33, 29, 22, 0.66)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "our-story",
+      "dataSource": "Local published-document fixture using the existing demo identity; no staging writes",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-light-our-story-vite.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 642.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgba(33, 29, 22, 0.66)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-light-our-story-vite-shared.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 642.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgba(33, 29, 22, 0.66)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-light-our-story-next.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 642.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(33, 29, 22)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgba(33, 29, 22, 0.66)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "home",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-dark-home-vite.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 4491.3125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "56.32px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(255, 248, 236, 0.05)",
+              "borderRadius": "12px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-dark-home-vite-shared.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 4491.3125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "56.32px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(255, 248, 236, 0.05)",
+              "borderRadius": "12px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-dark-home-next.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 4491.3125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "56.32px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(255, 248, 236, 0.05)",
+              "borderRadius": "12px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "contact",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-dark-contact-vite.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1080,
+            "height": 1914.171875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "89.6px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-dark-contact-vite-shared.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1080,
+            "height": 1914.171875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "89.6px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-dark-contact-next.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1080,
+            "height": 1914.171875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "89.6px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "products",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-dark-products-vite.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1885.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "102.4px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "10px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-dark-products-vite-shared.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1885.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "102.4px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "10px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-dark-products-next.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1885.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "102.4px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "11.52px",
+              "fontWeight": "800",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "10px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "services",
+      "dataSource": "Local published-document fixture using the existing demo identity; no staging writes",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-dark-services-vite.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 732.15625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-dark-services-vite-shared.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 732.15625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-dark-services-next.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 732.15625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "our-story",
+      "dataSource": "Local published-document fixture using the existing demo identity; no staging writes",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "luxury-dark-our-story-vite.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 642.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "luxury-dark-our-story-vite-shared.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 642.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "luxury-dark-our-story-next.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1080,
+            "height": 642.1875
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "94.72px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18.56px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "home",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-light-home-vite.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 3975.375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(82, 90, 103)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "44px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-light-home-vite-shared.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 3975.375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(82, 90, 103)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "44px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-light-home-next.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 3975.375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(82, 90, 103)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "44px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "contact",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-light-contact-vite.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1641.515625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(31, 94, 255)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-light-contact-vite-shared.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1641.515625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(31, 94, 255)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-light-contact-next.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1641.515625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(31, 94, 255)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "products",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-light-products-vite.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1810.78125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(31, 94, 255)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-light-products-vite-shared.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1810.78125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(31, 94, 255)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-light-products-next.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1810.78125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(31, 94, 255)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgb(255, 255, 255)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "services",
+      "dataSource": "Local published-document fixture using the existing demo identity; no staging writes",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-light-services-vite.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(82, 90, 103)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-light-services-vite-shared.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(82, 90, 103)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-light-services-next.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(82, 90, 103)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "our-story",
+      "dataSource": "Local published-document fixture using the existing demo identity; no staging writes",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-light-our-story-vite.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(82, 90, 103)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-light-our-story-vite-shared.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(82, 90, 103)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-light-our-story-next.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(15, 17, 21)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(82, 90, 103)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "home",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-dark-home-vite.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 3975.375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "44px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgb(0, 0, 0)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-dark-home-vite-shared.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 3975.375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "44px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgb(0, 0, 0)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-dark-home-next.jpg",
+          "text": "Luxury versions of everyday energy.LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.ShowcaseOpenShowcase IIOpenShowcase IIIOpenProduct LanguageEnergy, treated like an object of desire.The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 3975.375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "44px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".storyHome__flatCard",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgb(0, 0, 0)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme LUME showcase preview"
+            },
+            {
+              "loaded": true,
+              "alt": "Black and gold LUME product concept"
+            }
+          ],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "contact",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-dark-contact-vite.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1641.515625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-dark-contact-vite-shared.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1641.515625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-dark-contact-next.jpg",
+          "text": "AccessLUME is not found. It is entered by invitation.LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.01Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.02Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.03Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world.Request informationContinue with the dealership.First nameLast nameEmailPhoneHow can we help?Submit request",
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1641.515625
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "h2",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "51.2px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "products",
+      "dataSource": "Read-only snapshot of actual staging published content",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-dark-products-vite.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1810.78125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgb(0, 0, 0)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-dark-products-vite-shared.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1810.78125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgb(0, 0, 0)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-dark-products-next.jpg",
+          "text": "Exclusive EditionsProductsObjects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.ALLDRINKFRAGRANCEFASHION3DdrinkLUME x Red BullSpecial EditionView ProductdrinkLUME x StarbucksReserve BlendView ProductMoet & ChandondrinkLUME x Moet & ChandonBlanc de BlancsView ProductfragranceLUME x YSLLibre - FemmeView ProductfragranceLUME x YSLY - HommeView ProductHermesfashionLUME x HermesCarre SoieView ProductRolexfashionLUME x RolexDaytona EditionView Product",
+          "h1": [
+            "Products"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 1810.78125
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "12px",
+              "fontWeight": "600",
+              "color": "rgb(217, 183, 106)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__filters",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": ".productsPage__card",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgb(0, 0, 0)",
+              "borderRadius": "6px"
+            }
+          ],
+          "images": [
+            {
+              "loaded": true,
+              "alt": "Red Bull Special Edition"
+            },
+            {
+              "loaded": true,
+              "alt": "Starbucks Reserve Blend"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Libre - Femme"
+            },
+            {
+              "loaded": true,
+              "alt": "YSL Y - Homme"
+            }
+          ],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "services",
+      "dataSource": "Local published-document fixture using the existing demo identity; no staging writes",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-dark-services-vite.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-dark-services-vite-shared.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-dark-services-next.jpg",
+          "text": "Dealership servicesPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Dealership services"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "our-story",
+      "dataSource": "Local published-document fixture using the existing demo identity; no staging writes",
+      "baselineSha": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+      "samples": [
+        {
+          "kind": "vite",
+          "file": "glo3d-dark-our-story-vite.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "vite-shared",
+          "file": "glo3d-dark-our-story-vite-shared.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        },
+        {
+          "kind": "next",
+          "file": "glo3d-dark-our-story-next.jpg",
+          "text": "Our storyPublished contract fixture; no remote content created.Helpful dealership content is available without JavaScript.",
+          "h1": [
+            "Our story"
+          ],
+          "box": {
+            "width": 1280,
+            "height": 430.484375
+          },
+          "styles": [
+            {
+              "selector": "h1",
+              "fontFamily": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+              "fontSize": "54.88px",
+              "fontWeight": "700",
+              "color": "rgb(255, 248, 236)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            },
+            {
+              "selector": "p",
+              "fontFamily": "Moralana, Georgia, \"Times New Roman\", serif",
+              "fontSize": "18px",
+              "fontWeight": "400",
+              "color": "rgb(199, 189, 168)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderRadius": "0px"
+            }
+          ],
+          "images": [],
+          "errors": []
+        }
+      ],
+      "extractedViteSameText": true,
+      "extractedViteSameStyles": true,
+      "sameText": true,
+      "sameH1": true,
+      "styleDifferences": []
+    }
+  ]
+}

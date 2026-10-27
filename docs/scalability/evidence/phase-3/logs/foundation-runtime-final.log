@@ -1,0 +1,21 @@
+
+> @lume/web@0.0.0 verify:foundation
+> node scripts/verify-foundation.mjs
+
+PASS actual Next process contains zero generic production/application/token bindings
+HTML alpha: HTTP 200; Foundation Alpha Motors; other tenant absent; identity lookups=1
+HTML beta: HTTP 200; Foundation Beta Autos; other tenant absent; identity lookups=1
+HTML alpha: HTTP 200; Foundation Alpha Motors; other tenant absent; identity lookups=1
+HTML beta: HTTP 200; Foundation Beta Autos; other tenant absent; identity lookups=1
+Flight alpha: HTTP 200; Foundation Alpha Motors; other tenant absent; identity lookups=1
+Flight beta: HTTP 200; Foundation Beta Autos; other tenant absent; identity lookups=1
+Flight alpha: HTTP 200; Foundation Alpha Motors; other tenant absent; identity lookups=1
+Flight beta: HTTP 200; Foundation Beta Autos; other tenant absent; identity lookups=1
+PASS alternating HTML and React Flight alpha → beta → alpha → beta; 20 concurrent requests remain isolated
+PASS verified custom-domain contract; 12 forged/unknown selector cases return 404; noindex robots and responses
+Evidence: artifacts/isolation.json (local contract double; real staging validation still requires dedicated bindings)
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

@@ -1,0 +1,70 @@
+{
+  "bindings": [
+    {
+      "name": "WEB_PREVIEW_SUPABASE_URL",
+      "targets": [
+        "preview"
+      ]
+    },
+    {
+      "name": "WEB_PREVIEW_PROJECT_REF",
+      "targets": [
+        "preview"
+      ]
+    },
+    {
+      "name": "WEB_PREVIEW_SUPABASE_ANON_KEY",
+      "targets": [
+        "preview"
+      ]
+    },
+    {
+      "name": "WEB_PREVIEW_DEFAULT_TENANT",
+      "targets": [
+        "preview"
+      ]
+    },
+    {
+      "name": "WEB_PREVIEW_R2_PUBLIC_BASE_URL",
+      "targets": [
+        "preview"
+      ]
+    },
+    {
+      "name": "WEB_PREVIEW_CONTACT_URL",
+      "targets": [
+        "preview"
+      ]
+    },
+    {
+      "name": "WEB_PREVIEW_UPSTREAM_ORIGIN",
+      "targets": [
+        "preview"
+      ]
+    },
+    {
+      "name": "WEB_PREVIEW_HOSTS",
+      "targets": [
+        "preview"
+      ]
+    }
+  ],
+  "stagingProjectRef": "hapyyupeugxccofpibor",
+  "anonymousStagingTenantVerified": true,
+  "serviceKeyPresent": false,
+  "productionCredentialMatches": 0,
+  "genericApplicationBindingCount": 0,
+  "draftDirectReads": [
+    {
+      "table": "pages",
+      "status": 200,
+      "rows": 0
+    },
+    {
+      "table": "page_revisions",
+      "status": 200,
+      "rows": 0
+    }
+  ],
+  "productionRefInPublishedHtml": false
+}

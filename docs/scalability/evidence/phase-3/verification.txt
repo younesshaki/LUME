@@ -1,0 +1,99 @@
+Phase 3 verification — application commit 458996a37cc98f059d4d805b871b6f396dceaae3
+Captured 2026-10-27. Node 24. Root Vite/admin/API/build/deploy configuration unchanged.
+Later commits add verification scripts, docs and these captured artifacts only.
+
+Required existing-app checks, run sequentially with original commands/config:
+
+npm run typecheck:all                 PASS (exit 0; root + all workspaces)
+npm test -- --run                     FAIL (exit 1)
+  Test Files: 295 passed, 2 failed (297).
+  Tests:      2327 passed, 2 failed (2329).
+  - scripts/verify-shared-conversation-memory.test.mjs:
+    "never prints a supplied credential" exceeded default 5000ms.
+  - apps/admin/lib/managedFeedSftpFetch.server.test.ts:
+    "stops reading an oversized SFTP file at the managed feed cap" exceeded
+    default 5000ms; afterAll cleanup also exceeded 10000ms.
+  No test source, timeout default or SFTP implementation was changed.
+  logs/tests.log preserves the complete original failure output.
+npm run build                        PASS (exit 0; live Vite production build)
+npm run build:admin                   PASS (exit 0; NODE_USE_ENV_PROXY=1 for HTTPS)
+npm run check:migrations              PASS (exit 0; 92 sequential files)
+git diff --check                     PASS (exit 0)
+
+Independent new workspace:
+
+npm run build --workspace=@lume/web    PASS (exit 0; optimized Next production build)
+npm run typecheck --workspace=@lume/web PASS (exit 0; import graph + TypeScript)
+node apps/web/scripts/audit-env.mjs   PASS (23 current VITE names mapped)
+node apps/web/scripts/scan-output.mjs PASS (122 compiled server/client files;
+  no inherited credential value matches)
+
+Targeted timeout diagnosis (not a replacement for the full-suite result):
+
+npm test -- --run scripts/verify-shared-conversation-memory.test.mjs \
+  apps/admin/lib/managedFeedSftpFetch.server.test.ts \
+  --maxWorkers=1 --testTimeout=30000
+  14 passed, 1 failed across two files.
+  Credential-output harness: 8/8 PASS.
+  SFTP: 6/7; still returns its existing "SFTP feed request timed out." after
+  about 20 seconds rather than the expected /exceeds the 25 MB limit/i.
+  This is the known pre-existing SFTP failure, not masked or fixed here.
+  logs/test-rerun-final.log has exact output.
+
+Contract/unit/runtime checks:
+
+npm run test:content --workspace=@lume/web     PASS 8/8
+npm run test:foundation --workspace=@lume/web  PASS 7/7
+npm run test:vehicles --workspace=@lume/web    PASS 8/8
+npm run verify:content --workspace=@lume/web   PASS
+  20 published template/mode/route documents, 40 missing/empty combinations,
+  draft/host rejection, 24 concurrent requests, raw no-JS HTTP503 error document
+  after failure-only HTTP307; no private details or competing headings.
+npm run verify:foundation --workspace=@lume/web PASS
+  Two LOCAL active tenant fixtures: alternating HTML/React Flight plus
+  20 concurrent requests; 12 forged/unknown-selector cases rejected.
+npm run verify:vehicles --workspace=@lume/web PASS
+  36 alternating/concurrent HTML/Flight/JSON requests. A foreign active tenant
+  gets document/JSON 404 (Flight uses a 404 digest), no leaked vehicle data.
+Existing public API/cookie tests            PASS 9 files / 18 tests
+  logs/public-api-tests.log; all also included in the full suite.
+
+Browser and hosted evidence:
+
+verify-live-parity.mjs      PASS 20 cases, equal content/title/behavior/requests;
+  all 40 top/bottom perceptual comparisons pass (threshold 0.1, zero allowed
+  different pixels after perceptual AA handling, no masks). 28 raw PNG pairs
+  exact; other 12 have 6-40 RGB pixels changed, maximum channel delta 1-2.
+verify-content-browser.mjs  PASS 20 published cases; text, h1, sampled styles
+  match old/shared Vite and Next; zero browser errors.
+verify-content-mobile.mjs   PASS 12 hosted template/mode/route cases at 390x844,
+  JavaScript disabled, no overflow/canvas/chat/model requests, R2 images decoded,
+  native home-to-products navigation works. No media/API mocks.
+verify-form-browser.mjs     PASS real staging consent reject/accept 201,
+  reopen/refresh persistence, lead 201, invalid lead 400; zero browser errors.
+  Both Glo3D/light and Luxury/dark receipts/success screenshots committed.
+Hosted raw capture          PASS 12 real published HTML documents, correct
+  single SEO set/h1; unknown/forged selector and unapproved-host 404.
+  Vercel normalizes injected forwarded-host; canonical stays unchanged.
+Hosted environment          PASS only Preview WEB_PREVIEW_* bindings;
+  staging project hapyyupeugxccofpibor authorization verified; no service key
+  or production credentials. Anonymous direct pages/page_revisions reads:
+  HTTP200 with zero visible rows. No production ref in captured published HTML.
+Client graph/output         PASS 15 client-reference manifests, 33 modules,
+  no admin/DB/server/config modules; actual 11 hosted JS chunks and 25 raw HTML
+  captures contain none of the configured credential values.
+R2 image response           PASS HTTP200, image/png, actual browser decoding.
+  Ordinary images do NOT prove GLB/texture CORS (later rollout gate).
+Actual deployed functions   PASS web: 6 entries /5 distinct IDs, conservative
+  6/12 headroom. Unchanged live Vite: 10/12 entries, 2 headroom.
+Production unchanged        PASS Vite/admin production IDs and build settings
+  match pre-change snapshot; production allowed-origin digests unchanged.
+
+Staging limitation: one real demo tenant and Luxury publication. Glo3D is a
+presentation override. Services/custom publications and extra active tenants
+exist ONLY as explicitly labelled deterministic local fixtures. No seeding,
+remote publication, database migration, production deployment or traffic cutover.
+
+Evidence text normalizes terminal carriage returns/trailing whitespace only;
+raw HTML and screenshot source comparisons are unchanged. The first 200 in
+the curl transcript is the HTTPS proxy CONNECT; the application response is 404.

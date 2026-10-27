@@ -12,10 +12,16 @@ export function proxy(request: NextRequest) {
       },
     });
   const vehicleApi = /^\/api\/vehicles(?:\/|$)/.test(request.nextUrl.pathname);
+  const mutationApi = ["/api/leads", "/api/consent"].includes(
+    request.nextUrl.pathname,
+  );
   if (
-    !["GET", "HEAD", ...(vehicleApi ? ["OPTIONS"] : [])].includes(
-      request.method,
-    )
+    ![
+      "GET",
+      "HEAD",
+      ...(vehicleApi ? ["OPTIONS"] : []),
+      ...(mutationApi ? ["POST", "OPTIONS"] : []),
+    ].includes(request.method)
   )
     return new NextResponse("Read-only preview", {
       status: 405,
@@ -30,7 +36,7 @@ export function proxy(request: NextRequest) {
     const forwarded = request.headers.get("x-forwarded-host");
     if (forwarded && hostname(forwarded) !== host) return fail();
     if (
-      (!vehicleApi && request.headers.has("x-lume-tenant")) ||
+      (!vehicleApi && !mutationApi && request.headers.has("x-lume-tenant")) ||
       request.headers.has("x-web-tenant")
     )
       return fail();
@@ -53,7 +59,12 @@ export function proxy(request: NextRequest) {
       !(root && host.endsWith(`.${root}`))
     )
       return fail();
-    return NextResponse.next();
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(
+      "x-web-request-path",
+      request.nextUrl.pathname + request.nextUrl.search,
+    );
+    return NextResponse.next({ request: { headers: requestHeaders } });
   } catch {
     return fail();
   }

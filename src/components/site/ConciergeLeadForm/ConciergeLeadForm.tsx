@@ -1,3 +1,4 @@
+import { ConciergeLeadFormView } from "@lume/blocks/react/ConciergeLeadForm";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
   botLeadFormSourceContext,
@@ -93,7 +94,8 @@ export function ConciergeLeadForm() {
     try {
       await submitLead({
         ...form,
-        ...(botSourceContext?.trigger === "bot-action" && botSourceContext.vehicleId
+        ...(botSourceContext?.trigger === "bot-action" &&
+        botSourceContext.vehicleId
           ? { vehicleId: botSourceContext.vehicleId }
           : {}),
         source: botSourceContext ? "chat" : "contact-form",
@@ -109,7 +111,8 @@ export function ConciergeLeadForm() {
     } catch (error) {
       setStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Unable to submit request.",
+        message:
+          error instanceof Error ? error.message : "Unable to submit request.",
       });
     } finally {
       if (TURNSTILE_SITE_KEY) {
@@ -120,100 +123,24 @@ export function ConciergeLeadForm() {
   }
 
   return (
-    <section
-      id="concierge-lead-form"
-      ref={formSectionRef}
-      className="contactPage__formSection"
-      aria-label="Dealership inquiry"
-      data-concierge-target="contact-lead-form"
-    >
-      <div>
-        <p className="contactPage__eyebrowSmall">Request information</p>
-        <h2>Continue with the dealership.</h2>
-      </div>
-      <form className="contactPage__form" onSubmit={handleSubmit}>
-        <div className="contactPage__formGrid">
-          <label>
-            <span>First name</span>
-            <input
-              ref={firstNameInputRef}
-              value={form.firstName}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, firstName: event.target.value }))
-              }
-              autoComplete="given-name"
-            />
-          </label>
-          <label>
-            <span>Last name</span>
-            <input
-              value={form.lastName}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, lastName: event.target.value }))
-              }
-              autoComplete="family-name"
-            />
-          </label>
-          <label>
-            <span>Email</span>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, email: event.target.value }))
-              }
-              autoComplete="email"
-            />
-          </label>
-          <label>
-            <span>Phone</span>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, phone: event.target.value }))
-              }
-              autoComplete="tel"
-            />
-          </label>
-        </div>
-        <label className="contactPage__messageField">
-          <span>How can we help?</span>
-          <textarea
-            value={form.message}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, message: event.target.value }))
-            }
-            rows={5}
-          />
-        </label>
-        {TURNSTILE_SITE_KEY ? (
+    <ConciergeLeadFormView
+      formSectionRef={formSectionRef}
+      firstNameInputRef={firstNameInputRef}
+      form={form}
+      setForm={setForm}
+      handleSubmit={handleSubmit}
+      status={status}
+      verificationPending={Boolean(TURNSTILE_SITE_KEY) && !turnstileToken}
+      verification={
+        TURNSTILE_SITE_KEY ? (
           <TurnstileWidget
             key={turnstileResetKey}
             siteKey={TURNSTILE_SITE_KEY}
             onToken={setTurnstileToken}
           />
-        ) : null}
-        {status.message ? (
-          <p
-            className={`contactPage__formStatus contactPage__formStatus--${status.type}`}
-            role={status.type === "error" ? "alert" : "status"}
-          >
-            {status.message}
-          </p>
-        ) : null}
-        <button
-          type="submit"
-          className="contactPage__submit"
-          disabled={
-            status.type === "submitting" ||
-            (Boolean(TURNSTILE_SITE_KEY) && !turnstileToken)
-          }
-        >
-          {status.type === "submitting" ? "Sending…" : "Submit request"}
-        </button>
-      </form>
-    </section>
+        ) : null
+      }
+    />
   );
 }
 

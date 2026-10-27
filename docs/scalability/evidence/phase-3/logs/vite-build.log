@@ -1,0 +1,100 @@
+
+> lume-cinematic-showcase@0.0.0 build
+> tsc && vite build
+
+vite v5.4.21 building for production...
+(node:19083) [vite-plugin-glsl] Warning: 'esbuild' was not found.
+Please install it as a dev dependency if your vite version does not use rolldown.
+(Use `node --trace-warnings ...` to show where the warning was created)
+transforming...
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+
+../assets/fonts/montserrat/Montserrat-Regular.otf referenced in ../assets/fonts/montserrat/Montserrat-Regular.otf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+
+../assets/fonts/montserrat/Montserrat-Light.otf referenced in ../assets/fonts/montserrat/Montserrat-Light.otf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+✓ 3487 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                             4.25 kB │ gzip:   1.63 kB
+dist/assets/Bat - Halloween-aYto_G6d.webm                  28.20 kB
+dist/assets/Mileast-B7B0Spo_.otf                           29.98 kB
+dist/assets/Moralana DEMO-BVrLp7YT.otf                     38.84 kB
+dist/assets/Higher Jump-ByqZXRv_.ttf                    1,854.79 kB
+dist/assets/lume-homepage-background-BgUjzgvS.png       1,906.38 kB
+dist/assets/AdminRouter-dvv3f2xV.css                        0.78 kB │ gzip:   0.39 kB
+dist/assets/CinematicShell-x5mxCGUx.css                     1.39 kB │ gzip:   0.52 kB
+dist/assets/index-D3KoXjLi.css                              1.74 kB │ gzip:   0.67 kB
+dist/assets/PageRenderer-Bc_LQATc.css                       2.06 kB │ gzip:   0.70 kB
+dist/assets/index-CYn16e2o.css                              2.08 kB │ gzip:   0.86 kB
+dist/assets/ShowcasePage-j6fZTK9b.css                       2.34 kB │ gzip:   0.93 kB
+dist/assets/SiteFooter-IA7JJ_AV.css                         2.73 kB │ gzip:   0.86 kB
+dist/assets/index-DSkFyNft.css                              4.05 kB │ gzip:   1.34 kB
+dist/assets/index-DERObB8X.css                              4.77 kB │ gzip:   1.37 kB
+dist/assets/ContactPage-BDh44sam.css                        4.82 kB │ gzip:   1.40 kB
+dist/assets/index-Dgm8k8VC.css                              8.36 kB │ gzip:   2.10 kB
+dist/assets/selectors-Ckvam-TT.css                          9.13 kB │ gzip:   2.63 kB
+dist/assets/index-CPHn-8jp.css                              9.25 kB │ gzip:   2.21 kB
+dist/assets/index-DpRP0A4t.css                              9.75 kB │ gzip:   2.30 kB
+dist/assets/TemplateConversionPanel-DVWWECoR.css            9.89 kB │ gzip:   2.33 kB
+dist/assets/ProductsPage-BWv_FkVP.css                      10.53 kB │ gzip:   2.85 kB
+dist/assets/OllamaChat-CwT49HH_.css                        11.19 kB │ gzip:   2.65 kB
+dist/assets/registerBlocks-C1U5GOZZ.css                    19.32 kB │ gzip:   4.17 kB
+dist/assets/DealershipForms-oEqU5tWH.css                   20.24 kB │ gzip:   4.04 kB
+dist/assets/VehicleFilters-C2UgtaEH.css                    23.91 kB │ gzip:   5.11 kB
+dist/assets/Experience-CxDvi_H0.css                        35.04 kB │ gzip:   7.51 kB
+dist/assets/index-B2NKuAeQ.css                            232.43 kB │ gzip:  37.22 kB
+dist/assets/ShowcasePage.sounds-CZyeptLK.js                 0.09 kB │ gzip:   0.09 kB
+dist/assets/productModel-CYRf-olS.js                        0.11 kB │ gzip:   0.11 kB
+dist/assets/ProductsPage-BPIM_4AA.js                        0.12 kB │ gzip:   0.11 kB
+dist/assets/ContactPage-dj1lMZMd.js                         0.14 kB │ gzip:   0.14 kB
+dist/assets/prefetch-CNhKQz6_.js                            0.16 kB │ gzip:   0.16 kB
+dist/assets/CinematicShell-CYOg8dbf.js                      0.68 kB │ gzip:   0.37 kB
+dist/assets/use-in-view-tkjAkgVr.js                         0.81 kB │ gzip:   0.47 kB
+dist/assets/send-B16gcdjC.js                                1.09 kB │ gzip:   0.48 kB
+dist/assets/VehiclesPageRendererRoute-DYgkEl7s.js           1.21 kB │ gzip:   0.62 kB
+dist/assets/index-TehFjZ1G.js                               1.46 kB │ gzip:   0.66 kB
+dist/assets/VehicleDetailPageRendererRoute-CylKjp6R.js      1.66 kB │ gzip:   0.74 kB
+dist/assets/hover-border-gradient-Bp8CvMps.js               1.68 kB │ gzip:   0.85 kB
+dist/assets/AdminRouter-BxmH_qTM.js                         2.29 kB │ gzip:   1.07 kB
+dist/assets/index-HTBNd350.js                               2.40 kB │ gzip:   1.05 kB
+dist/assets/selectors-DqSmWZ0T.js                           2.53 kB │ gzip:   1.13 kB
+dist/assets/PagePreviewBridge-BrirVqMV.js                   2.60 kB │ gzip:   1.38 kB
+dist/assets/PageRendererRoutes-CS4gd7l0.js                  3.03 kB │ gzip:   1.04 kB
+dist/assets/index-BY2kLkaa.js                               3.41 kB │ gzip:   1.28 kB
+dist/assets/ConciergeLeadForm-C9n5nk_1.js                   3.62 kB │ gzip:   1.44 kB
+dist/assets/index-h6PRBdMR.js                               3.82 kB │ gzip:   1.52 kB
+dist/assets/index-D7pnNYg3.js                               3.85 kB │ gzip:   1.63 kB
+dist/assets/StoryProvider-WZnJRHyA.js                       4.92 kB │ gzip:   1.74 kB
+dist/assets/catalog-DF35hro6.js                             4.97 kB │ gzip:   1.78 kB
+dist/assets/index-BbCKU_tJ.js                               7.45 kB │ gzip:   2.80 kB
+dist/assets/SiteFooter-BGSUbhLw.js                          8.18 kB │ gzip:   3.01 kB
+dist/assets/TemplateConversionPanel-CeVMn4FQ.js             8.33 kB │ gzip:   3.03 kB
+dist/assets/PageRenderer-DE-q0m2E.js                        8.94 kB │ gzip:   3.49 kB
+dist/assets/GlowingEffect-BJ5D-hmQ.js                       9.94 kB │ gzip:   4.15 kB
+dist/assets/index-e1GiCskF.js                              11.77 kB │ gzip:   3.24 kB
+dist/assets/index-DctXEPbm.js                              12.34 kB │ gzip:   4.10 kB
+dist/assets/index-DrcdUi4m.js                              15.10 kB │ gzip:   5.20 kB
+dist/assets/index-DZWKNw2w.js                              16.56 kB │ gzip:   6.48 kB
+dist/assets/DealershipForms-D9w3yaEp.js                    17.94 kB │ gzip:   4.81 kB
+dist/assets/OllamaChat-Wt0R0iN0.js                         23.82 kB │ gzip:   8.73 kB
+dist/assets/index-oVd51HYN.js                              45.17 kB │ gzip:  14.72 kB
+dist/assets/index-SFc2wnMY.js                              70.44 kB │ gzip:  27.81 kB
+dist/assets/Experience-YrfFnY5N.js                        126.05 kB │ gzip:  45.18 kB
+dist/assets/VehicleFilters-DIzw-96i.js                    131.28 kB │ gzip:  51.31 kB
+dist/assets/registerBlocks-BdkjPuEi.js                    173.47 kB │ gzip:  47.48 kB
+dist/assets/CanvasErrorBoundary-BEExd5Ev.js               892.33 kB │ gzip: 242.38 kB
+dist/assets/index-DqdmyiMO.js                           1,072.99 kB │ gzip: 335.36 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.54s
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

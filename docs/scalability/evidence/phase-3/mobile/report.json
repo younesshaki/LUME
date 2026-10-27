@@ -1,0 +1,374 @@
+{
+  "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+  "javaScriptEnabled": false,
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "cases": [
+    {
+      "template": "luxury",
+      "theme": "light",
+      "route": "home",
+      "status": 200,
+      "title": "LUME",
+      "h1": [
+        "Luxury versions of everyday energy."
+      ],
+      "contentLength": 414,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/starbucksLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLfemmeLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        }
+      ],
+      "publishedRevision": "47ddcda2-1d23-4d83-a0dc-0ce56653c08e",
+      "screenshot": "luxury-light-home.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": true
+    },
+    {
+      "template": "luxury",
+      "theme": "light",
+      "route": "contact",
+      "status": 200,
+      "title": "Access — LUME",
+      "h1": [
+        "LUME is not found. It is entered by invitation."
+      ],
+      "contentLength": 1224,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [],
+      "publishedRevision": "c1dc761b-e268-44b3-922d-187da252c01d",
+      "screenshot": "luxury-light-contact.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": false
+    },
+    {
+      "template": "luxury",
+      "theme": "light",
+      "route": "products",
+      "status": 200,
+      "title": "Products — LUME",
+      "h1": [
+        "Products"
+      ],
+      "contentLength": 593,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/starbucksLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLfemmeLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLmenLUME.png",
+          "loaded": true
+        }
+      ],
+      "publishedRevision": "ed2755c7-be9c-4add-a9e1-23205dc59420",
+      "screenshot": "luxury-light-products.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": false
+    },
+    {
+      "template": "luxury",
+      "theme": "dark",
+      "route": "home",
+      "status": 200,
+      "title": "LUME",
+      "h1": [
+        "Luxury versions of everyday energy."
+      ],
+      "contentLength": 414,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/starbucksLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLfemmeLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        }
+      ],
+      "publishedRevision": "47ddcda2-1d23-4d83-a0dc-0ce56653c08e",
+      "screenshot": "luxury-dark-home.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": true
+    },
+    {
+      "template": "luxury",
+      "theme": "dark",
+      "route": "contact",
+      "status": 200,
+      "title": "Access — LUME",
+      "h1": [
+        "LUME is not found. It is entered by invitation."
+      ],
+      "contentLength": 1224,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [],
+      "publishedRevision": "c1dc761b-e268-44b3-922d-187da252c01d",
+      "screenshot": "luxury-dark-contact.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": false
+    },
+    {
+      "template": "luxury",
+      "theme": "dark",
+      "route": "products",
+      "status": 200,
+      "title": "Products — LUME",
+      "h1": [
+        "Products"
+      ],
+      "contentLength": 593,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/starbucksLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLfemmeLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLmenLUME.png",
+          "loaded": true
+        }
+      ],
+      "publishedRevision": "ed2755c7-be9c-4add-a9e1-23205dc59420",
+      "screenshot": "luxury-dark-products.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": false
+    },
+    {
+      "template": "glo3d",
+      "theme": "light",
+      "route": "home",
+      "status": 200,
+      "title": "LUME",
+      "h1": [
+        "Luxury versions of everyday energy."
+      ],
+      "contentLength": 414,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/starbucksLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLfemmeLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        }
+      ],
+      "publishedRevision": "47ddcda2-1d23-4d83-a0dc-0ce56653c08e",
+      "screenshot": "glo3d-light-home.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": true
+    },
+    {
+      "template": "glo3d",
+      "theme": "light",
+      "route": "contact",
+      "status": 200,
+      "title": "Access — LUME",
+      "h1": [
+        "LUME is not found. It is entered by invitation."
+      ],
+      "contentLength": 1224,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [],
+      "publishedRevision": "c1dc761b-e268-44b3-922d-187da252c01d",
+      "screenshot": "glo3d-light-contact.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": false
+    },
+    {
+      "template": "glo3d",
+      "theme": "light",
+      "route": "products",
+      "status": 200,
+      "title": "Products — LUME",
+      "h1": [
+        "Products"
+      ],
+      "contentLength": 593,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/starbucksLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLfemmeLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLmenLUME.png",
+          "loaded": true
+        }
+      ],
+      "publishedRevision": "ed2755c7-be9c-4add-a9e1-23205dc59420",
+      "screenshot": "glo3d-light-products.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": false
+    },
+    {
+      "template": "glo3d",
+      "theme": "dark",
+      "route": "home",
+      "status": 200,
+      "title": "LUME",
+      "h1": [
+        "Luxury versions of everyday energy."
+      ],
+      "contentLength": 414,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/starbucksLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLfemmeLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        }
+      ],
+      "publishedRevision": "47ddcda2-1d23-4d83-a0dc-0ce56653c08e",
+      "screenshot": "glo3d-dark-home.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": true
+    },
+    {
+      "template": "glo3d",
+      "theme": "dark",
+      "route": "contact",
+      "status": 200,
+      "title": "Access — LUME",
+      "h1": [
+        "LUME is not found. It is entered by invitation."
+      ],
+      "contentLength": 1224,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [],
+      "publishedRevision": "c1dc761b-e268-44b3-922d-187da252c01d",
+      "screenshot": "glo3d-dark-contact.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": false
+    },
+    {
+      "template": "glo3d",
+      "theme": "dark",
+      "route": "products",
+      "status": 200,
+      "title": "Products — LUME",
+      "h1": [
+        "Products"
+      ],
+      "contentLength": 593,
+      "width": 390,
+      "viewport": 390,
+      "canvasCount": 0,
+      "images": [
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/blackredbullcycles.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/starbucksLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLfemmeLUME.png",
+          "loaded": true
+        },
+        {
+          "src": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/YSLmenLUME.png",
+          "loaded": true
+        }
+      ],
+      "publishedRevision": "ed2755c7-be9c-4add-a9e1-23205dc59420",
+      "screenshot": "glo3d-dark-products.jpg",
+      "chatOrModelRequests": 0,
+      "nativeProductsLinkWorked": false
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "forged-tenant-header",
+  "path": "/contact?tenant=demo",
+  "status": 404,
+  "headers": {
+    "cache-control": "private, no-store, max-age=0",
+    "content-type": "text/plain;charset=UTF-8",
+    "x-robots-tag": "noindex, nofollow, noarchive"
+  },
+  "bytes": 17
+}

@@ -1,0 +1,318 @@
+{
+  "projectRef": "hapyyupeugxccofpibor",
+  "tenant": {
+    "id": "2de52a45-bc2b-451c-994c-02208b994e26",
+    "slug": "demo",
+    "name": "LUME Demo",
+    "status": "active"
+  },
+  "nav": [
+    {
+      "slug": "home",
+      "title": "Home",
+      "nav_order": 0
+    },
+    {
+      "slug": "products",
+      "title": "Products",
+      "nav_order": 1
+    },
+    {
+      "slug": "vehicles",
+      "title": "Vehicles",
+      "nav_order": 2
+    },
+    {
+      "slug": "showcase",
+      "title": "Showcase",
+      "nav_order": 3
+    },
+    {
+      "slug": "contact",
+      "title": "Contact",
+      "nav_order": 4
+    }
+  ],
+  "pages": [
+    {
+      "slug": "home",
+      "page": {
+        "id": "f8505dc6-7e7d-4aac-ac8a-b1759548341d",
+        "slug": "home",
+        "title": "Home",
+        "seo_meta": {
+          "title": "LUME",
+          "description": "Luxury versions of everyday energy."
+        },
+        "blocks": {
+          "blocks": [
+            {
+              "id": "home-hero",
+              "type": "hero",
+              "props": {
+                "title": "Luxury versions of everyday energy.",
+                "eyebrow": "",
+                "subtitle": "LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling.",
+                "backgroundImageKey": ""
+              }
+            },
+            {
+              "id": "home-showcase",
+              "type": "showcase-gallery",
+              "props": {
+                "title": "",
+                "chapterIds": [
+                  "showcase-chapter-1",
+                  "showcase-chapter-2",
+                  "showcase-chapter-3"
+                ]
+              }
+            },
+            {
+              "id": "home-feature",
+              "type": "feature-band",
+              "props": {
+                "body": "The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression.",
+                "kicker": "Product Language",
+                "heading": "Energy, treated like an object of desire.",
+                "mediaAlt": "Black and gold LUME product concept",
+                "mediaKey": "blackredbullcycles.png"
+              }
+            }
+          ],
+          "version": 1
+        },
+        "published_revision_id": "47ddcda2-1d23-4d83-a0dc-0ce56653c08e"
+      }
+    },
+    {
+      "slug": "contact",
+      "page": {
+        "id": "0d614e55-a692-4650-bb9f-b93ec71dcff7",
+        "slug": "contact",
+        "title": "Contact",
+        "seo_meta": {
+          "title": "Access — LUME",
+          "description": "LUME is not found. It is entered by invitation."
+        },
+        "blocks": {
+          "blocks": [
+            {
+              "id": "contact-hero",
+              "type": "hero",
+              "props": {
+                "title": "LUME is not found. It is entered by invitation.",
+                "eyebrow": "Access",
+                "subtitle": "LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is.",
+                "backgroundImageKey": ""
+              }
+            },
+            {
+              "id": "contact-statements",
+              "type": "statement-list",
+              "props": {
+                "items": [
+                  {
+                    "body": "Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition.",
+                    "label": "01"
+                  },
+                  {
+                    "body": "Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience.",
+                    "label": "02"
+                  },
+                  {
+                    "body": "Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there.",
+                    "label": "03"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "contact-closing",
+              "type": "rich-text",
+              "props": {
+                "body": "For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world."
+              }
+            }
+          ],
+          "version": 1
+        },
+        "published_revision_id": "c1dc761b-e268-44b3-922d-187da252c01d"
+      }
+    },
+    {
+      "slug": "products",
+      "page": {
+        "id": "5445720f-5e5f-4386-be0d-1d9f06b3e0e8",
+        "slug": "products",
+        "title": "Products",
+        "seo_meta": {
+          "title": "Products — LUME",
+          "description": "Objects that exist only within LUME. Collaborations with the world's most recognised brands."
+        },
+        "blocks": {
+          "blocks": [
+            {
+              "id": "products-hero",
+              "type": "hero",
+              "props": {
+                "title": "Products",
+                "eyebrow": "Exclusive Editions",
+                "subtitle": "Objects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale.",
+                "backgroundImageKey": ""
+              }
+            },
+            {
+              "id": "products-grid",
+              "type": "product-grid",
+              "props": {
+                "title": "",
+                "subtitle": "",
+                "categories": []
+              }
+            }
+          ],
+          "version": 1
+        },
+        "published_revision_id": "ed2755c7-be9c-4add-a9e1-23205dc59420"
+      }
+    },
+    {
+      "slug": "services",
+      "page": null
+    },
+    {
+      "slug": "vehicles",
+      "page": {
+        "id": "1b4cf2ae-4348-4430-b4d5-a620f93683cd",
+        "slug": "vehicles",
+        "title": "Vehicles",
+        "seo_meta": {
+          "title": "Vehicles — LUME"
+        },
+        "blocks": {
+          "blocks": [
+            {
+              "id": "vehicles-hero",
+              "type": "hero",
+              "props": {
+                "title": "Vehicles",
+                "eyebrow": "",
+                "subtitle": "",
+                "backgroundImageKey": ""
+              }
+            },
+            {
+              "id": "vehicles-inventory",
+              "type": "vehicle-inventory",
+              "props": {
+                "title": "",
+                "showFilters": true
+              }
+            }
+          ],
+          "version": 1
+        },
+        "published_revision_id": "25dfd1e1-b56e-4485-8f09-885253b34ed7"
+      }
+    },
+    {
+      "slug": "showcase",
+      "page": {
+        "id": "c5e21f2f-8414-40b5-ae89-399bc07f1a23",
+        "slug": "showcase",
+        "title": "Showcase",
+        "seo_meta": {
+          "title": "Showcase — LUME",
+          "description": "Dedicated cinematic product stories."
+        },
+        "blocks": {
+          "blocks": [
+            {
+              "id": "showcase-hero",
+              "type": "hero",
+              "props": {
+                "title": "Showcase",
+                "eyebrow": "Cinematic Entries",
+                "subtitle": "Dedicated cinematic product stories. These entries start with the LUME title card before loading the full experience.",
+                "backgroundImageKey": ""
+              }
+            },
+            {
+              "id": "showcase-gallery",
+              "type": "showcase-gallery",
+              "props": {
+                "title": "",
+                "chapterIds": [
+                  "showcase-chapter-1",
+                  "showcase-chapter-2",
+                  "showcase-chapter-3"
+                ]
+              }
+            }
+          ],
+          "version": 1
+        },
+        "published_revision_id": "4b2226dc-2b86-4fc4-9f5d-6b51b98fa754"
+      }
+    },
+    {
+      "slug": "vehicle",
+      "page": null
+    }
+  ],
+  "design": [
+    {
+      "theme": {
+        "modes": {
+          "dark": {
+            "colors": {
+              "ink": "#fff8ec",
+              "gold": "#d9b76a",
+              "line": "#3a3328",
+              "soft": "#8a806d",
+              "muted": "#c7bda8",
+              "panel": "#101011",
+              "background": "#000000",
+              "dockItemColor": "#efede6",
+              "dockItemBorder": "#e9c31b",
+              "dockItemBackground": "#272727"
+            }
+          },
+          "light": {
+            "assets": {
+              "siteBackground": {
+                "overlayColor": "#ffd500",
+                "overlayOpacity": 0.2
+              }
+            },
+            "colors": {}
+          }
+        },
+        "shared": {
+          "fonts": {
+            "body": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "experience": "var(--scene-font-moralana)"
+          },
+          "dockVariant": "default",
+          "cinematicIntensity": 1
+        },
+        "branding": {
+          "logoUrl": "https://atsgdjwjtmqvtotbrowu.supabase.co/storage/v1/object/public/tenant-logos/efab59f0-c566-42dc-96d9-d40a6ad2a2f3/branding/logo?v=1784244932162",
+          "favicon192Url": "https://atsgdjwjtmqvtotbrowu.supabase.co/storage/v1/object/public/tenant-logos/efab59f0-c566-42dc-96d9-d40a6ad2a2f3/branding/favicon-192?v=1784245517731"
+        },
+        "template": {
+          "key": "luxury",
+          "version": 1
+        },
+        "navLoader": {
+          "enabled": true
+        },
+        "schemaVersion": 2,
+        "vehiclePricing": {
+          "showPriceReductionSignal": false
+        }
+      }
+    }
+  ]
+}

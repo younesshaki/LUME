@@ -1,10 +1,6 @@
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { VehicleCardView } from "@lume/blocks/react/VehicleCard";
+import { VehicleCollectionView } from "@lume/blocks/react/VehicleCollection";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import {
@@ -41,7 +37,10 @@ function useVehicleCollection(
   const make = stringProp(block, "make");
   const bodyStyle = stringProp(block, "bodyStyle");
   const priceMax = Math.max(0, numberProp(block, "priceMax"));
-  const maxItems = Math.min(12, Math.max(1, Math.round(numberProp(block, "maxItems", 6))));
+  const maxItems = Math.min(
+    12,
+    Math.max(1, Math.round(numberProp(block, "maxItems", 6))),
+  );
   const [state, setState] = useState<CollectionState>({
     status: "loading",
     vehicles: [],
@@ -57,7 +56,9 @@ function useVehicleCollection(
           curatedIds.length > 0
             ? (
                 await Promise.allSettled(
-                  curatedIds.slice(0, maxItems).map((id) => loadVehicleById(id)),
+                  curatedIds
+                    .slice(0, maxItems)
+                    .map((id) => loadVehicleById(id)),
                 )
               ).flatMap((result) =>
                 result.status === "fulfilled" && result.value
@@ -102,6 +103,7 @@ function VehicleCollection({
   const collection = useVehicleCollection(block, sort);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const scrollerId = useId();
+  const headingId = useId();
   const reduceMotion = useReducedMotion();
 
   function scroll(direction: -1 | 1) {
@@ -120,7 +122,10 @@ function VehicleCollection({
   }
 
   const controls = (
-    <div className="vehicleCarousel__controls" aria-label="Vehicle carousel controls">
+    <div
+      className="vehicleCarousel__controls"
+      aria-label="Vehicle carousel controls"
+    >
       <button
         type="button"
         aria-label="Previous vehicles"
@@ -141,43 +146,18 @@ function VehicleCollection({
   );
 
   return (
-    <DealershipSection
+    <VehicleCollectionView
       block={block}
-      className="dealershipBlock--vehicles"
-      headerAside={controls}
-    >
-      {collection.status === "loading" ? (
-        <p className="dealershipBlock__empty" role="status">Loading vehicles…</p>
-      ) : collection.status === "error" ? (
-        <p className="dealershipBlock__empty" role="alert">
-          The live collection is temporarily unavailable.
-        </p>
-      ) : collection.vehicles.length === 0 ? (
-        <p className="dealershipBlock__empty" role="status">
-          No live vehicles match this selection yet.
-        </p>
-      ) : (
-        <div
-          id={scrollerId}
-          ref={scrollerRef}
-          className="vehicleCarousel"
-          role="region"
-          aria-label="Featured vehicles"
-          tabIndex={0}
-          onKeyDown={handleKeyDown}
-        >
-          {collection.vehicles.map((vehicle) => (
-            <VehicleCard key={vehicle.id} vehicle={vehicle} />
-          ))}
-        </div>
-      )}
-      <div className="dealershipBlock__footerAction">
-        <DealershipActionLink href="/vehicles" secondary>
-          {stringProp(block, "ctaLabel")}
-          <ArrowRight aria-hidden="true" />
-        </DealershipActionLink>
-      </div>
-    </DealershipSection>
+      headingId={headingId}
+      collection={collection}
+      scrollerId={scrollerId}
+      scrollerRef={scrollerRef}
+      controls={controls}
+      onKeyDown={handleKeyDown}
+      cards={collection.vehicles.map((vehicle) => (
+        <VehicleCard key={vehicle.id} vehicle={vehicle} />
+      ))}
+    />
   );
 }
 
@@ -186,31 +166,12 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
   const vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
 
   return (
-    <article className="vehicleCarousel__card">
-      <a href={`/vehicles/${encodeURIComponent(vehicle.id)}`}>
-        <div className="vehicleCarousel__media">
-          {image ? (
-            <img
-              src={image}
-              alt={vehicle.primaryImageAlt || vehicleName}
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <span aria-hidden="true">{vehicle.make}</span>
-          )}
-        </div>
-        <div className="vehicleCarousel__copy">
-          <p>{vehicle.year}</p>
-          <h3 className="dealershipVehicleCard__title">
-            <MakeLogo make={vehicle.make} size={18} />
-            {vehicle.make} {vehicle.model}
-          </h3>
-          {vehicle.trim ? <span>{vehicle.trim}</span> : null}
-          <strong>{formatVehiclePrice(vehicle.price)}</strong>
-        </div>
-      </a>
-    </article>
+    <VehicleCardView
+      vehicle={vehicle}
+      image={image}
+      price={formatVehiclePrice(vehicle.price)}
+      href={`/vehicles/${encodeURIComponent(vehicle.id)}`}
+    />
   );
 }
 
@@ -238,21 +199,4 @@ export function VehicleSearchBand({ block }: BlockComponentProps) {
   );
 }
 
-export function VehicleSpecTable({ block }: BlockComponentProps) {
-  const items = labelBodyItemsProp(block);
-
-  return (
-    <DealershipSection block={block} className="dealershipBlock--specs">
-      <div className="vehicleSpecTable">
-        <dl>
-          {items.map((item, index) => (
-            <div key={`${item.label}-${index}`}>
-              <dt>{item.label}</dt>
-              <dd>{item.body}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </DealershipSection>
-  );
-}
+export { VehicleSpecTable } from "@lume/blocks/react/VehicleSpecTable";

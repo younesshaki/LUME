@@ -1,0 +1,13 @@
+{
+  "name": "glo3d-dark-home",
+  "path": "/?tenant=demo&template=glo3d&theme=dark",
+  "status": 200,
+  "headers": {
+    "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+    "content-type": "text/html; charset=utf-8",
+    "x-robots-tag": "noindex, nofollow, noarchive",
+    "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "x-vercel-cache": "MISS"
+  },
+  "bytes": 19279
+}

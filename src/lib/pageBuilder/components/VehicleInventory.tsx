@@ -1,3 +1,5 @@
+import { MarketplaceCardView } from "@lume/blocks/react/MarketplaceCard";
+import { VehicleInventoryView } from "@lume/blocks/react/VehicleInventory";
 import {
   CSSProperties,
   MouseEvent,
@@ -33,7 +35,10 @@ import {
   vehicleFiltersFromBotAction,
   vehicleResultLimitFromBotAction,
 } from "@/lib/botActionConsumers";
-import { readVehicleUrlState, writeVehicleUrlState } from "@/experience/vehicles/urlState";
+import {
+  readVehicleUrlState,
+  writeVehicleUrlState,
+} from "@/experience/vehicles/urlState";
 import { ROUTE_PATHS } from "@/app-shell/routePaths";
 import { useBotAction } from "@/lib/useBotAction";
 import { useSound } from "@/lib/sound";
@@ -71,12 +76,6 @@ function scheduleAfterPaint(callback: () => void): () => void {
     window.cancelAnimationFrame(firstFrame);
     if (secondFrame) window.cancelAnimationFrame(secondFrame);
   };
-}
-
-function formatMileage(miles: number | null): string {
-  if (miles === null) return "N/A";
-  if (miles === 0) return "New";
-  return `${miles.toLocaleString()} mi`;
 }
 
 function readStoredIds(key: string): string[] {
@@ -176,119 +175,51 @@ function VehicleCard({
   };
 
   return (
-    <article
-      className={[
-        "vehiclesPage__card",
-        cardStyle === "notch" && "vehiclesPage__card--notch",
-        cardStyle === "bento" && "vehiclesPage__card--bento",
-        isBentoFeatured && "vehiclesPage__card--bento-featured",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      style={
-        cardStyle === "notch" || cardStyle === "bento"
-          ? ({ "--vehicle-card-accent": cardColor } as CSSProperties &
-              Record<"--vehicle-card-accent", string>)
-          : undefined
+    <MarketplaceCardView
+      vehicle={vehicle}
+      image={vehicleDisplayImage(vehicle)}
+      price={formatVehiclePrice(vehicle.price)}
+      cardStyle={cardStyle}
+      cardColor={cardColor}
+      index={index}
+      onHover={() => play(vehiclePageSoundActions.cardHover)}
+      onMouseMove={handleMouseMove as React.MouseEventHandler<HTMLElement>}
+      actions={
+        <div className="vehiclesPage__cardActions">
+          <button
+            type="button"
+            className="vehiclesPage__detailsBtn"
+            onClick={() => {
+              play(vehiclePageSoundActions.cardOpen);
+              onViewDetails();
+            }}
+          >
+            View details
+          </button>
+          <IconButton
+            label={saved ? "Remove saved vehicle" : "Save vehicle"}
+            active={saved}
+            onClick={() => {
+              play(vehiclePageSoundActions.saveToggle);
+              onToggleSaved();
+            }}
+          >
+            <Heart size={16} fill={saved ? "currentColor" : "none"} />
+          </IconButton>
+          <IconButton
+            label={compared ? "Remove from compare" : "Add to compare"}
+            active={compared}
+            disabled={compareDisabled}
+            onClick={() => {
+              play(vehiclePageSoundActions.compareToggle);
+              onToggleCompare();
+            }}
+          >
+            {compared ? <Check size={16} /> : <GitCompare size={16} />}
+          </IconButton>
+        </div>
       }
-      onMouseEnter={() => play(vehiclePageSoundActions.cardHover)}
-      onMouseMove={handleMouseMove}
-    >
-      <div className="vehiclesPage__cardImage">
-        {vehicleDisplayImage(vehicle) ? (
-          <img
-            src={vehicleDisplayImage(vehicle)}
-            alt={
-              vehicle.primaryImageAlt ||
-              `${vehicle.year} ${vehicle.make} ${vehicle.model}`
-            }
-          />
-        ) : (
-          <div className="vehiclesPage__cardImagePlaceholder">
-            <span>{vehicle.make}</span>
-          </div>
-        )}
-        {vehicle.isSpecial && (
-          <span className="vehiclesPage__badge vehiclesPage__badge--special">
-            Special
-          </span>
-        )}
-        <span
-          className={`vehiclesPage__badge vehiclesPage__badge--${vehicle.stockType.toLowerCase()} ${vehicle.isSpecial ? "vehiclesPage__badge--stockOffset" : ""}`}
-        >
-          {vehicle.stockType}
-        </span>
-      </div>
-
-      <div className="vehiclesPage__cardBody">
-        <p className="vehiclesPage__cardYear">{vehicle.year}</p>
-        <h2 className="vehiclesPage__cardTitle">
-          {/* Decorative: the make is written immediately after it. */}
-          <MakeLogo make={vehicle.make} size={22} className="vehiclesPage__cardMark" />
-          {vehicle.make} {vehicle.model}
-        </h2>
-        {vehicle.trim && (
-          <p className="vehiclesPage__cardTrim">{vehicle.trim}</p>
-        )}
-      </div>
-
-      <div className="vehiclesPage__cardMeta" aria-label="Vehicle details">
-        <span className="vehiclesPage__cardStat">
-          {formatMileage(vehicle.mileage)}
-        </span>
-        {vehicle.fuelType && (
-          <span className="vehiclesPage__cardStat">{vehicle.fuelType}</span>
-        )}
-        {vehicle.drivetrain && (
-          <span className="vehiclesPage__cardStat">{vehicle.drivetrain}</span>
-        )}
-      </div>
-
-      <div className="vehiclesPage__cardFooter">
-        <span className="vehiclesPage__cardPrice">
-          {formatVehiclePrice(vehicle.price)}
-        </span>
-        {vehicle.sellerCity && (
-          <span className="vehiclesPage__cardLocation">
-            {vehicle.sellerCity}, {vehicle.sellerState}
-          </span>
-        )}
-      </div>
-
-      <div className="vehiclesPage__cardActions">
-        <button
-          type="button"
-          className="vehiclesPage__detailsBtn"
-          onClick={() => {
-            play(vehiclePageSoundActions.cardOpen);
-            onViewDetails();
-          }}
-        >
-          View details
-        </button>
-        <IconButton
-          label={saved ? "Remove saved vehicle" : "Save vehicle"}
-          active={saved}
-          onClick={() => {
-            play(vehiclePageSoundActions.saveToggle);
-            onToggleSaved();
-          }}
-        >
-          <Heart size={16} fill={saved ? "currentColor" : "none"} />
-        </IconButton>
-        <IconButton
-          label={compared ? "Remove from compare" : "Add to compare"}
-          active={compared}
-          disabled={compareDisabled}
-          onClick={() => {
-            play(vehiclePageSoundActions.compareToggle);
-            onToggleCompare();
-          }}
-        >
-          {compared ? <Check size={16} /> : <GitCompare size={16} />}
-        </IconButton>
-      </div>
-    </article>
+    />
   );
 }
 
@@ -488,15 +419,20 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   // #vehicles hash when it's actually driving the /vehicles route — writing
   // it from an embedded instance would hijack an unrelated page's URL.
   useEffect(() => {
-    if (typeof window === "undefined" || window.location.pathname !== ROUTE_PATHS.vehicles) return;
+    if (
+      typeof window === "undefined" ||
+      window.location.pathname !== ROUTE_PATHS.vehicles
+    )
+      return;
     writeVehicleUrlState(filters, sort, effectivePage, resultLimit);
   }, [effectivePage, filters, resultLimit, sort]);
 
-  const visibleTotalCount = totalCount === null
-    ? null
-    : resultLimit === null
-      ? totalCount
-      : Math.min(totalCount, resultLimit);
+  const visibleTotalCount =
+    totalCount === null
+      ? null
+      : resultLimit === null
+        ? totalCount
+        : Math.min(totalCount, resultLimit);
 
   const totalPages =
     visibleTotalCount === null
@@ -563,19 +499,16 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
   };
 
   return (
-    <section className="vehicleInventoryBlock">
-      {title && (
-        <div className="vehiclesPage__hero">
-          <div className="vehiclesPage__lamp" aria-hidden="true" />
-          <h2 className="vehiclesPage__title">{title}</h2>
-        </div>
-      )}
-
-      {loadError ? (
-        <div className="vehiclesPage__error">
-          <p>Unable to load vehicle inventory. Please refresh to try again.</p>
-        </div>
-      ) : (
+    <VehicleInventoryView
+      title={title}
+      loadError={loadError}
+      showDemo={Boolean(houseOrTenantLabel("house", ""))}
+      gridRef={gridRef}
+      loading={loading}
+      visibleTotalCount={visibleTotalCount}
+      activeCount={activeCount}
+      vehicleCount={vehicles.length}
+      toolbar={
         <>
           {showFilters ? (
             <MarketplaceToolbar
@@ -595,7 +528,10 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
               onOpenFilters={() => setFiltersOpen(true)}
             />
           ) : null}
-
+        </>
+      }
+      chips={
+        <>
           {showFilters && filterChips.length > 0 && (
             <div
               className="vehiclesPage__activeFilters"
@@ -633,106 +569,85 @@ export function VehicleInventory({ block, mode }: BlockComponentProps) {
               )}
             </div>
           )}
-
-          {/* LUME's own concept inventory only; a dealership's listings are real. */}
-          {houseOrTenantLabel("house", "") ? (
-            <p className="vehiclesPage__demoNotice">
-              Concept demo: prices and imagery are representative until verified
-              listing data is connected.
-            </p>
-          ) : null}
-
-          <div className="vehiclesPage__resultsBar" ref={gridRef}>
-            {!loading && visibleTotalCount !== null && (
-              <span className="vehiclesPage__resultCount">
-                {visibleTotalCount} vehicle{visibleTotalCount !== 1 ? "s" : ""}
-                {activeCount > 0 ? " matching filters" : ""}
-              </span>
-            )}
-          </div>
-
-          {loading ? (
-            <div className="vehiclesPage__loading">
-              <span>Loading vehicles...</span>
-            </div>
-          ) : vehicles.length === 0 ? (
-            <div className="vehiclesPage__empty">
-              <p>No vehicles match your filters.</p>
-              <button
-                type="button"
-                className="vehiclesPage__clearBtn"
-                onClick={() => {
-                    setFilters(DEFAULT_FILTERS);
-                    setResultLimit(null);
-                    setPage(1);
-                }}
-              >
-                Clear all filters
-              </button>
-            </div>
-          ) : (
-            <>
-              <motion.div
-                className={`vehiclesPage__grid${cardStyle === "bento" ? " vehiclesPage__grid--bento" : ""}`}
-                key={`${safePage}-${JSON.stringify(filters)}-${sort}`}
-                initial={{ opacity: 0, y: isStandard ? 0 : 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: isStandard ? 0.18 : 0.3 }}
-              >
-                {vehicles.map((vehicle, index) => {
-                  const compared = compareVehicleIds.includes(vehicle.id);
-                  return (
-                    <VehicleCard
-                      key={vehicle.id}
-                      vehicle={vehicle}
-                      index={index}
-                      saved={savedVehicleIds.includes(vehicle.id)}
-                      compared={compared}
-                      compareDisabled={
-                        !compared && compareVehicleIds.length >= 3
-                      }
-                      cardStyle={cardStyle}
-                      cardColor={cardColor}
-                      onViewDetails={() => handleViewDetails(vehicle.id)}
-                      onToggleSaved={() => toggleSaved(vehicle.id)}
-                      onToggleCompare={() => toggleCompare(vehicle.id)}
-                    />
-                  );
-                })}
-              </motion.div>
-
-              {visibleTotalCount !== null && (
-                <Pagination
-                  page={safePage}
-                  totalPages={totalPages}
-                  onPage={(nextPage) => {
-                    setPage(nextPage);
-                    gridRef.current?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
-                  }}
-                />
-              )}
-            </>
+        </>
+      }
+      grid={
+        <motion.div
+          className={`vehiclesPage__grid${cardStyle === "bento" ? " vehiclesPage__grid--bento" : ""}`}
+          key={`${safePage}-${JSON.stringify(filters)}-${sort}`}
+          initial={{ opacity: 0, y: isStandard ? 0 : 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: isStandard ? 0.18 : 0.3 }}
+        >
+          {vehicles.map((vehicle, index) => {
+            const compared = compareVehicleIds.includes(vehicle.id);
+            return (
+              <VehicleCard
+                key={vehicle.id}
+                vehicle={vehicle}
+                index={index}
+                saved={savedVehicleIds.includes(vehicle.id)}
+                compared={compared}
+                compareDisabled={!compared && compareVehicleIds.length >= 3}
+                cardStyle={cardStyle}
+                cardColor={cardColor}
+                onViewDetails={() => handleViewDetails(vehicle.id)}
+                onToggleSaved={() => toggleSaved(vehicle.id)}
+                onToggleCompare={() => toggleCompare(vehicle.id)}
+              />
+            );
+          })}
+        </motion.div>
+      }
+      pagination={
+        <>
+          {visibleTotalCount !== null && (
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onPage={(nextPage) => {
+                setPage(nextPage);
+                gridRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }}
+            />
           )}
         </>
-      )}
-      {showFilters ? (
-        <AdvancedFilters
-          open={filtersOpen}
-          facets={facets}
-          filters={filters}
-          activeCount={activeCount}
-          onChange={handleFilterChange}
-          onClear={() => {
+      }
+      filters={
+        <>
+          {showFilters ? (
+            <AdvancedFilters
+              open={filtersOpen}
+              facets={facets}
+              filters={filters}
+              activeCount={activeCount}
+              onChange={handleFilterChange}
+              onClear={() => {
+                setFilters(DEFAULT_FILTERS);
+                setResultLimit(null);
+                setPage(1);
+              }}
+              onClose={() => setFiltersOpen(false)}
+            />
+          ) : null}
+        </>
+      }
+      emptyAction={
+        <button
+          type="button"
+          className="vehiclesPage__clearBtn"
+          onClick={() => {
             setFilters(DEFAULT_FILTERS);
             setResultLimit(null);
             setPage(1);
           }}
-          onClose={() => setFiltersOpen(false)}
-        />
-      ) : null}
-    </section>
+        >
+          Clear all filters
+        </button>
+      }
+    />
   );
 }

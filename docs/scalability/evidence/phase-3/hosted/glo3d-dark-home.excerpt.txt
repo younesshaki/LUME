@@ -1,0 +1,11 @@
+<title>LUME</title>
+<meta name="description" content="Luxury versions of everyday energy."/>
+<meta name="robots" content="noindex, nofollow, nocache"/>
+<link rel="canonical" href="https://lume-web-phase3-hakicsi89.vercel.app/?tenant=demo"/>
+<meta property="og:title" content="LUME"/>
+<meta property="og:description" content="Luxury versions of everyday energy."/>
+<meta property="og:url" content="https://lume-web-phase3-hakicsi89.vercel.app/?tenant=demo"/>
+<meta property="og:image" content="https://lume-web-phase3-hakicsi89.vercel.app/logo.svg"/>
+<meta property="og:image:alt" content="Home"/>
+<meta property="og:type" content="website"/>
+<h1 class="storyHome__title">Luxury versions of everyday energy.</h1>

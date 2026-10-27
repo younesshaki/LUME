@@ -85,7 +85,7 @@ try {
   let ready = false;
   for (let n = 0; n < 100; n++) {
     try {
-      await fetch(`http://127.0.0.1:${port}`);
+      await fetch(`http://127.0.0.1:${port}/robots.txt`);
       ready = true;
       break;
     } catch {

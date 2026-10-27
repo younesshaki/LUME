@@ -1,0 +1,7 @@
+{
+  manifests: 15,
+  modules: 33,
+  hostedHtml: 25,
+  hostedChunks: 11,
+  credentialValueMatches: 0
+}

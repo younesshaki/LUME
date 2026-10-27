@@ -1,6 +1,10 @@
+import { VehicleDetailUnavailable } from "@lume/blocks/react/VehicleDetailUnavailable";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { DEFAULT_FILTERS, loadVehicleResults } from "@/experience/vehicles/catalog";
+import {
+  DEFAULT_FILTERS,
+  loadVehicleResults,
+} from "@/experience/vehicles/catalog";
 import type { BlockComponentProps } from "../registry";
 import { usePageBuilderRenderContext } from "../renderContext";
 import { booleanProp, stringProp } from "./props";
@@ -19,15 +23,13 @@ export function VehicleDetail({ block }: BlockComponentProps) {
   const navigate = useNavigate();
   const { vehicleId: routeVehicleId } = useParams();
   const { preview } = usePageBuilderRenderContext();
-  const sampleVehicleId = usePreviewSampleVehicleId(Boolean(preview && !routeVehicleId));
+  const sampleVehicleId = usePreviewSampleVehicleId(
+    Boolean(preview && !routeVehicleId),
+  );
   const vehicleId = routeVehicleId ?? sampleVehicleId;
 
   if (!vehicleId) {
-    return (
-      <div className="vehicleDetail__state">
-        <p>The vehicle detail surface renders here once a visitor opens a vehicle.</p>
-      </div>
-    );
+    return <VehicleDetailUnavailable />;
   }
 
   return (

@@ -1,0 +1,100 @@
+{
+  "sourceSha": "458996a37cc98f059d4d805b871b6f396dceaae3",
+  "clientReferenceManifests": 15,
+  "clientModules": [
+    "apps/web/app/content.css",
+    "apps/web/app/error.tsx",
+    "apps/web/app/global-error.tsx",
+    "apps/web/app/style.css",
+    "apps/web/app/tailwind.css",
+    "apps/web/app/vehicles/error.tsx",
+    "apps/web/components/client/TenantIdentity.tsx",
+    "apps/web/components/content/Consent.tsx",
+    "apps/web/components/content/InteractiveForms.tsx",
+    "apps/web/components/content/ProductGrid.tsx",
+    "apps/web/components/content/QuickSearch.tsx",
+    "apps/web/components/vehicles/GalleryEnhancement.tsx",
+    "apps/web/components/vehicles/OptionalTools.tsx",
+    "node_modules/lucide-react/dist/esm/Icon.mjs",
+    "node_modules/next/dist/client/components/client-page.js",
+    "node_modules/next/dist/client/components/client-segment.js",
+    "node_modules/next/dist/client/components/http-access-fallback/error-boundary.js",
+    "node_modules/next/dist/client/components/layout-router.js",
+    "node_modules/next/dist/client/components/render-from-template-context.js",
+    "node_modules/next/dist/esm/client/components/client-page.js",
+    "node_modules/next/dist/esm/client/components/client-segment.js",
+    "node_modules/next/dist/esm/client/components/http-access-fallback/error-boundary.js",
+    "node_modules/next/dist/esm/client/components/layout-router.js",
+    "node_modules/next/dist/esm/client/components/render-from-template-context.js",
+    "node_modules/next/dist/esm/lib/framework/boundary-components.js",
+    "node_modules/next/dist/esm/lib/metadata/generate/icon-mark.js",
+    "node_modules/next/dist/lib/framework/boundary-components.js",
+    "node_modules/next/dist/lib/metadata/generate/icon-mark.js",
+    "packages/blocks/src/react/AnnouncementBar.tsx",
+    "packages/blocks/src/react/MakeLogo.tsx",
+    "packages/blocks/src/react/TrustInteractive.tsx",
+    "packages/blocks/src/react/styles.css",
+    "src/experience/assets/images/lume-homepage-background.png"
+  ],
+  "forbiddenClientModules": [],
+  "hostedHtmlFilesScanned": 25,
+  "credentialValueMatches": 0,
+  "productionProjectRefInHostedChunks": false,
+  "actualHostedChunks": [
+    {
+      "path": "/_next/static/chunks/87c73c54-f46fec743414da25.js",
+      "bytes": 199864,
+      "sha256": "8d393f5cb37de557578495a9d043f98f957c3b1da7860451ceca6d0e13fe7ce2"
+    },
+    {
+      "path": "/_next/static/chunks/968-38f546818ddc7235.js",
+      "bytes": 222211,
+      "sha256": "f8e4595be501a68723900b9cd7ade02023aced54a91a87428323745df00ad41b"
+    },
+    {
+      "path": "/_next/static/chunks/main-app-dc7cf68d71e55745.js",
+      "bytes": 465,
+      "sha256": "82141460d1889ee3513e2d503384e4c66a434a9f3f15986c8f0485500f45ac16"
+    },
+    {
+      "path": "/_next/static/chunks/app/global-error-8c1cf4ec46c40a03.js",
+      "bytes": 491,
+      "sha256": "7fe5db5d51866ac2802c5b2249473dd421e02a78ec71b585156e9b6bbca86946"
+    },
+    {
+      "path": "/_next/static/chunks/app/error-c27e498ae1e1800f.js",
+      "bytes": 502,
+      "sha256": "c3547ca370ee09956ddc8e50da8065a0dfe17e73f4265602a9a100cb9f26321a"
+    },
+    {
+      "path": "/_next/static/chunks/945-1f4f225020d436e2.js",
+      "bytes": 255876,
+      "sha256": "a209621a8dc6ade9ba332e3cf25c054560e38843301f467192b1984f595c5b5b"
+    },
+    {
+      "path": "/_next/static/chunks/378-bd3585b232f91940.js",
+      "bytes": 219572,
+      "sha256": "c8e930e8feb670b97bcb923bb2cc8243e54ca33a069159af564656ec6d7cb180"
+    },
+    {
+      "path": "/_next/static/chunks/app/page-47a11487d0ab96b6.js",
+      "bytes": 127,
+      "sha256": "e4f832cfc8b4a06a9996cb1e4c54bc3b25e948da68df5f19a8c826f3ac092216"
+    },
+    {
+      "path": "/_next/static/chunks/polyfills-42372ed130431b0a.js",
+      "bytes": 112594,
+      "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683"
+    },
+    {
+      "path": "/_next/static/chunks/webpack-5b3c6f533d599923.js",
+      "bytes": 3886,
+      "sha256": "7ef2f8a15581ca79a450db0beddbe0670c1b264b74cf6989b23481b5f91ff50b"
+    },
+    {
+      "path": "/_next/static/chunks/app/%5Bslug%5D/page-61d14aa6e60b5360.js",
+      "bytes": 127,
+      "sha256": "c096e2551f5dbc1ad4215f444f9804ab55a38a3467df613e5e45d96c0d5495c5"
+    }
+  ]
+}

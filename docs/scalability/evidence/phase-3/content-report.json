@@ -1,0 +1,542 @@
+{
+  "dataSource": "Local deterministic public-RPC double; no staging writes or fabricated remote tenants",
+  "requests": [
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "light",
+      "route": "home",
+      "status": 200,
+      "h1": "Luxury versions of everyday energy.",
+      "title": "LUME",
+      "canonical": "http://127.0.0.1:34497/?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "light",
+      "route": "contact",
+      "status": 200,
+      "h1": "LUME is not found. It is entered by invitation.",
+      "title": "Access — LUME",
+      "canonical": "http://127.0.0.1:34497/contact?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "light",
+      "route": "products",
+      "status": 200,
+      "h1": "Products",
+      "title": "Products — LUME",
+      "canonical": "http://127.0.0.1:34497/products?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "light",
+      "route": "services",
+      "status": 200,
+      "h1": "Published services",
+      "title": "Fixture services",
+      "canonical": "http://127.0.0.1:34497/services?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "light",
+      "route": "our-story",
+      "status": 200,
+      "h1": "Published our-story",
+      "title": "Fixture our-story",
+      "canonical": "http://127.0.0.1:34497/our-story?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "home",
+      "status": 200,
+      "h1": "Luxury versions of everyday energy.",
+      "title": "LUME",
+      "canonical": "http://127.0.0.1:34497/?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "contact",
+      "status": 200,
+      "h1": "LUME is not found. It is entered by invitation.",
+      "title": "Access — LUME",
+      "canonical": "http://127.0.0.1:34497/contact?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "products",
+      "status": 200,
+      "h1": "Products",
+      "title": "Products — LUME",
+      "canonical": "http://127.0.0.1:34497/products?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "services",
+      "status": 200,
+      "h1": "Published services",
+      "title": "Fixture services",
+      "canonical": "http://127.0.0.1:34497/services?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "our-story",
+      "status": 200,
+      "h1": "Published our-story",
+      "title": "Fixture our-story",
+      "canonical": "http://127.0.0.1:34497/our-story?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "home",
+      "status": 200,
+      "h1": "Luxury versions of everyday energy.",
+      "title": "LUME",
+      "canonical": "http://127.0.0.1:34497/?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "contact",
+      "status": 200,
+      "h1": "LUME is not found. It is entered by invitation.",
+      "title": "Access — LUME",
+      "canonical": "http://127.0.0.1:34497/contact?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "products",
+      "status": 200,
+      "h1": "Products",
+      "title": "Products — LUME",
+      "canonical": "http://127.0.0.1:34497/products?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "services",
+      "status": 200,
+      "h1": "Published services",
+      "title": "Fixture services",
+      "canonical": "http://127.0.0.1:34497/services?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "our-story",
+      "status": 200,
+      "h1": "Published our-story",
+      "title": "Fixture our-story",
+      "canonical": "http://127.0.0.1:34497/our-story?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "home",
+      "status": 200,
+      "h1": "Luxury versions of everyday energy.",
+      "title": "LUME",
+      "canonical": "http://127.0.0.1:34497/?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "contact",
+      "status": 200,
+      "h1": "LUME is not found. It is entered by invitation.",
+      "title": "Access — LUME",
+      "canonical": "http://127.0.0.1:34497/contact?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "products",
+      "status": 200,
+      "h1": "Products",
+      "title": "Products — LUME",
+      "canonical": "http://127.0.0.1:34497/products?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "services",
+      "status": 200,
+      "h1": "Published services",
+      "title": "Fixture services",
+      "canonical": "http://127.0.0.1:34497/services?tenant=demo"
+    },
+    {
+      "scenario": "published",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "our-story",
+      "status": 200,
+      "h1": "Published our-story",
+      "title": "Fixture our-story",
+      "canonical": "http://127.0.0.1:34497/our-story?tenant=demo"
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "light",
+      "route": "home",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "light",
+      "route": "contact",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "light",
+      "route": "products",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "light",
+      "route": "services",
+      "status": 404
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "light",
+      "route": "our-story",
+      "status": 404
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "home",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "contact",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "products",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "services",
+      "status": 404
+    },
+    {
+      "scenario": "missing",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "our-story",
+      "status": 404
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "home",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "contact",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "products",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "services",
+      "status": 404
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "our-story",
+      "status": 404
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "home",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "contact",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "products",
+      "status": 200
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "services",
+      "status": 404
+    },
+    {
+      "scenario": "missing",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "our-story",
+      "status": 404
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "light",
+      "route": "home",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "light",
+      "route": "contact",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "light",
+      "route": "products",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "light",
+      "route": "services",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "light",
+      "route": "our-story",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "home",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "contact",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "products",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "services",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "luxury",
+      "mode": "dark",
+      "route": "our-story",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "home",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "contact",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "products",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "services",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "light",
+      "route": "our-story",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "home",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "contact",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "products",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "services",
+      "status": 200
+    },
+    {
+      "scenario": "empty",
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "our-story",
+      "status": 200
+    },
+    {
+      "rejection": "tenant=foreign",
+      "status": 404
+    },
+    {
+      "rejection": "tenant=demo&draft=1",
+      "status": 404
+    },
+    {
+      "rejection": "tenant=demo&revision=draft-secret",
+      "status": 404
+    },
+    {
+      "rejection": "tenant=demo&revisionId=draft-secret",
+      "status": 404
+    },
+    {
+      "rejection": "tenant=demo&previewToken=public-token",
+      "status": 404
+    },
+    {
+      "rejection": "tenant=demo&preview=1",
+      "status": 404
+    },
+    {
+      "rejection": "tenant=demo&tenant=foreign",
+      "status": 404
+    },
+    {
+      "rejection": "host",
+      "status": 404
+    },
+    {
+      "rejection": "x-forwarded-host",
+      "status": 404
+    },
+    {
+      "rejection": "x-web-tenant",
+      "status": 404
+    },
+    {
+      "scenario": "error",
+      "route": "contact",
+      "status": 503,
+      "privateDetailsLeaked": false,
+      "redirectStatus": 307,
+      "h1": "Published content is temporarily unavailable",
+      "javascriptRequired": false
+    }
+  ],
+  "publicRpcPaths": [
+    "/rest/v1/rpc/tenant_by_slug",
+    "/rest/v1/rpc/get_tenant_theme",
+    "/rest/v1/rpc/list_published_nav_pages",
+    "/rest/v1/rpc/get_published_page"
+  ],
+  "concurrentIsolationRequests": 24,
+  "productionBindingCount": 0
+}

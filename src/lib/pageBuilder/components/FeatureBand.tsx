@@ -1,33 +1,7 @@
 import type { BlockComponentProps } from "../registry";
 import { mediaUrl } from "@/config/cdn";
-import { stringProp } from "./props";
+import { FeatureBandView } from "@lume/blocks/react/FeatureBand";
 import "@/experience/ui/StoryHomePage/StoryHomePage.css";
-
-export function FeatureBand({ block }: BlockComponentProps) {
-  const kicker = stringProp(block, "kicker");
-  const heading = stringProp(block, "heading");
-  const body = stringProp(block, "body");
-  const mediaKey = stringProp(block, "mediaKey");
-  const mediaAlt = stringProp(block, "mediaAlt", heading);
-  const imageSrc = mediaKey ? resolveMediaSource(mediaKey) : "";
-
-  return (
-    <section className="storyHome__featureBand">
-      {imageSrc && (
-        <div className="storyHome__featureMedia">
-          <img src={imageSrc} alt={mediaAlt} />
-        </div>
-      )}
-      <div className="storyHome__featureCopy">
-        {kicker && <p className="storyHome__sectionKicker">{kicker}</p>}
-        <h2>{heading}</h2>
-        {body && <p>{body}</p>}
-      </div>
-    </section>
-  );
-}
-
-function resolveMediaSource(value: string): string {
-  if (/^(https?:)?\/\//.test(value) || value.startsWith("/")) return value;
-  return mediaUrl(value);
+export function FeatureBand(props: BlockComponentProps) {
+  return <FeatureBandView {...props} mediaUrl={mediaUrl} />;
 }

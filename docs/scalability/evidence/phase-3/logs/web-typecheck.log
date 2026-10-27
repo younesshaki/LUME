@@ -1,0 +1,10 @@
+
+> @lume/web@0.0.0 typecheck
+> node scripts/check-boundaries.mjs && tsc --noEmit
+
+PASS web import boundaries: audited shared source graph, no client/server leaks
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

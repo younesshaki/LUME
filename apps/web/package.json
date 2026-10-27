@@ -13,9 +13,12 @@
     "audit:functions": "node scripts/audit-functions.mjs",
     "test:vehicles": "node --conditions=react-server --test checks/vehicles.check.mjs",
     "verify:vehicles": "node scripts/verify-vehicles.mjs",
-    "verify:vehicle-browser": "node scripts/verify-vehicle-browser.mjs"
+    "verify:vehicle-browser": "node scripts/verify-vehicle-browser.mjs",
+    "test:content": "node --import tsx --conditions=react-server --test checks/content.check.mjs",
+    "verify:content": "node --import tsx scripts/verify-content.mjs"
   },
   "dependencies": {
+    "@lume/blocks": "*",
     "@lume/types": "*",
     "next": "16.2.6",
     "react": "19.2.6",
@@ -23,6 +26,7 @@
     "server-only": "0.0.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "4.2.2",
     "@types/node": "25.6.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

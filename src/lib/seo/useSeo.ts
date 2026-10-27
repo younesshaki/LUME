@@ -1,50 +1,12 @@
+import { resolveSeo, type SeoOptions } from "@lume/blocks/seo";
+export {
+  resolveSeo,
+  LUME_SEO_FALLBACK,
+  type SeoOptions,
+  type SeoValues,
+  type ResolvedSeo,
+} from "@lume/blocks/seo";
 import { useEffect, useMemo } from "react";
-
-export type SeoValues = {
-  title?: string;
-  description?: string;
-  ogImage?: string;
-};
-
-export type SeoOptions = {
-  page?: SeoValues;
-  tenant?: SeoValues;
-  fallback?: SeoValues;
-  canonicalPath?: string;
-};
-
-export type ResolvedSeo = {
-  title: string;
-  description: string;
-  ogImage: string;
-  canonical: string;
-};
-
-export const LUME_SEO_FALLBACK: Required<SeoValues> = {
-  title: "LUME",
-  description: "Luxury versions of everyday energy.",
-  ogImage: "/logo.svg",
-};
-
-export function resolveSeo(
-  { page, tenant, fallback = LUME_SEO_FALLBACK, canonicalPath = "/" }: SeoOptions,
-  origin = ""
-): ResolvedSeo {
-  const title = firstText(page?.title, tenant?.title, fallback.title, LUME_SEO_FALLBACK.title);
-  const description = firstText(
-    page?.description,
-    tenant?.description,
-    fallback.description,
-    LUME_SEO_FALLBACK.description
-  );
-  const ogImage = toAbsoluteUrl(
-    firstText(page?.ogImage, tenant?.ogImage, fallback.ogImage, LUME_SEO_FALLBACK.ogImage),
-    origin
-  );
-  const canonical = toAbsoluteUrl(canonicalPath, origin);
-
-  return { title, description, ogImage, canonical };
-}
 
 /** Own the document metadata for the current public route. */
 export function useSeo(options: SeoOptions): void {
@@ -63,7 +25,11 @@ export function useSeo(options: SeoOptions): void {
     () =>
       resolveSeo(
         {
-          page: { title: pageTitle, description: pageDescription, ogImage: pageOgImage },
+          page: {
+            title: pageTitle,
+            description: pageDescription,
+            ogImage: pageOgImage,
+          },
           tenant: {
             title: tenantTitle,
             description: tenantDescription,
@@ -76,7 +42,7 @@ export function useSeo(options: SeoOptions): void {
           },
           canonicalPath,
         },
-        typeof document === "undefined" ? "" : document.location.origin
+        typeof document === "undefined" ? "" : document.location.origin,
       ),
     [
       canonicalPath,
@@ -89,7 +55,7 @@ export function useSeo(options: SeoOptions): void {
       tenantDescription,
       tenantOgImage,
       tenantTitle,
-    ]
+    ],
   );
 
   useEffect(() => {
@@ -98,12 +64,16 @@ export function useSeo(options: SeoOptions): void {
     const previousTitle = document.title;
     document.title = resolved.title;
 
-    const restoreDescription = upsertMeta("name", "description", resolved.description);
+    const restoreDescription = upsertMeta(
+      "name",
+      "description",
+      resolved.description,
+    );
     const restoreOgTitle = upsertMeta("property", "og:title", resolved.title);
     const restoreOgDescription = upsertMeta(
       "property",
       "og:description",
-      resolved.description
+      resolved.description,
     );
     const restoreOgImage = upsertMeta("property", "og:image", resolved.ogImage);
     const restoreCanonical = upsertCanonical(resolved.canonical);
@@ -119,24 +89,11 @@ export function useSeo(options: SeoOptions): void {
   }, [resolved]);
 }
 
-function firstText(...values: Array<string | undefined>): string {
-  for (const value of values) {
-    const trimmed = value?.trim();
-    if (trimmed) return trimmed;
-  }
-  return "";
-}
-
-function toAbsoluteUrl(value: string, origin: string): string {
-  if (!origin) return value;
-  try {
-    return new URL(value, origin).toString();
-  } catch {
-    return value;
-  }
-}
-
-function upsertMeta(attribute: "name" | "property", key: string, content: string): () => void {
+function upsertMeta(
+  attribute: "name" | "property",
+  key: string,
+  content: string,
+): () => void {
   const selector = `meta[${attribute}="${key}"]`;
   const existing = document.head.querySelector<HTMLMetaElement>(selector);
   const element = existing ?? document.createElement("meta");
@@ -161,7 +118,9 @@ function upsertMeta(attribute: "name" | "property", key: string, content: string
 }
 
 function upsertCanonical(href: string): () => void {
-  const existing = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+  const existing = document.head.querySelector<HTMLLinkElement>(
+    'link[rel="canonical"]',
+  );
   const element = existing ?? document.createElement("link");
   const previousHref = existing?.getAttribute("href") ?? null;
 
