@@ -5,7 +5,7 @@ import { ProductDetailView } from "@lume/blocks/react/ProductDetail";
 import { CinematicShellView } from "@lume/blocks/react/CinematicShell";
 import { contentContext } from "../../../server/content/context";
 import { canonicalFor } from "../../../server/vehicles/presentation";
-import artwork from "../../../../../src/experience/assets/images/lume-homepage-background.png";
+const artwork = "/lume-homepage-background.png";
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ productId: string }> };
 const productData = cache(async (id: string) => {
@@ -59,7 +59,7 @@ export default async function Page({ params }: Props) {
   const { tenant, product } = await productData((await params).productId);
   const back = `/products?tenant=${encodeURIComponent(tenant.slug)}`;
   return (
-    <CinematicShellView mode="standard" artwork={artwork.src}>
+    <CinematicShellView mode="standard" artwork={artwork}>
       <div className="productDetail" data-web-content>
         <main
           className="productDetail__main"

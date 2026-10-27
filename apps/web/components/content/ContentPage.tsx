@@ -1,11 +1,11 @@
 import { TemplateHomeView } from "@lume/blocks/react/TemplateHome";
 import type { ReactNode } from "react";
 import { CinematicShellView } from "@lume/blocks/react/CinematicShell";
-import artwork from "../../../../src/experience/assets/images/lume-homepage-background.png";
 import { contentPage } from "../../server/content/context";
 import { ServerBlocks } from "./ServerBlocks";
 import InteractiveForms from "./InteractiveForms";
 import Consent from "./Consent";
+const artwork = "/lume-homepage-background.png";
 export async function ContentPage({ slug }: { slug: string }) {
   const { tenant, page, state, mode, template, design } =
     await contentPage(slug);
@@ -62,13 +62,13 @@ export async function ContentPage({ slug }: { slug: string }) {
       </div>
     );
   return (
-    <CinematicShellView mode="standard" artwork={artwork.src}>
+    <CinematicShellView mode="standard" artwork={artwork}>
       <div
         className={frame[0]}
         style={
           slug === "home"
             ? ({
-                "--story-home-bg-image": `url(${artwork.src})`,
+                "--story-home-bg-image": `url(${artwork})`,
               } as import("react").CSSProperties)
             : undefined
         }
@@ -143,7 +143,7 @@ export async function ContentPage({ slug }: { slug: string }) {
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <CinematicShellView mode="standard" artwork={artwork.src}>
+    <CinematicShellView mode="standard" artwork={artwork}>
       {children}
     </CinematicShellView>
   );
