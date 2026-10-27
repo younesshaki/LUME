@@ -8,9 +8,12 @@
     "build": "node scripts/check-boundaries.mjs && node scripts/run.mjs build",
     "start": "node scripts/run.mjs start",
     "typecheck": "node scripts/check-boundaries.mjs && tsc --noEmit",
-    "test:foundation": "node --test checks/*.check.mjs",
+    "test:foundation": "node --test checks/foundation.check.mjs",
     "verify:foundation": "node scripts/verify-foundation.mjs",
-    "audit:functions": "node scripts/audit-functions.mjs"
+    "audit:functions": "node scripts/audit-functions.mjs",
+    "test:vehicles": "node --conditions=react-server --test checks/vehicles.check.mjs",
+    "verify:vehicles": "node scripts/verify-vehicles.mjs",
+    "verify:vehicle-browser": "node scripts/verify-vehicle-browser.mjs"
   },
   "dependencies": {
     "@lume/types": "*",

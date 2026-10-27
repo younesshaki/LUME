@@ -11,7 +11,12 @@ export function proxy(request: NextRequest) {
         "Cache-Control": "private, no-store, max-age=0",
       },
     });
-  if (!["GET", "HEAD"].includes(request.method))
+  const vehicleApi = /^\/api\/vehicles(?:\/|$)/.test(request.nextUrl.pathname);
+  if (
+    !["GET", "HEAD", ...(vehicleApi ? ["OPTIONS"] : [])].includes(
+      request.method,
+    )
+  )
     return new NextResponse("Read-only preview", {
       status: 405,
       headers: {
@@ -25,7 +30,7 @@ export function proxy(request: NextRequest) {
     const forwarded = request.headers.get("x-forwarded-host");
     if (forwarded && hostname(forwarded) !== host) return fail();
     if (
-      request.headers.has("x-lume-tenant") ||
+      (!vehicleApi && request.headers.has("x-lume-tenant")) ||
       request.headers.has("x-web-tenant")
     )
       return fail();

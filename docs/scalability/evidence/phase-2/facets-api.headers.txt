@@ -1,0 +1,20 @@
+HTTP/1.1 200 OK
+date: Tue, 27 Oct 2026 03:31:39 GMT
+server: envoy
+
+HTTP/2 200
+age: 0
+cache-control: private, no-store
+content-type: application/json
+date: Tue, 27 Oct 2026 03:31:41 GMT
+etag: W/"inventory-facets-demo-5934"
+referrer-policy: no-referrer
+server: envoy
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch,Origin
+x-content-type-options: nosniff
+x-matched-path: /api/vehicles/facets
+x-robots-tag: noindex, nofollow, noarchive
+x-vercel-cache: MISS
+x-vercel-id: cle1::iad1::6ktqv-1793071900627-f71ec3bbacae
+x-envoy-upstream-service-time: 1743

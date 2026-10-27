@@ -1,0 +1,71 @@
+{
+  "mutationsScopedTo": "lume-web-preview only; two additional Preview-only public config bindings; no domain/DNS changes",
+  "snapshots": [
+    {
+      "name": "lume-admin",
+      "before": {
+        "id": "prj_P5GW49IreH0zjnKqdXXSWivIHGaU",
+        "name": "lume-admin",
+        "rootDirectory": "apps/admin",
+        "buildCommand": "next build",
+        "installCommand": "cd ../.. && npm install --legacy-peer-deps",
+        "production": "dpl_7nWpz7u7FpWnZbWD1SNQMC6EvyPa",
+        "preview": "dpl_2ASxiSHj9mEfZjesNvDfhvKgfwZz",
+        "envBindingMetadataCount": 39,
+        "envBindingMetadataSha256": "6f383b4d8134f953acf7813c30032810d8c4e489b24c6ffd73ac72cc1c9c5325"
+      },
+      "after": {
+        "id": "prj_P5GW49IreH0zjnKqdXXSWivIHGaU",
+        "name": "lume-admin",
+        "rootDirectory": "apps/admin",
+        "buildCommand": "next build",
+        "installCommand": "cd ../.. && npm install --legacy-peer-deps",
+        "production": "dpl_7nWpz7u7FpWnZbWD1SNQMC6EvyPa",
+        "preview": "dpl_HQSXarDGqxFbRh2pRW5He5PLua4c",
+        "envBindingMetadataCount": 39,
+        "envBindingMetadataSha256": "6f383b4d8134f953acf7813c30032810d8c4e489b24c6ffd73ac72cc1c9c5325"
+      },
+      "productionAndSettingsUnchanged": true,
+      "latestFeaturePreview": {
+        "id": "dpl_HQSXarDGqxFbRh2pRW5He5PLua4c",
+        "state": "CANCELED",
+        "branch": "feat/phase2-vehicle-vertical-slice",
+        "sha": "611e34a857e43a1c82303d9d9b5d23f0d1d3ab62",
+        "note": "Existing Git integration automatically creates feature jobs; unchanged ignore rules canceled them before serving."
+      }
+    },
+    {
+      "name": "lume",
+      "before": {
+        "id": "prj_reXmkyltuIYOG17lPcLMCsYifRZN",
+        "name": "lume",
+        "rootDirectory": null,
+        "buildCommand": "npm run build",
+        "installCommand": "npm install --legacy-peer-deps",
+        "production": "dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo",
+        "preview": "dpl_2fMATjPuyHZjekPtFRKcmRUFRxQd",
+        "envBindingMetadataCount": 44,
+        "envBindingMetadataSha256": "e471869651451330663003fc61d2c6507d0760e91e0354727fd576b1a8f42470"
+      },
+      "after": {
+        "id": "prj_reXmkyltuIYOG17lPcLMCsYifRZN",
+        "name": "lume",
+        "rootDirectory": null,
+        "buildCommand": "npm run build",
+        "installCommand": "npm install --legacy-peer-deps",
+        "production": "dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo",
+        "preview": "dpl_3UBD9TjfZymnDGS4Uou6MzYfHNhx",
+        "envBindingMetadataCount": 44,
+        "envBindingMetadataSha256": "e471869651451330663003fc61d2c6507d0760e91e0354727fd576b1a8f42470"
+      },
+      "productionAndSettingsUnchanged": true,
+      "latestFeaturePreview": {
+        "id": "dpl_3UBD9TjfZymnDGS4Uou6MzYfHNhx",
+        "state": "CANCELED",
+        "branch": "feat/phase2-vehicle-vertical-slice",
+        "sha": "611e34a857e43a1c82303d9d9b5d23f0d1d3ab62",
+        "note": "Existing Git integration automatically creates feature jobs; unchanged ignore rules canceled them before serving."
+      }
+    }
+  ]
+}

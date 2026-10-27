@@ -28,8 +28,13 @@ export default async function Preview({ searchParams }: Props) {
       </dl>
       <TenantIdentity slug={tenant.slug} />
       <p>
-        No inventory, chat, forms, page-builder or cinematic routes are migrated
-        in this foundation.
+        <a href={`/vehicles?tenant=${encodeURIComponent(tenant.slug)}`}>
+          Browse preview inventory
+        </a>
+      </p>
+      <p>
+        Vehicle inventory and detail are available in the isolated preview. Live
+        routing, chat, forms, page-builder and cinema remain unchanged.
       </p>
     </main>
   );
