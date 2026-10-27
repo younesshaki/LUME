@@ -1,11 +1,14 @@
-# Isolated public web foundation — Phase 1
+# Isolated public web preview — Phase 2
 
 This is a **preview-only** Next.js App Router workspace. Nothing routes live
-Vite traffic here. There are no vehicle, chat, lead, form or cinematic routes.
+Vite traffic here. Vehicle inventory/detail and their three public read API
+transports are available. Lead submission, connected chat, published content
+and cinema remain on their existing owners.
 The disposable `poc/` remains reference work, not an application dependency.
 
 Read [the approved plan](../../docs/scalability/nextjs-migration-plan.md) and
-[Phase 1 evidence / setup](../../docs/scalability/phase-1-web-foundation.md).
+[Phase 1 evidence / setup](../../docs/scalability/phase-1-web-foundation.md), then
+[Phase 2 behavior, evidence and rollout limits](../../docs/scalability/phase-2-vehicle-vertical-slice.md).
 
 From repository root, with Node 24:
 
@@ -15,6 +18,8 @@ npm run build:web
 npm run typecheck:web
 npm run test:foundation --workspace=@lume/web
 npm run verify:foundation --workspace=@lume/web
+npm run test:vehicles --workspace=@lume/web
+npm run verify:vehicles --workspace=@lume/web
 node apps/web/scripts/audit-env.mjs
 npm run audit:functions --workspace=@lume/web
 node apps/web/scripts/scan-output.mjs
@@ -26,13 +31,15 @@ does not contact Supabase, create data, or use this machine's production keys.
 It checks actual HTML and React Flight, concurrency, host/selector rejection,
 verified-domain contracts, noindex/no-store, HTTP read-only behavior, and an
 environment audit inside the real Next process. Generated evidence is ignored
-under `artifacts/`. This is not a substitute for validation against hosted
-staging with two real active tenants.
+under `artifacts/`. Staging has only one real active tenant (`demo`); hosted rejection tests and
+these deterministic multi-tenant tests are recorded separately, without claiming
+two real staging tenants.
 
 To start against dedicated staging, configure the `WEB_PREVIEW_*` process
 bindings listed in `.env.example` securely, then use `npm run dev:web` or
 `npm run start --workspace=@lume/web`. Default local port is 3200, with the
-read-only route `/preview?tenant=<active-staging-slug>`. Metadata/canonical and
+read-only routes `/preview?tenant=demo`, `/vehicles?tenant=demo` and
+`/vehicles/<legacy-uuid>?tenant=demo`. Metadata/canonical and
 the client identity prop derive from the same request-memoized server result.
 
 **Do not copy `.env.example` to `.env.local`.** Next's dotenv auto-loading could
@@ -54,10 +61,11 @@ bindings, and the hosted environment still needs inspection before its gate pass
 Use only these scripts: invoking `next build/start` directly fails the isolation
 guard. Staging URL/ref/anon bindings are needed for a running preview, not for
 the standalone compilation. The optional staging service-role binding is used
-only for an exact verified-domain metadata lookup under existing RLS; ordinary
+only for exact verified-domain metadata and exact vehicle gallery metadata
+after anonymous vehicle visibility is established; ordinary
 host/query tenant identity uses anon `tenant_by_slug`. No migration is needed.
 
-Production runtime code lives in `app`, `server`, `components/client`, `config`
+Production runtime code lives in `app`, `server`, `components`, `config`
 and `proxy.ts`. `build` and `typecheck` enforce import graph boundaries. Server
 loaders cannot reach client components; client graphs cannot reach server/config
 or server-only Next APIs. Server pages may compose explicit client entry leaves
@@ -72,4 +80,6 @@ existing SPA fallback. Production builds are skipped and independently refused
 by the launcher. The separate `lume-web-preview` project is now deployed as a
 read-only Preview; [hosted evidence](../../docs/scalability/phase-1-hosted-exit-gates.md)
 records raw curl responses, staging-only bindings, single-tenant limitations and
-the actual function manifest. PR #95 remains draft; Phase 2 has not started.
+the actual Phase 1 function manifest. PR #95 is merged into staging. The
+[Phase 2 evidence](../../docs/scalability/phase-2-vehicle-vertical-slice.md) records
+the current deployment and function manifest. Phase 3 has not started.

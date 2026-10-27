@@ -1,0 +1,21 @@
+{
+  "base": "https://lume-web-preview-205wpfnwb-hakicsi89-5044s-projects.vercel.app",
+  "vehicleId": "16b46448-d5d0-441f-a329-397ec236a1a1",
+  "viewport": {
+    "width": 390,
+    "height": 664
+  },
+  "javaScriptEnabled": false,
+  "proxyCertificatePolicy": "Test-process-only SPKI pin for explicitly supplied proxy CA; no persistent trust change",
+  "status": 200,
+  "title": "2023 Ferrari 812 GTS | LUME Demo",
+  "image": {
+    "complete": true,
+    "width": 1448,
+    "height": 1086
+  },
+  "overflow": false,
+  "contactUrl": "https://lume-mdcuj0srt-hakicsi89-5044s-projects.vercel.app/contact?tenant=demo&vehicleId=16b46448-d5d0-441f-a329-397ec236a1a1",
+  "modelOrChatRequests": 0,
+  "failures": []
+}

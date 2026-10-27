@@ -1,0 +1,23 @@
+<title>2023 Ferrari 812 GTS | LUME Demo</title>
+<meta name="description" content="2023 Ferrari 812 GTS at LUME Demo. Est. $392,500. View photos, specifications and availability."/>
+<link rel="canonical" href="https://lume-web-preview-205wpfnwb-hakicsi89-5044s-projects.vercel.app/vehicles/16b46448-d5d0-441f-a329-397ec236a1a1?tenant=demo"/>
+<meta property="og:title" content="2023 Ferrari 812 GTS | LUME Demo"/>
+<meta property="og:description" content="2023 Ferrari 812 GTS at LUME Demo. Est. $392,500. View photos, specifications and availability."/>
+<meta property="og:url" content="https://lume-web-preview-205wpfnwb-hakicsi89-5044s-projects.vercel.app/vehicles/16b46448-d5d0-441f-a329-397ec236a1a1?tenant=demo"/>
+<meta property="og:image" content="https://pub-da3069790c6443f883e3991be965f766.r2.dev/demo/vehicles/16b46448-d5d0-441f-a329-397ec236a1a1/3cce3110-827e-40d9-bb52-1db95b598d2d.png"/>
+<meta property="og:image:alt" content="2023 Ferrari 812 GTS"/>
+<meta property="og:type" content="website"/>
+<h1>2023 Ferrari 812 GTS</h1>
+<p class="price">Est. $392,500</p>
+<div><dt>Year</dt><dd>2023</dd></div>
+<div><dt>Make</dt><dd>Ferrari</dd></div>
+<div><dt>Model</dt><dd>812 GTS</dd></div>
+<div><dt>Trim</dt><dd>EXTRACAMPIONARIO BIANCO CERVINO FULL PPF SCRAPE ARMOR 7 YR WTY</dd></div>
+<div><dt>Mileage</dt><dd>2,991 miles</dd></div>
+<div><dt>Stock type</dt><dd>Used</dd></div>
+<div><dt>Body style</dt><dd>Convertible</dd></div>
+<div><dt>Exterior</dt><dd>Bianco Cervino</dd></div>
+<div><dt>Interior</dt><dd>Nero</dd></div>
+<div><dt>Drivetrain</dt><dd>RWD</dd></div>
+<div><dt>Fuel</dt><dd>Gasoline</dd></div>
+<div><dt>Location</dt><dd>St Clair Shores, MI</dd></div>

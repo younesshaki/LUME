@@ -1,0 +1,20 @@
+HTTP/1.1 200 OK
+date: Tue, 27 Oct 2026 03:31:39 GMT
+server: envoy
+
+HTTP/2 200
+age: 0
+cache-control: private, no-store
+content-type: application/json
+date: Tue, 27 Oct 2026 03:31:42 GMT
+etag: W/"inventory-2de52a45-bc2b-451c-994c-02208b994e26-5934"
+referrer-policy: no-referrer
+server: envoy
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch,Origin
+x-content-type-options: nosniff
+x-matched-path: /api/vehicles
+x-robots-tag: noindex, nofollow, noarchive
+x-vercel-cache: MISS
+x-vercel-id: cle1::iad1::zhlfl-1793071900719-1a27ac6812c3
+x-envoy-upstream-service-time: 1946

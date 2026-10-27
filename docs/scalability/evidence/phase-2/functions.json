@@ -1,0 +1,37 @@
+{
+  "deploymentId": "dpl_2n4oVAJoEwEXJfWGzoS5K54eft5w",
+  "url": "lume-web-preview-205wpfnwb-hakicsi89-5044s-projects.vercel.app",
+  "target": "staging",
+  "state": "READY",
+  "sourceSha": "611e34a857e43a1c82303d9d9b5d23f0d1d3ab62",
+  "outputRecordCount": 6,
+  "distinctFunctionCount": 5,
+  "limit": 12,
+  "headroom": 7,
+  "outputs": [
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-95f3cc21464a2fda25989fd4ae1920a009__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-95f3cc21464a2fda25989fd4ae1920a009"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-38cb9afd073839d3fc63cfb18d0a92bd7b__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-38cb9afd073839d3fc63cfb18d0a92bd7b"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-e25ccbcfe574714584d962c66f768b02eb__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-e25ccbcfe574714584d962c66f768b02eb"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-b2ec3dc8413c72367c85a863e98219a70e__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-b2ec3dc8413c72367c85a863e98219a70e"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-937bbe478fea3f71e5e213c9a044e8b7af__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-937bbe478fea3f71e5e213c9a044e8b7af"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-937bbe478fea3f71e5e213c9a044e8b7af__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-937bbe478fea3f71e5e213c9a044e8b7af"
+    }
+  ]
+}
