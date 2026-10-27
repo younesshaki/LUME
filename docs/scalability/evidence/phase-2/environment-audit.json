@@ -1,0 +1,20 @@
+{
+  "project": "lume-web-preview",
+  "projectId": "prj_OAtJghgaCiSDMqapWbATWOb51CQf",
+  "deploymentId": "dpl_2n4oVAJoEwEXJfWGzoS5K54eft5w",
+  "previewBindingNames": [
+    "WEB_PREVIEW_SUPABASE_URL",
+    "WEB_PREVIEW_PROJECT_REF",
+    "WEB_PREVIEW_SUPABASE_ANON_KEY",
+    "WEB_PREVIEW_DEFAULT_TENANT",
+    "WEB_PREVIEW_R2_PUBLIC_BASE_URL",
+    "WEB_PREVIEW_CONTACT_URL"
+  ],
+  "productionTargetBindingCount": 0,
+  "configuredDatabaseHostname": "hapyyupeugxccofpibor.supabase.co",
+  "configuredDatabaseProjectRef": "hapyyupeugxccofpibor",
+  "configuredAnonJwtProjectRef": null,
+  "allSupabaseBindingsMatchSecureStagingBindings": true,
+  "productionReferenceConfigured": false,
+  "forbiddenGenericBindingCount": 0
+}

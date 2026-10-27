@@ -11,6 +11,10 @@ const keys = [
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
   "GH_TOKEN",
+  "GITHUB_TOKEN",
+  "VERCEL_TOKEN",
+  "WEB_PREVIEW_SUPABASE_ANON_KEY",
+  "WEB_PREVIEW_SUPABASE_SERVICE_ROLE_KEY",
 ];
 const values = keys.flatMap((k) =>
   process.env[k] ? [Buffer.from(process.env[k])] : [],
@@ -33,5 +37,5 @@ for (const file of [
     );
 }
 console.log(
-  `PASS ${count} compiled server/client output files contain none of the inherited production credential values`,
+  `PASS ${count} compiled server/client output files contain none of the inherited credential values`,
 );

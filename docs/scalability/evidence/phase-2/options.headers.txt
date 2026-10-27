@@ -1,0 +1,20 @@
+HTTP/1.1 200 OK
+date: Tue, 27 Oct 2026 03:31:39 GMT
+server: envoy
+
+HTTP/2 204
+access-control-allow-headers: Content-Type, X-Lume-Tenant
+access-control-allow-methods: GET, OPTIONS
+access-control-allow-origin: https://lume-web-preview-205wpfnwb-hakicsi89-5044s-projects.vercel.app
+cache-control: private, no-store
+date: Tue, 27 Oct 2026 03:31:41 GMT
+referrer-policy: no-referrer
+server: envoy
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch,Origin
+x-content-type-options: nosniff
+x-matched-path: /api/vehicles
+x-robots-tag: noindex, nofollow, noarchive
+x-vercel-cache: MISS
+x-vercel-id: cle1::iad1::jpsfd-1793071900962-50a6e0d957c5
+x-envoy-upstream-service-time: 423

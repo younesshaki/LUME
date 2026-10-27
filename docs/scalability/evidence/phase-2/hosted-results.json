@@ -1,0 +1,122 @@
+{
+  "base": "https://lume-web-preview-205wpfnwb-hakicsi89-5044s-projects.vercel.app",
+  "results": [
+    {
+      "name": "vehicle",
+      "status": 200,
+      "bytes": 15766,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "inventory",
+      "status": 200,
+      "bytes": 15248,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "detail-api",
+      "status": 200,
+      "bytes": 986,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "inventory-api",
+      "status": 200,
+      "bytes": 840,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "facets-api",
+      "status": 200,
+      "bytes": 8621,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "unknown-tenant",
+      "status": 404,
+      "bytes": 4370,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "unknown-tenant-api",
+      "status": 404,
+      "bytes": 38,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "conflicting-selector",
+      "status": 404,
+      "bytes": 38,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "header-only",
+      "status": 200,
+      "bytes": 986,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "invalid-id",
+      "status": 400,
+      "bytes": 30,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "options",
+      "status": 204,
+      "bytes": 0,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "post-rejected",
+      "status": 405,
+      "bytes": 17,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "flight",
+      "status": 200,
+      "bytes": 8878,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "unknown-host",
+      "status": 404,
+      "bytes": 107,
+      "noindex": false,
+      "noStore": false
+    },
+    {
+      "name": "forwarded-host",
+      "status": 200,
+      "bytes": 15766,
+      "noindex": true,
+      "noStore": true
+    },
+    {
+      "name": "r2-image",
+      "status": 200,
+      "bytes": 364,
+      "noindex": false,
+      "noStore": false
+    }
+  ],
+  "forwardedHostNormalization": {
+    "normalHtmlSha256": "ef9eafc80144f29aa3be237ff8d23ee19d94fd436006d2f2397c572c4bbbb834",
+    "injectedHtmlSha256": "ef9eafc80144f29aa3be237ff8d23ee19d94fd436006d2f2397c572c4bbbb834",
+    "byteIdentical": true
+  }
+}

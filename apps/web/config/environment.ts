@@ -10,6 +10,9 @@ const previewKeys = [
   "WEB_PREVIEW_DEFAULT_TENANT",
   "WEB_PREVIEW_CUSTOM_HOSTS",
   "WEB_PREVIEW_TEST_MODE",
+  "WEB_PREVIEW_R2_PUBLIC_BASE_URL",
+  "WEB_PREVIEW_ALLOWED_ORIGINS",
+  "WEB_PREVIEW_CONTACT_URL",
 ];
 const platformKeys = [
   "PATH",
@@ -56,7 +59,7 @@ export function assertPreviewEnvironment(env: Environment) {
   // Vercel's serverless runtime does not execute npm start. Validate its own
   // project-scoped bindings directly, rather than requiring a build-only marker.
   if (env.VERCEL_ENV === "production")
-    throw new Error("Phase 1 web cannot run as a production deployment");
+    throw new Error("Isolated web preview cannot run as a production deployment");
   if (env.WEB_PREVIEW_TEST_MODE === "1" && env.VERCEL)
     throw new Error("Local test mode is forbidden on Vercel");
   const forbidden = Object.keys(env).filter(

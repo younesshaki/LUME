@@ -1,0 +1,170 @@
+$ npm run typecheck:all
+exit 0
+PASS web import boundaries: no cross-workspace runtime imports or client/server graph leaks
+
+$ npm test -- --run
+exit 1
+ FAIL  |app| apps/admin/lib/managedFeedSftpFetch.server.test.ts > managed SFTP feed transport
+Error: Hook timed out in 10000ms.
+ FAIL  |admin-routes| apps/admin/app/admin/[tenant]/pages/PageEditorJourneys.route.test.ts > page-builder demo journeys > adds, edits, previews, and publishes the hero block without losing its draft
+Error: Test timed out in 5000ms.
+ FAIL  |app| scripts/verify-shared-conversation-memory.test.mjs > shared-memory harness refuses unsafe invocations > never prints a supplied credential
+Error: Test timed out in 5000ms.
+ FAIL  |app| apps/admin/lib/managedFeedSftpFetch.server.test.ts > managed SFTP feed transport > stops reading an oversized SFTP file at the managed feed cap
+Error: Test timed out in 5000ms.
+ FAIL  |app| src/lib/pageBuilder/VehicleDetailPageRendererRoute.test.tsx > VehicleDetailPageRendererRoute > renders the hardcoded VDP unchanged when no vehicle page is published
+Error: Test timed out in 5000ms.
+ Test Files  4 failed | 293 passed (297)
+      Tests  4 failed | 2325 passed (2329)
+   Duration  475.86s (transform 54.43s, setup 71.67s, import 162.91s, tests 154.66s, environment 826.27s)
+
+$ npm run build
+exit 0
+vite v5.4.21 building for production...
+Please install it as a dev dependency if your vite version does not use rolldown.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1m
+
+$ NODE_USE_ENV_PROXY=1 npm run build:admin
+exit 0
+├ ƒ /api/visitor/login
+├ ƒ /api/visitor/logout
+├ ƒ /api/visitor/loyalty
+├ ƒ /api/visitor/me
+├ ƒ /api/visitor/saved-vehicles
+├ ƒ /api/visitor/saved-vehicles/[vehicleId]
+├ ƒ /api/visitor/signup
+├ ƒ /invite/[token]
+ƒ Proxy (Middleware)
+ƒ  (Dynamic)  server-rendered on demand
+
+$ npm run check:migrations
+exit 0
+[migrations] 92 sequential files
+
+$ npm run build:web
+exit 0
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.8s
+  Running TypeScript ...
+  Finished TypeScript in 4.7s ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/4) ...
+  Generating static pages using 4 workers (1/4)
+  Generating static pages using 4 workers (2/4)
+  Generating static pages using 4 workers (3/4)
+✓ Generating static pages using 4 workers (4/4) in 251ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/vehicles
+├ ƒ /api/vehicles/[id]
+├ ƒ /api/vehicles/facets
+├ ƒ /preview
+├ ○ /robots.txt
+├ ƒ /vehicles
+└ ƒ /vehicles/[vehicleId]
+ƒ Proxy (Middleware)
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+$ npm run typecheck:web
+exit 0
+PASS web import boundaries: no cross-workspace runtime imports or client/server graph leaks
+
+$ npm run test:foundation --workspace=@lume/web
+exit 0
+✔ environment allowlist strips inherited production bindings and Git tokens (16.181408ms)
+✔ production deployments, database origins, and cross-project credentials fail closed (14.573274ms)
+✔ hosted preview runtime validates its own bindings without a local launcher marker (5.910053ms)
+✔ alternating concurrent requests never reuse a module-global tenant (3.253084ms)
+✔ unknown, nested, reserved, duplicate, conflicting and forged selectors are rejected (2.968354ms)
+✔ unverified or mismatched custom-domain mappings fail closed (1.163181ms)
+✔ boundary checker detects indirect graph leaks and workspace escapes (463.061991ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2783.063665
+
+$ npm run test:vehicles --workspace=@lume/web
+exit 0
+✔ visible vehicle precedes exact scoped ordered gallery; price signal normalized (78.424362ms)
+✔ cross-tenant, sold, missing and invalid UUID never expose gallery or signal (3.367116ms)
+✔ managed-gallery failure and old-schema feed projection preserve HTTPS feed fallback (5.002227ms)
+✔ price-signal failure hides signal without hiding vehicle; unavailable price is never $0/NaN (22.072454ms)
+✔ inventory preserves count, hasMore, deterministic sort, all filter keys and mileage-null semantics (1.945511ms)
+✔ search-vector fallback retains mileage filter and all constraints (1.752652ms)
+✔ Next API preserves response shapes, CORS, OPTIONS, ETag, no cookie mutation, header selector and 404s (17.119851ms)
+✔ hosted OPTIONS compares the verified public HTTPS host, not Vercel's internal HTTP URL (0.757796ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 585.905088
+
+$ npm run verify:vehicles --workspace=@lume/web
+exit 0
+PASS 36 alternating/concurrent HTML, Flight and JSON requests: alpha 200, active beta document/JSON 404 (Flight 200 with 404 digest); no foreign vehicle content; gallery queried only after visibility (18 reads).
+Two active tenants are LOCAL deterministic fixtures. Staging remains demo only; no remote tenant was created.
+
+$ npm run verify:foundation --workspace=@lume/web
+exit 0
+PASS actual Next process contains zero generic production/application/token bindings
+HTML alpha: HTTP 200; Foundation Alpha Motors; other tenant absent; identity lookups=1
+HTML beta: HTTP 200; Foundation Beta Autos; other tenant absent; identity lookups=1
+HTML alpha: HTTP 200; Foundation Alpha Motors; other tenant absent; identity lookups=1
+HTML beta: HTTP 200; Foundation Beta Autos; other tenant absent; identity lookups=1
+Flight alpha: HTTP 200; Foundation Alpha Motors; other tenant absent; identity lookups=1
+Flight beta: HTTP 200; Foundation Beta Autos; other tenant absent; identity lookups=1
+Flight alpha: HTTP 200; Foundation Alpha Motors; other tenant absent; identity lookups=1
+Flight beta: HTTP 200; Foundation Beta Autos; other tenant absent; identity lookups=1
+PASS alternating HTML and React Flight alpha → beta → alpha → beta; 20 concurrent requests remain isolated
+PASS verified custom-domain contract; 12 forged/unknown selector cases return 404; noindex robots and responses
+Evidence: artifacts/isolation.json (local contract double; real staging validation still requires dedicated bindings)
+
+$ node apps/web/scripts/scan-output.mjs
+exit 0
+PASS 107 compiled server/client output files contain none of the inherited credential values
+
+$ npm test -- --run tests/api api/_tests --maxWorkers=1
+exit 0
+ Test Files  9 passed (9)
+      Tests  18 passed (18)
+   Duration  34.24s (transform 1.34s, setup 4.13s, import 1.40s, tests 685ms, environment 22.08s)
+
+$ npm test -- --run 'apps/admin/app/admin/[tenant]/pages/PageEditorJourneys.route.test.ts' scripts/verify-shared-conversation-memory.test.mjs apps/admin/lib/managedFeedSftpFetch.server.test.ts src/lib/pageBuilder/VehicleDetailPageRendererRoute.test.tsx --maxWorkers=1 --testTimeout=30000
+exit 1
+ FAIL  |app| apps/admin/lib/managedFeedSftpFetch.server.test.ts > managed SFTP feed transport > stops reading an oversized SFTP file at the managed feed cap
+AssertionError: expected [Function] to throw error matching /exceeds the 25 MB limit/i but got 'SFTP feed request timed out.'
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 23 passed (24)
+   Duration  63.68s (transform 6.39s, setup 671ms, import 7.19s, tests 45.97s, environment 7.71s)
+
+$ WEB_VERIFY_BASE_URL=<immutable Preview origin> WEB_VERIFY_PROXY_CA=<platform proxy CA certificate> npm run verify:vehicle-browser --workspace=@lume/web
+exit 0
+{
+  base: 'https://lume-web-preview-205wpfnwb-hakicsi89-5044s-projects.vercel.app',
+  vehicleId: '16b46448-d5d0-441f-a329-397ec236a1a1',
+  viewport: { width: 390, height: 664 },
+  javaScriptEnabled: false,
+  proxyCertificatePolicy: 'Test-process-only SPKI pin for explicitly supplied proxy CA; no persistent trust change',
+  status: 200,
+  title: '2023 Ferrari 812 GTS | LUME Demo',
+  image: { complete: true, width: 1448, height: 1086 },
+  overflow: false,
+  contactUrl: 'https://lume-mdcuj0srt-hakicsi89-5044s-projects.vercel.app/contact?tenant=demo&vehicleId=16b46448-d5d0-441f-a329-397ec236a1a1',
+  modelOrChatRequests: 0,
+  failures: []
+}
+PASS optional gallery and lazy client-only chat-entry dialog; zero browser errors.

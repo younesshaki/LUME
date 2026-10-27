@@ -10,7 +10,7 @@ export type TenantRepository = {
   ): Promise<{ tenantId: string; domain: string } | null>;
 };
 
-/** Only tenant identity and exact verified-domain metadata are read in Phase 1. */
+/** Tenant identity and exact verified-domain metadata; never full tenant configuration. */
 export function tenantRepository(): TenantRepository {
   const config = databaseConfiguration(process.env);
   async function read<T>(
