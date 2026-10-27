@@ -1,0 +1,27 @@
+[
+  {
+    "kind": "demo",
+    "status": 200,
+    "containsDemo": true
+  },
+  {
+    "kind": "missing",
+    "status": 404,
+    "containsDemo": false
+  },
+  {
+    "kind": "demo",
+    "status": 200,
+    "containsDemo": true
+  },
+  {
+    "kind": "missing",
+    "status": 404,
+    "containsDemo": false
+  },
+  {
+    "kind": "demo",
+    "status": 200,
+    "containsDemo": true
+  }
+]

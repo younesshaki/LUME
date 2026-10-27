@@ -1,0 +1,6 @@
+{
+  "framework": "nextjs",
+  "installCommand": "cd ../.. && npm ci --legacy-peer-deps",
+  "buildCommand": "npm run build",
+  "ignoreCommand": "node -e \"process.exit(process.env.VERCEL_ENV === 'production' ? 0 : 1)\""
+}

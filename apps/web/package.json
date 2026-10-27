@@ -1,0 +1,31 @@
+{
+  "name": "@lume/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/run.mjs dev",
+    "build": "node scripts/check-boundaries.mjs && node scripts/run.mjs build",
+    "start": "node scripts/run.mjs start",
+    "typecheck": "node scripts/check-boundaries.mjs && tsc --noEmit",
+    "test:foundation": "node --test checks/*.check.mjs",
+    "verify:foundation": "node scripts/verify-foundation.mjs",
+    "audit:functions": "node scripts/audit-functions.mjs"
+  },
+  "dependencies": {
+    "@lume/types": "*",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.2",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

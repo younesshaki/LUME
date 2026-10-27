@@ -1,0 +1,19 @@
+HTTP/1.1 200 OK
+date: Tue, 27 Oct 2026 02:01:00 GMT
+server: envoy
+
+HTTP/2 200
+age: 0
+cache-control: private, no-cache, no-store, max-age=0, must-revalidate
+content-type: text/x-component
+date: Tue, 27 Oct 2026 02:01:00 GMT
+referrer-policy: no-referrer
+server: envoy
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+x-content-type-options: nosniff
+x-matched-path: /preview.rsc
+x-robots-tag: noindex, nofollow, noarchive
+x-vercel-cache: MISS
+x-vercel-id: cle1::iad1::5jbt6-1793066460546-0987729658b2
+x-envoy-upstream-service-time: 261
