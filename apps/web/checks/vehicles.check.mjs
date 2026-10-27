@@ -290,3 +290,26 @@ test("Next API preserves response shapes, CORS, OPTIONS, ETag, no cookie mutatio
   );
   assert.equal((await get("/api/vehicles/bad-id?tenant=alpha")).status, 400);
 });
+
+test("hosted OPTIONS compares the verified public HTTPS host, not Vercel's internal HTTP URL", async () => {
+  process.env.VERCEL = "1";
+  try {
+    const r = await vehicleApi(
+      new Request("http://internal.vercel.test/api/vehicles", {
+        method: "OPTIONS",
+        headers: {
+          host: "web-preview.vercel.app",
+          origin: "https://web-preview.vercel.app",
+        },
+      }),
+      "inventory",
+    );
+    assert.equal(r.status, 204);
+    assert.equal(
+      r.headers.get("access-control-allow-origin"),
+      "https://web-preview.vercel.app",
+    );
+  } finally {
+    delete process.env.VERCEL;
+  }
+});

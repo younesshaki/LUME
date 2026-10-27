@@ -11,9 +11,12 @@ export async function vehicleApi(
 ) {
   const url = new URL(request.url);
   const origin = request.headers.get("origin");
+  // Vercel's internal Request URL may be HTTP even when the public host is HTTPS.
+  // Host is validated by ingress and the resolver; never trust caller forwarded-proto.
+  const publicOrigin = `${process.env.VERCEL ? "https:" : url.protocol}//${request.headers.get("host")}`;
   const allowed =
     !origin ||
-    origin === url.origin ||
+    origin === publicOrigin ||
     (process.env.WEB_PREVIEW_ALLOWED_ORIGINS ?? "").split(",").includes(origin);
   const h = new Headers({
     "Content-Type": "application/json",
