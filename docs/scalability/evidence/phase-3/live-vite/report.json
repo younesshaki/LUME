@@ -1,0 +1,1826 @@
+{
+  "beforeCommit": "cff045f2479f4f8e6c741b3044af11356484ed6e",
+  "dataSource": "Frozen actual public staging snapshots; services is a labelled local published-document fixture; no remote tenant or page edits",
+  "productionPageRendererEnabled": false,
+  "vehicleResponseOrder": "Tenant SEO ready before vehicle response, equal for both builds; legacy competing metadata effects remain unchanged",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "cases": [
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "home",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "title": "LUME Demo",
+          "text": "LUXURY VERSIONS OF EVERYDAY ENERGY. LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling. Showcase Open Showcase II Open Showcase III Open PRODUCT LANGUAGE ENERGY, TREATED LIKE AN OBJECT OF DESIRE. The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "title": "LUME Demo",
+          "text": "LUXURY VERSIONS OF EVERYDAY ENERGY. LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling. Showcase Open Showcase II Open Showcase III Open PRODUCT LANGUAGE ENERGY, TREATED LIKE AN OBJECT OF DESIRE. The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "contact",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "title": "LUME Demo",
+          "text": "ACCESS LUME IS NOT FOUND. IT IS ENTERED BY INVITATION. LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is. 01 Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition. 02 Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience. 03 Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there. For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world. REQUEST INFORMATION CONTINUE WITH THE DEALERSHIP. FIRST NAME LAST NAME EMAIL PHONE HOW CAN WE HELP? SUBMIT REQUEST"
+        },
+        "behavior": {
+          "leadSuccess": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/leads",
+            "method": "POST",
+            "tenant": "demo",
+            "body": {
+              "firstName": "Parity",
+              "lastName": "Fixture",
+              "email": "parity@example.invalid",
+              "phone": "",
+              "message": "Local before/after contract fixture; no remote submission.",
+              "source": "contact-form",
+              "utmSource": "phase3-live-parity"
+            }
+          },
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "title": "LUME Demo",
+          "text": "ACCESS LUME IS NOT FOUND. IT IS ENTERED BY INVITATION. LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is. 01 Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition. 02 Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience. 03 Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there. For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world. REQUEST INFORMATION CONTINUE WITH THE DEALERSHIP. FIRST NAME LAST NAME EMAIL PHONE HOW CAN WE HELP? SUBMIT REQUEST"
+        },
+        "behavior": {
+          "leadSuccess": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/leads",
+            "method": "POST",
+            "tenant": "demo",
+            "body": {
+              "firstName": "Parity",
+              "lastName": "Fixture",
+              "email": "parity@example.invalid",
+              "phone": "",
+              "message": "Local before/after contract fixture; no remote submission.",
+              "source": "contact-form",
+              "utmSource": "phase3-live-parity"
+            }
+          },
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "products",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 40,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 2,
+        "meanChannelDelta": 0.00003096064814814815,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 40,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 2,
+        "meanChannelDelta": 0.00003125,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Products"
+          ],
+          "title": "LUME Demo",
+          "text": "EXCLUSIVE EDITIONS PRODUCTS Objects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale. ALL DRINK FRAGRANCE FASHION 3D DRINK LUME × RED BULL Special Edition VIEW PRODUCT DRINK LUME × STARBUCKS Reserve Blend VIEW PRODUCT MOET & CHANDON DRINK LUME × MOET & CHANDON Blanc de Blancs VIEW PRODUCT FRAGRANCE LUME × YSL Libre - Femme VIEW PRODUCT FRAGRANCE LUME × YSL Y - Homme VIEW PRODUCT HERMES FASHION LUME × HERMES Carre Soie VIEW PRODUCT ROLEX FASHION LUME × ROLEX Daytona Edition VIEW PRODUCT"
+        },
+        "behavior": {
+          "filteredCategories": [
+            "fragrance",
+            "fragrance"
+          ],
+          "allProductCount": 7,
+          "detailPath": "/products/red-bull",
+          "backPath": "/products",
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Products"
+          ],
+          "title": "LUME Demo",
+          "text": "EXCLUSIVE EDITIONS PRODUCTS Objects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale. ALL DRINK FRAGRANCE FASHION 3D DRINK LUME × RED BULL Special Edition VIEW PRODUCT DRINK LUME × STARBUCKS Reserve Blend VIEW PRODUCT MOET & CHANDON DRINK LUME × MOET & CHANDON Blanc de Blancs VIEW PRODUCT FRAGRANCE LUME × YSL Libre - Femme VIEW PRODUCT FRAGRANCE LUME × YSL Y - Homme VIEW PRODUCT HERMES FASHION LUME × HERMES Carre Soie VIEW PRODUCT ROLEX FASHION LUME × ROLEX Daytona Edition VIEW PRODUCT"
+        },
+        "behavior": {
+          "filteredCategories": [
+            "fragrance",
+            "fragrance"
+          ],
+          "allProductCount": 7,
+          "detailPath": "/products/red-bull",
+          "backPath": "/products",
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "services",
+      "fixture": true,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 40,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 2,
+        "meanChannelDelta": 0.00003125,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 40,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 2,
+        "meanChannelDelta": 0.00003125,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Dealership services"
+          ],
+          "title": "Services | LUME Demo",
+          "text": "DEALERSHIP SERVICES Local public-contract fixture; no remote publication created. Service information rendered through the existing block registry."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Dealership services"
+          ],
+          "title": "Services | LUME Demo",
+          "text": "DEALERSHIP SERVICES Local public-contract fixture; no remote publication created. Service information rendered through the existing block registry."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "luxury",
+      "mode": "light",
+      "route": "vehicle",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 40,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 2,
+        "meanChannelDelta": 0.000030671296296296294,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 40,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 2,
+        "meanChannelDelta": 0.00003125,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "2023 Ferrari 812 GTS"
+          ],
+          "title": "2023 Ferrari 812 GTS · LUME Demo",
+          "text": "BACK TO RESULTS USED LUME DEMO 2023 FERRARI 812 GTS EXTRACAMPIONARIO BIANCO CERVINO FULL PPF SCRAPE ARMOR 7 YR WTY Est. $392,500 Price and availability should be confirmed directly with the dealership. REQUEST INFO MILEAGE 2,991 mi BODY Convertible FUEL Gasoline DRIVETRAIN RWD EXTERIOR Bianco Cervino INTERIOR Nero LOCATION St Clair Shores, MI LISTING Live inventory"
+        },
+        "behavior": {
+          "galleryDialog": true,
+          "inquiryDialog": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "2023 Ferrari 812 GTS"
+          ],
+          "title": "2023 Ferrari 812 GTS · LUME Demo",
+          "text": "BACK TO RESULTS USED LUME DEMO 2023 FERRARI 812 GTS EXTRACAMPIONARIO BIANCO CERVINO FULL PPF SCRAPE ARMOR 7 YR WTY Est. $392,500 Price and availability should be confirmed directly with the dealership. REQUEST INFO MILEAGE 2,991 mi BODY Convertible FUEL Gasoline DRIVETRAIN RWD EXTERIOR Bianco Cervino INTERIOR Nero LOCATION St Clair Shores, MI LISTING Live inventory"
+        },
+        "behavior": {
+          "galleryDialog": true,
+          "inquiryDialog": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "home",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "title": "LUME Demo",
+          "text": "LUXURY VERSIONS OF EVERYDAY ENERGY. LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling. Showcase Open Showcase II Open Showcase III Open PRODUCT LANGUAGE ENERGY, TREATED LIKE AN OBJECT OF DESIRE. The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Luxury versions of everyday energy."
+          ],
+          "title": "LUME Demo",
+          "text": "LUXURY VERSIONS OF EVERYDAY ENERGY. LUME reframes familiar products through black-gold design, cinematic pacing, and premium product storytelling. Showcase Open Showcase II Open Showcase III Open PRODUCT LANGUAGE ENERGY, TREATED LIKE AN OBJECT OF DESIRE. The first LUME direction imagines a premium black-and-gold energy product: sharper, slower, more tactile, and built for a cinematic first impression."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "contact",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 32,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 1,
+        "meanChannelDelta": 0.000019386574074074075,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 32,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 1,
+        "meanChannelDelta": 0.000019386574074074075,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "title": "LUME Demo",
+          "text": "ACCESS LUME IS NOT FOUND. IT IS ENTERED BY INVITATION. LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is. 01 Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition. 02 Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience. 03 Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there. For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world. REQUEST INFORMATION CONTINUE WITH THE DEALERSHIP. FIRST NAME LAST NAME EMAIL PHONE HOW CAN WE HELP? SUBMIT REQUEST"
+        },
+        "behavior": {
+          "leadSuccess": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/leads",
+            "method": "POST",
+            "tenant": "demo",
+            "body": {
+              "firstName": "Parity",
+              "lastName": "Fixture",
+              "email": "parity@example.invalid",
+              "phone": "",
+              "message": "Local before/after contract fixture; no remote submission.",
+              "source": "contact-form",
+              "utmSource": "phase3-live-parity"
+            }
+          },
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "title": "LUME Demo",
+          "text": "ACCESS LUME IS NOT FOUND. IT IS ENTERED BY INVITATION. LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is. 01 Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition. 02 Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience. 03 Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there. For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world. REQUEST INFORMATION CONTINUE WITH THE DEALERSHIP. FIRST NAME LAST NAME EMAIL PHONE HOW CAN WE HELP? SUBMIT REQUEST"
+        },
+        "behavior": {
+          "leadSuccess": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/leads",
+            "method": "POST",
+            "tenant": "demo",
+            "body": {
+              "firstName": "Parity",
+              "lastName": "Fixture",
+              "email": "parity@example.invalid",
+              "phone": "",
+              "message": "Local before/after contract fixture; no remote submission.",
+              "source": "contact-form",
+              "utmSource": "phase3-live-parity"
+            }
+          },
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "products",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Products"
+          ],
+          "title": "LUME Demo",
+          "text": "EXCLUSIVE EDITIONS PRODUCTS Objects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale. ALL DRINK FRAGRANCE FASHION 3D DRINK LUME × RED BULL Special Edition VIEW PRODUCT DRINK LUME × STARBUCKS Reserve Blend VIEW PRODUCT MOET & CHANDON DRINK LUME × MOET & CHANDON Blanc de Blancs VIEW PRODUCT FRAGRANCE LUME × YSL Libre - Femme VIEW PRODUCT FRAGRANCE LUME × YSL Y - Homme VIEW PRODUCT HERMES FASHION LUME × HERMES Carre Soie VIEW PRODUCT ROLEX FASHION LUME × ROLEX Daytona Edition VIEW PRODUCT"
+        },
+        "behavior": {
+          "filteredCategories": [
+            "fragrance",
+            "fragrance"
+          ],
+          "allProductCount": 7,
+          "detailPath": "/products/red-bull",
+          "backPath": "/products",
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Products"
+          ],
+          "title": "LUME Demo",
+          "text": "EXCLUSIVE EDITIONS PRODUCTS Objects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale. ALL DRINK FRAGRANCE FASHION 3D DRINK LUME × RED BULL Special Edition VIEW PRODUCT DRINK LUME × STARBUCKS Reserve Blend VIEW PRODUCT MOET & CHANDON DRINK LUME × MOET & CHANDON Blanc de Blancs VIEW PRODUCT FRAGRANCE LUME × YSL Libre - Femme VIEW PRODUCT FRAGRANCE LUME × YSL Y - Homme VIEW PRODUCT HERMES FASHION LUME × HERMES Carre Soie VIEW PRODUCT ROLEX FASHION LUME × ROLEX Daytona Edition VIEW PRODUCT"
+        },
+        "behavior": {
+          "filteredCategories": [
+            "fragrance",
+            "fragrance"
+          ],
+          "allProductCount": 7,
+          "detailPath": "/products/red-bull",
+          "backPath": "/products",
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "services",
+      "fixture": true,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Dealership services"
+          ],
+          "title": "Services | LUME Demo",
+          "text": "DEALERSHIP SERVICES Local public-contract fixture; no remote publication created. Service information rendered through the existing block registry."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Dealership services"
+          ],
+          "title": "Services | LUME Demo",
+          "text": "DEALERSHIP SERVICES Local public-contract fixture; no remote publication created. Service information rendered through the existing block registry."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "luxury",
+      "mode": "dark",
+      "route": "vehicle",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 35,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 1,
+        "meanChannelDelta": 0.00002025462962962963,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 35,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 1,
+        "meanChannelDelta": 0.00002025462962962963,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "2023 Ferrari 812 GTS"
+          ],
+          "title": "2023 Ferrari 812 GTS · LUME Demo",
+          "text": "BACK TO RESULTS USED LUME DEMO 2023 FERRARI 812 GTS EXTRACAMPIONARIO BIANCO CERVINO FULL PPF SCRAPE ARMOR 7 YR WTY Est. $392,500 Price and availability should be confirmed directly with the dealership. REQUEST INFO MILEAGE 2,991 mi BODY Convertible FUEL Gasoline DRIVETRAIN RWD EXTERIOR Bianco Cervino INTERIOR Nero LOCATION St Clair Shores, MI LISTING Live inventory"
+        },
+        "behavior": {
+          "galleryDialog": true,
+          "inquiryDialog": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "2023 Ferrari 812 GTS"
+          ],
+          "title": "2023 Ferrari 812 GTS · LUME Demo",
+          "text": "BACK TO RESULTS USED LUME DEMO 2023 FERRARI 812 GTS EXTRACAMPIONARIO BIANCO CERVINO FULL PPF SCRAPE ARMOR 7 YR WTY Est. $392,500 Price and availability should be confirmed directly with the dealership. REQUEST INFO MILEAGE 2,991 mi BODY Convertible FUEL Gasoline DRIVETRAIN RWD EXTERIOR Bianco Cervino INTERIOR Nero LOCATION St Clair Shores, MI LISTING Live inventory"
+        },
+        "behavior": {
+          "galleryDialog": true,
+          "inquiryDialog": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "home",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Find the right vehicle, then see it in person."
+          ],
+          "title": "LUME Demo",
+          "text": "CURRENT INVENTORY Find the right vehicle, then see it in person. Browse vehicles with clear prices and specifications, then book a test drive or talk to the team. Explore inventory View inventory BUILT FOR THE NEXT STEP Momentum without pressure. 01 Clear pricing Reduce the distance between vehicle interest and a concrete drive request. 02 Inspected vehicles Preserve which vehicle and timing matter when the shopper contacts the dealership. 03 Local dealership team Let the dealership confirm every appointment rather than implying unavailable slots. CURRENT INVENTORY Find the right vehicle, then see it in person. Browse vehicles with clear prices and specifications, then book a test drive or talk to the team. View inventory Book a test drive 01—03 Clear pricing Inspected vehicles Local dealership team"
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Find the right vehicle, then see it in person."
+          ],
+          "title": "LUME Demo",
+          "text": "CURRENT INVENTORY Find the right vehicle, then see it in person. Browse vehicles with clear prices and specifications, then book a test drive or talk to the team. Explore inventory View inventory BUILT FOR THE NEXT STEP Momentum without pressure. 01 Clear pricing Reduce the distance between vehicle interest and a concrete drive request. 02 Inspected vehicles Preserve which vehicle and timing matter when the shopper contacts the dealership. 03 Local dealership team Let the dealership confirm every appointment rather than implying unavailable slots. CURRENT INVENTORY Find the right vehicle, then see it in person. Browse vehicles with clear prices and specifications, then book a test drive or talk to the team. View inventory Book a test drive 01—03 Clear pricing Inspected vehicles Local dealership team"
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "contact",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "title": "LUME Demo",
+          "text": "ACCESS LUME is not found. It is entered by invitation. LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is. 01 Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition. 02 Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience. 03 Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there. For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world. REQUEST INFORMATION CONTINUE WITH THE DEALERSHIP. FIRST NAME LAST NAME EMAIL PHONE HOW CAN WE HELP? SUBMIT REQUEST"
+        },
+        "behavior": {
+          "leadSuccess": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/leads",
+            "method": "POST",
+            "tenant": "demo",
+            "body": {
+              "firstName": "Parity",
+              "lastName": "Fixture",
+              "email": "parity@example.invalid",
+              "phone": "",
+              "message": "Local before/after contract fixture; no remote submission.",
+              "source": "contact-form",
+              "utmSource": "phase3-live-parity"
+            }
+          },
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "title": "LUME Demo",
+          "text": "ACCESS LUME is not found. It is entered by invitation. LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is. 01 Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition. 02 Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience. 03 Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there. For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world. REQUEST INFORMATION CONTINUE WITH THE DEALERSHIP. FIRST NAME LAST NAME EMAIL PHONE HOW CAN WE HELP? SUBMIT REQUEST"
+        },
+        "behavior": {
+          "leadSuccess": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/leads",
+            "method": "POST",
+            "tenant": "demo",
+            "body": {
+              "firstName": "Parity",
+              "lastName": "Fixture",
+              "email": "parity@example.invalid",
+              "phone": "",
+              "message": "Local before/after contract fixture; no remote submission.",
+              "source": "contact-form",
+              "utmSource": "phase3-live-parity"
+            }
+          },
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "products",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 6,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 1,
+        "meanChannelDelta": 0.00000318287037037037,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Products"
+          ],
+          "title": "LUME Demo",
+          "text": "EXCLUSIVE EDITIONS Products Objects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale. ALL DRINK FRAGRANCE FASHION 3D drink LUME × Red Bull Special Edition View Product drink LUME × Starbucks Reserve Blend View Product Moet & Chandon drink LUME × Moet & Chandon Blanc de Blancs View Product fragrance LUME × YSL Libre - Femme View Product fragrance LUME × YSL Y - Homme View Product Hermes fashion LUME × Hermes Carre Soie View Product Rolex fashion LUME × Rolex Daytona Edition View Product"
+        },
+        "behavior": {
+          "filteredCategories": [
+            "fragrance",
+            "fragrance"
+          ],
+          "allProductCount": 7,
+          "detailPath": "/products/red-bull",
+          "backPath": "/products",
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Products"
+          ],
+          "title": "LUME Demo",
+          "text": "EXCLUSIVE EDITIONS Products Objects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale. ALL DRINK FRAGRANCE FASHION 3D drink LUME × Red Bull Special Edition View Product drink LUME × Starbucks Reserve Blend View Product Moet & Chandon drink LUME × Moet & Chandon Blanc de Blancs View Product fragrance LUME × YSL Libre - Femme View Product fragrance LUME × YSL Y - Homme View Product Hermes fashion LUME × Hermes Carre Soie View Product Rolex fashion LUME × Rolex Daytona Edition View Product"
+        },
+        "behavior": {
+          "filteredCategories": [
+            "fragrance",
+            "fragrance"
+          ],
+          "allProductCount": 7,
+          "detailPath": "/products/red-bull",
+          "backPath": "/products",
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "services",
+      "fixture": true,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Dealership services"
+          ],
+          "title": "Services | LUME Demo",
+          "text": "Dealership services Local public-contract fixture; no remote publication created. Service information rendered through the existing block registry."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Dealership services"
+          ],
+          "title": "Services | LUME Demo",
+          "text": "Dealership services Local public-contract fixture; no remote publication created. Service information rendered through the existing block registry."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "light",
+      "route": "vehicle",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "2023 Ferrari 812 GTS"
+          ],
+          "title": "2023 Ferrari 812 GTS · LUME Demo",
+          "text": "Back to results USED LUME Demo 2023 Ferrari 812 GTS EXTRACAMPIONARIO BIANCO CERVINO FULL PPF SCRAPE ARMOR 7 YR WTY Est. $392,500 Price and availability should be confirmed directly with the dealership. Request info Mileage 2,991 mi Body Convertible Fuel Gasoline Drivetrain RWD Exterior Bianco Cervino Interior Nero Location St Clair Shores, MI Listing Live inventory"
+        },
+        "behavior": {
+          "galleryDialog": true,
+          "inquiryDialog": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "2023 Ferrari 812 GTS"
+          ],
+          "title": "2023 Ferrari 812 GTS · LUME Demo",
+          "text": "Back to results USED LUME Demo 2023 Ferrari 812 GTS EXTRACAMPIONARIO BIANCO CERVINO FULL PPF SCRAPE ARMOR 7 YR WTY Est. $392,500 Price and availability should be confirmed directly with the dealership. Request info Mileage 2,991 mi Body Convertible Fuel Gasoline Drivetrain RWD Exterior Bianco Cervino Interior Nero Location St Clair Shores, MI Listing Live inventory"
+        },
+        "behavior": {
+          "galleryDialog": true,
+          "inquiryDialog": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "home",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Find the right vehicle, then see it in person."
+          ],
+          "title": "LUME Demo",
+          "text": "CURRENT INVENTORY Find the right vehicle, then see it in person. Browse vehicles with clear prices and specifications, then book a test drive or talk to the team. Explore inventory View inventory BUILT FOR THE NEXT STEP Momentum without pressure. 01 Clear pricing Reduce the distance between vehicle interest and a concrete drive request. 02 Inspected vehicles Preserve which vehicle and timing matter when the shopper contacts the dealership. 03 Local dealership team Let the dealership confirm every appointment rather than implying unavailable slots. CURRENT INVENTORY Find the right vehicle, then see it in person. Browse vehicles with clear prices and specifications, then book a test drive or talk to the team. View inventory Book a test drive 01—03 Clear pricing Inspected vehicles Local dealership team"
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Find the right vehicle, then see it in person."
+          ],
+          "title": "LUME Demo",
+          "text": "CURRENT INVENTORY Find the right vehicle, then see it in person. Browse vehicles with clear prices and specifications, then book a test drive or talk to the team. Explore inventory View inventory BUILT FOR THE NEXT STEP Momentum without pressure. 01 Clear pricing Reduce the distance between vehicle interest and a concrete drive request. 02 Inspected vehicles Preserve which vehicle and timing matter when the shopper contacts the dealership. 03 Local dealership team Let the dealership confirm every appointment rather than implying unavailable slots. CURRENT INVENTORY Find the right vehicle, then see it in person. Browse vehicles with clear prices and specifications, then book a test drive or talk to the team. View inventory Book a test drive 01—03 Clear pricing Inspected vehicles Local dealership team"
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "contact",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "title": "LUME Demo",
+          "text": "ACCESS LUME is not found. It is entered by invitation. LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is. 01 Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition. 02 Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience. 03 Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there. For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world. REQUEST INFORMATION CONTINUE WITH THE DEALERSHIP. FIRST NAME LAST NAME EMAIL PHONE HOW CAN WE HELP? SUBMIT REQUEST"
+        },
+        "behavior": {
+          "leadSuccess": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/leads",
+            "method": "POST",
+            "tenant": "demo",
+            "body": {
+              "firstName": "Parity",
+              "lastName": "Fixture",
+              "email": "parity@example.invalid",
+              "phone": "",
+              "message": "Local before/after contract fixture; no remote submission.",
+              "source": "contact-form",
+              "utmSource": "phase3-live-parity"
+            }
+          },
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "LUME is not found. It is entered by invitation."
+          ],
+          "title": "LUME Demo",
+          "text": "ACCESS LUME is not found. It is entered by invitation. LUME is a secret luxury hotel in Monaco built around a different form of exclusivity. Wealth is not the currency. Impact is. 01 Access to LUME is reserved for people who have positively influenced society and helped others. The invitation is not a purchase, a booking strategy, or a public application. It is recognition. 02 Once invited, a guest is placed on the list. From that moment, they may request a stay whenever availability allows, but only once per year. When the visit ends, the card resets. The wait becomes part of the experience. 03 Inside LUME, every object belongs to the stay. Special editions created with the world's most recognised brands exist only within the hotel. They are experienced there, and they remain there. For LUME, contact is not a form. It is the beginning of discretion, consideration, and alignment with a philosophy: the stay itself is the product, and access is earned by what a person contributes to the world. REQUEST INFORMATION CONTINUE WITH THE DEALERSHIP. FIRST NAME LAST NAME EMAIL PHONE HOW CAN WE HELP? SUBMIT REQUEST"
+        },
+        "behavior": {
+          "leadSuccess": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/leads",
+            "method": "POST",
+            "tenant": "demo",
+            "body": {
+              "firstName": "Parity",
+              "lastName": "Fixture",
+              "email": "parity@example.invalid",
+              "phone": "",
+              "message": "Local before/after contract fixture; no remote submission.",
+              "source": "contact-form",
+              "utmSource": "phase3-live-parity"
+            }
+          },
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "products",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 8,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 1,
+        "meanChannelDelta": 0.0000028935185185185184,
+        "exactPngMatch": false,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Products"
+          ],
+          "title": "LUME Demo",
+          "text": "EXCLUSIVE EDITIONS Products Objects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale. ALL DRINK FRAGRANCE FASHION 3D drink LUME × Red Bull Special Edition View Product drink LUME × Starbucks Reserve Blend View Product Moet & Chandon drink LUME × Moet & Chandon Blanc de Blancs View Product fragrance LUME × YSL Libre - Femme View Product fragrance LUME × YSL Y - Homme View Product Hermes fashion LUME × Hermes Carre Soie View Product Rolex fashion LUME × Rolex Daytona Edition View Product"
+        },
+        "behavior": {
+          "filteredCategories": [
+            "fragrance",
+            "fragrance"
+          ],
+          "allProductCount": 7,
+          "detailPath": "/products/red-bull",
+          "backPath": "/products",
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Products"
+          ],
+          "title": "LUME Demo",
+          "text": "EXCLUSIVE EDITIONS Products Objects that exist only within LUME. Collaborations with the world's most recognised brands — unavailable anywhere else, never for sale. ALL DRINK FRAGRANCE FASHION 3D drink LUME × Red Bull Special Edition View Product drink LUME × Starbucks Reserve Blend View Product Moet & Chandon drink LUME × Moet & Chandon Blanc de Blancs View Product fragrance LUME × YSL Libre - Femme View Product fragrance LUME × YSL Y - Homme View Product Hermes fashion LUME × Hermes Carre Soie View Product Rolex fashion LUME × Rolex Daytona Edition View Product"
+        },
+        "behavior": {
+          "filteredCategories": [
+            "fragrance",
+            "fragrance"
+          ],
+          "allProductCount": 7,
+          "detailPath": "/products/red-bull",
+          "backPath": "/products",
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "services",
+      "fixture": true,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "Dealership services"
+          ],
+          "title": "Services | LUME Demo",
+          "text": "Dealership services Local public-contract fixture; no remote publication created. Service information rendered through the existing block registry."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "Dealership services"
+          ],
+          "title": "Services | LUME Demo",
+          "text": "Dealership services Local public-contract fixture; no remote publication created. Service information rendered through the existing block registry."
+        },
+        "behavior": {
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "vehicle",
+      "fixture": false,
+      "initialContentEqual": true,
+      "behaviorEqual": true,
+      "requestsEqual": true,
+      "top": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "bottom": {
+        "changedPixels": 0,
+        "totalPixels": 1152000,
+        "maxChannelDelta": 0,
+        "meanChannelDelta": 0,
+        "exactPngMatch": true,
+        "perceptualMatch": true,
+        "perceptualThreshold": 0.1
+      },
+      "before": {
+        "version": "before",
+        "initial": {
+          "h1": [
+            "2023 Ferrari 812 GTS"
+          ],
+          "title": "2023 Ferrari 812 GTS · LUME Demo",
+          "text": "Back to results USED LUME Demo 2023 Ferrari 812 GTS EXTRACAMPIONARIO BIANCO CERVINO FULL PPF SCRAPE ARMOR 7 YR WTY Est. $392,500 Price and availability should be confirmed directly with the dealership. Request info Mileage 2,991 mi Body Convertible Fuel Gasoline Drivetrain RWD Exterior Bianco Cervino Interior Nero Location St Clair Shores, MI Listing Live inventory"
+        },
+        "behavior": {
+          "galleryDialog": true,
+          "inquiryDialog": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      },
+      "after": {
+        "version": "after",
+        "initial": {
+          "h1": [
+            "2023 Ferrari 812 GTS"
+          ],
+          "title": "2023 Ferrari 812 GTS · LUME Demo",
+          "text": "Back to results USED LUME Demo 2023 Ferrari 812 GTS EXTRACAMPIONARIO BIANCO CERVINO FULL PPF SCRAPE ARMOR 7 YR WTY Est. $392,500 Price and availability should be confirmed directly with the dealership. Request info Mileage 2,991 mi Body Convertible Fuel Gasoline Drivetrain RWD Exterior Bianco Cervino Interior Nero Location St Clair Shores, MI Listing Live inventory"
+        },
+        "behavior": {
+          "galleryDialog": true,
+          "inquiryDialog": true,
+          "consent": {
+            "choice": "accepted",
+            "version": 1
+          }
+        },
+        "requests": [
+          {
+            "path": "/api/consent",
+            "method": "POST",
+            "body": {
+              "choice": "accepted",
+              "version": 1
+            }
+          }
+        ],
+        "errors": []
+      }
+    }
+  ],
+  "afterApplicationCommit": "458996a37cc98f059d4d805b871b6f396dceaae3",
+  "screenshotEncoding": "Raw PNGs compared before JPEG encoding. Committed JPEGs are review copies; hashes preserve provenance of the raw captures. No masks."
+}

@@ -1,0 +1,15 @@
+{
+  "changedProject": "lume-admin",
+  "changedKey": "ALLOWED_CHAT_ORIGINS",
+  "gitBranch": "staging",
+  "target": [
+    "preview"
+  ],
+  "addedOrigins": [
+    "https://lume-web-phase3-hakicsi89.vercel.app"
+  ],
+  "stablePreviewOrigin": "https://lume-web-phase3-hakicsi89.vercel.app",
+  "stagingProjectRef": "hapyyupeugxccofpibor",
+  "productionOriginsUnchanged": true,
+  "productionDeploymentsUnchanged": true
+}

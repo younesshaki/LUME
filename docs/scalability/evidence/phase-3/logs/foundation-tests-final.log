@@ -1,0 +1,24 @@
+
+> @lume/web@0.0.0 test:foundation
+> node --test checks/foundation.check.mjs
+
+✔ environment allowlist strips inherited production bindings and Git tokens (1.703839ms)
+✔ production deployments, database origins, and cross-project credentials fail closed (0.576322ms)
+✔ hosted preview runtime validates its own bindings without a local launcher marker (0.203664ms)
+✔ alternating concurrent requests never reuse a module-global tenant (0.924473ms)
+✔ unknown, nested, reserved, duplicate, conflicting and forged selectors are rejected (0.616102ms)
+✔ unverified or mismatched custom-domain mappings fail closed (0.25383ms)
+✔ boundary checker detects indirect graph leaks and workspace escapes (284.045138ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 589.716077
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

@@ -1,0 +1,223 @@
+{
+  "fixtureOnly": true,
+  "stagingRowsWritten": 0,
+  "evidence": [
+    {
+      "tenant": "alpha",
+      "transport": "HTML",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "JSON",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "beta",
+      "transport": "HTML",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "JSON",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "alpha",
+      "transport": "HTML",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "JSON",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "beta",
+      "transport": "HTML",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "JSON",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "JSON",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "JSON",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "alpha",
+      "transport": "JSON",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "beta",
+      "transport": "JSON",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "alpha",
+      "transport": "JSON",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "beta",
+      "transport": "JSON",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "alpha",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "beta",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "alpha",
+      "transport": "JSON",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "JSON",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "beta",
+      "transport": "HTML",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "alpha",
+      "transport": "Flight",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "beta",
+      "transport": "HTML",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "HTML",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "beta",
+      "transport": "HTML",
+      "status": 404,
+      "containsAlphaVehicle": false
+    },
+    {
+      "tenant": "alpha",
+      "transport": "HTML",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "HTML",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "HTML",
+      "status": 200,
+      "containsAlphaVehicle": true
+    },
+    {
+      "tenant": "alpha",
+      "transport": "HTML",
+      "status": 200,
+      "containsAlphaVehicle": true
+    }
+  ],
+  "galleryReads": 18
+}

@@ -1,0 +1,421 @@
+{
+  "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+  "deployment": {
+    "id": "dpl_2WRiWovc3UJk4Bm5wxLLHKzvnRKx",
+    "url": "lume-web-preview-fzf2ri5e0-hakicsi89-5044s-projects.vercel.app",
+    "sourceSha": "458996a37cc98f059d4d805b871b6f396dceaae3",
+    "target": "staging",
+    "projectId": "prj_OAtJghgaCiSDMqapWbATWOb51CQf"
+  },
+  "documents": [
+    {
+      "name": "luxury-light-home",
+      "path": "/?tenant=demo&template=luxury&theme=light",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 19899,
+      "template": "luxury",
+      "mode": "light",
+      "route": "home",
+      "title": "LUME",
+      "description": "Luxury versions of everyday energy.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/?tenant=demo",
+      "h1": "Luxury versions of everyday energy.",
+      "publishedRevision": "47ddcda2-1d23-4d83-a0dc-0ce56653c08e"
+    },
+    {
+      "name": "luxury-light-contact",
+      "path": "/contact?tenant=demo&template=luxury&theme=light",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 18102,
+      "template": "luxury",
+      "mode": "light",
+      "route": "contact",
+      "title": "Access — LUME",
+      "description": "LUME is not found. It is entered by invitation.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/contact?tenant=demo",
+      "h1": "LUME is not found. It is entered by invitation.",
+      "publishedRevision": "c1dc761b-e268-44b3-922d-187da252c01d"
+    },
+    {
+      "name": "luxury-light-products",
+      "path": "/products?tenant=demo&template=luxury&theme=light",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 25791,
+      "template": "luxury",
+      "mode": "light",
+      "route": "products",
+      "title": "Products — LUME",
+      "description": "Objects that exist only within LUME. Collaborations with the world's most recognised brands.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/products?tenant=demo",
+      "h1": "Products",
+      "publishedRevision": "ed2755c7-be9c-4add-a9e1-23205dc59420"
+    },
+    {
+      "name": "luxury-dark-home",
+      "path": "/?tenant=demo&template=luxury&theme=dark",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 19718,
+      "template": "luxury",
+      "mode": "dark",
+      "route": "home",
+      "title": "LUME",
+      "description": "Luxury versions of everyday energy.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/?tenant=demo",
+      "h1": "Luxury versions of everyday energy.",
+      "publishedRevision": "47ddcda2-1d23-4d83-a0dc-0ce56653c08e"
+    },
+    {
+      "name": "luxury-dark-contact",
+      "path": "/contact?tenant=demo&template=luxury&theme=dark",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 17921,
+      "template": "luxury",
+      "mode": "dark",
+      "route": "contact",
+      "title": "Access — LUME",
+      "description": "LUME is not found. It is entered by invitation.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/contact?tenant=demo",
+      "h1": "LUME is not found. It is entered by invitation.",
+      "publishedRevision": "c1dc761b-e268-44b3-922d-187da252c01d"
+    },
+    {
+      "name": "luxury-dark-products",
+      "path": "/products?tenant=demo&template=luxury&theme=dark",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 25610,
+      "template": "luxury",
+      "mode": "dark",
+      "route": "products",
+      "title": "Products — LUME",
+      "description": "Objects that exist only within LUME. Collaborations with the world's most recognised brands.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/products?tenant=demo",
+      "h1": "Products",
+      "publishedRevision": "ed2755c7-be9c-4add-a9e1-23205dc59420"
+    },
+    {
+      "name": "glo3d-light-home",
+      "path": "/?tenant=demo&template=glo3d&theme=light",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 19302,
+      "template": "glo3d",
+      "mode": "light",
+      "route": "home",
+      "title": "LUME",
+      "description": "Luxury versions of everyday energy.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/?tenant=demo",
+      "h1": "Luxury versions of everyday energy.",
+      "publishedRevision": "47ddcda2-1d23-4d83-a0dc-0ce56653c08e"
+    },
+    {
+      "name": "glo3d-light-contact",
+      "path": "/contact?tenant=demo&template=glo3d&theme=light",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 17931,
+      "template": "glo3d",
+      "mode": "light",
+      "route": "contact",
+      "title": "Access — LUME",
+      "description": "LUME is not found. It is entered by invitation.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/contact?tenant=demo",
+      "h1": "LUME is not found. It is entered by invitation.",
+      "publishedRevision": "c1dc761b-e268-44b3-922d-187da252c01d"
+    },
+    {
+      "name": "glo3d-light-products",
+      "path": "/products?tenant=demo&template=glo3d&theme=light",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 25620,
+      "template": "glo3d",
+      "mode": "light",
+      "route": "products",
+      "title": "Products — LUME",
+      "description": "Objects that exist only within LUME. Collaborations with the world's most recognised brands.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/products?tenant=demo",
+      "h1": "Products",
+      "publishedRevision": "ed2755c7-be9c-4add-a9e1-23205dc59420"
+    },
+    {
+      "name": "glo3d-dark-home",
+      "path": "/?tenant=demo&template=glo3d&theme=dark",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 19279,
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "home",
+      "title": "LUME",
+      "description": "Luxury versions of everyday energy.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/?tenant=demo",
+      "h1": "Luxury versions of everyday energy.",
+      "publishedRevision": "47ddcda2-1d23-4d83-a0dc-0ce56653c08e"
+    },
+    {
+      "name": "glo3d-dark-contact",
+      "path": "/contact?tenant=demo&template=glo3d&theme=dark",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 17908,
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "contact",
+      "title": "Access — LUME",
+      "description": "LUME is not found. It is entered by invitation.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/contact?tenant=demo",
+      "h1": "LUME is not found. It is entered by invitation.",
+      "publishedRevision": "c1dc761b-e268-44b3-922d-187da252c01d"
+    },
+    {
+      "name": "glo3d-dark-products",
+      "path": "/products?tenant=demo&template=glo3d&theme=dark",
+      "status": 200,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 25597,
+      "template": "glo3d",
+      "mode": "dark",
+      "route": "products",
+      "title": "Products — LUME",
+      "description": "Objects that exist only within LUME. Collaborations with the world's most recognised brands.",
+      "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/products?tenant=demo",
+      "h1": "Products",
+      "publishedRevision": "ed2755c7-be9c-4add-a9e1-23205dc59420"
+    }
+  ],
+  "rejections": [
+    {
+      "name": "unknown-tenant",
+      "path": "/contact?tenant=unknown-phase3",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 4744
+    },
+    {
+      "name": "duplicate-selector",
+      "path": "/contact?tenant=demo&tenant=foreign",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-store, max-age=0",
+        "content-type": "text/plain;charset=UTF-8",
+        "x-robots-tag": "noindex, nofollow, noarchive"
+      },
+      "bytes": 17
+    },
+    {
+      "name": "draft",
+      "path": "/contact?tenant=demo&draft=1",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 4764
+    },
+    {
+      "name": "revision",
+      "path": "/contact?tenant=demo&revisionId=draft",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 4791
+    },
+    {
+      "name": "preview-token",
+      "path": "/contact?tenant=demo&previewToken=public-token",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 4818
+    },
+    {
+      "name": "forged-tenant-header",
+      "path": "/contact?tenant=demo",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-store, max-age=0",
+        "content-type": "text/plain;charset=UTF-8",
+        "x-robots-tag": "noindex, nofollow, noarchive"
+      },
+      "bytes": 17
+    },
+    {
+      "name": "caller-tenant-header",
+      "path": "/contact?tenant=demo",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-store, max-age=0",
+        "content-type": "text/plain;charset=UTF-8",
+        "x-robots-tag": "noindex, nofollow, noarchive"
+      },
+      "bytes": 17
+    },
+    {
+      "name": "services-unpublished",
+      "path": "/services?tenant=demo",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 5516
+    },
+    {
+      "name": "custom-unpublished",
+      "path": "/our-story?tenant=demo",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 5518
+    },
+    {
+      "name": "foreign-vehicle",
+      "path": "/api/vehicles/11111111-1111-4111-8111-111111111111?tenant=demo",
+      "status": 404,
+      "headers": {
+        "cache-control": "private, no-store",
+        "content-type": "application/json",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch,Origin",
+        "x-vercel-cache": "MISS"
+      },
+      "bytes": 29
+    },
+    {
+      "name": "unapproved-host-routed-to-preview",
+      "host": "lume-web-phase3-rejected-hakicsi89.vercel.app",
+      "status": 404,
+      "applicationRejected": true
+    }
+  ],
+  "media": [
+    {
+      "url": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/demo/vehicles/16b46448-d5d0-441f-a329-397ec236a1a1/3cce3110-827e-40d9-bb52-1db95b598d2d.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 1874719,
+      "allowOrigin": null,
+      "scope": "Ordinary image loading; GLB/texture CORS is a later rollout gate"
+    }
+  ],
+  "forwardedHost": {
+    "name": "forwarded-host",
+    "path": "/contact?tenant=demo",
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "content-type": "text/html; charset=utf-8",
+      "x-robots-tag": "noindex, nofollow, noarchive",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-vercel-cache": "MISS"
+    },
+    "bytes": 17788,
+    "platformNormalized": true,
+    "canonicalUnaffected": true
+  }
+}

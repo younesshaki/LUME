@@ -1,0 +1,7 @@
+curl --include https://lume-web-phase3-rejected-hakicsi89.vercel.app/contact?tenant=demo
+HTTP/1.1 200 OK
+HTTP/2 404
+cache-control: private, no-store, max-age=0
+content-type: text/plain;charset=UTF-8
+x-robots-tag: noindex, nofollow, noarchive
+Preview not found

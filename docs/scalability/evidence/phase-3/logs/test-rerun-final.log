@@ -1,0 +1,51 @@
+
+> lume-cinematic-showcase@0.0.0 test
+> vitest run --run scripts/verify-shared-conversation-memory.test.mjs apps/admin/lib/managedFeedSftpFetch.server.test.ts --maxWorkers=1 --testTimeout=30000
+
+3:58:50 PM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+3:58:50 PM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+3:58:50 PM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+3:58:50 PM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+3:58:50 PM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+3:58:50 PM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+ RUN  v4.1.5 /workspace/LUME
+
+ ❯ |app| apps/admin/lib/managedFeedSftpFetch.server.test.ts (7 tests | 1 failed) 21667ms
+     × stops reading an oversized SFTP file at the managed feed cap 20509ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |app| apps/admin/lib/managedFeedSftpFetch.server.test.ts > managed SFTP feed transport > stops reading an oversized SFTP file at the managed feed cap
+AssertionError: expected [Function] to throw error matching /exceeds the 25 MB limit/i but got 'SFTP feed request timed out.'
+
+- Expected:
+/exceeds the 25 MB limit/i
+
++ Received:
+"SFTP feed request timed out."
+
+ ❯ apps/admin/lib/managedFeedSftpFetch.server.test.ts:120:83
+    118|   it("stops reading an oversized SFTP file at the managed feed cap", a…
+    119|     content = Buffer.alloc(25 * 1024 * 1024 + 1, 0x61);
+    120|     await expect(fetchManagedSftpFeed(input(), { resolveTargets: local…
+       |                                                                                   ^
+    121|       .rejects.toThrow(/exceeds the 25 MB limit/i);
+    122|     content = Buffer.from("Stock,VIN\nOW26220,4T1DAACK4TU663212\n", "u…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 14 passed (15)
+   Start at  15:58:50
+   Duration  32.90s (transform 84ms, setup 111ms, import 114ms, tests 31.94s, environment 503ms)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

@@ -1,0 +1,44 @@
+{
+  "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+  "consent": [
+    {
+      "choice": "rejected",
+      "status": 201,
+      "body": {
+        "recorded": true
+      }
+    },
+    {
+      "choice": "accepted",
+      "status": 201,
+      "body": {
+        "recorded": true
+      }
+    }
+  ],
+  "lead": {
+    "browserSuccessContractFixture": false,
+    "remoteLeadCreated": true,
+    "receipt": {
+      "status": 201,
+      "body": {
+        "leadId": "766011d4-0590-4f35-ae04-3366d5f0993b"
+      }
+    },
+    "tenantHeader": "demo",
+    "source": "contact-form",
+    "utmSource": "phase3-browser-check",
+    "actualStagingValidation": {
+      "status": 400,
+      "body": {
+        "error": "Email or phone is required."
+      }
+    }
+  },
+  "consentStorage": {
+    "choice": "accepted",
+    "version": 1,
+    "at": "2026-10-27T14:12:15.334Z"
+  },
+  "browserErrors": []
+}

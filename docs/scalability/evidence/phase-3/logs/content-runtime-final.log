@@ -1,0 +1,10 @@
+
+> @lume/web@0.0.0 verify:content
+> node --import tsx scripts/verify-content.mjs
+
+PASS published SSR: 20 template/mode/route documents; 40 fallback/empty template/mode/routes; draft/host selectors, 24 concurrent isolation requests, server-rendered HTTP503 (307 failure-only redirect). Evidence: artifacts/content/
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

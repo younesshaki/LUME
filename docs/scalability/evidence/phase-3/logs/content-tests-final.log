@@ -1,0 +1,25 @@
+
+> @lume/web@0.0.0 test:content
+> node --import tsx --conditions=react-server --test checks/content.check.mjs
+
+✔ published loader uses only scoped anonymous public RPCs; no draft tables or caller revision selection (23.470678ms)
+✔ missing, empty, invalid, mismatched and unavailable published documents remain distinguishable (2.371429ms)
+✔ lead proxy preserves Origin, tenant, contract and only the signed visitor cookie; never forwards admin/auth cookies or Set-Cookie (3.703061ms)
+✔ mutations reject cross-origin, absent Origin, unknown tenant and conflicting selectors before upstream writes (2.15209ms)
+✔ consent forwarding contains no visitor identity; upstream validation/failures are visible and safe (2.09134ms)
+✔ oversized body fails without an upstream mutation (1.041619ms)
+✔ every standard-mode shared descriptor has an explicit server adapter (0.436573ms)
+✔ outage HTML escapes tenant content, has one heading and cannot redirect to an external path (9.847825ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 381.683304
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

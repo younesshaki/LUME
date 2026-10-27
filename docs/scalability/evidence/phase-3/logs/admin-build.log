@@ -1,0 +1,122 @@
+
+> lume-cinematic-showcase@0.0.0 build:admin
+> npm run build --workspace=@lume/admin
+
+
+> @lume/admin@0.0.0 build
+> next build
+
+▲ Next.js 16.2.6 (Turbopack)
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 10.9s
+  Running TypeScript ...
+  Finished TypeScript in 13.5s ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/8) ...
+  Generating static pages using 4 workers (2/8)
+  Generating static pages using 4 workers (4/8)
+  Generating static pages using 4 workers (6/8)
+✓ Generating static pages using 4 workers (8/8) in 207ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /admin
+├ ƒ /admin/[tenant]
+├ ƒ /admin/[tenant]/analytics
+├ ƒ /admin/[tenant]/assets
+├ ƒ /admin/[tenant]/branding
+├ ƒ /admin/[tenant]/concierge-targets
+├ ƒ /admin/[tenant]/customers
+├ ƒ /admin/[tenant]/customers/[visitorId]
+├ ƒ /admin/[tenant]/design
+├ ƒ /admin/[tenant]/domains
+├ ƒ /admin/[tenant]/knowledge
+├ ƒ /admin/[tenant]/leads
+├ ƒ /admin/[tenant]/leads/[leadId]
+├ ƒ /admin/[tenant]/loyalty
+├ ƒ /admin/[tenant]/navigation
+├ ƒ /admin/[tenant]/pages
+├ ƒ /admin/[tenant]/pages/[pageId]
+├ ƒ /admin/[tenant]/pages/new
+├ ƒ /admin/[tenant]/persona
+├ ƒ /admin/[tenant]/settings/api-keys
+├ ƒ /admin/[tenant]/settings/billing
+├ ƒ /admin/[tenant]/settings/integrations
+├ ƒ /admin/[tenant]/settings/inventory-feeds
+├ ƒ /admin/[tenant]/settings/system-preferences
+├ ƒ /admin/[tenant]/team
+├ ƒ /admin/[tenant]/templates
+├ ƒ /admin/[tenant]/vehicles
+├ ƒ /admin/[tenant]/vehicles/[id]
+├ ƒ /admin/[tenant]/vehicles/import
+├ ƒ /admin/[tenant]/vehicles/new
+├ ƒ /admin/[tenant]/website
+├ ƒ /admin/onboarding
+├ ƒ /admin/platform
+├ ƒ /api/admin/concierge
+├ ƒ /api/admin/concierge/commands/[commandId]/confirm
+├ ƒ /api/bot-actions
+├ ƒ /api/chat
+├ ƒ /api/consent
+├ ƒ /api/cron/archive-sold-vehicles
+├ ƒ /api/cron/domain-verification
+├ ƒ /api/cron/inventory-export-runs
+├ ƒ /api/cron/inventory-feed-runs
+├ ƒ /api/cron/lead-email-digests
+├ ƒ /api/cron/rag-indexing
+├ ƒ /api/cron/storage-usage
+├ ƒ /api/cron/vehicle-image-descriptions
+├ ƒ /api/cron/webhook-deliveries
+├ ƒ /api/domains/[id]/verify
+├ ƒ /api/editor/chat
+├ ƒ /api/events
+├ ƒ /api/gdpr/delete
+├ ƒ /api/gdpr/export
+├ ƒ /api/health
+├ ƒ /api/leads
+├ ƒ /api/leads/export
+├ ƒ /api/ready
+├ ƒ /api/resend-webhook
+├ ƒ /api/vehicles
+├ ƒ /api/vehicles/[id]
+├ ƒ /api/vehicles/[id]/images
+├ ƒ /api/vehicles/[id]/images/[imageId]
+├ ƒ /api/vehicles/[id]/images/[imageId]/primary
+├ ƒ /api/vehicles/[id]/images/import-feed
+├ ƒ /api/vehicles/[id]/images/order
+├ ƒ /api/vehicles/[id]/images/upload-url
+├ ƒ /api/vehicles/[id]/price-signal
+├ ƒ /api/vehicles/facets
+├ ƒ /api/visitor/chat-history
+├ ƒ /api/visitor/login
+├ ƒ /api/visitor/logout
+├ ƒ /api/visitor/loyalty
+├ ƒ /api/visitor/me
+├ ƒ /api/visitor/saved-vehicles
+├ ƒ /api/visitor/saved-vehicles/[vehicleId]
+├ ƒ /api/visitor/signup
+├ ○ /demo-access
+├ ƒ /invite/[token]
+├ ○ /login
+└ ○ /signup
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

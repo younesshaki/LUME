@@ -1,0 +1,25 @@
+
+> @lume/web@0.0.0 test:vehicles
+> node --conditions=react-server --test checks/vehicles.check.mjs
+
+✔ visible vehicle precedes exact scoped ordered gallery; price signal normalized (36.500955ms)
+✔ cross-tenant, sold, missing and invalid UUID never expose gallery or signal (1.245143ms)
+✔ managed-gallery failure and old-schema feed projection preserve HTTPS feed fallback (2.243227ms)
+✔ price-signal failure hides signal without hiding vehicle; unavailable price is never $0/NaN (10.988572ms)
+✔ inventory preserves count, hasMore, deterministic sort, all filter keys and mileage-null semantics (1.073857ms)
+✔ search-vector fallback retains mileage filter and all constraints (0.774018ms)
+✔ Next API preserves response shapes, CORS, OPTIONS, ETag, no cookie mutation, header selector and 404s (7.189007ms)
+✔ hosted OPTIONS compares the verified public HTTPS host, not Vercel's internal HTTP URL (0.24019ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 174.340151
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

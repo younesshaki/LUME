@@ -1,0 +1,24 @@
+{
+  documents: 12,
+  rejections: 11,
+  stagingProjectRef: 'hapyyupeugxccofpibor',
+  functionCounts: [
+    {
+      name: 'web-preview',
+      deploymentId: 'dpl_2WRiWovc3UJk4Bm5wxLLHKzvnRKx',
+      outputEntries: 6,
+      distinctFunctionIdentifiers: 5,
+      budget: 12,
+      conservativeHeadroom: 6
+    },
+    {
+      name: 'live-vite',
+      deploymentId: 'dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo',
+      outputEntries: 10,
+      distinctFunctionIdentifiers: 10,
+      budget: 12,
+      conservativeHeadroom: 2
+    }
+  ],
+  productionUnchanged: true
+}

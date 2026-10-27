@@ -1,0 +1,16 @@
+[
+  {
+    "project": "lume",
+    "productionBefore": "dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo",
+    "productionAfter": "dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo",
+    "productionOriginsUnchanged": true,
+    "buildSettingsUnchanged": true
+  },
+  {
+    "project": "lume-admin",
+    "productionBefore": "dpl_7nWpz7u7FpWnZbWD1SNQMC6EvyPa",
+    "productionAfter": "dpl_7nWpz7u7FpWnZbWD1SNQMC6EvyPa",
+    "productionOriginsUnchanged": true,
+    "buildSettingsUnchanged": true
+  }
+]

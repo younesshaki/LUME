@@ -1,0 +1,13 @@
+Checking noindex Preview
+Launching isolated browser
+Browser launched; creating context
+Context created; creating page
+Loading contact
+Consent UI hydrated
+Consent choice sent rejected
+Consent receipt headers 201
+Consent choice sent accepted
+Consent receipt headers 201
+Lead submitted
+Lead receipt headers 201
+PASS consent reject/accept/reopen/refresh with staging 201 receipts; lead actually created on staging with 201 receipt; invalid lead 400.

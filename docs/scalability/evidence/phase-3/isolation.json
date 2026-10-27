@@ -1,0 +1,64 @@
+{
+  "source": "LOCAL CONTRACT DOUBLE, not hosted staging",
+  "evidence": [
+    {
+      "kind": "HTML",
+      "tenant": "alpha",
+      "status": 200,
+      "isolated": true,
+      "lookups": 1
+    },
+    {
+      "kind": "HTML",
+      "tenant": "beta",
+      "status": 200,
+      "isolated": true,
+      "lookups": 1
+    },
+    {
+      "kind": "HTML",
+      "tenant": "alpha",
+      "status": 200,
+      "isolated": true,
+      "lookups": 1
+    },
+    {
+      "kind": "HTML",
+      "tenant": "beta",
+      "status": 200,
+      "isolated": true,
+      "lookups": 1
+    },
+    {
+      "kind": "Flight",
+      "tenant": "alpha",
+      "status": 200,
+      "isolated": true,
+      "lookups": 1
+    },
+    {
+      "kind": "Flight",
+      "tenant": "beta",
+      "status": 200,
+      "isolated": true,
+      "lookups": 1
+    },
+    {
+      "kind": "Flight",
+      "tenant": "alpha",
+      "status": 200,
+      "isolated": true,
+      "lookups": 1
+    },
+    {
+      "kind": "Flight",
+      "tenant": "beta",
+      "status": 200,
+      "isolated": true,
+      "lookups": 1
+    }
+  ],
+  "concurrentRequests": 20,
+  "negativeRequests": 12,
+  "processIsolation": true
+}
