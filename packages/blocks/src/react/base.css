@@ -1,0 +1,239 @@
+
+:root {
+  --theme-lume-ink: #fff8ec;
+  --theme-lume-muted: rgba(255, 248, 236, 0.64);
+  --theme-lume-soft: rgba(255, 248, 236, 0.42);
+  --theme-lume-line: rgba(255, 248, 236, 0.12);
+  --theme-lume-gold: #d9b76a;
+  --theme-lume-background: #000;
+  --theme-lume-panel: rgba(8, 8, 9, 0.82);
+  --lume-cinematic-intensity: 1;
+  --lume-dock-item-bg: #272727;
+  --lume-dock-item-color: #efede6;
+  --lume-dock-item-border: #e9c31b27;
+  --theme-site-background-position: center;
+  --theme-site-background-size: cover;
+  --theme-site-background-overlay: rgba(0, 0, 0, 0.42);
+  /* Shared public-surface roles. Pages can remain expressive without assuming
+     that the active website mode is always a dark canvas. */
+  --lume-surface: rgba(12, 11, 13, 0.82);
+  --lume-surface-raised: rgba(18, 14, 15, 0.9);
+  --lume-surface-subtle: rgba(255, 248, 236, 0.06);
+  --lume-control: rgba(255, 248, 236, 0.07);
+  --lume-shadow: rgba(0, 0, 0, 0.38);
+  --lume-focus-ring: color-mix(in srgb, var(--theme-lume-gold) 42%, transparent);
+  --lume-danger: #ffb3a6;
+  --lume-primary-action: var(--theme-lume-gold);
+  --lume-on-primary: #17130d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="marquee"] [data-slot="marquee-row"] {
+    animation: none;
+    transform: none;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --theme-lume-ink: #211d16;
+  --theme-lume-muted: rgba(33, 29, 22, 0.66);
+  --theme-lume-soft: rgba(33, 29, 22, 0.46);
+  --theme-lume-line: rgba(47, 38, 25, 0.16);
+  --theme-lume-background: #f4efe5;
+  --theme-lume-panel: rgba(255, 252, 246, 0.88);
+  --lume-dock-item-bg: #fffaf0;
+  --lume-dock-item-color: #211d16;
+  --lume-dock-item-border: rgba(154, 117, 39, 0.2);
+  --theme-site-background-overlay: rgba(244, 239, 229, 0.12);
+  --lume-surface: color-mix(in srgb, var(--theme-lume-panel) 94%, var(--theme-lume-background));
+  --lume-surface-raised: color-mix(in srgb, var(--theme-lume-panel) 98%, var(--theme-lume-background));
+  --lume-surface-subtle: color-mix(in srgb, var(--theme-lume-ink) 4%, transparent);
+  --lume-control: color-mix(in srgb, var(--theme-lume-ink) 5%, var(--theme-lume-panel));
+  --lume-shadow: color-mix(in srgb, #372810 16%, transparent);
+  --lume-focus-ring: color-mix(in srgb, var(--theme-lume-gold) 44%, transparent);
+  --lume-danger: #a6382b;
+  --lume-primary-action: color-mix(in srgb, var(--theme-lume-gold) 76%, #3a280d);
+  --lume-on-primary: #fffaf0;
+}
+
+@font-face {
+  font-family: "Mileast";
+  src: url("../../../../src/experience/assets/fonts/mileast/Mileast.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: var(--experience-font-family);
+  background: var(--theme-lume-background, #000);
+  background-image:
+    linear-gradient(var(--theme-site-background-overlay), var(--theme-site-background-overlay)),
+    var(--theme-site-background-image, none);
+  background-position: center, var(--theme-site-background-position);
+  background-repeat: no-repeat;
+  background-size: cover, var(--theme-site-background-size);
+  color: var(--theme-lume-ink, #fff8ec);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+}
+
+/* ---- Public website navigation loader (branded route-transition cover) ------
+   Per-tenant, opt-in. Same design as the admin loader; theme-aware scrim keyed
+   on the site's [data-theme]. Pure CSS/compositor animation. */
+.nav-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 240ms ease, visibility 0s linear 240ms, backdrop-filter 240ms ease;
+}
+:root[data-theme="light"] .nav-loader {
+  background: rgba(244, 239, 229, 0.55);
+}
+.nav-loader[data-state="visible"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 180ms ease, backdrop-filter 180ms ease;
+}
+.nav-loader__logo {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 200ms ease, transform 200ms ease;
+  will-change: transform, opacity;
+  user-select: none;
+}
+.nav-loader[data-state="visible"] .nav-loader__logo {
+  opacity: 1;
+  transform: scale(1);
+  /* First rotation begins at 2s; then a 250ms pause between each full turn. */
+  animation: nav-loader-step-spin 850ms linear 2000ms infinite;
+}
+.nav-loader__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* One full turn (0 -> 70.588% of the cycle = 600ms), then hold upright for the
+   remaining 250ms pause, repeat. */
+@keyframes nav-loader-step-spin {
+  0% { transform: rotate(0deg); }
+  70.588% { transform: rotate(360deg); }
+  100% { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-loader,
+  .nav-loader__logo {
+    transition-duration: 90ms !important;
+  }
+  .nav-loader[data-state="visible"] .nav-loader__logo {
+    animation: none !important;
+  }
+}
+
+/* ---- Theme reveal (View Transitions) --------------------------------------
+   The circular reveal is animated on ::view-transition-new(root) from JS. Kill
+   the default cross-fade so only the clip-path reveal plays; new theme sits on
+   top of the old and clips outward from the toggle button. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 0;
+}
+::view-transition-new(root) {
+  z-index: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+@theme inline {
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  /* Used by src/components/ui/shine-border.tsx (vendored from @magicui). */
+  --animate-shine: shine var(--duration) infinite linear;
+
+  @keyframes shine {
+    0% {
+      background-position: 0% 0%;
+    }
+
+    50% {
+      background-position: 100% 100%;
+    }
+
+    to {
+      background-position: 0% 0%;
+    }
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+
+  @keyframes marquee-vertical {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
+}

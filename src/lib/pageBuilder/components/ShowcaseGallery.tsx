@@ -1,10 +1,7 @@
+import { FlatShowcaseCardView } from "@lume/blocks/react/ShowcaseCard";
 import { useMemo } from "react";
 import { mediaUrl } from "@/config/cdn";
-import {
-  CardBody,
-  CardContainer,
-  CardItem,
-} from "@/components/ui/3d-card";
+import { CardBody, CardContainer, CardItem } from "@/components/ui/3d-card";
 import { useSound } from "@/lib/sound";
 import { getShowcasePreviewForChapter } from "@/experience/products/catalog";
 import { useStory } from "@/experience/story/StoryProvider";
@@ -37,26 +34,13 @@ function FlatShowcaseCard({
   };
 
   return (
-    <div
-      className="storyHome__flatCard"
-      onClick={handleSelect}
-      onMouseEnter={() => play(showcasePageSoundActions.cardHover)}
-      onFocus={() => play(showcasePageSoundActions.cardHover)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          handleSelect();
-        }
-      }}
-    >
-      <img className="storyHome__flatCardImage" src={imageSrc} alt={imageAlt} />
-      <div className="storyHome__flatCardBody">
-        <p className="storyHome__flatCardTitle">{title}</p>
-        <span className="storyHome__flatCardAction">Open</span>
-      </div>
-    </div>
+    <FlatShowcaseCardView
+      title={title}
+      imageSrc={imageSrc}
+      imageAlt={imageAlt}
+      onSelect={handleSelect}
+      onHover={() => play(showcasePageSoundActions.cardHover)}
+    />
   );
 }
 
@@ -107,7 +91,11 @@ function ShowcaseCard({
             rotateZ={-2}
             className="storyHome__option3dImageSlot"
           >
-            <img className="storyHome__option3dImage" src={imageSrc} alt={imageAlt} />
+            <img
+              className="storyHome__option3dImage"
+              src={imageSrc}
+              alt={imageAlt}
+            />
           </CardItem>
           <CardItem
             translateZ={44}
@@ -138,7 +126,8 @@ export function ShowcaseGallery({ block, mode }: BlockComponentProps) {
       .flatMap((part) => part.chapters)
       .filter(
         (chapter) =>
-          visibleChapterIds.size === 0 || visibleChapterIds.has(chapter.definition.id)
+          visibleChapterIds.size === 0 ||
+          visibleChapterIds.has(chapter.definition.id),
       )
       .map((chapter) => ({
         ...chapter,
@@ -150,19 +139,26 @@ export function ShowcaseGallery({ block, mode }: BlockComponentProps) {
 
   return (
     <section
-      className={pageSlug === "showcase" ? "showcasePage__cards" : "storyHome__showcaseCards"}
+      className={
+        pageSlug === "showcase"
+          ? "showcasePage__cards"
+          : "storyHome__showcaseCards"
+      }
       aria-label="LUME showcases"
     >
       {title && <h2 className="showcasePage__eyebrow">{title}</h2>}
       {showcaseChapters.map((chapter, index) => {
-        const preview = getShowcasePreviewForChapter(chapter.definition.id, index);
+        const preview = getShowcasePreviewForChapter(
+          chapter.definition.id,
+          index,
+        );
         const handleSelect = () => {
           if (onEnterShowcase) {
             onEnterShowcase(chapter.partIndex, chapter.chapterIndex);
             return;
           }
           console.warn(
-            `[pageBuilder] showcase selected without route handler: ${chapter.definition.id}`
+            `[pageBuilder] showcase selected without route handler: ${chapter.definition.id}`,
           );
         };
 

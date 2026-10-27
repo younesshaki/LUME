@@ -9,9 +9,37 @@
     "typecheck": "tsc --noEmit"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./react/*": "./src/react/*.tsx",
+    "./react/props": "./src/react/props.ts",
+    "./react/types": "./src/react/types.ts",
+    "./theme-styles": "./src/themeStyles.ts",
+    "./product-catalog": "./src/productCatalog.ts",
+    "./product-model": "./src/productModel.ts",
+    "./block-media": "./src/blockMedia.ts",
+    "./base.css": "./src/react/base.css",
+    "./styles.css": "./src/react/styles.css",
+    "./resolved-appearance": "./src/resolvedAppearance.ts",
+    "./seo": "./src/seo.ts",
+    "./story-types": "./src/storyTypes.ts",
+    "./story-manifest": "./src/storyManifest.ts",
+    "./react/classNames": "./src/react/classNames.ts",
+    "./react/VehicleServices": "./src/react/VehicleServices.tsx",
+    "./template-experience": "./src/templateExperience.ts",
+    "./visibility": "./src/visibility.ts",
+    "./product-sounds": "./src/productSounds.ts",
+    "./lead-attribution": "./src/leadAttribution.ts"
   },
   "dependencies": {
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "lucide-react": "^1.11.0",
+    "@lume/types": "*",
+    "motion": "^12.38.0",
+    "@base-ui/react": "^1.4.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.5.0"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1 || ^19.2.6"
   }
 }

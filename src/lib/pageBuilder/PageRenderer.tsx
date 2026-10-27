@@ -1,6 +1,19 @@
-import { Component, CSSProperties, ReactNode, useEffect, useMemo, useState } from "react";
+import { isBlockVisibleInMode } from "@lume/blocks/visibility";
+export { isBlockVisibleInMode } from "@lume/blocks/visibility";
+import {
+  Component,
+  CSSProperties,
+  ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { fetchPublishedPage } from "@lume/db";
-import { validateBlock, type BlockDescriptor, type BlockMode } from "@lume/blocks";
+import {
+  validateBlock,
+  type BlockDescriptor,
+  type BlockMode,
+} from "@lume/blocks";
 import type { PageBlock, PublishedPage } from "@lume/types";
 import CinematicShell from "@/experience/ui/CinematicShell";
 import homepageBackgroundImage from "@/experience/assets/images/lume-homepage-background.png";
@@ -8,8 +21,14 @@ import { useDualMode } from "@/lib/DualModeContext";
 import { supabase } from "@/lib/supabase";
 import { publicTenantSlug, resolveTenantId } from "@/lib/publicTenant";
 import { getBlockComponent, getBlockDescriptor } from "./registry";
-import { isAutomotiveEditorial, useActiveSiteTemplate } from "@/lib/useActiveSiteTemplate";
-import { PageBuilderRenderProvider, type PageBuilderRenderContextValue } from "./renderContext";
+import {
+  isAutomotiveEditorial,
+  useActiveSiteTemplate,
+} from "@/lib/useActiveSiteTemplate";
+import {
+  PageBuilderRenderProvider,
+  type PageBuilderRenderContextValue,
+} from "./renderContext";
 import { registerBlocks } from "./registerBlocks";
 import { isPageRendererEnabled } from "./featureFlag";
 import { BlockAppearanceFrame } from "./BlockAppearanceFrame";
@@ -51,7 +70,10 @@ type PageRendererState =
 
 const publishedPageRequests = new Map<string, Promise<PublishedPage | null>>();
 
-function fetchPublishedPageOnce(tenantId: string, slug: string): Promise<PublishedPage | null> {
+function fetchPublishedPageOnce(
+  tenantId: string,
+  slug: string,
+): Promise<PublishedPage | null> {
   const key = `${tenantId}\u0000${slug}`;
   const existing = publishedPageRequests.get(key);
   if (existing) return existing;
@@ -62,7 +84,8 @@ function fetchPublishedPageOnce(tenantId: string, slug: string): Promise<Publish
   );
   publishedPageRequests.set(key, request);
   const clear = () => {
-    if (publishedPageRequests.get(key) === request) publishedPageRequests.delete(key);
+    if (publishedPageRequests.get(key) === request)
+      publishedPageRequests.delete(key);
   };
   void request.then(clear, clear);
   return request;
@@ -108,7 +131,9 @@ export function PageRenderer({
   const { mode } = useDualMode();
   const enabled = force || isPageRendererEnabled;
   const [state, setState] = useState<PageRendererState>(() =>
-    enabled ? { status: "loading", page: null } : { status: "fallback", page: null }
+    enabled
+      ? { status: "loading", page: null }
+      : { status: "fallback", page: null },
   );
 
   useEffect(() => {
@@ -130,10 +155,17 @@ export function PageRenderer({
 
         const page = await fetchPublishedPageOnce(tenantId, slug);
         if (!cancelled) {
-          setState(page ? { status: "ready", page } : { status: "fallback", page: null });
+          setState(
+            page
+              ? { status: "ready", page }
+              : { status: "fallback", page: null },
+          );
         }
       } catch (error) {
-        console.warn(`[pageBuilder] falling back after ${slug} page fetch failed`, error);
+        console.warn(
+          `[pageBuilder] falling back after ${slug} page fetch failed`,
+          error,
+        );
         if (!cancelled) setState({ status: "fallback", page: null });
       }
     }
@@ -151,7 +183,7 @@ export function PageRenderer({
             .map((block) => toRenderableBlock(block, state.page.slug, mode))
             .filter((block): block is RenderableBlock => Boolean(block))
         : [],
-    [mode, state]
+    [mode, state],
   );
   usePublishedPageSeo(state.status === "ready" ? state.page : null);
 
@@ -162,7 +194,12 @@ export function PageRenderer({
   if (renderableBlocks.length === 0) return <>{fallback}</>;
 
   return (
-    <PageBlocksView slug={slug} blocks={state.page.blocks.blocks} footer={footer} context={context} />
+    <PageBlocksView
+      slug={slug}
+      blocks={state.page.blocks.blocks}
+      footer={footer}
+      context={context}
+    />
   );
 }
 
@@ -187,7 +224,14 @@ type PageBlocksViewProps = {
  * the published-page renderer and the admin live-preview bridge render through
  * this so the preview is pixel-identical to production — never an approximation.
  */
-export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverride, blockWrapper }: PageBlocksViewProps) {
+export function PageBlocksView({
+  slug,
+  blocks,
+  footer,
+  context,
+  mode: modeOverride,
+  blockWrapper,
+}: PageBlocksViewProps) {
   const { mode: ambientMode } = useDualMode();
   // Glo3D has no cinematic mode, and the editor preview must match the live
   // site, so it wins over the editor's mode switch too.
@@ -199,7 +243,7 @@ export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverri
       blocks
         .map((block) => toRenderableBlock(block, slug, mode))
         .filter((block): block is RenderableBlock => Boolean(block)),
-    [blocks, slug, mode]
+    [blocks, slug, mode],
   );
 
   // Custom published pages get a neutral frame (contact's padded dark page),
@@ -215,33 +259,39 @@ export function PageBlocksView({ slug, blocks, footer, context, mode: modeOverri
             id={frame.mainId}
             // `pageBuilderMain` lets a template (Glo3D) run blocks edge to edge;
             // the padding stays the same unless a template sets the variables.
-            className={["pageBuilderMain", frame.mainClassName].filter(Boolean).join(" ")}
+            className={["pageBuilderMain", frame.mainClassName]
+              .filter(Boolean)
+              .join(" ")}
             style={{
               paddingTop: "var(--page-builder-main-top, 72px)",
               paddingBottom: "var(--page-builder-main-bottom, 160px)",
             }}
           >
-            {slug === "home" && <div className="storyHome__tracingBeam" aria-hidden="true" />}
+            {slug === "home" && (
+              <div className="storyHome__tracingBeam" aria-hidden="true" />
+            )}
             {renderableBlocks.map(({ block, Component }) => (
               <BlockBoundary key={block.id} block={block}>
-                {blockWrapper
-                  ? blockWrapper(
-                      block,
-                      <BlockAppearanceFrame block={block}>
-                        <Component block={block} mode={mode} />
-                      </BlockAppearanceFrame>,
-                    )
-                  : (
-                      <BlockAppearanceFrame block={block}>
-                        <Component block={block} mode={mode} />
-                      </BlockAppearanceFrame>
-                    )}
+                {blockWrapper ? (
+                  blockWrapper(
+                    block,
+                    <BlockAppearanceFrame block={block}>
+                      <Component block={block} mode={mode} />
+                    </BlockAppearanceFrame>,
+                  )
+                ) : (
+                  <BlockAppearanceFrame block={block}>
+                    <Component block={block} mode={mode} />
+                  </BlockAppearanceFrame>
+                )}
               </BlockBoundary>
             ))}
             {slug === "contact" ? <ConciergeLeadForm /> : null}
           </main>
           {/* Glo3D's home already carries these actions in its own blocks. */}
-          {slug === "home" && !flatTemplate ? <TemplateConversionPanel /> : null}
+          {slug === "home" && !flatTemplate ? (
+            <TemplateConversionPanel />
+          ) : null}
           {footer}
         </div>
       </CinematicShell>
@@ -277,12 +327,14 @@ type RenderableBlock = {
 function toRenderableBlock(
   block: PageBlock,
   slug: string,
-  mode: BlockMode
+  mode: BlockMode,
 ): RenderableBlock | null {
   try {
     const descriptor = getBlockDescriptor(block.type);
     if (!descriptor) {
-      console.warn(`[pageBuilder] skipping unknown block "${block.type}" on ${slug}`);
+      console.warn(
+        `[pageBuilder] skipping unknown block "${block.type}" on ${slug}`,
+      );
       return null;
     }
 
@@ -294,29 +346,27 @@ function toRenderableBlock(
     if (!validation.ok) {
       console.warn(
         `[pageBuilder] skipping invalid block "${block.type}" on ${slug}`,
-        validation.errors
+        validation.errors,
       );
       return null;
     }
 
     const Component = getBlockComponent(block.type);
     if (!Component) {
-      console.warn(`[pageBuilder] skipping unregistered block "${block.type}" on ${slug}`);
+      console.warn(
+        `[pageBuilder] skipping unregistered block "${block.type}" on ${slug}`,
+      );
       return null;
     }
 
     return { block, Component };
   } catch (error) {
-    console.warn(`[pageBuilder] skipping block "${block.type}" on ${slug}`, error);
+    console.warn(
+      `[pageBuilder] skipping block "${block.type}" on ${slug}`,
+      error,
+    );
     return null;
   }
-}
-
-export function isBlockVisibleInMode(
-  descriptor: Pick<BlockDescriptor, "modes" | "experienceOnly">,
-  mode: BlockMode
-): boolean {
-  return descriptor.modes.includes(mode) && !(mode === "standard" && descriptor.experienceOnly);
 }
 
 class BlockBoundary extends Component<
@@ -330,7 +380,10 @@ class BlockBoundary extends Component<
   }
 
   componentDidCatch(error: unknown) {
-    console.warn(`[pageBuilder] block render failed: ${this.props.block.type}`, error);
+    console.warn(
+      `[pageBuilder] block render failed: ${this.props.block.type}`,
+      error,
+    );
   }
 
   render() {
