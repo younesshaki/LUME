@@ -128,7 +128,7 @@ try {
     if (child.exitCode !== null)
       throw new Error("Preview process exited before readiness");
     try {
-      const r = await request("/");
+      const r = await request("/robots.txt");
       if (r.status === 200) break;
     } catch {}
     if (i === 99) throw new Error("Preview did not become ready");

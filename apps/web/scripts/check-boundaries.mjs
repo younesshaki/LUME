@@ -22,6 +22,74 @@ export function inspectBoundaries(root = appRoot) {
     if (existsSync(resolve(root, entry))) paths.push(resolve(root, entry));
   const graph = new Map();
   const errors = [];
+  const sharedRoots = ["blocks", "types"].map((name) =>
+    resolve(appRoot, "../../packages", name),
+  );
+  const permittedData = resolve(
+    appRoot,
+    "../../src/experience/products/catalog.json",
+  );
+  function sharedTarget(specifier) {
+    const name = specifier.split("/")[1];
+    const packageRoot = resolve(appRoot, "../../packages", name);
+    if (!sharedRoots.includes(packageRoot)) return null;
+    const manifest = JSON.parse(
+      readFileSync(resolve(packageRoot, "package.json"), "utf8"),
+    );
+    const sub = specifier.split("/").slice(2).join("/");
+    const key = sub ? "./" + sub : ".";
+    let target = manifest.exports?.[key];
+    if (!target)
+      for (const [pattern, value] of Object.entries(manifest.exports ?? {}))
+        if (pattern.includes("*") && key.startsWith(pattern.split("*")[0]))
+          target = value.replace("*", key.slice(pattern.split("*")[0].length));
+    if (typeof target !== "string") return null;
+    return resolve(packageRoot, target);
+  }
+  function resolveSource(base) {
+    return [
+      base,
+      base + ".ts",
+      base + ".tsx",
+      base + ".mjs",
+      resolve(base, "index.ts"),
+      resolve(base, "index.tsx"),
+    ].find((p) => existsSync(p) && statSync(p).isFile());
+  }
+  // Follow approved shared source packages too: accepting the package name alone
+  // would miss a future re-export of admin, browser-only or privileged modules.
+  for (let index = 0; index < paths.length; index++) {
+    const file = paths[index];
+    const ast = ts.createSourceFile(
+      file,
+      readFileSync(file, "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    function discover(n) {
+      if (
+        (ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) &&
+        n.moduleSpecifier &&
+        ts.isStringLiteral(n.moduleSpecifier)
+      ) {
+        const spec = n.moduleSpecifier.text;
+        let target = spec.startsWith("@lume/")
+          ? sharedTarget(spec)
+          : spec.startsWith(".")
+            ? resolveSource(resolve(dirname(file), spec))
+            : null;
+        if (
+          target &&
+          /\.(tsx?|mjs)$/.test(target) &&
+          sharedRoots.some((r) => target.startsWith(r + "/")) &&
+          !paths.includes(target)
+        )
+          paths.push(target);
+      }
+      ts.forEachChild(n, discover);
+    }
+    discover(ast);
+  }
   for (const file of paths) {
     const text = readFileSync(file, "utf8");
     const ast = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
@@ -81,9 +149,33 @@ export function inspectBoundaries(root = appRoot) {
     node.edges = [];
     for (const { specifier, typeOnly } of node.imports) {
       if (specifier === "@lume/types" && typeOnly) continue;
+      if (
+        ["@lume/types", "@lume/blocks"].some(
+          (p) => specifier === p || specifier.startsWith(p + "/"),
+        )
+      ) {
+        const target = sharedTarget(specifier);
+        if (target && /\.(css|json)$/.test(target) && existsSync(target))
+          continue;
+        if (!target || !graph.has(target))
+          errors.push(
+            `${relative(root, node.file)}: unresolved shared source ${specifier}`,
+          );
+        else if (!typeOnly) node.edges.push(target);
+        continue;
+      }
       if (specifier.startsWith(".")) {
         const base = resolve(dirname(node.file), specifier);
-        if (!base.startsWith(root + "/")) {
+        if (
+          !base.startsWith(root + "/") &&
+          !sharedRoots.some((r) => base.startsWith(r + "/"))
+        ) {
+          if (base === permittedData) continue;
+          if (
+            /\.(png|otf|ttf|svg)$/.test(base) &&
+            base.includes("/src/experience/assets/")
+          )
+            continue;
           errors.push(
             `${relative(root, node.file)}: import escapes web workspace`,
           );
@@ -104,9 +196,21 @@ export function inspectBoundaries(root = appRoot) {
         if (target && !typeOnly) node.edges.push(target);
       } else if (
         !(specifier.startsWith("node:") && !node.client) &&
-        !["server-only", "react", "next"].some(
-          (p) => specifier === p || specifier.startsWith(p + "/"),
-        )
+        ![
+          "server-only",
+          "react",
+          "next",
+          ...(sharedRoots.some((r) => node.file.startsWith(r + "/"))
+            ? [
+                "lucide-react",
+                "motion",
+                "@base-ui/react",
+                "clsx",
+                "tailwind-merge",
+                "zod",
+              ]
+            : []),
+        ].some((p) => specifier === p || specifier.startsWith(p + "/"))
       ) {
         errors.push(
           `${relative(root, node.file)}: unapproved runtime package ${specifier}`,
@@ -145,6 +249,15 @@ export function inspectBoundaries(root = appRoot) {
           errors.push(
             `${relative(root, node.file)}: client graph reaches server/config code`,
           );
+        if (
+          n.imports.some(
+            (i) => !i.typeOnly && i.specifier.startsWith("node:"),
+          ) ||
+          /\bprocess\s*\./.test(readFileSync(n.file, "utf8"))
+        )
+          errors.push(
+            `${relative(root, node.file)}: client graph reaches process/Node API`,
+          );
         if (n.imports.some((i) => i.specifier === "server-only"))
           errors.push(
             `${relative(root, node.file)}: client graph reaches server-only`,
@@ -178,6 +291,6 @@ if (
     process.exitCode = 1;
   } else
     console.log(
-      "PASS web import boundaries: no cross-workspace runtime imports or client/server graph leaks",
+      "PASS web import boundaries: audited shared source graph, no client/server leaks",
     );
 }
