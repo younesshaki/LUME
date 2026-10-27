@@ -1,0 +1,15 @@
+1:"$Sreact.fragment"
+2:I[9630,[],""]
+3:I[1380,[],""]
+5:I[887,[],"OutletBoundary"]
+8:I[887,[],"ViewportBoundary"]
+a:I[887,[],"MetadataBoundary"]
+:HL["/_next/static/css/8c1edebb2a009d19.css","style"]
+0:{"f":[[["",{"children":["preview",{"children":["__PAGE__?{\"tenant\":\"demo\"}",{}]}]},"$undefined","$undefined",16],[["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/8c1edebb2a009d19.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"en","children":["$","body",null,{"children":["$","$L2",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L3",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[["$","main",null,{"children":["$","h1",null,{"children":"Preview not found"}]}],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}]}]]}],{"children":[["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L3",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}],{"children":[["$","$1","c",{"children":["$L4",null,["$","$L5",null,{"children":"$@6"}]]}],{},null,false,null]},null,false,"$@7"]},null,false,null],["$","$1","h",{"children":[null,["$","$L8","NvcVaVL4hxwSkw2TYplmuv",{"children":"$L9"}],["$","$La","NvcVaVL4hxwSkw2TYplmum",{"children":"$Lb"}]]}],false]],"q":"?tenant=demo","i":false,"S":false,"h":null,"b":"x8q4E2Sqwn3-M6dhcNSpu"}
+c:[]
+7:"$Wc"
+9:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+d:I[7127,["517","static/chunks/app/preview/page-ca9342cf3b7ebd57.js"],"default"]
+4:["$","main",null,{"children":[["$","p",null,{"children":"Phase 1 · isolated, read-only, noindex"}],["$","h1",null,{"children":"LUME Demo"}],["$","dl",null,{"children":[["$","dt",null,{"children":"Tenant"}],["$","dd",null,{"data-testid":"tenant-slug","children":"demo"}],["$","dt",null,{"children":"Resolution"}],["$","dd",null,{"children":"preview"}]]}],["$","$Ld",null,{"slug":"demo"}],["$","p",null,{"children":"No inventory, chat, forms, page-builder or cinematic routes are migrated in this foundation."}]]}]
+6:null
+b:[["$","title","0",{"children":"LUME Demo | LUME foundation preview"}],["$","meta","1",{"name":"description","content":"Read-only tenant preview for LUME Demo."}],["$","meta","2",{"name":"robots","content":"noindex, nofollow, nocache"}],["$","link","3",{"rel":"canonical","href":"https://lume-web-preview-lsots60e4-hakicsi89-5044s-projects.vercel.app/preview?tenant=demo"}]]

@@ -1,0 +1,156 @@
+{
+  "preview": {
+    "api": "GET /v13/deployments/dpl_BKy6dB7Mv1dAKhqsMXkAfxztE9AQ",
+    "deployment": {
+      "id": "dpl_BKy6dB7Mv1dAKhqsMXkAfxztE9AQ",
+      "url": "lume-web-preview-lsots60e4-hakicsi89-5044s-projects.vercel.app",
+      "readyState": "READY",
+      "target": "staging",
+      "functions": null,
+      "lambdas": [
+        {
+          "id": "bld_r07crzd98",
+          "entrypoint": ".",
+          "readyState": "READY",
+          "output": [
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-3e9138cf0e5ff82aaca9c085e554ca1439__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-3e9138cf0e5ff82aaca9c085e554ca1439"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-3dcd4cd60dee00c538057549ec9033ea73__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-3dcd4cd60dee00c538057549ec9033ea73"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-08576923f31be6ae6738271762f56bf308__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-08576923f31be6ae6738271762f56bf308"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-069bdbb9ae8641d920643080d2cc0b0952__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-069bdbb9ae8641d920643080d2cc0b0952"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-069bdbb9ae8641d920643080d2cc0b0952__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-069bdbb9ae8641d920643080d2cc0b0952"
+            }
+          ]
+        }
+      ],
+      "builds": [],
+      "projectId": "prj_OAtJghgaCiSDMqapWbATWOb51CQf"
+    },
+    "manifestOutputRecords": 5,
+    "distinctFunctionNames": [
+      "team_t8yG0q4msCu2WcGuYOPbNukt-069bdbb9ae8641d920643080d2cc0b0952",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-08576923f31be6ae6738271762f56bf308",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-3dcd4cd60dee00c538057549ec9033ea73",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-3e9138cf0e5ff82aaca9c085e554ca1439"
+    ],
+    "functionCount": 4,
+    "hobbyLimit": 12,
+    "headroom": 8
+  },
+  "liveVite": {
+    "api": "GET /v13/deployments/dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo",
+    "deployment": {
+      "id": "dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo",
+      "url": "lume-ntqcjz388-hakicsi89-5044s-projects.vercel.app",
+      "readyState": "READY",
+      "target": "production",
+      "functions": {
+        "api/chat.ts": {
+          "regions": [
+            "dub1"
+          ]
+        },
+        "api/vehicles.ts": {
+          "regions": [
+            "dub1"
+          ]
+        },
+        "api/vehicles/[id].ts": {
+          "regions": [
+            "dub1"
+          ]
+        },
+        "api/vehicles/facets.ts": {
+          "regions": [
+            "dub1"
+          ]
+        }
+      },
+      "lambdas": [
+        {
+          "id": "bld_ofozp0am9",
+          "entrypoint": ".",
+          "readyState": "READY",
+          "output": [
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-1ea7f54bd11e862f785d8cc412b32b1746__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-1ea7f54bd11e862f785d8cc412b32b1746"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-ec4cd0ff1410e847b259a4bb3750505f7e__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-ec4cd0ff1410e847b259a4bb3750505f7e"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-7f7f211e2c33bf36a672817e6172f3fcda__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-7f7f211e2c33bf36a672817e6172f3fcda"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-30780591f75dde3d60542c02a4103fa831__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-30780591f75dde3d60542c02a4103fa831"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-b1d6b8ea3b10bf314c5420cdca8e3834b7__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-b1d6b8ea3b10bf314c5420cdca8e3834b7"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-2bf2de19a850572bd104ea24b3db09dd8f__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-2bf2de19a850572bd104ea24b3db09dd8f"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-07d117dcce205fa19558967eb0b86f5bf7__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-07d117dcce205fa19558967eb0b86f5bf7"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-ff8d53b5bd63ec1c739916b6165aaa29a6__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-ff8d53b5bd63ec1c739916b6165aaa29a6"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-dd1673ff6e87ff331897141dd8d7f754f5__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-dd1673ff6e87ff331897141dd8d7f754f5"
+            },
+            {
+              "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-4da51cdbea42749086984a6c2056ad3aa4__",
+              "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-4da51cdbea42749086984a6c2056ad3aa4"
+            }
+          ]
+        }
+      ],
+      "projectId": "prj_reXmkyltuIYOG17lPcLMCsYifRZN"
+    },
+    "manifestOutputRecords": 10,
+    "distinctFunctionNames": [
+      "team_t8yG0q4msCu2WcGuYOPbNukt-07d117dcce205fa19558967eb0b86f5bf7",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-1ea7f54bd11e862f785d8cc412b32b1746",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-2bf2de19a850572bd104ea24b3db09dd8f",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-30780591f75dde3d60542c02a4103fa831",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-4da51cdbea42749086984a6c2056ad3aa4",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-7f7f211e2c33bf36a672817e6172f3fcda",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-b1d6b8ea3b10bf314c5420cdca8e3834b7",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-dd1673ff6e87ff331897141dd8d7f754f5",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-ec4cd0ff1410e847b259a4bb3750505f7e",
+      "team_t8yG0q4msCu2WcGuYOPbNukt-ff8d53b5bd63ec1c739916b6165aaa29a6"
+    ],
+    "functionCount": 10,
+    "hobbyLimit": 12,
+    "headroom": 2
+  },
+  "accountAudit": {
+    "api": "/v2/teams/{configured VERCEL_ORG_ID}",
+    "httpStatus": 200,
+    "observedPlan": "hobby",
+    "requestedFunctionBudget": 12
+  }
+}

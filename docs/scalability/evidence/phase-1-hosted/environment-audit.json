@@ -1,0 +1,52 @@
+{
+  "deploymentId": "dpl_BKy6dB7Mv1dAKhqsMXkAfxztE9AQ",
+  "projectId": "prj_OAtJghgaCiSDMqapWbATWOb51CQf",
+  "target": "staging",
+  "stagingProjectRef": "hapyyupeugxccofpibor",
+  "knownProductionProjectRef": "atsgdjwjtmqvtotbrowu",
+  "usesProductionProject": false,
+  "applicationBindings": [
+    "WEB_PREVIEW_DEFAULT_TENANT",
+    "WEB_PREVIEW_PROJECT_REF",
+    "WEB_PREVIEW_SUPABASE_ANON_KEY",
+    "WEB_PREVIEW_SUPABASE_URL"
+  ],
+  "productionTargetsForAppBindings": 0,
+  "forbiddenDeploymentBindingNames": [],
+  "configurationValueChecks": [
+    {
+      "key": "WEB_PREVIEW_SUPABASE_URL",
+      "target": [
+        "preview"
+      ],
+      "decrypted": true,
+      "matchesSecureBinding": true,
+      "hostname": "hapyyupeugxccofpibor.supabase.co"
+    },
+    {
+      "key": "WEB_PREVIEW_PROJECT_REF",
+      "target": [
+        "preview"
+      ],
+      "decrypted": true,
+      "matchesSecureBinding": true,
+      "projectRef": "hapyyupeugxccofpibor"
+    },
+    {
+      "key": "WEB_PREVIEW_SUPABASE_ANON_KEY",
+      "target": [
+        "preview"
+      ],
+      "decrypted": true,
+      "matchesSecureBinding": true
+    },
+    {
+      "key": "WEB_PREVIEW_DEFAULT_TENANT",
+      "target": [
+        "preview"
+      ],
+      "matchesSecureBinding": true
+    }
+  ],
+  "secretValuesIncluded": false
+}

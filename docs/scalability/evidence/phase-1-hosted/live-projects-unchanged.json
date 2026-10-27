@@ -1,0 +1,60 @@
+{
+  "before": {
+    "lume-admin": {
+      "id": "prj_P5GW49IreH0zjnKqdXXSWivIHGaU",
+      "rootDirectory": "apps/admin",
+      "framework": "nextjs",
+      "buildCommand": "next build",
+      "installCommand": "cd ../.. && npm install --legacy-peer-deps",
+      "production": {
+        "id": "dpl_7nWpz7u7FpWnZbWD1SNQMC6EvyPa",
+        "url": "lume-admin-lsb1dn6v4-hakicsi89-5044s-projects.vercel.app"
+      },
+      "environmentBindingCount": 39,
+      "environmentBindingMetadataSha256": "41bcb015d02ff2ca97e5abfcba51294c6a9d70c62d1b82bf2c9cfad0700fb1f3"
+    },
+    "lume": {
+      "id": "prj_reXmkyltuIYOG17lPcLMCsYifRZN",
+      "rootDirectory": null,
+      "framework": "vite",
+      "buildCommand": "npm run build",
+      "installCommand": "npm install --legacy-peer-deps",
+      "production": {
+        "id": "dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo",
+        "url": "lume-ntqcjz388-hakicsi89-5044s-projects.vercel.app"
+      },
+      "environmentBindingCount": 44,
+      "environmentBindingMetadataSha256": "92ceb14a58bda5dcb463682c73c902b96f4d61c60add468aaf09fb89ddc917b3"
+    }
+  },
+  "after": {
+    "lume-admin": {
+      "id": "prj_P5GW49IreH0zjnKqdXXSWivIHGaU",
+      "rootDirectory": "apps/admin",
+      "framework": "nextjs",
+      "buildCommand": "next build",
+      "installCommand": "cd ../.. && npm install --legacy-peer-deps",
+      "production": {
+        "id": "dpl_7nWpz7u7FpWnZbWD1SNQMC6EvyPa",
+        "url": "lume-admin-lsb1dn6v4-hakicsi89-5044s-projects.vercel.app"
+      },
+      "environmentBindingCount": 39,
+      "environmentBindingMetadataSha256": "41bcb015d02ff2ca97e5abfcba51294c6a9d70c62d1b82bf2c9cfad0700fb1f3"
+    },
+    "lume": {
+      "id": "prj_reXmkyltuIYOG17lPcLMCsYifRZN",
+      "rootDirectory": null,
+      "framework": "vite",
+      "buildCommand": "npm run build",
+      "installCommand": "npm install --legacy-peer-deps",
+      "production": {
+        "id": "dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo",
+        "url": "lume-ntqcjz388-hakicsi89-5044s-projects.vercel.app"
+      },
+      "environmentBindingCount": 44,
+      "environmentBindingMetadataSha256": "92ceb14a58bda5dcb463682c73c902b96f4d61c60add468aaf09fb89ddc917b3"
+    }
+  },
+  "identical": true,
+  "note": "Only names/target metadata was hashed, never values; all Vercel mutations scoped to new lume-web-preview project"
+}

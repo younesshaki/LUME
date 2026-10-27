@@ -69,5 +69,7 @@ for the data/tenant adapters. `resolver-core.ts` is pure and testable without Ne
 The Vercel config is for a **new separate preview project rooted at `apps/web`**.
 Do not apply it to `lume` or `lume-admin`, assign customer domains, or remove the
 existing SPA fallback. Production builds are skipped and independently refused
-by the launcher. No Vercel project has been linked or deployed by this change;
-real function count and hosted staging gates are still pending external access.
+by the launcher. The separate `lume-web-preview` project is now deployed as a
+read-only Preview; [hosted evidence](../../docs/scalability/phase-1-hosted-exit-gates.md)
+records raw curl responses, staging-only bindings, single-tenant limitations and
+the actual function manifest. PR #95 remains draft; Phase 2 has not started.

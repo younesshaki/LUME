@@ -1,0 +1,16 @@
+HTTP/1.1 200 OK
+date: Tue, 27 Oct 2026 02:01:00 GMT
+server: envoy
+
+HTTP/2 405
+allow: GET, HEAD
+cache-control: private, no-store, max-age=0
+content-type: text/plain;charset=UTF-8
+date: Tue, 27 Oct 2026 02:01:00 GMT
+referrer-policy: no-referrer
+server: envoy
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-content-type-options: nosniff
+x-robots-tag: noindex, nofollow, noarchive
+x-vercel-id: cle1::92dxw-1793066460596-b16c01b0473e
+x-envoy-upstream-service-time: 216

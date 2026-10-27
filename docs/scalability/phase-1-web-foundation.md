@@ -1,6 +1,6 @@
 # Phase 1 — isolated web foundation
 
-Scope: the first implementation phase of [the approved migration plan](nextjs-migration-plan.md), and nothing from Phase 2 onward. This document records implementation, evidence and remaining external prerequisites. It does **not** declare the hosted Phase 1 gate complete.
+Scope: the first implementation phase of [the approved migration plan](nextjs-migration-plan.md), and nothing from Phase 2 onward. This document records the foundation implementation. The previously blocked hosted gates were closed on 2026-10-27 under the agreed single-tenant criterion; see [hosted evidence and raw captures](phase-1-hosted-exit-gates.md). PR #95 remains draft for review; Phase 2 has not started.
 
 ## Reference and starting state
 
@@ -107,11 +107,11 @@ For each of the eight alternating HTML/Flight requests the evidence records HTTP
 
 | Required gate | Local evidence | Hosted staging status |
 |---|---|---|
-| Two active tenants alternate without HTML/Flight/cache contamination | **PROVEN locally**, eight alternating responses plus 20 concurrent requests; metadata/body identity consistent and request-local dedup verified | **BLOCKED**, no dedicated staging URL/key/ref or two staging tenant selectors supplied; synthetic contract rows are not called real staging tenants |
-| Unknown/forged hosts and selectors rejected | **PROVEN locally**, 12 rejection cases plus custom-domain verification contract | **PENDING hosted check**, separate Vercel project's forwarding/routing behavior is not inferred from local requests |
-| Production keys absent from staging preview | **PROVEN for the actual locally started Next subprocess**, plus production URL/JWT/role rejection tests and compiled output scan; inherited generic production bindings removed | **PENDING hosted check**, there is no linked/deployed staging web project to inspect |
+| Tenant isolation under single-tenant staging limitation | **PROVEN locally**, eight alternating synthetic HTML/Flight responses plus 20 concurrent requests | **PROVEN under the updated criterion**: staging has only demo; deployed demo/unknown alternation and negative requests pass. No second real staging tenant is claimed or created |
+| Unknown/forged hosts and selectors | **PROVEN locally**, 12 rejection cases plus custom-domain verification contract | **PROVEN hosted**: edge/app rejections recorded; Vercel normalizes x-forwarded-host to Host rather than returning a mismatch 404. That documented anti-spoofing result was explicitly accepted; raw 200 response and identical canonical are retained |
+| Production keys absent from staging preview | **PROVEN locally** through subprocess guard/output checks | **PROVEN hosted**: actual project/deployment inventory contains only four Preview-scoped WEB_PREVIEW application bindings; decrypted staging values match in-memory checks, with no secrets included in evidence |
 
-The implementation and local proofs are reviewable now. The full hosted gate is **not proven** and must not be marked complete until those prerequisites are provided and tested. Stop after this draft; do not implement Phase 2 to work around missing staging access.
+The hosted gates are now **PROVEN under the agreed single-tenant criterion and accepted forwarded-host normalization**, with [actual curl, configuration and manifest evidence](phase-1-hosted-exit-gates.md). This does not assert two real staging tenants, a literal deployed forwarded-header 404, or a wholly green existing test suite. Stop for review; do not start Phase 2.
 
 ## Function-budget audit
 
@@ -123,13 +123,13 @@ Run `npm run audit:functions --workspace=@lume/web` after building. It records s
 | Root source estimate against 12 | 4 slots if only the eight real handlers deploy; conservative 2 slots if both helper files are counted by the existing build. This is not a verified deployment count |
 | New separate `apps/web` Next build | One dynamic page `/preview`; static `/`, robots and framework error pages; one Node proxy; **zero new API handlers**, no image optimizer usage/dynamic OG generation |
 | New web estimate against 12 | Conservatively 2 dynamic units (SSR + proxy), leaving 10 estimated slots, **subject to Vercel grouping/runtime accounting** |
-| Actual Vercel Build Output / deployment | **UNVERIFIED**: no Vercel CLI, project link/token or connected Vercel tool was available. No `.vercel/output/functions` exists. Counts are explicitly not reported as deployed/billable counts |
+| Actual Vercel deployment manifest, 2026-10-27 | **MEASURED**: isolated preview has 4 distinct deployed function identities (5 output records), headroom 8; unchanged live Vite deployment has 10, headroom 2. [Raw manifests](evidence/phase-1-hosted/function-manifests.json) supersede source estimates |
 
-The two projects have separate budgets; do not add their counts as though they were one deployment. A real preview build must inspect the Vercel manifest/deployment details and enforce ≤12 before claiming the Phase 1 hosted gate or Phase 2 readiness. No production deployment or account-plan change was attempted.
+The two projects have separate budgets; do not add their counts as though they were one deployment. The READY Preview deployment is within the confirmed Hobby 12-function budget. An initial new-project request with omitted target was automatically classified Production and canceled by the existing ignore guard; it did not serve the app. The successful request used explicit non-production API target staging. Neither live project nor the account plan was changed.
 
 ## Preview project configuration and reproduction
 
-Create/link only a new dedicated `lume-web` staging/preview Vercel project rooted at `apps/web`, with monorepo source inclusion, no customer domains, and no production application keys. `apps/web/vercel.json` installs workspaces from the monorepo root, builds web only, and skips production deployments; the launcher independently refuses production. Root `vercel.json` and both live projects remain untouched. No routing or DNS cutover is involved.
+The dedicated `lume-web-preview` project is now deployed from `apps/web`, with monorepo source inclusion, no customer domains, and no production application keys. See the [immutable preview and deployment ID](phase-1-hosted-exit-gates.md). `apps/web/vercel.json` installs workspaces from the monorepo root, builds web only, and skips production deployments; the launcher independently refuses production. Root `vercel.json` and both live projects remain untouched. No routing or DNS cutover is involved.
 
 Securely supply the explicit staging bindings above and exact preview host. For localhost, use `npm run dev:web` (port 3200) or `npm run build:web` then `npm run start --workspace=@lume/web`. The compilation intentionally needs no production/staging credentials; starting a real data preview requires staging values. No `.env.local` files are accepted by this launcher. `NODE_USE_ENV_PROXY` and the platform CA are retained when needed; TLS verification is not disabled.
 
@@ -146,7 +146,7 @@ node apps/web/scripts/audit-env.mjs
 npm run audit:functions --workspace=@lume/web
 ```
 
-The local verifier deliberately uses an isolated loopback origin and synthetic active tenants; test mode is forbidden in Vercel. Repeat the same alternating HTML/Flight and negative requests on the eventual hosted staging preview using **real active staging tenants**, without enabling test mode. A positive custom-domain check additionally needs an already-verified staging mapping and staging domain-read binding under existing RLS. Do not add a migration or relax RLS if those are absent; report the prerequisite instead.
+The local verifier deliberately uses an isolated loopback origin and synthetic active tenants; test mode is forbidden in Vercel. The hosted follow-up uses the single real staging demo tenant plus unknown/forged requests, alongside the deterministic multi-tenant proof; no second staging tenant was seeded. A positive custom-domain check additionally needs an already-verified staging mapping and staging domain-read binding under existing RLS. Do not add a migration or relax RLS if those are absent; report the prerequisite instead.
 
 ## Verification results and next review
 
@@ -165,9 +165,9 @@ The local verifier deliberately uses an isolated loopback origin and synthetic a
 | `npm run verify:foundation --workspace=@lume/web` | Passed against production build / local contract double: 8 alternating HTML/Flight responses, 20 concurrent requests, 12 rejection cases, verified-domain contract and read-only methods |
 | `node apps/web/scripts/scan-output.mjs` | Passed: 82 compiled server/client files contain none of the inherited production credential values |
 | `node apps/web/scripts/audit-env.mjs` | Passed: all 23 current VITE names have explicit mappings |
-| `npm run audit:functions --workspace=@lume/web` | Local manifest/source audit recorded; actual Vercel deployment count remains unverified |
+| Function audit | Local source audit retained; actual hosted deployment manifests now prove preview 4/12 and unchanged Vite 10/12. [Measured evidence](phase-1-hosted-exit-gates.md) |
 | Existing manifest/lock preservation | Every previous lock record unchanged; existing scripts/build/deploy/dependency declarations preserved; only new delegates and additive records |
 
 Existing test failures are reported and were not masked by code or assertion changes. The shared-memory credential-output harness clears on a longer-timeout single-worker rerun; SFTP remains an application-timeout-versus-size-cap failure already seen before this phase.
 
-Open risks / Phase 2 prerequisites: complete dedicated staging bindings and hosted isolation/secret audit; link/build only the separate preview project and inspect actual function accounting; review custom-domain metadata permissions without broadening RLS; rebase the approved reference plan after #94 is merged. Browser storage migration, live inventory SSR/DTOs, API adapters, R2/model/shader parity, templates, concierge and mobile performance remain later phases. This task stops for review and does not start any of them.
+Hosted staging bindings, anti-spoofing/secret audit and actual function accounting are now verified. Remaining review risks: staging still has only one real tenant; the provider normalizes forwarded host; optional custom-domain metadata permissions remain separately reviewable without broadening RLS; rebase the approved reference plan after #94 is merged if needed. Browser storage migration, live inventory SSR/DTOs, API adapters, R2/model/shader parity, templates, concierge and mobile performance remain later phases. This task stops for review and does not start any of them.
