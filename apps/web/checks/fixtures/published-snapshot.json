@@ -255,6 +255,10 @@
         },
         "published_revision_id": "4b2226dc-2b86-4fc4-9f5d-6b51b98fa754"
       }
+    },
+    {
+      "slug": "vehicle",
+      "page": null
     }
   ],
   "design": [

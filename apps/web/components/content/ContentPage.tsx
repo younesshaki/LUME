@@ -24,7 +24,9 @@ export async function ContentPage({ slug }: { slug: string }) {
           actions={
             <div className="templateHome__actions">
               <a href={`/vehicles?tenant=${tenant.slug}`}>Explore inventory</a>
-              <a href="#conversion">{template.conversion.primaryLabel}</a>
+              <a href="#template-conversion-heading">
+                {template.conversion.primaryLabel}
+              </a>
             </div>
           }
           Conversion={

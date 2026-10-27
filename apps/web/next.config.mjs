@@ -14,13 +14,34 @@ export default {
     // Preserve that behavior without changing the live stylesheet or silently
     // substituting a different font in the parity comparison.
     function inspect(rule) {
-      for(const item of (Array.isArray(rule.use)?rule.use:rule.use?[rule.use]:[])) if(item && typeof item === "object" && item.loader?.includes("/css-loader/")) {
-        const previous=item.options?.url;
-        item.options={...item.options,url:(url,...args)=> /(?:^|\/)ui\/assets\/fonts\/montserrat\/Montserrat-(?:Regular|Light)\.otf$/.test(url)||url.startsWith("../assets/fonts/montserrat/") ? false : typeof previous === "function" ? previous(url,...args) : previous !== false};
-      }
-      for(const child of [...(rule.oneOf??[]),...(rule.rules??[])])inspect(child);
+      for (const item of Array.isArray(rule.use)
+        ? rule.use
+        : rule.use
+          ? [rule.use]
+          : [])
+        if (
+          item &&
+          typeof item === "object" &&
+          item.loader?.includes("/css-loader/")
+        ) {
+          const previous = item.options?.url;
+          item.options = {
+            ...item.options,
+            url: (url, ...args) =>
+              /(?:^|\/)ui\/assets\/fonts\/montserrat\/Montserrat-(?:Regular|Light)\.otf$/.test(
+                url,
+              ) || url.startsWith("../assets/fonts/montserrat/")
+                ? false
+                : typeof previous === "function"
+                  ? previous(url, ...args)
+                  : previous !== false,
+          };
+        }
+      for (const child of [...(rule.oneOf ?? []), ...(rule.rules ?? [])])
+        inspect(child);
     }
-    for(const rule of config.module.rules) if(rule && typeof rule === "object")inspect(rule);
+    for (const rule of config.module.rules)
+      if (rule && typeof rule === "object") inspect(rule);
     return config;
   },
   async headers() {

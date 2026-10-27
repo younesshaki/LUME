@@ -114,7 +114,38 @@ const evidence = [];
 const out = `${root}/artifacts/content`;
 await mkdir(out, { recursive: true });
 async function request(path, headers = {}) {
- return new Promise((resolve,reject)=>{const req=http.request({hostname:"127.0.0.1",port,path,headers:{host:`127.0.0.1:${port}`,...headers}},res=>{let html="";res.setEncoding("utf8");res.on("data",c=>html+=c);res.on("end",()=>resolve({status:res.statusCode,headers:new Headers(Object.entries(res.headers).map(([k,v])=>[k,Array.isArray(v)?v.join(","):v])),html}));});req.setTimeout(20000,()=>req.destroy(new Error("Content fixture timeout")));req.on("error",reject);req.end();});
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        hostname: "127.0.0.1",
+        port,
+        path,
+        headers: { host: `127.0.0.1:${port}`, ...headers },
+      },
+      (res) => {
+        let html = "";
+        res.setEncoding("utf8");
+        res.on("data", (c) => (html += c));
+        res.on("end", () =>
+          resolve({
+            status: res.statusCode,
+            headers: new Headers(
+              Object.entries(res.headers).map(([k, v]) => [
+                k,
+                Array.isArray(v) ? v.join(",") : v,
+              ]),
+            ),
+            html,
+          }),
+        );
+      },
+    );
+    req.setTimeout(20000, () =>
+      req.destroy(new Error("Content fixture timeout")),
+    );
+    req.on("error", reject);
+    req.end();
+  });
 }
 
 function checkDocument(result, path) {
@@ -183,26 +214,43 @@ try {
       }
   for (const state of ["missing", "empty"]) {
     scenario = state;
-    for (const slug of ["", "contact", "products", "services", "our-story"]) {
-      const path = `/${slug}?tenant=demo`;
-      const r = await request(path);
-      const expected =
-        state === "missing" && ["services", "our-story"].includes(slug)
-          ? 404
-          : 200;
-      assert.equal(r.status, expected);
-      if (expected === 200) {
-        const dom = checkDocument(r, path);
-        assert.equal(
-          dom.querySelector("[data-content-state]")?.dataset.contentState,
-          state === "missing" ? "fallback" : "empty",
-        );
-        if (state === "empty" && slug === "our-story")
-          assert.ok(!dom.body.textContent.includes("Public revision only"));
-      }
-      await writeFile(`${out}/${state}-${slug || "home"}.html`, r.html);
-      evidence.push({ scenario, route: slug || "home", status: r.status });
-    }
+    for (const template of ["luxury", "glo3d"])
+      for (const mode of ["light", "dark"])
+        for (const slug of [
+          "",
+          "contact",
+          "products",
+          "services",
+          "our-story",
+        ]) {
+          const path = `/${slug}?tenant=demo&template=${template}&theme=${mode}`;
+          const r = await request(path);
+          const expected =
+            state === "missing" && ["services", "our-story"].includes(slug)
+              ? 404
+              : 200;
+          assert.equal(r.status, expected);
+          if (expected === 200) {
+            const dom = checkDocument(r, path);
+            assert.equal(
+              dom.querySelector("[data-content-state]")?.dataset.contentState,
+              state === "missing" ? "fallback" : "empty",
+            );
+            if (state === "empty" && slug === "our-story")
+              assert.ok(!dom.body.textContent.includes("Public revision only"));
+          }
+          await writeFile(
+            `${out}/${state}-${template}-${mode}-${slug || "home"}.html`,
+            r.html,
+          );
+          evidence.push({
+            scenario,
+            template,
+            mode,
+            route: slug || "home",
+            status: r.status,
+          });
+        }
   }
   scenario = "published";
   for (const query of [
@@ -255,8 +303,15 @@ try {
     }),
   );
   scenario = "error";
-  const failed = await request("/contact?tenant=demo");
-  assert.equal(failed.status, 500);
+  const redirect = await request("/contact?tenant=demo");
+  assert.equal(redirect.status, 307);
+  assert.match(redirect.headers.get("location"), /^\/preview\/unavailable\?/);
+  const failed = await request(redirect.headers.get("location"));
+  assert.equal(failed.status, 503);
+  const errorDom = new JSDOM(failed.html).window.document;
+  assert.equal(errorDom.querySelectorAll("h1").length, 1);
+  assert.ok(errorDom.querySelector("a[href^='/contact']"));
+  assert.equal(errorDom.querySelectorAll("script").length, 0);
   assert.ok(!failed.html.includes("must not leak"));
   assert.ok(!failed.html.includes('data-content-state="published"'));
   await writeFile(`${out}/error-contact.html`, failed.html);
@@ -265,6 +320,9 @@ try {
     route: "contact",
     status: failed.status,
     privateDetailsLeaked: false,
+    redirectStatus: redirect.status,
+    h1: errorDom.querySelector("h1").textContent,
+    javascriptRequired: false,
   });
   assert.ok(
     calls.every((c) => !/(?:page_revisions|draft|\/pages$)/.test(c.path)),
@@ -285,7 +343,7 @@ try {
     ) + "\n",
   );
   console.log(
-    `PASS published SSR: 20 template/mode/route documents; 10 fallback/empty routes; draft/host selectors, 24 concurrent isolation requests, sanitized HTTP500. Evidence: artifacts/content/`,
+    `PASS published SSR: 20 template/mode/route documents; 40 fallback/empty template/mode/routes; draft/host selectors, 24 concurrent isolation requests, server-rendered HTTP503 (307 failure-only redirect). Evidence: artifacts/content/`,
   );
 } finally {
   child.kill("SIGTERM");

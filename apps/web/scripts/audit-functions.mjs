@@ -61,9 +61,18 @@ const report = {
   web: {
     nextRoutes,
     staticRoutes,
-    declaredDynamicPageRoutes: ["/preview"],
+    declaredDynamicPageRoutes: nextRoutes
+      ? Object.keys(nextRoutes).filter(
+          (p) =>
+            p.endsWith("/page") &&
+            !p.startsWith("/_") &&
+            !staticRoutes.includes(p.replace(/\/page$/, "") || "/"),
+        )
+      : null,
     proxy: true,
-    newApiHandlers: 0,
+    apiRouteHandlers: nextRoutes
+      ? Object.keys(nextRoutes).filter((p) => p.startsWith("/api/"))
+      : null,
     deployedFunctions,
   },
   budget: 12,

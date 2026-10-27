@@ -3,12 +3,12 @@ import { isBlockVisibleInMode } from "@lume/blocks/visibility";
 import "server-only";
 import { cache } from "react";
 import { headers, cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getSiteTemplate, normalizeSiteDesign } from "@lume/types";
 import { DEFAULT_PAGES } from "@lume/blocks";
 import { getTenantSiteDesignStyles } from "@lume/blocks/theme-styles";
 import { requestTenant } from "../tenant.ts";
-import { publishedRepository } from "./repository.ts";
+import { ContentUnavailable, publishedRepository } from "./repository.ts";
 
 export const contentContext = cache(async () => {
   const h = await headers();
@@ -60,40 +60,57 @@ export const contentContext = cache(async () => {
   };
 });
 export const contentPage = cache(async (slug: string) => {
-  const context = await contentContext();
-  const published = await context.repository.page(
-    context.tenant.tenantId,
-    slug,
-  );
-  if (
-    published &&
-    published.blocks.blocks.some((b) => {
-      const d = getBlockDescriptor(b.type);
-      return d && isBlockVisibleInMode(d, "standard");
-    })
-  )
-    return { ...context, page: published, state: "published" as const };
-  const fallback = DEFAULT_PAGES.find(
-    (p) => p.slug === slug && ["home", "contact", "products"].includes(slug),
-  );
-  if (!fallback && !published) notFound();
-  const page =
-    published ??
-    (fallback
-      ? {
-          id: `fallback-${slug}`,
-          slug,
-          title: fallback.title,
-          seoMeta: fallback.seoMeta,
-          blocks: fallback.blocks,
-          publishedRevisionId: null,
-        }
-      : null);
-  if (!page) notFound();
-  return {
-    ...context,
-    page:
-      published && fallback ? { ...published, blocks: fallback.blocks } : page,
-    state: published ? ("empty" as const) : ("fallback" as const),
-  };
+  try {
+    const context = await contentContext();
+    const published = await context.repository.page(
+      context.tenant.tenantId,
+      slug,
+    );
+    if (
+      published &&
+      published.blocks.blocks.some((b) => {
+        const d = getBlockDescriptor(b.type);
+        return d && isBlockVisibleInMode(d, "standard");
+      })
+    )
+      return { ...context, page: published, state: "published" as const };
+    const fallback = DEFAULT_PAGES.find(
+      (p) => p.slug === slug && ["home", "contact", "products"].includes(slug),
+    );
+    if (!fallback && !published) notFound();
+    const page =
+      published ??
+      (fallback
+        ? {
+            id: `fallback-${slug}`,
+            slug,
+            title: fallback.title,
+            seoMeta: fallback.seoMeta,
+            blocks: fallback.blocks,
+            publishedRevisionId: null,
+          }
+        : null);
+    if (!page) notFound();
+    return {
+      ...context,
+      page:
+        published && fallback
+          ? { ...published, blocks: fallback.blocks }
+          : page,
+      state: published ? ("empty" as const) : ("fallback" as const),
+    };
+  } catch (error) {
+    if (!(error instanceof ContentUnavailable)) throw error;
+    const h = await headers();
+    const request = new URL(
+      h.get("x-web-request-path") ?? "/",
+      "http://request.internal",
+    );
+    const query = new URLSearchParams({
+      path: slug === "home" ? "/" : `/${slug}`,
+    });
+    const tenant = request.searchParams.get("tenant");
+    if (tenant) query.set("tenant", tenant);
+    redirect(`/preview/unavailable?${query}`);
+  }
 });

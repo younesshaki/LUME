@@ -19,22 +19,26 @@ export function publishedRepository(
       "get_published_page" | "get_tenant_theme" | "list_published_nav_pages",
     body: Record<string, string>,
   ): Promise<T[]> {
-    const response = await transport(`${config.url}/rest/v1/rpc/${name}`, {
-      method: "POST",
-      cache: "no-store",
-      redirect: "error",
-      signal: AbortSignal.timeout(10000),
-      headers: {
-        apikey: config.anon,
-        Authorization: `Bearer ${config.anon}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) throw new ContentUnavailable();
-    const data: unknown = await response.json();
-    if (!Array.isArray(data)) throw new ContentUnavailable();
-    return data as T[];
+    try {
+      const response = await transport(`${config.url}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        cache: "no-store",
+        redirect: "error",
+        signal: AbortSignal.timeout(10000),
+        headers: {
+          apikey: config.anon,
+          Authorization: `Bearer ${config.anon}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new ContentUnavailable();
+      const data: unknown = await response.json();
+      if (!Array.isArray(data)) throw new ContentUnavailable();
+      return data as T[];
+    } catch {
+      throw new ContentUnavailable();
+    }
   }
   return {
     async page(tenantId: string, slug: string): Promise<PublishedPage | null> {

@@ -128,7 +128,13 @@ const out =
   process.env.CONTENT_EVIDENCE_DIR ??
   path.join(web, "artifacts/content-browser");
 fs.mkdirSync(out, { recursive: true });
-const evidence = [];
+const filter = process.env.CONTENT_CASE;
+const evidence =
+  filter && fs.existsSync(path.join(out, "report.json"))
+    ? JSON.parse(
+        fs.readFileSync(path.join(out, "report.json")),
+      ).evidence.filter((e) => `${e.template}/${e.mode}/${e.route}` !== filter)
+    : [];
 const mediaResponses = new Map();
 async function context(mode) {
   const c = await browser.newContext({
@@ -139,6 +145,7 @@ async function context(mode) {
   });
   await c.addInitScript((mode) => {
     localStorage.setItem("lume.dualMode", "standard");
+    localStorage.setItem("lume.preview-mode.v1", "on");
     localStorage.setItem("lume.color-theme.v1", mode);
     localStorage.setItem("lume.color-theme.chosen.v1", "1");
     localStorage.setItem("lume-cookie-consent", "rejected");
@@ -161,6 +168,7 @@ try {
         "services",
         "our-story",
       ]) {
+        if (filter && `${template}/${mode}/${slug}` !== filter) continue;
         const pair = {
           template,
           mode,
@@ -175,7 +183,21 @@ try {
           const c = await context(mode);
           const p = await c.newPage();
           const errors = [];
+          await p.route("**/_vercel/**", (route) =>
+            route.fulfill({
+              status: 200,
+              contentType: "text/javascript",
+              body: "/* Isolated reference: platform telemetry is not sent. */",
+            }),
+          );
           p.on("pageerror", (e) => errors.push(e.message));
+          p.on("response", (r) => {
+            if (
+              r.status() >= 400 &&
+              ["script", "stylesheet"].includes(r.request().resourceType())
+            )
+              errors.push(`asset ${new URL(r.url()).pathname}: ${r.status()}`);
+          });
           async function media(route, key) {
             if (!mediaResponses.has(key))
               mediaResponses.set(
@@ -242,7 +264,7 @@ try {
           const pathname = slug === "home" ? "/" : `/${slug}`;
           await p.goto(
             `${base}${pathname}?tenant=demo&template=${template}&theme=${mode}`,
-            { waitUntil: "domcontentloaded", timeout: 60000 },
+            { waitUntil: "load", timeout: 60000 },
           );
           await p
             .locator("main.pageBuilderMain h1")
@@ -252,6 +274,11 @@ try {
               document.documentElement.dataset.theme === mode &&
               document.documentElement.dataset.lumeTemplate === template,
             { mode, template },
+            { timeout: 30000 },
+          );
+          await p.waitForFunction(
+            () => getComputedStyle(document.body).marginTop === "0px",
+            {},
             { timeout: 30000 },
           );
           await p.evaluate(() => document.fonts.ready);
