@@ -1,0 +1,28 @@
+Phase 4d local verification. Application commit 6a402d9390ca6ffc70a1f48b2f6599cb91b6545d
+
+Worktree base ee354b574; real npm install --legacy-peer-deps (no node_modules symlink).
+Before typecheck: web next-env.d.ts/.next/tsconfig.tsbuildinfo deleted.
+
+Required gates (exit status, unchanged commands):
+typecheck-all 0
+web-build 0
+blocks-typecheck 0
+all-checks 0
+diff-check 0
+
+Commands:
+  npm run typecheck:all
+  npm run build --workspace=@lume/web (includes import boundary audit)
+  npm run typecheck --workspace=@lume/blocks
+  node --import tsx --conditions=react-server --test apps/web/checks/*.check.mjs
+  git diff --check
+
+All six check suites: foundation 7, vehicles 8, content 8, concierge 12, visitor 5, navigation 6; 46/46 pass.
+Browser proof: CONCIERGE_EVIDENCE_DIR=/path/out node --import tsx apps/web/scripts/verify-concierge.mjs
+PASS 9 browser journeys; 17 local SSE turns; no provider requests or staging writes. Evidence: /workspace/lume-phase4d-results/browser
+
+PASS 139 compiled server/client output files contain none of the inherited credential values
+
+LOCAL fixtures only. Browser chat SSE and lead receipts are intercepted, clearly labelled local, and never counted as hosted/provider proof. Database data is synthetic on loopback. No staging/default/demo data writes or external provider requests.
+
+The full repository Vitest suite was not part of this slice gate and is not claimed rerun here. Historical SFTP timing failures were not modified or masked. GitHub CI is pending approved push and PR creation. Hosted real-provider evidence is BLOCKED pending Josh provisioning/approval.
