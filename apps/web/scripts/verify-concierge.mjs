@@ -225,11 +225,42 @@ try {
       ),
     });
   });
+  async function readableDialog(locator, name) {
+    const style = await locator.evaluate((node) => {
+      const c = getComputedStyle(node);
+      return {
+        foreground: c.color,
+        background: c.backgroundColor,
+        opacity: c.opacity,
+      };
+    });
+    const foreground = style.foreground.match(/[\d.]+/g).map(Number);
+    const background = style.background.match(/[\d.]+/g).map(Number);
+    const luminance = (rgb) =>
+      rgb
+        .slice(0, 3)
+        .map((c) => c / 255)
+        .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+        .reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+    const values = [luminance(foreground), luminance(background)].sort(
+      (a, b) => a - b,
+    );
+    const contrast = (values[1] + 0.05) / (values[0] + 0.05);
+    assert.equal(background[3] ?? 1, 1, "Dialog surface must be opaque");
+    assert.equal(Number(style.opacity), 1);
+    assert.ok(contrast >= 4.5, `${name} contrast ${contrast}`);
+    report.readability ??= {};
+    report.readability[name] = { ...style, contrast };
+  }
   async function ask(action, text = "Local action fixture") {
     nextAction = action;
     await page
       .getByRole("button", { name: "Ask the concierge", exact: true })
       .click();
+    await readableDialog(
+      page.getByRole("dialog", { name: /^Concierge for/ }),
+      "chat",
+    );
     await page.getByLabel("Message the concierge").fill(text);
     await page.getByRole("button", { name: "Send", exact: true }).click();
   }
@@ -425,6 +456,7 @@ try {
   await landed(`/vehicles/${ids[1]}`);
   const inquiry = page.getByRole("dialog", { name: /Inquiry for 2024 BMW i4/ });
   await inquiry.waitFor();
+  await readableDialog(inquiry, "inquiry");
   await page.waitForFunction(
     () =>
       document.querySelector(
@@ -444,9 +476,14 @@ try {
     "vehicle-inquiry",
   );
   assert.equal(report.leads.at(-1).body.vehicleId, ids[1]);
+  await inquiry
+    .getByText("Request received. The dealership will follow up with you.", {
+      exact: true,
+    })
+    .scrollIntoViewIfNeeded();
   await page.screenshot({
     path: path.join(out, "vehicle-inquiry-mobile.jpg"),
-    fullPage: true,
+    fullPage: false,
   });
   await page
     .getByRole("button", { name: "Close inquiry", exact: true })

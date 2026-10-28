@@ -1,4 +1,17 @@
 .concierge {
+  /* Dialogs must remain opaque/readable outside the published template shell. */
+  --lume-ink: #211d16;
+  --lume-soft: #574f40;
+  --lume-muted: #5b5448;
+  --lume-line: #d2c9b8;
+  --lume-gold: #77570b;
+  --lume-surface: #fffdf8;
+  --lume-surface-raised: #fffaf0;
+  --lume-primary-action: #d9b76a;
+  --lume-on-primary: #17130d;
+  --lume-danger: #a6382b;
+  font-family: system-ui, sans-serif;
+  color-scheme: light;
   width: min(32rem, 92vw);
   max-height: min(80vh, 44rem);
   border: none;
@@ -93,6 +106,17 @@
 .concierge--inquiry {
   padding: 1rem;
   overflow-y: auto;
+}
+.concierge--inquiry .contactPage__formSection {
+  grid-template-columns: 1fr;
+  margin-top: 0;
+  padding-top: 1rem;
+  gap: 1rem;
+}
+.concierge--inquiry .contactPage__formSection h2 {
+  font-family: inherit;
+  font-size: 1.3rem;
+  line-height: 1.3;
 }
 .concierge__input {
   min-width: 0;
