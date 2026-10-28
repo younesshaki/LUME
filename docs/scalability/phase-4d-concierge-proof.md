@@ -1,12 +1,14 @@
 # Phase 4d — concierge consumers and end-to-end proof
 
-This slice starts directly from staging `ee354b574b75c500408cd2cb04c2dd64b469ff46` after 4a–4c. The implementation is local commit `6a402d9`. It changes the isolated Next preview only, plus an opt-in completion guard in the shared chat transport. Vite, admin, API ownership, origin settings, database schema and tenant data are unchanged. No traffic cutover or later phase is started.
+This slice starts directly from staging `ee354b574b75c500408cd2cb04c2dd64b469ff46` after 4a–4c. The implementation including the mobile readability fix is local commit `5f3d237`. It changes the isolated Next preview only, plus an opt-in completion guard in the shared chat transport. Vite, admin, API ownership, origin settings, database schema and tenant data are unchanged. No traffic cutover or later phase is started.
 
 **Hosted exit gate: BLOCKED, not proven.** Josh must provision/confirm funded staging and its origin allowlist before a hosted request. The local evidence below is deliberately not a real-provider claim. Push and a draft PR also require Josh's explicit approval; none has been inferred from elapsed time or earlier phases.
 
 ## Implementation
 
 The history recorder now observes pathname **and search** transitions. Filtering inventory twice on `/vehicles` records both URLs; refreshing the second URL does not create a duplicate entry. Concierge back actions resolve from public same-origin history, scoped away from other tenant selectors, and rewind that stack before `router.replace`. They never call browser `history.back()`. Tenant selectors are carried into every action destination, including comparison and form targets. Stored history is revalidated against external, encoded-private and malformed paths. Unavailable tab storage falls back to a grounded filter/inventory destination.
+
+Dialogs own an opaque preview palette instead of inheriting translucent template surfaces; browser checks record opacity 1 and a 16.12:1 dialog text/background contrast. The mobile inquiry layout is constrained and its successful receipt is captured.
 
 The chat launcher is available on published content, inventory, comparison and vehicle detail, so a visitor can continue across zones using the same tenant-scoped chat session. Switching tenant remounts the dialog. Chat code remains an intent-loaded client island; metadata/content remain server-owned.
 
@@ -88,7 +90,7 @@ Once Josh explicitly confirms provisioning and authorizes the hosted run, the pr
 
 ```sh
 WEB_PREVIEW_HOSTED_SMOKE_APPROVED=1 \
-WEB_PREVIEW_SMOKE_ORIGIN=https://<stable-web-preview>.vercel.app \
+WEB_PREVIEW_SMOKE_ORIGIN="https://<stable-web-preview>.vercel.app" \
 WEB_PREVIEW_DEFAULT_TENANT=demo \
 CONCIERGE_EVIDENCE_DIR=/path/outside-repository \
 node apps/web/scripts/verify-concierge-hosted.mjs

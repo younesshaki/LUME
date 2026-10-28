@@ -23,7 +23,7 @@
         ],
         "stream": true,
         "pagePath": "/vehicles/11111111-1111-4111-8111-111111111111",
-        "requestId": "f09724ef-e8f9-47ed-97b5-916a0a39ff04",
+        "requestId": "40f164d5-9e42-4712-af39-d5887fd9185c",
         "navigation": {
           "hasPrevious": false,
           "hasResults": false
@@ -53,7 +53,7 @@
         "stream": true,
         "pagePath": "/vehicles",
         "sessionId": "local-session",
-        "requestId": "d7e63b75-be22-4de1-84df-f3966b2e5b2b",
+        "requestId": "09aefa11-5aeb-40f0-afee-0d0b03011573",
         "navigation": {
           "hasPrevious": true,
           "hasResults": false
@@ -82,7 +82,7 @@
         "stream": true,
         "pagePath": "/vehicles/33333333-3333-4333-8333-333333333333",
         "sessionId": "local-session",
-        "requestId": "4fc8be4b-5704-4ca8-8b45-2ff6611d3570",
+        "requestId": "c8981875-8ae1-434b-89e0-34b93cf67dba",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -110,7 +110,7 @@
         "stream": true,
         "pagePath": "/vehicles",
         "sessionId": "local-session",
-        "requestId": "27483aca-b142-4668-8d5b-26a528543c03",
+        "requestId": "dd3b407e-926e-4b43-b69e-f569076d2868",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -138,7 +138,7 @@
         "stream": true,
         "pagePath": "/vehicles",
         "sessionId": "local-session",
-        "requestId": "c6b6a720-5335-47d0-8262-6fec2cb1e0d3",
+        "requestId": "00c65672-5087-429f-a63f-0a100cc91663",
         "navigation": {
           "hasPrevious": true,
           "hasResults": false
@@ -166,7 +166,7 @@
         "stream": true,
         "pagePath": "/products",
         "sessionId": "local-session",
-        "requestId": "4a25271a-cee8-492f-a631-049bab0a7bd9",
+        "requestId": "def9a395-b645-4d71-86b4-0d0ce75c0b06",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -194,7 +194,7 @@
         "stream": true,
         "pagePath": "/vehicles",
         "sessionId": "local-session",
-        "requestId": "aa407b83-b49c-499e-8731-830d7d6b872b",
+        "requestId": "e6828df0-c689-49ab-9a7e-12618ccd18b4",
         "navigation": {
           "hasPrevious": true,
           "hasResults": false
@@ -225,7 +225,7 @@
         "stream": true,
         "pagePath": "/vehicles/compare",
         "sessionId": "local-session",
-        "requestId": "2ad79a77-6a57-4438-b876-dc53259a427a",
+        "requestId": "c7080f06-95a5-4afc-8f3f-8a6fa8df0d1d",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -263,7 +263,7 @@
         "stream": true,
         "pagePath": "/contact",
         "sessionId": "local-session",
-        "requestId": "a522d032-b517-4c9f-9d46-89879e1a3a27",
+        "requestId": "0f9bd60d-205f-462d-a4d5-7906cb816c56",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -297,7 +297,7 @@
         "stream": true,
         "pagePath": "/contact",
         "sessionId": "local-session",
-        "requestId": "c33a2982-707b-4564-8e9b-ba4ab8cb8065",
+        "requestId": "cd4ee5da-cb0e-4e1c-be15-fbbed3a3a066",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -336,7 +336,7 @@
         "stream": true,
         "pagePath": "/contact",
         "sessionId": "local-session",
-        "requestId": "f7dfa342-12dd-41c4-9eea-473d17509395",
+        "requestId": "4be6ad73-df9a-43af-832f-2e742f32de1f",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -376,7 +376,7 @@
         "stream": true,
         "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
         "sessionId": "local-session",
-        "requestId": "ee6f5c20-d5cb-4b5e-b226-68acc6ae5bfa",
+        "requestId": "c8f407dc-9a01-4784-9188-aa85f7217a90",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -412,7 +412,7 @@
         "stream": true,
         "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
         "sessionId": "local-session",
-        "requestId": "5bf7ccfc-9f18-444f-bddc-90da57b71cd3",
+        "requestId": "fd1eba8a-9007-4e41-9c8e-54ab82d58bd9",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -448,7 +448,7 @@
         "stream": true,
         "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
         "sessionId": "local-session",
-        "requestId": "1e0e642b-65e9-45bb-bf7d-3aabbbc0c551",
+        "requestId": "32710ca0-45c7-49f6-9bae-9cfd6094468f",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -478,7 +478,7 @@
         "stream": true,
         "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
         "sessionId": "local-session",
-        "requestId": "4f439ed3-deca-4324-bc18-8a4ad3a62eb6",
+        "requestId": "d38d482e-2f91-45dd-8ded-c63b74b4018f",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -506,7 +506,7 @@
         "stream": true,
         "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
         "sessionId": "local-session",
-        "requestId": "8f331f4d-0500-4b92-9167-19b282046e8f",
+        "requestId": "9747a110-f76c-4b66-afaa-b430a6ed02ac",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -535,7 +535,7 @@
         "stream": true,
         "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
         "sessionId": "local-session",
-        "requestId": "ec6455d5-efd9-45f2-9624-bd97dc2582c4",
+        "requestId": "c76ac67c-1e45-44c0-8f3c-103141408621",
         "navigation": {
           "hasPrevious": true,
           "hasResults": true
@@ -739,15 +739,15 @@
       "query": ""
     },
     {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
       "path": "/rest/v1/rpc/get_tenant_theme",
       "query": ""
     },
     {
       "path": "/rest/v1/rpc/list_published_nav_pages",
-      "query": ""
-    },
-    {
-      "path": "/rest/v1/rpc/tenant_by_slug",
       "query": ""
     },
     {
@@ -963,5 +963,19 @@
       "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=22222222-2222-4222-8222-222222222222"
     }
   ],
+  "readability": {
+    "chat": {
+      "foreground": "rgb(33, 29, 22)",
+      "background": "rgb(255, 250, 240)",
+      "opacity": "1",
+      "contrast": 16.121828139399835
+    },
+    "inquiry": {
+      "foreground": "rgb(33, 29, 22)",
+      "background": "rgb(255, 250, 240)",
+      "opacity": "1",
+      "contrast": 16.121828139399835
+    }
+  },
   "browserErrors": []
 }

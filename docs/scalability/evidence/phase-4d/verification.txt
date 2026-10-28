@@ -1,4 +1,4 @@
-Phase 4d local verification. Application commit 6a402d9390ca6ffc70a1f48b2f6599cb91b6545d
+Phase 4d local verification. Application commit 5f3d23703108be3bd196d6e192224feafaadb2ac
 
 Worktree base ee354b574; real npm install --legacy-peer-deps (no node_modules symlink).
 Before typecheck: web next-env.d.ts/.next/tsconfig.tsbuildinfo deleted.
@@ -26,3 +26,5 @@ PASS 139 compiled server/client output files contain none of the inherited crede
 LOCAL fixtures only. Browser chat SSE and lead receipts are intercepted, clearly labelled local, and never counted as hosted/provider proof. Database data is synthetic on loopback. No staging/default/demo data writes or external provider requests.
 
 The full repository Vitest suite was not part of this slice gate and is not claimed rerun here. Historical SFTP timing failures were not modified or masked. GitHub CI is pending approved push and PR creation. Hosted real-provider evidence is BLOCKED pending Josh provisioning/approval.
+
+Final mobile readability check: chat/inquiry surfaces opaque (opacity 1), foreground/background contrast 16.12:1. All required gates were repeated after the dialog fix; browser proof remains 9 journeys/17 local SSE turns.
