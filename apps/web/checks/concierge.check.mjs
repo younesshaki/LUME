@@ -25,6 +25,7 @@ const tenantId = "2de52a45-bc2b-451c-994c-02208b994e26";
 const SSE_BODY =
   'data: {"type":"meta","sourceCategories":["inventory"],"capabilities":{"actions":true}}\n\n' +
   'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n' +
+  'data: {"type":"action","action":{"type":"navigate","route":"vehicles"}}\n\n' +
   "data: [DONE]\n\n";
 
 const sseResponse = () =>
@@ -181,8 +182,38 @@ test("a client that has already disconnected cancels the upstream turn (SSE canc
 
 // --- Phase 4b: bot-action → Next navigation translation ---
 import { resolveActionOutcome } from "../components/concierge/conciergeActions.ts";
+import { streamChat } from "@lume/blocks/chat-transport";
 
 const noHistory = { previous: () => null, lastResults: () => null };
+
+test("side-effect consumers require the SSE terminator, including chunk-split streams", async () => {
+  globalThis.fetch = async () =>
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          const bytes = new TextEncoder().encode(SSE_BODY);
+          for (let i = 0; i < bytes.length; i += 7)
+            controller.enqueue(bytes.slice(i, i + 7));
+          controller.close();
+        },
+      }),
+      { headers: { "content-type": "text/event-stream" } },
+    );
+  const events = [];
+  for await (const event of streamChat({ tenantSlug: "demo" }, [], {
+    requireCompletion: true,
+  }))
+    events.push(event.kind);
+  assert.deepEqual(events, ["meta", "delta", "action"]);
+  globalThis.fetch = async () =>
+    new Response(SSE_BODY.replace("data: [DONE]\n\n", ""));
+  await assert.rejects(async () => {
+    for await (const _ of streamChat({ tenantSlug: "demo" }, [], {
+      requireCompletion: true,
+    })) {
+    }
+  }, /ended before completion/);
+});
 
 test("navigate actions map free-form routes to public Next hrefs and drop non-public ones", () => {
   const nav = (route) =>
@@ -212,7 +243,10 @@ test("filter_inventory becomes real ?search params on /vehicles, not a hash", ()
     noHistory,
   );
   assert.equal(outcome.kind, "navigate");
-  assert.equal(outcome.href, "/vehicles?make=BMW&priceMax=50000&sort=price_asc");
+  assert.equal(
+    outcome.href,
+    "/vehicles?make=BMW&priceMax=50000&sort=price_asc",
+  );
   assert.equal(
     resolveActionOutcome({ type: "filter_inventory" }, noHistory).href,
     "/vehicles",
@@ -244,7 +278,11 @@ test("highlight-vehicle and navigate-target route/anchor resolve to internal pat
   });
   const anchor = {
     ...routeTarget,
-    target: { ...routeTarget.target, destination: "/products#gallery", kind: "section-anchor" },
+    target: {
+      ...routeTarget.target,
+      destination: "/products#gallery",
+      kind: "section-anchor",
+    },
   };
   assert.deepEqual(resolveActionOutcome(anchor, noHistory), {
     kind: "navigate",
@@ -254,17 +292,26 @@ test("highlight-vehicle and navigate-target route/anchor resolve to internal pat
     ...routeTarget,
     target: { ...routeTarget.target, kind: "modal" },
   };
-  assert.equal(resolveActionOutcome(modal, noHistory).kind, "deferred");
+  assert.equal(resolveActionOutcome(modal, noHistory).kind, "ignored");
 });
 
 test("navigate-back resolves locally (never history.back): previous, results, fallback, inventory", () => {
-  const withPrev = { previous: () => "/products", lastResults: () => "/vehicles?make=Audi" };
+  const withPrev = {
+    previous: () => "/products",
+    lastResults: () => "/vehicles?make=Audi",
+  };
   assert.deepEqual(
-    resolveActionOutcome({ type: "navigate-back", destination: "previous" }, withPrev),
+    resolveActionOutcome(
+      { type: "navigate-back", destination: "previous" },
+      withPrev,
+    ),
     { kind: "navigate", href: "/products", replace: true },
   );
   assert.deepEqual(
-    resolveActionOutcome({ type: "navigate-back", destination: "results" }, withPrev),
+    resolveActionOutcome(
+      { type: "navigate-back", destination: "results" },
+      withPrev,
+    ),
     { kind: "navigate", href: "/vehicles?make=Audi", replace: true },
   );
   // No history → grounded filter fallback.
@@ -281,21 +328,130 @@ test("navigate-back resolves locally (never history.back): previous, results, fa
   );
   // No history, no fallback → inventory.
   assert.deepEqual(
-    resolveActionOutcome({ type: "navigate-back", destination: "previous" }, noHistory),
+    resolveActionOutcome(
+      { type: "navigate-back", destination: "previous" },
+      noHistory,
+    ),
     { kind: "navigate", href: "/vehicles", replace: true },
   );
 });
 
-test("compare and lead-form actions are explicitly deferred (consumers land in 4c)", () => {
+test("comparison and lead actions resolve to implemented consumers", () => {
+  const ids = [
+    "11111111-1111-4111-8111-111111111111",
+    "22222222-2222-4222-8222-222222222222",
+  ];
+  assert.deepEqual(
+    resolveActionOutcome(
+      { type: "compare_vehicles", vehicleIds: ids },
+      noHistory,
+    ),
+    { kind: "navigate", href: `/vehicles/compare?ids=${ids.join(",")}` },
+  );
+  for (const vehicleIds of [
+    [ids[0]],
+    [ids[0], ids[0]],
+    ["foreign", ids[0]],
+    [...ids, ...ids],
+  ])
+    assert.equal(
+      resolveActionOutcome({ type: "compare_vehicles", vehicleIds }, noHistory)
+        .kind,
+      "ignored",
+    );
+  const outcome = resolveActionOutcome(
+    {
+      type: "open-lead-form",
+      prefill: {
+        firstName: " Sam ",
+        email: "sam@example.invalid",
+        secret: "must-not-pass",
+      },
+      vehicleId: ids[0],
+      attribution: { sessionId: "chat-fixture" },
+    },
+    noHistory,
+  );
+  assert.equal(outcome.href, "/contact#concierge-lead-form");
+  assert.equal(outcome.leadForm.input.firstName, "Sam");
+  assert.equal(outcome.leadForm.input.secret, undefined);
+  assert.equal(
+    outcome.leadForm.input.sourceContext.chatSessionId,
+    "chat-fixture",
+  );
+  const capture = resolveActionOutcome(
+    {
+      type: "capture_lead",
+      contact: { email: "sam@example.invalid" },
+      vehicleId: ids[0],
+    },
+    noHistory,
+  );
+  assert.equal(capture.kind, "capture-lead");
+  assert.equal(capture.input.source, "chat");
+  assert.equal(capture.input.sourceContext.actionType, "capture_lead");
+});
+
+test("registered form/modal destinations substitute safe parameters and carry attribution", () => {
+  const form = {
+    type: "navigate-target",
+    targetKey: "contact-lead-form",
+    target: {
+      key: "contact-lead-form",
+      label: "Contact",
+      kind: "form",
+      destination: "/contact#concierge-lead-form",
+      isConversion: true,
+    },
+    params: { firstName: "Ada" },
+    attribution: { sessionId: "session-fixture" },
+  };
+  assert.equal(
+    resolveActionOutcome(form, noHistory).leadForm.input.firstName,
+    "Ada",
+  );
+  const modal = {
+    ...form,
+    targetKey: "vehicle-inquiry",
+    target: {
+      ...form.target,
+      key: "vehicle-inquiry",
+      kind: "modal",
+      destination: "/vehicles/:vehicleId#vehicle-inquiry",
+    },
+    params: { vehicleId: "11111111-1111-4111-8111-111111111111" },
+  };
+  const resolved = resolveActionOutcome(modal, noHistory);
+  assert.equal(
+    resolved.href,
+    "/vehicles/11111111-1111-4111-8111-111111111111#vehicle-inquiry",
+  );
+  assert.equal(resolved.leadForm.input.vehicleId, modal.params.vehicleId);
+  assert.equal(
+    resolved.leadForm.input.sourceContext.targetKey,
+    "vehicle-inquiry",
+  );
   assert.equal(
     resolveActionOutcome(
-      { type: "compare_vehicles", vehicleIds: ["a", "b"] },
+      {
+        ...form,
+        target: { ...form.target, destination: "/contact#custom-form" },
+      },
       noHistory,
-    ).kind,
-    "deferred",
+    ).target.handlerId,
+    "custom-form",
   );
-  assert.equal(
-    resolveActionOutcome({ type: "open-lead-form" }, noHistory).kind,
-    "deferred",
-  );
+  for (const bad of [
+    { ...modal, params: {} },
+    { ...modal, params: { vehicleId: ".." } },
+    { ...form, targetKey: "forged" },
+    {
+      ...form,
+      target: {
+        ...form.target,
+        destination: "//evil.test#concierge-lead-form",
+      },
+    },
+  ])
+    assert.equal(resolveActionOutcome(bad, noHistory).kind, "ignored");
 });

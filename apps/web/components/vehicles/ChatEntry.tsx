@@ -11,7 +11,16 @@ import {
   resolveActionOutcome,
   type ActionNavigation,
 } from "../concierge/conciergeActions";
-import { inAppHistory, inAppHistorySummary } from "../concierge/inAppHistory";
+import {
+  inAppHistoryFor,
+  inAppHistorySummary,
+  rewindInAppPath,
+} from "../concierge/inAppHistory";
+import { tenantHref } from "../concierge/publicPath";
+import { queueLeadForm } from "../concierge/pendingLeadForm";
+import { queueTargetActivation } from "../concierge/targetActivation";
+import { submitPublicLead } from "../concierge/submitLead";
+import type { LeadCaptureInput } from "@lume/types";
 import {
   recordActionDispatched,
   recordActionSuppressed,
@@ -19,11 +28,8 @@ import {
 import "../concierge/concierge.css";
 
 /**
- * Live vehicle concierge (Phase 4a). Streams a turn through the same-origin
- * `/api/chat` proxy, which forwards to the admin app. Text streaming, session
- * continuity, duplicate handling and abort are wired here; action events are
- * validated by the transport and buffered, but acting on them (navigation,
- * filtering, lead prefill) is Phase 4b.
+ * Route-scoped concierge. Navigation and conversion actions wait for the turn
+ * to finish; aborted/failed turns cannot apply buffered effects.
  */
 
 type Turn = { id: string; role: "user" | "assistant"; content: string };
@@ -74,6 +80,7 @@ export default function ChatEntry({
   const [error, setError] = useState<string | null>(null);
   const [botName, setBotName] = useState<string | null>(null);
   const [sources, setSources] = useState<string[]>([]);
+  const [leadStatus, setLeadStatus] = useState<string | null>(null);
 
   const sessionKey = `lume.chat.session.v1.${tenant}`;
   const capsKey = `lume.chat.capabilities.v1.${tenant}`;
@@ -96,7 +103,7 @@ export default function ChatEntry({
     return {
       tenantSlug: tenant,
       pagePath: pathname,
-      navigation: inAppHistorySummary(),
+      navigation: inAppHistorySummary(tenant),
     };
   }
 
@@ -118,6 +125,7 @@ export default function ChatEntry({
     ]);
     setDraft("");
     setError(null);
+    setLeadStatus(null);
     setStreaming(true);
 
     const abort = new AbortController();
@@ -128,6 +136,7 @@ export default function ChatEntry({
     // winning navigation once the turn completes; the analytics event is still
     // emitted once per action, as it arrives.
     let pendingNav: ActionNavigation | null = null;
+    const captures = new Map<string, LeadCaptureInput>();
 
     const appendDelta = (textPart: string) =>
       setTurns((prev) =>
@@ -142,6 +151,7 @@ export default function ChatEntry({
 
     try {
       for await (const event of streamChat(config(), history, {
+        requireCompletion: true,
         signal: abort.signal,
         sessionId: session.current ?? undefined,
         requestId,
@@ -172,27 +182,52 @@ export default function ChatEntry({
               recordActionSuppressed(event.action);
               break;
             }
-            recordActionDispatched(event.action);
-            const outcome = resolveActionOutcome(event.action, inAppHistory);
+            const outcome = resolveActionOutcome(
+              event.action,
+              inAppHistoryFor(tenant),
+            );
+            if (outcome.kind === "ignored")
+              recordActionSuppressed(event.action);
+            else recordActionDispatched(event.action);
             if (outcome.kind === "navigate") pendingNav = outcome;
+            if (outcome.kind === "capture-lead")
+              captures.set(JSON.stringify(outcome.input), outcome.input);
             break;
           }
           case "duplicate":
+            pendingNav = null;
+            captures.clear();
             dropEmptyAssistant();
             break;
           case "timing":
             break;
         }
       }
+      for (const input of captures.values()) {
+        if (abort.signal.aborted) break;
+        setLeadStatus("Sending your details…");
+        await submitPublicLead(tenant, input, abort.signal);
+        if (!abort.signal.aborted)
+          setLeadStatus("Your details were sent to the dealership.");
+      }
       if (pendingNav && !abort.signal.aborted) {
         const { href, replace } = pendingNav;
-        if (replace) router.replace(href);
-        else router.push(href);
+        if (replace) rewindInAppPath(href);
+        dialog.current?.close();
+        close();
+        if (pendingNav.leadForm) queueLeadForm(tenant, pendingNav.leadForm);
+        if (pendingNav.target) queueTargetActivation(tenant, pendingNav.target);
+        const destination = href.startsWith("#")
+          ? window.location.pathname + window.location.search + href
+          : href;
+        if (replace) router.replace(tenantHref(destination, tenant));
+        else router.push(tenantHref(destination, tenant));
       }
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") {
         dropEmptyAssistant();
       } else {
+        setLeadStatus(null);
         dropEmptyAssistant();
         setError(
           caught instanceof Error
@@ -243,6 +278,7 @@ export default function ChatEntry({
               {error}
             </p>
           ) : null}
+          {leadStatus ? <p role="status">{leadStatus}</p> : null}
         </div>
 
         <form

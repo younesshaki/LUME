@@ -81,6 +81,8 @@ export type ChatStreamObserver = {
 };
 
 export type ChatStreamOptions = {
+  /** Consumers with side effects must reject an EOF without the SSE terminator. */
+  requireCompletion?: boolean;
   signal?: AbortSignal;
   sessionId?: string;
   startNewSession?: boolean;
@@ -229,6 +231,8 @@ export async function* streamChat(
         if (content) yield { kind: "delta", text: content };
       }
     }
+    if (options.requireCompletion)
+      throw new Error("Chat stream ended before completion");
   } finally {
     reader.releaseLock();
   }

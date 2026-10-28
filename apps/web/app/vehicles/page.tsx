@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ChatLauncher from "../../components/concierge/ChatLauncher";
 import { requestTenant } from "../../server/tenant";
 import { vehicleRepository, safeImage } from "../../server/vehicles/data";
 import {
@@ -116,6 +117,7 @@ export default async function Inventory({ searchParams }: Props) {
           );
         })}
       </div>
+      <ChatLauncher tenant={tenant.slug} title={`${tenant.name} inventory`} />
       <nav aria-label="Inventory pages" className="pagination">
         {offset > 0 && (
           <a href={pageLink(Math.max(0, offset - pageSize))}>Previous</a>

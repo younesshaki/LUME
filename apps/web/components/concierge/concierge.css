@@ -90,6 +90,18 @@
   font: inherit;
   cursor: pointer;
 }
+.concierge--inquiry {
+  padding: 1rem;
+  overflow-y: auto;
+}
+.concierge__input {
+  min-width: 0;
+}
+@media (max-width: 480px) {
+  .concierge__form {
+    flex-wrap: wrap;
+  }
+}
 .concierge__send {
   background: var(--lume-primary-action, #d9b76a);
   color: var(--lume-on-primary, #17130d);

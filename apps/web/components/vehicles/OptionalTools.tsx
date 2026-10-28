@@ -1,7 +1,6 @@
 "use client";
-import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-const ChatEntry = dynamic(() => import("./ChatEntry"), { ssr: false });
+import ChatLauncher from "../concierge/ChatLauncher";
 /** Live concierge chat (Phase 4a) mounts on demand; the 3D/model viewer
  * remains Phase 5 work. */
 export default function OptionalTools(props: {
@@ -11,16 +10,12 @@ export default function OptionalTools(props: {
 }) {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
-  const [chat, setChat] = useState(false);
   if (!hydrated) return null;
   return (
     <aside className="enhancement" aria-label="Optional vehicle tools">
       <p>Photos and specifications work without interactive tools.</p>
       <p>3D view unavailable: no vehicle model is configured.</p>
-      <button type="button" onClick={() => setChat(true)}>
-        Ask the concierge
-      </button>
-      {chat && <ChatEntry {...props} close={() => setChat(false)} />}
+      <ChatLauncher {...props} />
     </aside>
   );
 }

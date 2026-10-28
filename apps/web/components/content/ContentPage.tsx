@@ -5,6 +5,7 @@ import { contentPage } from "../../server/content/context";
 import { ServerBlocks } from "./ServerBlocks";
 import InteractiveForms from "./InteractiveForms";
 import Consent from "./Consent";
+import ChatLauncher from "../concierge/ChatLauncher";
 const artwork = "/lume-homepage-background.png";
 export async function ContentPage({ slug }: { slug: string }) {
   const { tenant, page, state, mode, template, design } =
@@ -55,6 +56,7 @@ export async function ContentPage({ slug }: { slug: string }) {
                   </a>
                 ))}
               </nav>
+              <ChatLauncher tenant={tenant.slug} title={tenant.name} />
               <Consent tenant={tenant.slug} name={tenant.name} />
             </footer>
           }
@@ -134,6 +136,7 @@ export async function ContentPage({ slug }: { slug: string }) {
               </a>
             ))}
           </nav>
+          <ChatLauncher tenant={tenant.slug} title={tenant.name} />
           <Consent tenant={tenant.slug} name={tenant.name} />
         </footer>
       </div>
