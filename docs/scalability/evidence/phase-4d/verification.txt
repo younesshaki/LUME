@@ -17,7 +17,7 @@ Commands:
   node --import tsx --conditions=react-server --test apps/web/checks/*.check.mjs
   git diff --check
 
-All six check suites: foundation 7, vehicles 8, content 8, concierge 12, visitor 5, navigation 6; 46/46 pass.
+All seven check suites: foundation 7, vehicles 8, content 8, concierge 12, visitor 5, navigation 6, hosted-outcome 4; 50/50 pass.
 Browser proof: CONCIERGE_EVIDENCE_DIR=/path/out node --import tsx apps/web/scripts/verify-concierge.mjs
 PASS 9 browser journeys; 17 local SSE turns; no provider requests or staging writes. Evidence: /workspace/lume-phase4d-results/browser
 
@@ -28,3 +28,10 @@ LOCAL fixtures only. Browser chat SSE and lead receipts are intercepted, clearly
 The full repository Vitest suite was not part of this slice gate and is not claimed rerun here. Historical SFTP timing failures were not modified or masked. GitHub CI is pending approved push and PR creation. Hosted real-provider evidence is BLOCKED pending Josh provisioning/approval.
 
 Final mobile readability check: chat/inquiry surfaces opaque (opacity 1), foreground/background contrast 16.12:1. All required gates were repeated after the dialog fix; browser proof remains 9 journeys/17 local SSE turns.
+
+Owner-authorized unfunded hosted diagnostics (separate from the local fixtures above):
+- Existing web remains Phase 3: chat and visitor routes HTTP404, stale admin upstream.
+- Direct current staging admin chat probes: expected sanitized HTTP502 provider-failure contract; no SSE/action frames observed. Exact DeepSeek status is hidden by admin; insufficient balance is owner-confirmed.
+- Direct admin anonymous /me HTTP401; logout without a cookie HTTP204 and session-clear cookie only; no visitor account/session created or revoked.
+- Full web chain awaits approved Preview deployment/upstream update. Authenticated visitor proof awaits an approved session. Real funded answer: pending funding.
+The diagnostics can create normal staging chat conversation/usage accounting; no tenant configuration, lead, save, origin or deployment change was made.

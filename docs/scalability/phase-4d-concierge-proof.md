@@ -1,8 +1,8 @@
 # Phase 4d — concierge consumers and end-to-end proof
 
-This slice starts directly from staging `ee354b574b75c500408cd2cb04c2dd64b469ff46` after 4a–4c. The implementation including the mobile readability fix is local commit `5f3d237`. It changes the isolated Next preview only, plus an opt-in completion guard in the shared chat transport. Vite, admin, API ownership, origin settings, database schema and tenant data are unchanged. No traffic cutover or later phase is started.
+This slice starts directly from staging `ee354b574b75c500408cd2cb04c2dd64b469ff46` after 4a–4c. The implementation including the mobile readability fix is local commit `5f3d237`. It changes the isolated Next preview only, plus an opt-in completion guard in the shared chat transport. This branch does not change Vite, admin, API ownership, origin settings, database schema or tenant configuration. The owner separately redeployed staging admin with its Preview allowlist updated, as recorded below. No traffic cutover or later phase is started.
 
-**Hosted exit gate: BLOCKED, not proven.** Josh must provision/confirm funded staging and its origin allowlist before a hosted request. The local evidence below is deliberately not a real-provider claim. Push and a draft PR also require Josh's explicit approval; none has been inferred from elapsed time or earlier phases.
+**Funded answer: pending funding.** The owner confirmed that staging admin was redeployed/allowlisted, but DeepSeek has no balance. Expected unfunded provider failure is a diagnostic outcome, not a product bug or a completed-answer claim. Actual read-only web checks and two direct staging-admin chat probes are captured below. The web Preview is still on Phase 3 and requires a separate deployment/upstream update before its full chain can be tested. Push, draft PR creation and a new isolated web deployment await explicit owner approval.
 
 ## Implementation
 
@@ -35,7 +35,7 @@ All data here is **synthetic, loopback-only alpha/beta fixtures**, never fabrica
 | Failure semantics           | Lead validation is visible; interrupted/truncated SSE cannot navigate or submit; duplicate SSE cannot submit another lead                                                                         |
 | Browser result              | **9 journeys, 17 local SSE turns, zero browser exceptions** at 390×844                                                                                                                            |
 | Existing transport/firewall | All web suites pass; import boundary guard and configured credential scan pass                                                                                                                    |
-| Real provider/hosted SSE    | **NOT RUN — owner provisioning gate below**                                                                                                                                                       |
+| Real provider/hosted SSE    | **Admin error path observed; funded answer pending funding; web Preview still stale**                                                                                                             |
 
 - [Local browser request/action/receipt report](evidence/phase-4d/local-browser-report.json)
 - [Raw filtered refresh HTML](evidence/phase-4d/local-filtered-refresh.html)
@@ -54,11 +54,36 @@ npm run verify:concierge --workspace=@lume/web
 git diff --check
 ```
 
-Current local results: all commands pass; suites are foundation 7, vehicles 8, content 8, concierge 12, visitor 5 and navigation 6 (**46 total**). The scan covers 139 compiled server/client outputs with zero inherited credential value matches. package-lock is restored to staging; no dependency or runtime package allowance changed. The full repository Vitest suite is not claimed rerun by this slice; historical SFTP timeouts are untouched. GitHub CI must be observed after approved push/PR creation.
+Current local results: all commands pass; suites are foundation 7, vehicles 8, content 8, concierge 12, visitor 5, navigation 6 and hosted-outcome classification 4 (**50 total**). The scan covers 139 compiled server/client outputs with zero inherited credential value matches. package-lock is restored to staging; no dependency or runtime package allowance changed. The full repository Vitest suite is not claimed rerun by this slice; historical SFTP timeouts are untouched. GitHub CI must be observed after approved push/PR creation.
 
-## Josh's provisioning gate — before any hosted run
+## Observed hosted state — unfunded mode
 
-No hosted request has been attempted. Supply secrets through project environment settings, never chat, git, VITE or public browser bindings. Confirm the stable web Preview URL and the staging admin Preview URL after setting the following.
+The owner authorized diagnostics with no DeepSeek balance. These are actual responses, never fixtures:
+
+| Probe                                        | Observed result                                       | Honest implication                                                             |
+| -------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Stable web `/vehicles?tenant=demo`           | HTTP 200, noindex                                     | Existing Phase 3 Preview is reachable                                          |
+| Stable web `/api/chat` and `/api/visitor/me` | HTTP 404                                              | Phase 4 chat/visitor routes are not deployed; this is not a balance response   |
+| New `lume-web-preview.vercel.app` alias      | Vercel alias lookup 404                               | That newer hostname is not assigned                                            |
+| Current staging admin navigation prompt      | HTTP 502, `AI provider request failed`                | Expected owner-confirmed unfunded provider outcome; no SSE frames emitted      |
+| Current staging admin provider-answer prompt | Same HTTP 502 contract                                | Funded answer remains **pending funding**                                      |
+| Direct admin anonymous visitor `/me`         | HTTP 401                                              | Correct anonymous rejection, not authentication proof                          |
+| Direct admin logout with no session cookie   | HTTP 204, only `lume_visitor_session` clearing cookie | Admin cookie-clearing contract observed, no visitor/session created or revoked |
+
+The current web alias points to deployment `dpl_2WRiWovc3UJk4Bm5wxLLHKzvnRKx`, source `458996a` (Phase 3), and `WEB_PREVIEW_UPSTREAM_ORIGIN` still points to the old admin `lume-admin-jzts0chbg-…` deployment. The owner's new admin is `dpl_7ksDyUt9318raGeM2w1ZcETr7FuZ`, source `ee354b574`, at `https://lume-admin-f2zgcm9is-hakicsi89-5044s-projects.vercel.app`.
+
+The admin maps failed provider HTTP statuses, including DeepSeek 402, to sanitized **502 JSON** before SSE is created. The response does not reveal the original provider status, so an exact balance error is not independently proven from the wire; the unfunded reason is owner-confirmed. Neither probe produced metadata/delta/action/[DONE]. Do not claim streamed action dispatch or a funded answer from those errors. Deterministic server replies can sometimes bypass the provider, but that did not happen for these observed requests.
+
+- [Deployment/binding audit](evidence/phase-4d/hosted-environment-audit.json)
+- [Actual web route checks](evidence/phase-4d/hosted-web-route-audit.json)
+- [Direct-admin results and visitor-cookie limits](evidence/phase-4d/hosted-admin-unfunded-report.json)
+- [Navigation error body](evidence/phase-4d/hosted-admin-navigation-error.json) and [provider error body](evidence/phase-4d/hosted-admin-provider-error.json)
+
+No origin setting, deployment, account, lead, saved vehicle or tenant configuration was changed by these probes. The two chat requests can create normal staging conversation/usage accounting. The visitor logout had no token, so it did not delete a session. Authenticated visitor issuance/forwarding still needs an approved existing session; none was forged or seeded.
+
+## Remaining Preview deployment gate
+
+Unfunded diagnostics have been authorized and performed as described above. Supply secrets through project environment settings, never chat, git, VITE or public browser bindings. Confirm the stable web Preview URL and the staging admin Preview URL after setting the following.
 
 ### Web Preview project, Preview target only
 
@@ -76,26 +101,31 @@ A web service-role key is **not required** for this smoke. Model keys, `VISITOR_
 
 ### Staging admin project, staging branch / Preview target only
 
-| Variable                                                         | Required setting                                                                                    |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Existing matching **staging** project bindings; no production values                                |
-| `DEEPSEEK_API_KEY`                                               | Valid **funded** server-only staging key                                                            |
-| `DEEPSEEK_API_URL`                                               | `https://api.deepseek.com/v1/chat/completions` (the default if unset)                               |
-| `ALLOWED_CHAT_ORIGINS`                                           | Append the exact stable web Preview origin, preserving existing entries; never add it to production |
-| `VISITOR_SESSION_SECRET`                                         | Existing staging-only signing secret for a returning-visitor session check; never copy it to web    |
+| Variable                                                         | Required setting                                                                                        |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Existing matching **staging** project bindings; no production values                                    |
+| `DEEPSEEK_API_KEY`                                               | Existing server-only staging key; currently **unfunded**. Funding is needed only for a real paid answer |
+| `DEEPSEEK_API_URL`                                               | `https://api.deepseek.com/v1/chat/completions` (the default if unset)                                   |
+| `ALLOWED_CHAT_ORIGINS`                                           | Append the exact stable web Preview origin, preserving existing entries; never add it to production     |
+| `VISITOR_SESSION_SECRET`                                         | Existing staging-only signing secret for a returning-visitor session check; never copy it to web        |
 
-Confirm the existing staging bot/plan has usable chat/action entitlement and a funded DeepSeek route. Do not fabricate tenant data, seed a second tenant or edit demo/default settings to manufacture success. Redeploy staging admin after an approved env/allowlist change, then set web's upstream to that deployment and deploy web as **Preview**, never production. No origin update or deploy is authorized merely by this document.
+Confirm the existing staging bot/plan has usable chat/action entitlement. A paid DeepSeek route remains pending funding; do not change tenant settings to force a free deterministic answer. Do not fabricate tenant data, seed a second tenant or edit demo/default settings to manufacture success. Redeploy staging admin after an approved env/allowlist change, then set web's upstream to that deployment and deploy web as **Preview**, never production. No origin update or deploy is authorized merely by this document.
 
-Once Josh explicitly confirms provisioning and authorizes the hosted run, the prepared runner sends one chat-only inventory prompt through web → staging admin → provider. It does not submit a lead, save a vehicle or create a visitor; normal staging conversation/usage accounting may occur. The operator flags below belong only to the verification process, not the web application's runtime bindings:
+The tested Phase 4d code must be deployed as an isolated **Preview**, and its `WEB_PREVIEW_UPSTREAM_ORIGIN` updated to the new staging admin. Reuse the existing stable allowlisted alias unless the owner explicitly chooses another. This is separate from production and does not authorize a repository push or deployment by inference.
+
+After that deployment is explicitly approved, the runner supports the owner-confirmed unfunded case. Its flags belong only to this operator process, never the web runtime:
 
 ```sh
 WEB_PREVIEW_HOSTED_SMOKE_APPROVED=1 \
+WEB_PREVIEW_SMOKE_EXPECT_UNFUNDED=1 \
 WEB_PREVIEW_SMOKE_ORIGIN="https://<stable-web-preview>.vercel.app" \
 WEB_PREVIEW_DEFAULT_TENANT=demo \
 CONCIERGE_EVIDENCE_DIR=/path/outside-repository \
 node apps/web/scripts/verify-concierge-hosted.mjs
 ```
 
-The runner refuses to make its first network request without that explicit flag. Capture raw SSE and safe response headers; require actual metadata, provider prose delta, structured action and `[DONE]`, no SSE error. Keep the **actual wire order**: the current contract may emit an action before prose; do not reorder evidence to imitate `meta → delta → action → [DONE]`. Web defers the effect until completion in either order. Record the stable/immutable deployment IDs, actual environment target/ref audit, function manifest/headroom, browser navigation outcome and any provider/quota/origin failure. A 403, 402, missing action, missing terminator or error leaves this gate open. Local fixtures are never substituted.
+It first checks the chat route exists, then records separate navigation and provider-answer probes plus anonymous visitor/cookie-clear checks. Explicit balance failures and the exact sanitized provider-failure contract are accepted only in unfunded mode. A stale route, Origin 403, missing provider configuration, transport failure or quota response is **not** relabelled as balance. Four regression checks cover that distinction.
 
-The full Phase 4 exit gate remains open until this funded provider/hosted evidence and any required returning-visitor check are reviewed. Stop after this slice for review; no Phase 5/cutover work is included.
+All actual raw response bodies and SSE wire order are retained. A deterministic meta/action/delta/[DONE] proves those frames, not a funded model answer. The funded mode additionally requires server timing to identify a real model/tool route; deterministic-only SSE cannot pass it. The HTTP runner does not itself prove browser action dispatch or authenticated visitor sessions; those require the deployed browser journey and an approved session.
+
+A provider error occurring before SSE cannot prove metadata, deltas, action dispatch or [DONE]. Local fixtures are never substituted. The full Phase 4 exit gate remains open; the real funded-answer check is **pending funding**. Stop after this slice for review; no Phase 5/cutover work is included.
