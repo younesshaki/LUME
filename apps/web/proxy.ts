@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { hostname } from "./server/resolver-core";
+import { ingressPolicy } from "./server/ingress-policy";
 
 /** Host allowlist at ingress; tenant existence/verified-domain checks stay in SSR. */
 export function proxy(request: NextRequest) {
@@ -11,22 +12,12 @@ export function proxy(request: NextRequest) {
         "Cache-Control": "private, no-store, max-age=0",
       },
     });
-  const vehicleApi = /^\/api\/vehicles(?:\/|$)/.test(request.nextUrl.pathname);
-  const mutationApi = ["/api/leads", "/api/consent"].includes(
-    request.nextUrl.pathname,
-  );
-  if (
-    ![
-      "GET",
-      "HEAD",
-      ...(vehicleApi ? ["OPTIONS"] : []),
-      ...(mutationApi ? ["POST", "OPTIONS"] : []),
-    ].includes(request.method)
-  )
+  const { methods, publicApi } = ingressPolicy(request.nextUrl.pathname);
+  if (!methods.includes(request.method))
     return new NextResponse("Read-only preview", {
       status: 405,
       headers: {
-        Allow: "GET, HEAD",
+        Allow: methods.join(", "),
         "X-Robots-Tag": "noindex, nofollow, noarchive",
         "Cache-Control": "private, no-store, max-age=0",
       },
@@ -36,7 +27,7 @@ export function proxy(request: NextRequest) {
     const forwarded = request.headers.get("x-forwarded-host");
     if (forwarded && hostname(forwarded) !== host) return fail();
     if (
-      (!vehicleApi && !mutationApi && request.headers.has("x-lume-tenant")) ||
+      (!publicApi && request.headers.has("x-lume-tenant")) ||
       request.headers.has("x-web-tenant")
     )
       return fail();

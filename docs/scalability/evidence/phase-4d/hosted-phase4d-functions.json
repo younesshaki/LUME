@@ -1,0 +1,34 @@
+{
+  "deploymentId": "dpl_GJWVvp1cVAFWxCU59VeGdx6eFFfv",
+  "target": "staging",
+  "outputEntries": 6,
+  "distinctFunctionIds": 5,
+  "budget": 12,
+  "conservativeHeadroom": 6,
+  "output": [
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-902f54644fde582249f1c34ff44e455d38__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-902f54644fde582249f1c34ff44e455d38"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-014c9f4a36625b34debd00d64b85d8cc9c__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-014c9f4a36625b34debd00d64b85d8cc9c"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-83c6c1058b73227c0a9821387afd775af6__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-83c6c1058b73227c0a9821387afd775af6"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-007f4af759d136160cac0acff7d6846313__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-007f4af759d136160cac0acff7d6846313"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-bc162035e6ff41197e5647df4aa05207d7__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-bc162035e6ff41197e5647df4aa05207d7"
+    },
+    {
+      "path": "__fn_team_t8yG0q4msCu2WcGuYOPbNukt-bc162035e6ff41197e5647df4aa05207d7__",
+      "functionName": "team_t8yG0q4msCu2WcGuYOPbNukt-bc162035e6ff41197e5647df4aa05207d7"
+    }
+  ]
+}

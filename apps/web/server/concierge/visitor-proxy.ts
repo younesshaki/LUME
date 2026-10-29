@@ -64,8 +64,18 @@ export async function visitorProxy(request: Request, segments: string[]) {
     });
 
   const url = new URL(request.url);
-  const origin = request.headers.get("origin");
   const ownOrigin = `${process.env.VERCEL ? "https:" : url.protocol}//${request.headers.get("host")}`;
+  const suppliedOrigin = request.headers.get("origin");
+  // Browsers omit Origin on a same-origin GET. Only a browser fetch explicitly
+  // marked same-origin may use its own verified host as upstream Origin.
+  // Mutations still require Origin; cross-site/metadata-free reads fail closed.
+  const sameOriginRead =
+    request.method === "GET" &&
+    request.headers.get("sec-fetch-site") === "same-origin" &&
+    ["cors", "same-origin"].includes(
+      request.headers.get("sec-fetch-mode") ?? "",
+    );
+  const origin = suppliedOrigin ?? (sameOriginRead ? ownOrigin : null);
   if (origin && origin !== ownOrigin) return json("Forbidden origin", 403);
   if (origin) {
     headers.set("Access-Control-Allow-Origin", origin);
@@ -148,7 +158,8 @@ export async function visitorProxy(request: Request, segments: string[]) {
     }
     // Relay back ONLY the signed visitor-session Set-Cookie; drop any other.
     for (const setCookie of response.headers.getSetCookie()) {
-      if (setCookie.startsWith(`${COOKIE}=`)) headers.append("set-cookie", setCookie);
+      if (setCookie.startsWith(`${COOKIE}=`))
+        headers.append("set-cookie", setCookie);
     }
 
     return new Response(response.body, { status: response.status, headers });

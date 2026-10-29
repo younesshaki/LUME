@@ -1,0 +1,59 @@
+{
+  "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+  "fixture": false,
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "interception": false,
+  "providerFundedAnswer": "pending funding",
+  "hostedActionDispatch": "not proven; no provider action frames",
+  "requests": [
+    {
+      "method": "GET",
+      "origin": null,
+      "fetchSite": "same-origin",
+      "fetchMode": "cors",
+      "tenantSelector": "demo"
+    }
+  ],
+  "pageErrors": [],
+  "visitor": {
+    "status": 401,
+    "body": "{\"error\":\"Not authenticated\"}"
+  },
+  "realVehicles": [
+    {
+      "id": "73f7c436-827d-4f15-bf1e-ce2d6e7fdc0f",
+      "make": "kimi",
+      "model": "kimi",
+      "year": 2026
+    },
+    {
+      "id": "0029ab28-2da2-483d-bc86-a1114deb3e1d",
+      "make": "Honda",
+      "model": "Civic Sedan",
+      "year": 2024
+    }
+  ],
+  "filteredRefresh": {
+    "url": "https://lume-web-phase3-hakicsi89.vercel.app/vehicles?tenant=demo&query=&make=kimi&priceMax=&sort=recommended",
+    "make": "kimi",
+    "recorded": [
+      "/vehicles?tenant=demo&evidence=1793282554954",
+      "/vehicles?tenant=demo&query=&make=kimi&priceMax=&sort=recommended"
+    ]
+  },
+  "chat": {
+    "status": 502,
+    "contentType": "application/json",
+    "body": "{\"error\":\"AI provider request failed\"}",
+    "visibleAlert": "Chat API 502: {\"error\":\"AI provider request failed\"}",
+    "navigationSuppressed": true
+  },
+  "comparison": {
+    "url": "https://lume-web-phase3-hakicsi89.vercel.app/vehicles/compare?tenant=demo&ids=73f7c436-827d-4f15-bf1e-ce2d6e7fdc0f,0029ab28-2da2-483d-bc86-a1114deb3e1d",
+    "h1Count": 1,
+    "vehicleLinkCount": 2
+  }
+}

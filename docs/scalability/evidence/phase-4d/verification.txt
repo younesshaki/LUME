@@ -1,0 +1,39 @@
+Phase 4d application/deployment commit 56c2c99cbdccd69c7bd968cbbc27ae82fa3bed80.
+Dedicated worktree based directly on staging ee354b574; real npm install --legacy-peer-deps; no node_modules symlink; package-lock matches staging.
+Before standalone typecheck: deleted apps/web/next-env.d.ts, apps/web/.next, apps/web/tsconfig.tsbuildinfo.
+
+Required local gates (exit status):
+typecheck-all 0
+web-build 0
+blocks-typecheck 0
+all-checks 0
+diff-check 0
+
+Commands:
+ npm run typecheck:all
+ npm run build --workspace=@lume/web (includes boundary check)
+ npm run typecheck --workspace=@lume/blocks
+ node --import tsx --conditions=react-server --test apps/web/checks/*.check.mjs
+ git diff --check
+
+55/55 checks: foundation 7; vehicles 8; content 8; concierge 12; visitor 7; navigation 6; hosted-outcome 4; ingress 3.
+PASS npm run verify:foundation --workspace=@lume/web: actual Next ingress (POST chat/logout and browser-style GET visitor), alternating HTML/Flight alpha/beta, 20 concurrent requests, 12 negative host/selector cases. Empty upstream prevents external writes.
+PASS 9 local browser journeys /17 intercepted fixture SSE turns /0 page exceptions. Browser harness now waits for the expected query commit before asserting repeated-back destination; pathname/storage alone can precede router commit.
+PASS 130 compiled server/client output files contain none of the inherited credential values
+
+Clean GitHub Actions on application commit 56c2c99: SUCCESS
+ https://github.com/younesshaki/LUME/actions/runs/40886946493
+ Actual successful steps: npm ci; check:migrations; typecheck:all; npm test; live Vite build; admin build.
+Root test/build checks were run by that clean CI checkout, not claimed rerun locally. No SFTP test changes or masking.
+
+Hosted, no interception and no synthetic remote tenants:
+ Preview source 56c2c99, READY, stable existing isolated alias, staging WEB_PREVIEW_* only.
+ Two web POST chat probes: HTTP 502 {"error":"AI provider request failed"}; expected owner-confirmed unfunded state. No SSE frames. Exact underlying balance reason hidden by admin.
+ Anonymous /api/visitor/me: 401; cookie-less logout: 204 with only lume_visitor_session clear cookie.
+ Real mobile browser: Origin omitted automatically on same-origin visitor GET, Fetch Metadata same-origin/cors, X-Lume-Tenant demo; 401. Actual chat UI shows expected 502 and does not navigate. No page exceptions. Real filter form/refresh and comparison pass.
+ 7 deployed read/security checks: unknown tenant/mismatched selector/internal header/duplicate selector return 404; foreign Origin/metadata-free GET/Origin-less mutation return 403.
+ Deployed comparison raw HTML: real demo vehicles, one h1, correct metadata and noindex.
+ 6 actual function output entries /5 distinct IDs; conservative headroom 6 of 12.
+ Project audit: no provider/service-role/generic production/test-mode bindings; 10 downloaded inventory client scripts scanned with zero configured credential/admin module matches. Vite/admin production deployments, aliases, build settings and production Origin digests unchanged.
+
+Funded answer: pending funding. Real SSE action dispatch and authenticated visitor issuance/forwarding remain NOT PROVEN. No visitor account/token/tenant or lead/save was fabricated. Chat probes can create normal staging chat/usage accounting. No Phase 5 or traffic cutover.

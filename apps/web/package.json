@@ -17,7 +17,8 @@
     "test:content": "node --import tsx --conditions=react-server --test checks/content.check.mjs",
     "test:concierge": "node --import tsx --conditions=react-server --test checks/concierge.check.mjs",
     "test:visitor": "node --import tsx --conditions=react-server --test checks/visitor.check.mjs",
-    "verify:content": "node --import tsx scripts/verify-content.mjs"
+    "verify:content": "node --import tsx scripts/verify-content.mjs",
+    "verify:concierge": "node --import tsx scripts/verify-concierge.mjs"
   },
   "dependencies": {
     "@lume/blocks": "*",

@@ -1,0 +1,26 @@
+{
+  "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+  "requests": [
+    {
+      "pathname": "/vehicles?tenant=demo",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "robots": "noindex, nofollow, noarchive",
+      "bodyExcerpt": "Vehicle page present"
+    },
+    {
+      "pathname": "/api/chat?tenant=demo",
+      "status": 404,
+      "contentType": "text/html; charset=utf-8",
+      "robots": "noindex, nofollow, noarchive",
+      "bodyExcerpt": "<!DOCTYPE html><html lang=\"en\" data-theme=\"dark\" data-lume-site-mode=\"dark\" data-lume-template=\"luxury\" data-lume-template-layout=\"cinematic-editorial\" style=\"-"
+    },
+    {
+      "pathname": "/api/visitor/me?tenant=demo",
+      "status": 404,
+      "contentType": "text/html; charset=utf-8",
+      "robots": "noindex, nofollow, noarchive",
+      "bodyExcerpt": "<!DOCTYPE html><html lang=\"en\" data-theme=\"dark\" data-lume-site-mode=\"dark\" data-lume-template=\"luxury\" data-lume-template-layout=\"cinematic-editorial\" style=\"-"
+    }
+  ]
+}
