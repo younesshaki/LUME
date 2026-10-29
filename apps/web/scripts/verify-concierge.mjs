@@ -321,6 +321,11 @@ try {
   await landed("/vehicles");
   assert.equal(new URL(page.url()).searchParams.get("make"), "Audi");
   await ask({ type: "navigate-back", destination: "previous" });
+  // The pathname is already /vehicles and rewind updates storage before the
+  // router commits. Wait for the expected query rather than accepting Audi.
+  await page.waitForURL(
+    (u) => u.pathname === "/vehicles" && u.searchParams.get("make") === "BMW",
+  );
   await landed("/vehicles");
   assert.equal(new URL(page.url()).searchParams.get("make"), "BMW");
   await ask({ type: "navigate", route: "products" });

@@ -87,7 +87,9 @@ test("login relays back ONLY the signed visitor-session Set-Cookie and forwards 
 });
 
 test("an existing session cookie is the only cookie forwarded upstream; admin/auth cookies are stripped", async () => {
-  const calls = stub(() => new Response('{"visitor":{"id":"v1"}}', { status: 200 }));
+  const calls = stub(
+    () => new Response('{"visitor":{"id":"v1"}}', { status: 200 }),
+  );
   await visitorProxy(
     request("me", "GET", {
       headers: {
@@ -104,7 +106,12 @@ test("an existing session cookie is the only cookie forwarded upstream; admin/au
 
 test("path allowlist: unknown endpoints, traversal and bad saved-vehicle ids are 404 before any upstream call", async () => {
   const calls = stub(() => new Response("{}"));
-  for (const path of ["secret", "me/extra", "saved-vehicles/..", "saved-vehicles/a/b"]) {
+  for (const path of [
+    "secret",
+    "me/extra",
+    "saved-vehicles/..",
+    "saved-vehicles/a/b",
+  ]) {
     const r = await visitorProxy(request(path), segments(path));
     assert.equal(r.status, 404, `expected 404 for ${path}`);
   }
@@ -121,16 +128,24 @@ test("path allowlist: unknown endpoints, traversal and bad saved-vehicle ids are
 test("visitor proxy rejects cross-origin, absent Origin, unknown tenant and unsupported methods", async () => {
   const calls = stub(() => new Response("{}"));
   assert.equal(
-    (await visitorProxy(request("me", "GET", { headers: { origin: "https://forged.test" } }), ["me"]))
-      .status,
+    (
+      await visitorProxy(
+        request("me", "GET", { headers: { origin: "https://forged.test" } }),
+        ["me"],
+      )
+    ).status,
     403,
   );
   const absent = request("me");
   absent.headers.delete("origin");
   assert.equal((await visitorProxy(absent, ["me"])).status, 403);
   assert.equal(
-    (await visitorProxy(request("me", "GET", { headers: { "x-lume-tenant": "foreign" } }), ["me"]))
-      .status,
+    (
+      await visitorProxy(
+        request("me", "GET", { headers: { "x-lume-tenant": "foreign" } }),
+        ["me"],
+      )
+    ).status,
     404,
   );
   const put = request("me", "PUT");
@@ -142,9 +157,46 @@ test("OPTIONS preflight returns 204 credentialed CORS with no upstream call", as
   const calls = stub(() => new Response("{}"));
   const r = await visitorProxy(request("me", "OPTIONS"), ["me"]);
   assert.equal(r.status, 204);
-  assert.equal(
-    r.headers.get("access-control-allow-credentials"),
-    "true",
+  assert.equal(r.headers.get("access-control-allow-credentials"), "true");
+  assert.equal(calls.length, 0);
+});
+
+test("same-origin browser GET without Origin reaches admin with verified own origin and only visitor cookie", async () => {
+  const calls = stub(
+    () => new Response('{"error":"Not authenticated"}', { status: 401 }),
   );
+  const read = request("me", "GET", {
+    headers: {
+      "sec-fetch-site": "same-origin",
+      "sec-fetch-mode": "cors",
+      cookie: "admin=private; lume_visitor_session=signed-fixture",
+    },
+  });
+  read.headers.delete("origin");
+  assert.equal((await visitorProxy(read, ["me"])).status, 401);
+  assert.equal(calls[0].options.headers.get("Origin"), "http://localhost:3200");
+  assert.equal(
+    calls[0].options.headers.get("Cookie"),
+    "lume_visitor_session=signed-fixture",
+  );
+});
+
+test("Fetch Metadata cannot authorize cross-site reads, foreign origins or Origin-less mutations", async () => {
+  const calls = stub(() => new Response("{}"));
+  for (const [method, site, mode, origin] of [
+    ["GET", "cross-site", "cors", null],
+    ["GET", "same-site", "cors", null],
+    ["GET", "same-origin", "navigate", null],
+    ["POST", "same-origin", "cors", null],
+    ["DELETE", "same-origin", "cors", null],
+    ["GET", "same-origin", "cors", "https://evil.invalid"],
+  ]) {
+    const r = request("me", method, {
+      headers: { "sec-fetch-site": site, "sec-fetch-mode": mode },
+    });
+    if (origin) r.headers.set("origin", origin);
+    else r.headers.delete("origin");
+    assert.equal((await visitorProxy(r, ["me"])).status, 403);
+  }
   assert.equal(calls.length, 0);
 });
