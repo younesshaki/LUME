@@ -29,7 +29,18 @@ assert.ok(
   "Set CONCIERGE_EVIDENCE_DIR outside the repository for review first",
 );
 fs.mkdirSync(out, { recursive: true });
+// A unique URL avoids stale intermediary responses immediately after alias
+// reassignment. This is an operator diagnostic, never a production cache rule.
+const observedAt = new Date().toISOString();
+const probeNonce = randomUUID();
+const requestUrl = (pathname) => {
+  const url = new URL(pathname, origin);
+  url.searchParams.set("evidence", probeNonce);
+  return url;
+};
 const report = {
+  observedAt,
+  probeNonce,
   origin: origin.origin,
   tenant,
   fixture: false,
@@ -60,7 +71,7 @@ const safeHeaders = (h) =>
       "x-source-categories",
     ].map((k) => [k, h.get(k)]),
   );
-const health = await fetch(new URL(`/vehicles?tenant=${tenant}`, origin), {
+const health = await fetch(requestUrl(`/vehicles?tenant=${tenant}`), {
   signal: AbortSignal.timeout(20000),
 });
 report.health = {
@@ -70,7 +81,7 @@ report.health = {
 save();
 assert.equal(health.status, 200);
 assert.match(health.headers.get("x-robots-tag"), /noindex/);
-const readiness = await fetch(new URL(`/api/chat?tenant=${tenant}`, origin), {
+const readiness = await fetch(requestUrl(`/api/chat?tenant=${tenant}`), {
   headers,
   signal: AbortSignal.timeout(20000),
 });
@@ -88,7 +99,7 @@ for (const [name, content] of [
     "Write one original sentence describing how a pleasant dealership visit feels. Do not navigate, submit an inquiry or save anything.",
   ],
 ]) {
-  const response = await fetch(new URL(`/api/chat?tenant=${tenant}`, origin), {
+  const response = await fetch(requestUrl(`/api/chat?tenant=${tenant}`), {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -131,7 +142,7 @@ for (const [name, content] of [
   );
 }
 // Anonymous checks need no test visitor, forged token, login, signup, or DB write.
-const me = await fetch(new URL(`/api/visitor/me?tenant=${tenant}`, origin), {
+const me = await fetch(requestUrl(`/api/visitor/me?tenant=${tenant}`), {
   headers,
   signal: AbortSignal.timeout(20000),
 });
@@ -142,10 +153,12 @@ assert.equal(
   401,
   "Anonymous visitor bridge should reach the admin and reject authentication",
 );
-const logout = await fetch(
-  new URL(`/api/visitor/logout?tenant=${tenant}`, origin),
-  { method: "POST", headers, body: "{}", signal: AbortSignal.timeout(20000) },
-);
+const logout = await fetch(requestUrl(`/api/visitor/logout?tenant=${tenant}`), {
+  method: "POST",
+  headers,
+  body: "{}",
+  signal: AbortSignal.timeout(20000),
+});
 const cookies = logout.headers.getSetCookie();
 report.visitor.logoutStatus = logout.status;
 report.visitor.relayedCookieNames = cookies.map((c) => c.split("=", 1)[0]);
