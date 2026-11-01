@@ -1,0 +1,74 @@
+/* The shared Vite stylesheet locks html and makes body an overflow container.
+ * Scope the reset to this disposable route so viewport sticky + Lenis agree.
+ * :has stops matching after navigation, even while Next retains the CSS file. */
+html:has(.showcase-poc),
+body.standardMode:has(.showcase-poc) {
+  height: auto;
+  overflow: visible;
+}
+.showcase-poc {
+  color: #f4ede1;
+  background: #15171d;
+  font-family: system-ui, sans-serif;
+  min-height: 100svh;
+}
+.showcase-poc__intro,
+.showcase-poc footer {
+  max-width: 64rem;
+  margin: auto;
+  padding: 2rem 1.5rem;
+}
+.showcase-poc h1 {
+  font-family: inherit;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.1;
+  color: inherit;
+}
+.showcase-poc nav {
+  display: flex;
+  gap: 1.5rem;
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+  background: #15171d;
+  border: 1px solid #ebc995;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+.showcase-poc a {
+  color: #ebc995;
+  text-decoration: underline;
+}
+.showcase-poc__scene {
+  height: 260svh;
+  position: relative;
+}
+.showcase-poc__sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1rem 5rem;
+}
+.showcase-poc__canvas {
+  flex: 1;
+  min-height: 0;
+}
+.showcase-poc__caption,
+.showcase-poc [role="status"],
+.showcase-poc [role="alert"] {
+  margin: 0;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+}
+.showcase-poc__loading {
+  padding: 2rem;
+  min-height: 100svh;
+}
+@media (prefers-reduced-motion: reduce) {
+  .showcase-poc__scene {
+    height: 100svh;
+  }
+}

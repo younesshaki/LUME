@@ -200,6 +200,13 @@ export function inspectBoundaries(root = appRoot) {
           "server-only",
           "react",
           "next",
+          // Explicit client-only capability for the disposable showcase spike.
+          // This does not admit these dependencies in server code, other client
+          // surfaces, shared packages, or a helper lacking "use client".
+          ...(node.client &&
+          node.file.startsWith(resolve(root, "components/showcase-poc") + "/")
+            ? ["@react-three/fiber", "@react-three/drei", "three", "lenis"]
+            : []),
           ...(sharedRoots.some((r) => node.file.startsWith(r + "/"))
             ? [
                 "lucide-react",
