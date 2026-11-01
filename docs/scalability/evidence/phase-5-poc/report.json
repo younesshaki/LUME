@@ -1,0 +1,467 @@
+{
+  "source": "LOCAL production Next build and synthetic loopback tenant/content data; REAL public R2 GLB bytes. No remote tenant/config writes or deployment.",
+  "fixtureDatabase": true,
+  "corsHeaderDiagnostic": "Real R2 GLB bytes with a test-only Access-Control-Allow-Origin response header; not direct R2 CORS proof",
+  "observedAt": "2026-11-01T15:35:03.766Z",
+  "routes": {
+    "/": {
+      "requestedJsChunks": [
+        "static/chunks/webpack-30c8719d7235350d.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/968-f4c87893b5b780b0.js",
+        "static/chunks/main-app-60dbd06cc9b6192f.js",
+        "static/chunks/app/global-error-bb408f18acfa8bcf.js",
+        "static/chunks/app/layout-50c07b11614d2cbe.js",
+        "static/chunks/app/error-520d0bbc4a20bcd1.js",
+        "static/chunks/680-d1993f938eedb2d1.js",
+        "static/chunks/172-720548d1a437104d.js",
+        "static/chunks/806-261cbed33be343c8.js",
+        "static/chunks/88-108d3a9dec62bec2.js",
+        "static/chunks/691-d282fc12f54d299f.js",
+        "static/chunks/app/page-0f8a21b67cb753b9.js"
+      ],
+      "initialJsBytes": 915611,
+      "initialJsGzipBytes": 291043,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/vehicles": {
+      "requestedJsChunks": [
+        "static/chunks/webpack-30c8719d7235350d.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/968-f4c87893b5b780b0.js",
+        "static/chunks/main-app-60dbd06cc9b6192f.js",
+        "static/chunks/app/vehicles/error-86574070429121b7.js",
+        "static/chunks/app/global-error-bb408f18acfa8bcf.js",
+        "static/chunks/app/layout-50c07b11614d2cbe.js",
+        "static/chunks/app/error-520d0bbc4a20bcd1.js",
+        "static/chunks/app/vehicles/page-e5022302c848c5ff.js"
+      ],
+      "initialJsBytes": 436988,
+      "initialJsGzipBytes": 131486,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase": {
+      "requestedInitialJsChunks": [
+        "static/chunks/webpack-30c8719d7235350d.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/968-f4c87893b5b780b0.js",
+        "static/chunks/main-app-60dbd06cc9b6192f.js",
+        "static/chunks/app/global-error-bb408f18acfa8bcf.js",
+        "static/chunks/app/showcase/page-6194a062414888f2.js",
+        "static/chunks/app/layout-50c07b11614d2cbe.js",
+        "static/chunks/app/error-520d0bbc4a20bcd1.js",
+        "static/chunks/9d78c252.0b82453246187003.js",
+        "static/chunks/1329d575.534506555cef1d4c.js",
+        "static/chunks/933.5d511185d0ccee69.js",
+        "static/chunks/653.fc70ded94ef2c827.js"
+      ],
+      "initialJsBytes": 1361176,
+      "initialJsGzipBytes": 379884,
+      "heavyChunksRequested": [
+        "static/chunks/9d78c252.0b82453246187003.js",
+        "static/chunks/1329d575.534506555cef1d4c.js",
+        "static/chunks/933.5d511185d0ccee69.js",
+        "static/chunks/653.fc70ded94ef2c827.js"
+      ],
+      "lifecycleJourney": {
+        "requestedJsChunks": [
+          "static/chunks/webpack-30c8719d7235350d.js",
+          "static/chunks/87c73c54-014124adcece3495.js",
+          "static/chunks/968-f4c87893b5b780b0.js",
+          "static/chunks/main-app-60dbd06cc9b6192f.js",
+          "static/chunks/app/global-error-bb408f18acfa8bcf.js",
+          "static/chunks/app/showcase/page-6194a062414888f2.js",
+          "static/chunks/app/layout-50c07b11614d2cbe.js",
+          "static/chunks/app/error-520d0bbc4a20bcd1.js",
+          "static/chunks/9d78c252.0b82453246187003.js",
+          "static/chunks/1329d575.534506555cef1d4c.js",
+          "static/chunks/933.5d511185d0ccee69.js",
+          "static/chunks/653.fc70ded94ef2c827.js",
+          "static/chunks/app/vehicles/error-86574070429121b7.js",
+          "static/chunks/app/vehicles/page-e5022302c848c5ff.js",
+          "static/chunks/680-d1993f938eedb2d1.js",
+          "static/chunks/172-720548d1a437104d.js",
+          "static/chunks/806-261cbed33be343c8.js",
+          "static/chunks/88-108d3a9dec62bec2.js",
+          "static/chunks/691-d282fc12f54d299f.js",
+          "static/chunks/app/page-0f8a21b67cb753b9.js"
+        ],
+        "requestedUniqueJsBytes": 1848203,
+        "requestedUniqueJsGzipBytes": 542883,
+        "note": "Includes exit-to-vehicles and exit-to-home chunks from the lifecycle journey; not an initial-route size",
+        "heavyChunksRequested": [
+          "static/chunks/9d78c252.0b82453246187003.js",
+          "static/chunks/1329d575.534506555cef1d4c.js",
+          "static/chunks/933.5d511185d0ccee69.js",
+          "static/chunks/653.fc70ded94ef2c827.js"
+        ]
+      }
+    }
+  },
+  "rendering": {
+    "meshes": 2,
+    "start": {
+      "progress": 0,
+      "camera": [
+        -1.2,
+        0.8,
+        6.4
+      ],
+      "drawCalls": 3,
+      "triangles": 206623,
+      "scrollY": 0,
+      "lenis": "lenis",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "bounds": {
+        "top": 236.390625,
+        "bottom": 946.796875,
+        "height": 710.40625
+      }
+    },
+    "scrolled": {
+      "progress": 0.5788,
+      "camera": [
+        -0.2979,
+        0.293,
+        5.5888
+      ],
+      "drawCalls": 3,
+      "triangles": 206623,
+      "scrollY": 1007,
+      "lenis": "lenis lenis-scrolling lenis-smooth",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "bounds": {
+        "top": 62.796875,
+        "bottom": 773.203125,
+        "height": 710.40625
+      }
+    },
+    "mediaResponses": [
+      {
+        "url": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+        "status": 200,
+        "decodedBytes": 603908,
+        "testCorsHeader": true
+      },
+      {
+        "url": "https://www.gstatic.com/draco/versioned/decoders/1.5.5/draco_wasm_wrapper.js",
+        "status": 200,
+        "decodedBytes": 58916,
+        "testCorsHeader": false
+      },
+      {
+        "url": "https://www.gstatic.com/draco/versioned/decoders/1.5.5/draco_decoder.wasm",
+        "status": 200,
+        "decodedBytes": 283091,
+        "testCorsHeader": false
+      },
+      {
+        "url": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+        "status": 200,
+        "decodedBytes": 603908,
+        "testCorsHeader": true
+      },
+      {
+        "url": "https://www.gstatic.com/draco/versioned/decoders/1.5.5/draco_decoder.wasm",
+        "status": 200,
+        "decodedBytes": 283091,
+        "testCorsHeader": false
+      },
+      {
+        "url": "https://www.gstatic.com/draco/versioned/decoders/1.5.5/draco_wasm_wrapper.js",
+        "status": 200,
+        "decodedBytes": 58916,
+        "testCorsHeader": false
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  "hydrationErrors": [],
+  "openGates": [
+    "R2 GET CORS for localhost and exact staging Preview origin; do not change production bucket/origins without owner approval",
+    "Physical mobile/Safari GPU, full 12-scene shaders/audio/timing and performance are outside this spike"
+  ],
+  "bundle": {
+    "source": "actual production client webpack compilation",
+    "definition": "Full async island including Three/R3F/drei, loader, private reconciler, Lenis and local scene/rig",
+    "moduleChunkReceipt": [
+      {
+        "resource": "apps/web/node_modules/lenis/dist/lenis.mjs",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/constants.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/index.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/index.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/build/three.module.js",
+        "chunks": [
+          "static/chunks/9d78c252.0b82453246187003.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler.production.js",
+        "chunks": [
+          "static/chunks/1329d575.534506555cef1d4c.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/cjs/scheduler.production.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/index.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/cjs/scheduler.production.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/drei/core/Gltf.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three-stdlib/loaders/DRACOLoader.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three-stdlib/libs/MeshoptDecoder.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three-stdlib/loaders/GLTFLoader.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three-stdlib/_polyfill/LoaderUtils.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three-stdlib/_polyfill/constants.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three-stdlib/utils/BufferGeometryUtils.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/dist/events-f8cd670d.esm.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase-poc/ShowcaseScene.tsx",
+        "chunks": [
+          "static/chunks/653.fc70ded94ef2c827.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase-poc/CameraRig.tsx",
+        "chunks": [
+          "static/chunks/653.fc70ded94ef2c827.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase-poc/useDisposableGLTF.ts",
+        "chunks": [
+          "static/chunks/653.fc70ded94ef2c827.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/drei/core/Sparkles.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/drei/helpers/constants.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/dist/react-three-fiber.esm.js",
+        "chunks": [
+          "static/chunks/933.5d511185d0ccee69.js"
+        ]
+      }
+    ],
+    "heavyChunks": [
+      {
+        "name": "static/chunks/933.5d511185d0ccee69.js",
+        "bytes": 137489,
+        "gzipBytes": 42967
+      },
+      {
+        "name": "static/chunks/9d78c252.0b82453246187003.js",
+        "bytes": 664888,
+        "gzipBytes": 166782
+      },
+      {
+        "name": "static/chunks/1329d575.534506555cef1d4c.js",
+        "bytes": 109697,
+        "gzipBytes": 33956
+      },
+      {
+        "name": "static/chunks/653.fc70ded94ef2c827.js",
+        "bytes": 3755,
+        "gzipBytes": 1821
+      }
+    ],
+    "emittedLevaModules": 0,
+    "rendererDependencies": [
+      "node_modules/lenis",
+      "node_modules/@react-three/fiber",
+      "node_modules/three",
+      "node_modules/@react-three/drei"
+    ]
+  },
+  "r2": {
+    "url": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+    "status": 200,
+    "bytes": 603908,
+    "sha256": "de5b04647e34ff1c7496c19cd77ec1719dde671b8bdb4b57ae1ae4d672b944ce",
+    "contentType": "model/gltf-binary",
+    "accessControlAllowOrigin": null,
+    "extensions": [
+      "EXT_texture_webp",
+      "KHR_draco_mesh_compression",
+      "KHR_materials_ior",
+      "KHR_materials_specular"
+    ],
+    "meshDefinitions": 2,
+    "stablePreviewGet": {
+      "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+      "status": 200,
+      "bytes": 603908,
+      "accessControlAllowOrigin": null
+    },
+    "browser": {
+      "directAccess": "blocked",
+      "errors": [
+        "Access to fetch at 'https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb' from origin 'http://127.0.0.1:33623' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "Could not load https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb: Failed to fetch",
+        "Error: Could not load https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb: Failed to fetch\n    at http://127.0.0.1:33623/_next/static/chunks/933.5d511185d0ccee69.js:1:24705\n    at Object.a [as onError] (http://127.0.0.1:33623/_next/static/chunks/933.5d511185d0ccee69.js:1:58299)\n    at http://127.0.0.1:33623/_next/static/chunks/9d78c252.0b82453246187003.js:227:155956"
+      ],
+      "failedRequests": [
+        {
+          "url": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+          "failure": "net::ERR_FAILED"
+        }
+      ]
+    }
+  },
+  "ssr": {
+    "status": 200,
+    "title": "Showcase study | Local showcase fixture",
+    "h1Count": 1,
+    "noindex": "noindex, nofollow, noarchive",
+    "canonical": "http://127.0.0.1:33623/showcase?tenant=demo"
+  },
+  "navigation": {
+    "exitToVehicles": {
+      "url": "http://127.0.0.1:33623/vehicles?tenant=demo",
+      "lenisCleaned": true,
+      "canvasUnmounted": true
+    },
+    "back": {
+      "progress": 0.6086,
+      "camera": [
+        -0.2324,
+        0.2489,
+        5.5183
+      ],
+      "drawCalls": 3,
+      "triangles": 206623,
+      "scrollY": 1050,
+      "lenis": "lenis",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "bounds": {
+        "top": 62.796875,
+        "bottom": 773.203125,
+        "height": 710.40625
+      }
+    },
+    "refresh": {
+      "progress": 0.6086,
+      "camera": [
+        -0.2205,
+        0.2421,
+        5.5074
+      ],
+      "drawCalls": 3,
+      "triangles": 206623,
+      "scrollY": 1050,
+      "lenis": "lenis",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "bounds": {
+        "top": 62.796875,
+        "bottom": 773.203125,
+        "height": 710.40625
+      }
+    },
+    "exitToHome": {
+      "url": "http://127.0.0.1:33623/?tenant=demo",
+      "lenisCleaned": true,
+      "canvasUnmounted": true
+    }
+  },
+  "reducedMotion": {
+    "lenisDisabled": true,
+    "mode": "reduced",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "serverErrors": false
+}
