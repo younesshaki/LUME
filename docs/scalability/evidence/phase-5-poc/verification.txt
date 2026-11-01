@@ -1,0 +1,25 @@
+Phase 5 disposable showcase POC. Application commit 1dd1225a00bdbe44c8cab7633e4b17b3bdddd7c0.
+Base: latest staging at start, 2f22f6f (merged Phase 4d).
+Branch: poc/phase5-showcase-island. Dedicated worktree; real npm install and clean npm ci --legacy-peer-deps, no node_modules directory symlink.
+Before final typecheck: deleted apps/web/.next, apps/web/next-env.d.ts and apps/web/tsconfig.tsbuildinfo.
+
+PASS npm run typecheck:all (all workspaces, before generated Next declarations)
+PASS npm run build --workspace=@lume/web (includes import boundary guard)
+PASS node --import tsx --conditions=react-server --test apps/web/checks/*.check.mjs (58/58)
+PASS npm run verify:showcase --workspace=@lume/web (production build; scope/limitations below)
+PASS npm run build (existing root Vite app)
+PASS npm run check:migrations (92 sequential files; no migration added/applied)
+PASS git diff --check
+PASS 138 compiled server/client files; no inherited configured credential value matches
+
+PASS every pre-existing package-lock package entry unchanged except the web manifest; new workspace dependencies added. Clean npm ci succeeds.
+PASS no diff to apps/web/config/environment.ts, root src, root package.json/Vite/Vercel config, apps/admin or shared packages.
+
+Browser: production Chromium /1280x900 +390x844 reduced motion. Software ANGLE/SwiftShader, not a physical-device performance proof.
+Real 603,908-byte R2 GLB, two meshes, 3 draw calls /206,623 triangles; Draco + embedded WebP decoded. Zero hydration/SSR errors. Controlled-header rendering has zero console errors, page errors or failed requests. Direct R2 errors are captured separately and are expected CORS failures.
+Lenis wheel input moves the actual rendered camera. Next Link -> vehicles unmounts canvas/destroys Lenis; browser Back restores scrollY 1050; refresh restores scrollY 1050; Home cleanup passes. Reduced motion disables Lenis and keeps camera at its initial path point.
+Actual webpack module->chunk map identifies 4 async island chunks (including the private R3F reconciler): 915,829 bytes /245,526 gzip bytes. Fresh home/vehicles browsers request none. Showcase requests all four. No emitted Leva production modules.
+
+R2 gate remains BLOCKED: actual GET 200 but no Access-Control-Allow-Origin for local origin or stable Preview origin; direct browser load fails. Diagnostic changes only a response header in Playwright for the same downloaded, hashed real GLB bytes. It is NOT direct R2 access proof, a fake model, an application proxy, a browser security bypass or a firewall change.
+No CORS/config/deployment/tenant mutation performed. No push, PR creation or deployment at preparation time; these require Josh approval. No Phase 5 full port or traffic cutover.
+Root Vitest/admin build and GitHub Actions were not run for this spike; the requested Phase 5 local gates above were run. No SFTP test modifications/masking.

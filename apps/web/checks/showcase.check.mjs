@@ -60,6 +60,28 @@ test("3D dependencies are permitted only inside the explicitly client-owned spik
         e.includes("client graph reaches server"),
       ),
     );
+    writeFileSync(
+      join(root, "config/private.ts"),
+      'export const value = "fixture";',
+    );
+    writeFileSync(
+      target,
+      '"use client";import "three";import "../../config/private";',
+    );
+    assert.ok(
+      inspectBoundaries(root).some((e) =>
+        e.includes("client graph reaches server/config"),
+      ),
+    );
+    writeFileSync(
+      target,
+      '"use client";import "three";process.env.PRIVATE_FIXTURE;',
+    );
+    assert.ok(
+      inspectBoundaries(root).some((e) =>
+        e.includes("client process access is forbidden"),
+      ),
+    );
     writeFileSync(target, '"use client";import "three";');
     writeFileSync(
       join(root, "server/bad.ts"),

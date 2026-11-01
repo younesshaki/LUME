@@ -1,0 +1,179 @@
+{
+  "source": "actual production client webpack compilation",
+  "definition": "Full async island including Three/R3F/drei, loader, private reconciler, Lenis and local scene/rig",
+  "moduleChunkReceipt": [
+    {
+      "resource": "apps/web/node_modules/lenis/dist/lenis.mjs",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/constants.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/index.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/index.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three/build/three.module.js",
+      "chunks": [
+        "static/chunks/9d78c252.0b82453246187003.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler.production.js",
+      "chunks": [
+        "static/chunks/1329d575.534506555cef1d4c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/cjs/scheduler.production.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/index.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/cjs/scheduler.production.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/drei/core/Gltf.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three-stdlib/loaders/DRACOLoader.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three-stdlib/libs/MeshoptDecoder.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three-stdlib/loaders/GLTFLoader.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three-stdlib/_polyfill/LoaderUtils.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three-stdlib/_polyfill/constants.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three-stdlib/utils/BufferGeometryUtils.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/dist/events-f8cd670d.esm.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase-poc/ShowcaseScene.tsx",
+      "chunks": [
+        "static/chunks/653.fc70ded94ef2c827.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase-poc/CameraRig.tsx",
+      "chunks": [
+        "static/chunks/653.fc70ded94ef2c827.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase-poc/useDisposableGLTF.ts",
+      "chunks": [
+        "static/chunks/653.fc70ded94ef2c827.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/drei/core/Sparkles.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/drei/helpers/constants.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/dist/react-three-fiber.esm.js",
+      "chunks": [
+        "static/chunks/933.5d511185d0ccee69.js"
+      ]
+    }
+  ],
+  "heavyChunks": [
+    {
+      "name": "static/chunks/933.5d511185d0ccee69.js",
+      "bytes": 137489,
+      "gzipBytes": 42967
+    },
+    {
+      "name": "static/chunks/9d78c252.0b82453246187003.js",
+      "bytes": 664888,
+      "gzipBytes": 166782
+    },
+    {
+      "name": "static/chunks/1329d575.534506555cef1d4c.js",
+      "bytes": 109697,
+      "gzipBytes": 33956
+    },
+    {
+      "name": "static/chunks/653.fc70ded94ef2c827.js",
+      "bytes": 3755,
+      "gzipBytes": 1821
+    }
+  ],
+  "emittedLevaModules": 0,
+  "rendererDependencies": [
+    "node_modules/lenis",
+    "node_modules/@react-three/fiber",
+    "node_modules/three",
+    "node_modules/@react-three/drei"
+  ]
+}
