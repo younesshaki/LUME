@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import VehicleInquiry from "../../../components/concierge/VehicleInquiry";
 import { vehiclePage } from "../../../server/vehicles/page-data";
 import {
   canonicalFor,
@@ -152,15 +153,18 @@ export default async function VehicleDetail(props: Props) {
         <p>
           Vehicle reference: <code>{v.id}</code>
         </p>
+        <VehicleInquiry
+          tenant={tenant.slug}
+          vehicleId={v.id}
+          title={title}
+          siteKey={process.env.WEB_PREVIEW_TURNSTILE_SITE_KEY}
+        />
         {contactUrl ? (
           <a className="button primary" href={contactUrl}>
             Contact dealer
           </a>
         ) : (
-          <p>
-            This read-only staging preview does not submit enquiries. Dealer
-            contact integration is required before rollout.
-          </p>
+          <p>Use Request information above to contact the dealership.</p>
         )}
       </section>
       <OptionalTools title={title} vehicleId={v.id} tenant={tenant.slug} />

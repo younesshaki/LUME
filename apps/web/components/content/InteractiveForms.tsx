@@ -1,8 +1,9 @@
 "use client";
 import { TemplateConversionPanel } from "@lume/blocks/react/TemplateConversionPanel";
 import type { SiteDesign } from "@lume/types";
-import { getLeadAttribution } from "@lume/blocks/lead-attribution";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { submitPublicLead } from "../concierge/submitLead";
+import { LEAD_FORM_EVENT, pendingLeadForm } from "../concierge/pendingLeadForm";
 import type {
   LeadCaptureInput,
   LeadCaptureResponse,
@@ -25,37 +26,22 @@ export default function InteractiveForms({
   block,
   siteKey,
   design,
+  vehicleId,
+  handlerId,
 }: {
   tenant: string;
   block?: PageBlock;
   siteKey?: string;
   design?: Pick<SiteDesign, "template">;
+  vehicleId?: string;
+  handlerId?: string;
 }) {
   const services = useMemo<LeadServices>(
     () => ({
       turnstileSiteKey: siteKey,
       Verification: TurnstileWidget,
       async submitLead(input: LeadCaptureInput): Promise<LeadCaptureResponse> {
-        const response = await fetch(
-          `/api/leads?tenant=${encodeURIComponent(tenant)}`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Lume-Tenant": tenant,
-            },
-            body: JSON.stringify({ ...input, ...getLeadAttribution(input) }),
-          },
-        );
-        const data = await response.json();
-        if (!response.ok)
-          throw new Error(
-            typeof data.error === "string"
-              ? data.error
-              : "Unable to submit request.",
-          );
-        return data;
+        return submitPublicLead(tenant, input);
       },
     }),
     [tenant, siteKey],
@@ -84,7 +70,11 @@ export default function InteractiveForms({
       ) : block && Component ? (
         <Component block={block} mode="standard" />
       ) : (
-        <ContactForm />
+        <ContactForm
+          tenant={tenant}
+          vehicleId={vehicleId}
+          handlerId={handlerId}
+        />
       )}
       <noscript>
         <p>
@@ -95,7 +85,15 @@ export default function InteractiveForms({
     </LeadServicesProvider>
   );
 }
-function ContactForm() {
+function ContactForm({
+  tenant,
+  vehicleId,
+  handlerId = "concierge-lead-form",
+}: {
+  tenant: string;
+  vehicleId?: string;
+  handlerId?: string;
+}) {
   const empty: ContactFormState = {
     firstName: "",
     lastName: "",
@@ -104,15 +102,60 @@ function ContactForm() {
     message: "",
   };
   const [form, setForm] = useState(empty);
+  const section = useRef<HTMLElement>(null);
+  const first = useRef<HTMLInputElement>(null);
+  const [context, setContext] = useState<LeadCaptureInput>({
+    source: "contact-form",
+    ...(vehicleId ? { vehicleId } : {}),
+  });
+  useEffect(() => {
+    const activate = () => {
+      const pending = pendingLeadForm(
+        tenant,
+        window.location.pathname,
+        handlerId,
+        true,
+      );
+      if (!pending) return;
+      setForm((current) => {
+        const next = { ...current };
+        for (const key of Object.keys(empty) as (keyof ContactFormState)[]) {
+          const value = pending.input[key];
+          if (typeof value === "string") next[key] = value;
+        }
+        return next;
+      });
+      setContext({
+        source: "chat",
+        vehicleId: pending.input.vehicleId ?? vehicleId,
+        sourceContext: pending.input.sourceContext,
+      });
+      requestAnimationFrame(() => {
+        section.current?.scrollIntoView({
+          block: "center",
+          behavior: "instant",
+        });
+        first.current?.focus({ preventScroll: true });
+      });
+    };
+    activate();
+    window.addEventListener(LEAD_FORM_EVENT, activate);
+    return () => window.removeEventListener(LEAD_FORM_EVENT, activate);
+  }, [tenant, vehicleId, handlerId]);
   const lead = forms.useLeadSubmission(
     "Request received. The dealership will follow up with you.",
   );
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void lead.send({ ...form, source: "contact-form" }, () => setForm(empty));
+    void lead.send({ ...form, ...context }, () => {
+      setForm(empty);
+      setContext({ source: "contact-form", vehicleId });
+    });
   }
   return (
     <ConciergeLeadFormView
+      formSectionRef={section}
+      firstNameInputRef={first}
       form={form}
       setForm={setForm}
       handleSubmit={handleSubmit}

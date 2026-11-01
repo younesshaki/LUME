@@ -1,0 +1,103 @@
+{
+  "observedAt": "2026-10-29T14:00:51.098Z",
+  "scope": "Josh-approved isolated web Preview deployment/upstream only; no admin/prod/tenant changes",
+  "deployment": {
+    "id": "dpl_GJWVvp1cVAFWxCU59VeGdx6eFFfv",
+    "immutableOrigin": "https://lume-web-preview-ht82e7f7b-hakicsi89-5044s-projects.vercel.app",
+    "stableOrigin": "https://lume-web-phase3-hakicsi89.vercel.app",
+    "target": "staging",
+    "sourceSha": "56c2c99cbdccd69c7bd968cbbc27ae82fa3bed80",
+    "readyState": "READY"
+  },
+  "bindings": [
+    {
+      "name": "WEB_PREVIEW_SUPABASE_URL",
+      "targets": [
+        "preview"
+      ],
+      "branch": null
+    },
+    {
+      "name": "WEB_PREVIEW_PROJECT_REF",
+      "targets": [
+        "preview"
+      ],
+      "branch": null
+    },
+    {
+      "name": "WEB_PREVIEW_SUPABASE_ANON_KEY",
+      "targets": [
+        "preview"
+      ],
+      "branch": null
+    },
+    {
+      "name": "WEB_PREVIEW_DEFAULT_TENANT",
+      "targets": [
+        "preview"
+      ],
+      "branch": null
+    },
+    {
+      "name": "WEB_PREVIEW_R2_PUBLIC_BASE_URL",
+      "targets": [
+        "preview"
+      ],
+      "branch": null
+    },
+    {
+      "name": "WEB_PREVIEW_CONTACT_URL",
+      "targets": [
+        "preview"
+      ],
+      "branch": null
+    },
+    {
+      "name": "WEB_PREVIEW_UPSTREAM_ORIGIN",
+      "targets": [
+        "preview"
+      ],
+      "branch": null
+    },
+    {
+      "name": "WEB_PREVIEW_HOSTS",
+      "targets": [
+        "preview"
+      ],
+      "branch": null
+    }
+  ],
+  "stagingProjectRef": "hapyyupeugxccofpibor",
+  "credentialProjectRef": "opaque publishable key; project bound by endpoint",
+  "stagingSupabaseOrigin": "https://hapyyupeugxccofpibor.supabase.co",
+  "upstream": "https://lume-admin-f2zgcm9is-hakicsi89-5044s-projects.vercel.app",
+  "defaultTenant": "demo",
+  "productionBindingsPresent": false,
+  "serviceRolePresent": false,
+  "testModePresent": false,
+  "downloadedClientScriptsScanned": 10,
+  "clientCredentialMatches": 0,
+  "clientAdminModuleMatches": 0,
+  "productionUnchanged": [
+    {
+      "project": "lume-admin",
+      "deploymentId": "dpl_7nWpz7u7FpWnZbWD1SNQMC6EvyPa",
+      "aliases": [
+        "lume-admin-five.vercel.app",
+        "lume-admin-hakicsi89-5044s-projects.vercel.app",
+        "lume-admin-git-main-hakicsi89-5044s-projects.vercel.app"
+      ],
+      "configurationCompared": true
+    },
+    {
+      "project": "lume",
+      "deploymentId": "dpl_2ZqooHgcvQEX6iox7UbFjW8b2XHo",
+      "aliases": [
+        "lume-jade-three.vercel.app",
+        "lume-hakicsi89-5044s-projects.vercel.app",
+        "lume-git-main-hakicsi89-5044s-projects.vercel.app"
+      ],
+      "configurationCompared": true
+    }
+  ]
+}

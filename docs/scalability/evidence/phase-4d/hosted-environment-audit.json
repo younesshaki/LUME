@@ -1,0 +1,27 @@
+{
+  "scope": "Read-only configuration/deployment audit; no settings, deployment, origin or tenant changes made by this task",
+  "observedAt": "2026-10-28T20:24:48.233930+00:00",
+  "stagingProjectRef": "hapyyupeugxccofpibor",
+  "web": {
+    "stableOrigin": "https://lume-web-phase3-hakicsi89.vercel.app",
+    "deployedSource": "458996a37cc98f059d4d805b871b6f396dceaae3",
+    "deploymentId": "dpl_2WRiWovc3UJk4Bm5wxLLHKzvnRKx",
+    "configuredUpstream": "https://lume-admin-jzts0chbg-hakicsi89-5044s-projects.vercel.app",
+    "newRequestedAlias": "https://lume-web-preview.vercel.app",
+    "newRequestedAliasBound": false,
+    "chatAndVisitorRoutesPresent": false
+  },
+  "admin": {
+    "deploymentId": "dpl_7ksDyUt9318raGeM2w1ZcETr7FuZ",
+    "origin": "https://lume-admin-f2zgcm9is-hakicsi89-5044s-projects.vercel.app",
+    "source": "ee354b574b75c500408cd2cb04c2dd64b469ff46",
+    "target": "staging/Preview",
+    "webOriginAllowed": true,
+    "providerKeyBindingPresent": true,
+    "funded": false,
+    "fundingEvidence": "Owner explicitly confirmed insufficient balance; sanitized endpoint response does not expose the provider status"
+  },
+  "fullWebChain": "Blocked pending Phase 4d Preview deployment and upstream binding update",
+  "fundedAnswer": "pending funding",
+  "authenticatedVisitorSession": "not proven; no approved visitor session supplied or created"
+}

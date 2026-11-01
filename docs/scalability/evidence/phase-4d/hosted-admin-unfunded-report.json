@@ -1,0 +1,57 @@
+{
+  "scope": "Direct staging admin only; NOT the web proxy/browser chain. Real responses, no fixtures.",
+  "adminDeployment": {
+    "id": "dpl_7ksDyUt9318raGeM2w1ZcETr7FuZ",
+    "url": "lume-admin-f2zgcm9is-hakicsi89-5044s-projects.vercel.app",
+    "state": "READY",
+    "target": "staging",
+    "branch": "staging",
+    "sha": "ee354b574b75c500408cd2cb04c2dd64b469ff46"
+  },
+  "webOrigin": "https://lume-web-phase3-hakicsi89.vercel.app",
+  "stagingProjectRef": "hapyyupeugxccofpibor",
+  "fundedAnswer": "pending funding",
+  "cases": [
+    {
+      "name": "server-navigation",
+      "status": 502,
+      "contentType": "application/json",
+      "classification": "expected-unfunded-provider-error",
+      "accepted": true,
+      "events": [],
+      "malformedFrames": 0,
+      "completeSse": false,
+      "actionFrameObserved": false,
+      "balanceReasonExplicit": false,
+      "timingRoutes": [],
+      "providerRouteObserved": false,
+      "providerReasonSanitized": true,
+      "fundedAnswer": "pending funding"
+    },
+    {
+      "name": "provider-answer",
+      "status": 502,
+      "contentType": "application/json",
+      "classification": "expected-unfunded-provider-error",
+      "accepted": true,
+      "events": [],
+      "malformedFrames": 0,
+      "completeSse": false,
+      "actionFrameObserved": false,
+      "balanceReasonExplicit": false,
+      "timingRoutes": [],
+      "providerRouteObserved": false,
+      "providerReasonSanitized": true,
+      "fundedAnswer": "pending funding"
+    }
+  ],
+  "visitor": {
+    "anonymousMeStatus": 401,
+    "logoutStatus": 204,
+    "cookieNames": [
+      "lume_visitor_session"
+    ],
+    "sessionClearCookie": true,
+    "authenticatedSession": "Not tested: no visitor credentials/session supplied, no visitor created"
+  }
+}

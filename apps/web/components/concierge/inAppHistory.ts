@@ -6,6 +6,7 @@
  * public surfaces only.
  */
 import type { InAppHistoryReader } from "./conciergeActions";
+import { publicPath } from "./publicPath";
 
 const KEY = "lume.in-app-history.v1";
 const MAX_ENTRIES = 50;
@@ -16,7 +17,9 @@ function read(): string[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed)
-      ? parsed.filter((p): p is string => typeof p === "string")
+      ? parsed.filter(
+          (p): p is string => typeof p === "string" && publicPath(p) !== null,
+        )
       : [];
   } catch {
     return [];
@@ -25,7 +28,10 @@ function read(): string[] {
 
 function write(entries: string[]): void {
   try {
-    window.sessionStorage.setItem(KEY, JSON.stringify(entries.slice(-MAX_ENTRIES)));
+    window.sessionStorage.setItem(
+      KEY,
+      JSON.stringify(entries.slice(-MAX_ENTRIES)),
+    );
   } catch {
     /* private mode — navigate-back degrades to its grounded fallback */
   }
@@ -33,11 +39,7 @@ function write(entries: string[]): void {
 
 /** Public, same-origin paths only; admin/preview/api never recorded. */
 function isSafeInAppPath(path: string): boolean {
-  return (
-    path.startsWith("/") &&
-    !path.startsWith("//") &&
-    !/^\/(admin|api|account|preview)(\/|$|\?|#)/.test(path)
-  );
+  return publicPath(path) !== null;
 }
 
 /** Record the page just rendered. No-op for duplicate consecutive entries
@@ -50,26 +52,49 @@ export function recordInAppPath(path: string): void {
   write(entries);
 }
 
-export const inAppHistory: InAppHistoryReader = {
-  previous() {
-    const entries = read();
-    // The last entry is the current page; "previous" is the one before it.
-    return entries.length >= 2 ? entries[entries.length - 2] : null;
-  },
-  lastResults() {
-    const entries = read();
-    for (let i = entries.length - 2; i >= 0; i -= 1) {
-      if (entries[i].startsWith("/vehicles") && !/^\/vehicles\/[^/?#]/.test(entries[i]))
-        return entries[i];
-    }
-    return null;
-  },
-};
+export function inAppHistoryFor(tenant?: string): InAppHistoryReader {
+  const scoped = () =>
+    read().filter((path) => {
+      const selector = new URL(path, "https://in-app.invalid").searchParams.get(
+        "tenant",
+      );
+      return !tenant || !selector || selector === tenant;
+    });
+  return {
+    previous() {
+      const entries = scoped();
+      // The last entry is the current page; "previous" is the one before it.
+      return entries.length >= 2 ? entries[entries.length - 2] : null;
+    },
+    lastResults() {
+      const entries = scoped();
+      for (let i = entries.length - 2; i >= 0; i -= 1) {
+        if (
+          new URL(entries[i], "https://in-app.invalid").pathname === "/vehicles"
+        )
+          return entries[i];
+      }
+      return null;
+    },
+  };
+}
+export const inAppHistory = inAppHistoryFor();
+
+/** A concierge back operation rewinds the app stack before router.replace. */
+export function rewindInAppPath(path: string): void {
+  const entries = read();
+  const index = entries.lastIndexOf(path);
+  if (index >= 0) write(entries.slice(0, index + 1));
+}
 
 /** The two booleans the chat request carries (never a path). */
-export function inAppHistorySummary(): { hasPrevious: boolean; hasResults: boolean } {
+export function inAppHistorySummary(tenant?: string): {
+  hasPrevious: boolean;
+  hasResults: boolean;
+} {
+  const history = inAppHistoryFor(tenant);
   return {
-    hasPrevious: inAppHistory.previous() !== null,
-    hasResults: inAppHistory.lastResults() !== null,
+    hasPrevious: history.previous() !== null,
+    hasResults: history.lastResults() !== null,
   };
 }

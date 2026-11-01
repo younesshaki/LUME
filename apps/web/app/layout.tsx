@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { contentContext } from "../server/content/context";
@@ -34,7 +35,9 @@ export default async function Layout({ children }: { children: ReactNode }) {
       style={ctx?.palette.variables}
     >
       <body className={ctx ? "standardMode" : "web-vehicle-shell"}>
-        <NavHistoryRecorder />
+        <Suspense fallback={null}>
+          <NavHistoryRecorder />
+        </Suspense>
         {children}
       </body>
     </html>

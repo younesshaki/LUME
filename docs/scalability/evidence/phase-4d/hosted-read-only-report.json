@@ -1,0 +1,90 @@
+{
+  "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+  "fixture": false,
+  "tenantLimitation": "Only demo exists remotely; foreign-tenant data isolation is covered by local deterministic fixtures, not fabricated remote tenants",
+  "cases": [
+    {
+      "name": "unknown tenant",
+      "path": "/vehicles/compare?tenant=phase4d-unknown&ids=73f7c436-827d-4f15-bf1e-ce2d6e7fdc0f,0029ab28-2da2-483d-bc86-a1114deb3e1d",
+      "status": 404,
+      "expected": 404,
+      "contentType": "text/html; charset=utf-8",
+      "body": "[HTML omitted; status/header captured]",
+      "robots": "noindex, nofollow, noarchive"
+    },
+    {
+      "name": "mismatched visitor selector",
+      "path": "/api/visitor/me?tenant=demo",
+      "status": 404,
+      "expected": 404,
+      "contentType": "application/json",
+      "body": "{\"error\":\"Unknown or inactive tenant\"}",
+      "robots": "noindex, nofollow, noarchive"
+    },
+    {
+      "name": "internal tenant header",
+      "path": "/api/visitor/me?tenant=demo",
+      "status": 404,
+      "expected": 404,
+      "contentType": "text/plain;charset=UTF-8",
+      "body": "Preview not found",
+      "robots": "noindex, nofollow, noarchive"
+    },
+    {
+      "name": "duplicate selector",
+      "path": "/api/visitor/me?tenant=demo&tenant=phase4d-unknown",
+      "status": 404,
+      "expected": 404,
+      "contentType": "text/plain;charset=UTF-8",
+      "body": "Preview not found",
+      "robots": "noindex, nofollow, noarchive"
+    },
+    {
+      "name": "cross-origin visitor read",
+      "path": "/api/visitor/me?tenant=demo",
+      "status": 403,
+      "expected": 403,
+      "contentType": "application/json",
+      "body": "{\"error\":\"Forbidden origin\"}",
+      "robots": "noindex, nofollow, noarchive"
+    },
+    {
+      "name": "Origin-less metadata-free visitor read",
+      "path": "/api/visitor/me?tenant=demo",
+      "status": 403,
+      "expected": 403,
+      "contentType": "application/json",
+      "body": "{\"error\":\"Forbidden origin\"}",
+      "robots": "noindex, nofollow, noarchive"
+    },
+    {
+      "name": "visitor mutation without Origin",
+      "path": "/api/visitor/logout?tenant=demo",
+      "status": 403,
+      "expected": 403,
+      "contentType": "application/json",
+      "body": "{\"error\":\"Forbidden origin\"}",
+      "robots": "noindex, nofollow, noarchive"
+    }
+  ],
+  "comparison": {
+    "url": "https://lume-web-phase3-hakicsi89.vercel.app/vehicles/compare?tenant=demo&ids=73f7c436-827d-4f15-bf1e-ce2d6e7fdc0f,0029ab28-2da2-483d-bc86-a1114deb3e1d",
+    "status": 200,
+    "robots": "noindex, nofollow, noarchive",
+    "title": "Compare vehicles | LUME Demo",
+    "description": "Compare available vehicles at LUME Demo.",
+    "canonical": "https://lume-web-phase3-hakicsi89.vercel.app/vehicles/compare?ids=73f7c436-827d-4f15-bf1e-ce2d6e7fdc0f%2C0029ab28-2da2-483d-bc86-a1114deb3e1d&tenant=demo",
+    "h1Count": 1,
+    "vehicles": [
+      {
+        "id": "73f7c436-827d-4f15-bf1e-ce2d6e7fdc0f",
+        "title": "2026 kimi kimi"
+      },
+      {
+        "id": "0029ab28-2da2-483d-bc86-a1114deb3e1d",
+        "title": "2024 Honda Civic Sedan"
+      }
+    ],
+    "serverTableText": "Side-by-side vehicle specificationsSpecification2026 kimi kimiPhotos coming soon2024 Honda Civic SedanPhotos coming soonPriceEst. $200Est. $25,890AvailabilityAvailableAvailableMileage1 milesNot providedBody styleSUVNot providedFuelGasolineNot providedDrivetrainAWDNot provided"
+  }
+}

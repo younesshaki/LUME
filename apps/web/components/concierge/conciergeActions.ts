@@ -8,20 +8,28 @@
  * on `/vehicles` (the vocabulary the Phase-2 inventory page already reads),
  * NOT the Vite `#vehicles?` hash scheme.
  *
- * Actions that need target-page state to land (compare, lead-form prefill) are
- * reported as `deferred` here and wired with their consumers in a later slice.
+ * Target state is consumed by the destination island after navigation.
  */
 import type { BotAction } from "@lume/blocks/chat-transport";
+import {
+  validateConciergeTargetDestination,
+  type LeadCaptureInput,
+} from "@lume/types";
+import { leadInput, type LeadFormRequest } from "./leadAction";
+import { publicPath } from "./publicPath";
+import type { TargetActivation } from "./targetActivation";
 
 export type ActionNavigation = {
   kind: "navigate";
   href: string;
   /** Back navigation replaces rather than pushes a new history entry. */
   replace?: boolean;
+  leadForm?: LeadFormRequest;
+  target?: TargetActivation;
 };
-export type ActionDeferred = { kind: "deferred"; reason: string };
+export type ActionCapture = { kind: "capture-lead"; input: LeadCaptureInput };
 export type ActionIgnored = { kind: "ignored" };
-export type ActionOutcome = ActionNavigation | ActionDeferred | ActionIgnored;
+export type ActionOutcome = ActionNavigation | ActionCapture | ActionIgnored;
 
 /** Reads same-origin in-app history so `navigate-back` resolves locally. */
 export type InAppHistoryReader = {
@@ -70,11 +78,28 @@ export function resolveActionOutcome(
       return navigateTargetOutcome(action);
     case "navigate-back":
       return navigateBackOutcome(action, history);
-    case "compare_vehicles":
-      return { kind: "deferred", reason: "compare consumer not wired yet" };
+    case "compare_vehicles": {
+      const ids = comparisonIds(action.vehicleIds);
+      return ids
+        ? { kind: "navigate", href: `/vehicles/compare?ids=${ids.join(",")}` }
+        : { kind: "ignored" };
+    }
     case "open-lead-form":
-    case "capture_lead":
-      return { kind: "deferred", reason: "lead-form prefill not wired yet" };
+      return {
+        kind: "navigate",
+        href: "/contact#concierge-lead-form",
+        leadForm: {
+          path: "/contact",
+          handlerId: "concierge-lead-form",
+          input: leadInput(action),
+        },
+      };
+    case "capture_lead": {
+      const input = leadInput(action);
+      return input.email || input.phone
+        ? { kind: "capture-lead", input }
+        : { kind: "ignored" };
+    }
     default:
       return { kind: "ignored" };
   }
@@ -125,7 +150,9 @@ export function routeStringToHref(route: string): string | null {
   }
 }
 
-function inventoryHref(action: Extract<BotAction, { type: "filter_inventory" }>): string {
+function inventoryHref(
+  action: Extract<BotAction, { type: "filter_inventory" }>,
+): string {
   const params = new URLSearchParams();
   const record = action as unknown as Record<string, unknown>;
   for (const [field, param] of Object.entries(FILTER_PARAM_MAP)) {
@@ -142,8 +169,24 @@ function inventoryHref(action: Extract<BotAction, { type: "filter_inventory" }>)
 function navigateTargetOutcome(
   action: Extract<BotAction, { type: "navigate-target" }>,
 ): ActionOutcome {
-  if (!action.target) return { kind: "ignored" };
-  const { kind, destination } = action.target;
+  if (!action.target || action.target.key !== action.targetKey)
+    return { kind: "ignored" };
+  const { kind } = action.target;
+  if (validateConciergeTargetDestination(kind, action.target.destination))
+    return { kind: "ignored" };
+  let invalid = false;
+  const destination = action.target.destination.replace(
+    /:([A-Za-z][A-Za-z0-9]*)/g,
+    (_, key: string) => {
+      const value = action.params?.[key]?.trim();
+      if (!value || value === "." || value === "..") {
+        invalid = true;
+        return "";
+      }
+      return encodeURIComponent(value);
+    },
+  );
+  if (invalid) return { kind: "ignored" };
   if (kind === "route") {
     const href = routeStringToHref(destination) ?? asInternalPath(destination);
     return href ? { kind: "navigate", href } : { kind: "ignored" };
@@ -155,8 +198,30 @@ function navigateTargetOutcome(
       ? { kind: "navigate", href: internal }
       : { kind: "ignored" };
   }
-  // form / modal targets need the on-page target runtime (later slice).
-  return { kind: "deferred", reason: `target kind "${kind}" not wired yet` };
+  const href = publicPath(destination);
+  if (!href) return { kind: "ignored" };
+  const [path, handlerId] = href.split("#");
+  // Typed prefill for built-in consumers; safe native activation for other IDs.
+  const contact =
+    kind === "form" &&
+    path === "/contact" &&
+    handlerId === "concierge-lead-form";
+  const inquiry =
+    kind === "modal" &&
+    /^\/vehicles\/[0-9a-f-]{36}$/i.test(path) &&
+    handlerId === "vehicle-inquiry";
+  const target: TargetActivation = { path, handlerId, kind };
+  if (!contact && !inquiry) return { kind: "navigate", href, target };
+  const input = leadInput(action);
+  if (inquiry) input.vehicleId = path.split("/")[2];
+  if (input.vehicleId && input.sourceContext?.trigger === "bot-action")
+    input.sourceContext.vehicleId = input.vehicleId;
+  return {
+    kind: "navigate",
+    href,
+    target,
+    leadForm: { path, handlerId, input },
+  };
 }
 
 function navigateBackOutcome(
@@ -167,11 +232,16 @@ function navigateBackOutcome(
     action.destination === "results"
       ? history.lastResults()
       : history.previous();
-  if (target) return { kind: "navigate", href: target, replace: true };
+  if (target && publicPath(target))
+    return { kind: "navigate", href: target, replace: true };
   // No safe same-origin history: use the grounded filter fallback, else
   // inventory. Never falls back to the browser's own history.back().
   if (action.fallback)
-    return { kind: "navigate", href: inventoryHref(action.fallback), replace: true };
+    return {
+      kind: "navigate",
+      href: inventoryHref(action.fallback),
+      replace: true,
+    };
   return { kind: "navigate", href: "/vehicles", replace: true };
 }
 
@@ -179,10 +249,27 @@ function navigateBackOutcome(
  * hash), never an external URL or an admin surface. */
 function asInternalPath(value: string): string | null {
   const trimmed = value.trim();
-  if (trimmed.startsWith("#")) return trimmed;
-  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return null;
-  if (/^\/(admin|api|account|preview)(\/|$|\?|#)/.test(trimmed)) return null;
-  return trimmed;
+  if (/^#[A-Za-z][\w:.-]*$/.test(trimmed)) return trimmed;
+  return publicPath(trimmed);
+}
+
+export function comparisonIds(values: unknown): string[] | null {
+  if (!Array.isArray(values) || values.length > 3) return null;
+  const ids = [
+    ...new Set(
+      values
+        .filter((v): v is string => typeof v === "string")
+        .map((v) => v.trim().toLowerCase()),
+    ),
+  ];
+  return ids.length >= 2 &&
+    ids.every((id) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
+        id,
+      ),
+    )
+    ? ids
+    : null;
 }
 
 function normalizePath(route: string): string {
@@ -197,7 +284,12 @@ function normalizeToken(route: string): string {
 function safeSegment(segment: string): string | null {
   try {
     const decoded = decodeURIComponent(segment).trim();
-    return decoded.length > 0 ? decoded : null;
+    return decoded.length > 0 &&
+      decoded !== "." &&
+      decoded !== ".." &&
+      !/[\\/\u0000-\u0020]/.test(decoded)
+      ? decoded
+      : null;
   } catch {
     return null;
   }

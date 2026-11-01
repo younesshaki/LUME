@@ -73,6 +73,7 @@ const child = spawn(process.execPath, ["scripts/run.mjs", "start"], {
     WEB_PREVIEW_PROJECT_REF: "local-contract-test",
     WEB_PREVIEW_ROOT_DOMAIN: "foundation.test",
     WEB_PREVIEW_DEFAULT_TENANT: "alpha",
+    WEB_PREVIEW_UPSTREAM_ORIGIN: "",
     WEB_PREVIEW_CUSTOM_HOSTS: JSON.stringify({
       "dealer.fixture.test": "beta",
       "unverified.fixture.test": "alpha",
@@ -140,6 +141,39 @@ try {
   );
   console.log(
     "PASS actual Next process contains zero generic production/application/token bindings",
+  );
+  // Through the actual Next ingress, not direct route-handler calls. The
+  // empty upstream makes these deterministic and prevents external writes.
+  for (const [path, method, headers] of [
+    [
+      "/api/chat?tenant=alpha",
+      "POST",
+      { origin: `http://127.0.0.1:${port}`, "x-lume-tenant": "alpha" },
+    ],
+    [
+      "/api/visitor/logout?tenant=alpha",
+      "POST",
+      { origin: `http://127.0.0.1:${port}`, "x-lume-tenant": "alpha" },
+    ],
+    [
+      "/api/visitor/me?tenant=alpha",
+      "GET",
+      {
+        "sec-fetch-site": "same-origin",
+        "sec-fetch-mode": "cors",
+        "x-lume-tenant": "alpha",
+      },
+    ],
+  ]) {
+    const r = await request(path, `127.0.0.1:${port}`, headers, method);
+    assert.equal(
+      r.status,
+      503,
+      `${method} ${path} passes ingress and reaches the deliberately unconfigured upstream guard`,
+    );
+  }
+  console.log(
+    "PASS real chat/visitor ingress and browser-style Origin-less GET reach route handlers without external writes",
   );
   for (const rsc of [false, true]) {
     for (const slug of ["alpha", "beta", "alpha", "beta"]) {

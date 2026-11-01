@@ -1,0 +1,71 @@
+{
+  "observedAt": "2026-10-29T14:02:32.910Z",
+  "probeNonce": "2874e1cb-b450-439a-930e-292a67dbf109",
+  "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+  "tenant": "demo",
+  "fixture": false,
+  "expectation": "unfunded",
+  "fundedAnswer": "pending funding",
+  "cases": [
+    {
+      "name": "server-navigation",
+      "status": 502,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "public, max-age=0, must-revalidate",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "x-source-categories": null
+      },
+      "classification": "expected-unfunded-provider-error",
+      "accepted": true,
+      "events": [],
+      "malformedFrames": 0,
+      "completeSse": false,
+      "actionFrameObserved": false,
+      "balanceReasonExplicit": false,
+      "timingRoutes": [],
+      "providerRouteObserved": false,
+      "providerReasonSanitized": true,
+      "fundedAnswer": "pending funding"
+    },
+    {
+      "name": "provider-answer",
+      "status": 502,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "public, max-age=0, must-revalidate",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+        "x-source-categories": null
+      },
+      "classification": "expected-unfunded-provider-error",
+      "accepted": true,
+      "events": [],
+      "malformedFrames": 0,
+      "completeSse": false,
+      "actionFrameObserved": false,
+      "balanceReasonExplicit": false,
+      "timingRoutes": [],
+      "providerRouteObserved": false,
+      "providerReasonSanitized": true,
+      "fundedAnswer": "pending funding"
+    }
+  ],
+  "visitor": {
+    "anonymousMeStatus": 401,
+    "logoutStatus": 204,
+    "relayedCookieNames": [
+      "lume_visitor_session"
+    ],
+    "onlySessionClearCookie": true
+  },
+  "browserActionDispatch": "not exercised by this HTTP runner",
+  "authenticatedVisitorSession": "not proven; requires an approved existing visitor session",
+  "health": {
+    "status": 200,
+    "robots": "noindex, nofollow, noarchive"
+  },
+  "chatRoute": {
+    "status": 405,
+    "expected": 405
+  }
+}

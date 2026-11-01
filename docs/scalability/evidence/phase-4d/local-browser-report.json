@@ -1,0 +1,981 @@
+{
+  "source": "Local synthetic tenant/vehicle/RPC fixtures and browser-intercepted SSE/lead receipts. NO real provider, remote data or staging writes.",
+  "remoteProviderProven": false,
+  "checks": [
+    "Query-only BMW→Audi transitions recorded; refresh retains Audi/price URL, form state and tenant-scoped SSR results.",
+    "VDP→results, repeated previous, products→last results; tenant and original filters retained without history.back().",
+    "Comparison server HTML contains two scoped vehicles/specs and one h1; foreign tenant/UUID, unknown tenant and malformed selection return 404.",
+    "Open-lead-form crosses routes, consumes tenant-scoped prefill once, accepts visitor edits and posts existing attribution contract; no PII in URL.",
+    "capture_lead gets a visible fixture receipt; navigate-target form activates on the same route, and modal navigates first then opens/prefills the vehicle inquiry.",
+    "Custom registered native form/modal IDs activate after navigation; no arbitrary selector execution.",
+    "Upstream lead validation is visible; interrupted SSE turn does not apply buffered navigation or mutations.",
+    "Truncated SSE without [DONE] cannot submit a lead, even after a valid action frame.",
+    "A duplicate SSE turn clears buffered conversion actions and cannot create another lead."
+  ],
+  "turns": [
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles/11111111-1111-4111-8111-111111111111",
+        "requestId": "8107a9ea-716b-4f07-a72a-ceb50c905de2",
+        "navigation": {
+          "hasPrevious": false,
+          "hasResults": false
+        }
+      },
+      "action": {
+        "type": "filter_inventory",
+        "make": "BMW",
+        "priceMax": 50000,
+        "sort": "price_asc"
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles",
+        "sessionId": "local-session",
+        "requestId": "e902a4c2-1429-46a7-98e0-2c9ab1a1df71",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": false
+        }
+      },
+      "action": {
+        "type": "filter_inventory",
+        "make": "Audi",
+        "priceMax": 30000
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles/33333333-3333-4333-8333-333333333333",
+        "sessionId": "local-session",
+        "requestId": "ed5f217c-d276-43a6-852f-056f820c33d6",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "navigate-back",
+        "destination": "results"
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles",
+        "sessionId": "local-session",
+        "requestId": "bb9f6f86-ba97-43a9-a889-5241d8e7b036",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "navigate-back",
+        "destination": "previous"
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles",
+        "sessionId": "local-session",
+        "requestId": "426f047d-a6df-46ec-8ad3-d45cb025de19",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": false
+        }
+      },
+      "action": {
+        "type": "navigate",
+        "route": "products"
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/products",
+        "sessionId": "local-session",
+        "requestId": "55f06564-8aa5-4b4d-b2f2-081e0eb31040",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "navigate-back",
+        "destination": "results"
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles",
+        "sessionId": "local-session",
+        "requestId": "5388245f-11db-4697-a493-592a2b57f5fc",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": false
+        }
+      },
+      "action": {
+        "type": "compare_vehicles",
+        "vehicleIds": [
+          "11111111-1111-4111-8111-111111111111",
+          "22222222-2222-4222-8222-222222222222"
+        ]
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles/compare",
+        "sessionId": "local-session",
+        "requestId": "2c9d84db-34f4-418b-bdd7-d6af78532dd1",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "open-lead-form",
+        "prefill": {
+          "firstName": "Local",
+          "email": "local@example.invalid",
+          "unexpected": "discard"
+        },
+        "vehicleId": "11111111-1111-4111-8111-111111111111",
+        "attribution": {
+          "sessionId": "local-session",
+          "targetKey": "contact-lead-form",
+          "conversationContext": "Local test only"
+        }
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/contact",
+        "sessionId": "local-session",
+        "requestId": "b7c7498c-07d7-4e70-a94a-e2041f9353ae",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "capture_lead",
+        "contact": {
+          "email": "capture@example.invalid"
+        },
+        "vehicleId": "11111111-1111-4111-8111-111111111111",
+        "attribution": {
+          "sessionId": "local-session"
+        }
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/contact",
+        "sessionId": "local-session",
+        "requestId": "fd8a8854-2f33-476a-9314-582f09bdd97d",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "navigate-target",
+        "targetKey": "contact-lead-form",
+        "target": {
+          "key": "contact-lead-form",
+          "label": "Contact",
+          "kind": "form",
+          "destination": "/contact#concierge-lead-form",
+          "isConversion": true
+        },
+        "params": {
+          "firstName": "Target",
+          "email": "target@example.invalid"
+        }
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/contact",
+        "sessionId": "local-session",
+        "requestId": "575e431a-af0d-4f84-97e0-46cc70e283d7",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "navigate-target",
+        "targetKey": "vehicle-inquiry",
+        "target": {
+          "key": "vehicle-inquiry",
+          "label": "Contact",
+          "kind": "modal",
+          "destination": "/vehicles/:vehicleId#vehicle-inquiry",
+          "isConversion": true
+        },
+        "params": {
+          "vehicleId": "22222222-2222-4222-8222-222222222222",
+          "firstName": "Modal",
+          "email": "modal@example.invalid"
+        }
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
+        "sessionId": "local-session",
+        "requestId": "1a7f13c2-c60f-43cf-832a-b298c2f0cef8",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "navigate-target",
+        "targetKey": "custom",
+        "target": {
+          "key": "custom",
+          "label": "Custom",
+          "kind": "form",
+          "destination": "/vehicles/22222222-2222-4222-8222-222222222222#custom-form",
+          "isConversion": true
+        },
+        "params": {}
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
+        "sessionId": "local-session",
+        "requestId": "96a4c8bb-2f80-4d56-88c7-2a466b023bd0",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "navigate-target",
+        "targetKey": "custom",
+        "target": {
+          "key": "custom",
+          "label": "Custom",
+          "kind": "modal",
+          "destination": "/vehicles/22222222-2222-4222-8222-222222222222#custom-modal",
+          "isConversion": true
+        },
+        "params": {}
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
+        "sessionId": "local-session",
+        "requestId": "130f36c8-4397-44a8-8fad-e8e6a57415fb",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "capture_lead",
+        "contact": {
+          "phone": "555-0199"
+        }
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "[DONE]"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
+        "sessionId": "local-session",
+        "requestId": "cea2ca99-c4a0-42ab-9726-5f3c8ddcb386",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "navigate",
+        "route": "products"
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "error"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
+        "sessionId": "local-session",
+        "requestId": "63bf7f9e-97d7-4c85-ac44-c3ed1c3a31da",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "capture_lead",
+        "contact": {
+          "email": "truncated@example.invalid"
+        }
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action"
+      ]
+    },
+    {
+      "request": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Local action fixture"
+          }
+        ],
+        "stream": true,
+        "pagePath": "/vehicles/22222222-2222-4222-8222-222222222222",
+        "sessionId": "local-session",
+        "requestId": "16043ca0-242d-4b71-8304-6c6d714945f6",
+        "navigation": {
+          "hasPrevious": true,
+          "hasResults": true
+        }
+      },
+      "action": {
+        "type": "capture_lead",
+        "contact": {
+          "email": "duplicate@example.invalid"
+        }
+      },
+      "streamEvents": [
+        "meta",
+        "delta",
+        "action",
+        "duplicate",
+        "[DONE]"
+      ]
+    }
+  ],
+  "leads": [
+    {
+      "body": {
+        "firstName": "Local",
+        "lastName": "",
+        "email": "local@example.invalid",
+        "phone": "555-0100",
+        "message": "",
+        "source": "chat",
+        "vehicleId": "11111111-1111-4111-8111-111111111111",
+        "sourceContext": {
+          "trigger": "bot-action",
+          "actionType": "open-lead-form",
+          "vehicleId": "11111111-1111-4111-8111-111111111111",
+          "targetKey": "contact-lead-form",
+          "chatSessionId": "local-session",
+          "conversationContext": "Local test only"
+        }
+      },
+      "status": 201,
+      "fixtureReceipt": true
+    },
+    {
+      "body": {
+        "source": "chat",
+        "email": "capture@example.invalid",
+        "vehicleId": "11111111-1111-4111-8111-111111111111",
+        "sourceContext": {
+          "trigger": "bot-action",
+          "actionType": "capture_lead",
+          "vehicleId": "11111111-1111-4111-8111-111111111111",
+          "chatSessionId": "local-session"
+        }
+      },
+      "status": 201,
+      "fixtureReceipt": true
+    },
+    {
+      "body": {
+        "firstName": "Modal",
+        "lastName": "",
+        "email": "modal@example.invalid",
+        "phone": "",
+        "message": "",
+        "source": "chat",
+        "vehicleId": "22222222-2222-4222-8222-222222222222",
+        "sourceContext": {
+          "trigger": "bot-action",
+          "actionType": "open-lead-form",
+          "vehicleId": "22222222-2222-4222-8222-222222222222",
+          "targetKey": "vehicle-inquiry"
+        }
+      },
+      "status": 201,
+      "fixtureReceipt": true
+    },
+    {
+      "body": {
+        "source": "chat",
+        "phone": "555-0199",
+        "sourceContext": {
+          "trigger": "bot-action",
+          "actionType": "capture_lead"
+        }
+      },
+      "status": 400,
+      "fixtureReceipt": true
+    }
+  ],
+  "databaseReads": [
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.11111111-1111-4111-8111-111111111111&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.11111111-1111-4111-8111-111111111111&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/public_vehicle_inventory",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&limit=13&offset=0&make=eq.BMW&price=lte.50000&order=price.asc%2Cid.asc"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/public_vehicle_inventory",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&limit=13&offset=0&make=eq.Audi&price=lte.30000&order=is_special.desc%2Ccreated_at.desc%2Cid.asc"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/public_vehicle_inventory",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&limit=13&offset=0&make=eq.Audi&price=lte.30000&order=is_special.desc%2Ccreated_at.desc%2Cid.asc"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/public_vehicle_inventory",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&limit=13&offset=0&make=eq.Audi&price=lte.30000&order=is_special.desc%2Ccreated_at.desc%2Cid.asc"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.33333333-3333-4333-8333-333333333333&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.33333333-3333-4333-8333-333333333333&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=33333333-3333-4333-8333-333333333333"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/public_vehicle_inventory",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&limit=13&offset=0&make=eq.Audi&price=lte.30000&order=is_special.desc%2Ccreated_at.desc%2Cid.asc"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/public_vehicle_inventory",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&limit=13&offset=0&make=eq.BMW&price=lte.50000&order=price.asc%2Cid.asc"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_tenant_theme",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/list_published_nav_pages",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_published_page",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_tenant_theme",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/list_published_nav_pages",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_tenant_theme",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/list_published_nav_pages",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_tenant_theme",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/list_published_nav_pages",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_tenant_theme",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/list_published_nav_pages",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_tenant_theme",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/list_published_nav_pages",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/public_vehicle_inventory",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&limit=13&offset=0&make=eq.BMW&price=lte.50000&order=price.asc%2Cid.asc"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.11111111-1111-4111-8111-111111111111&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.22222222-2222-4222-8222-222222222222&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.11111111-1111-4111-8111-111111111111&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.22222222-2222-4222-8222-222222222222&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=22222222-2222-4222-8222-222222222222"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.11111111-1111-4111-8111-111111111111&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.22222222-2222-4222-8222-222222222222&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.11111111-1111-4111-8111-111111111111&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.22222222-2222-4222-8222-222222222222&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=22222222-2222-4222-8222-222222222222"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.11111111-1111-4111-8111-111111111111&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.44444444-4444-4444-8444-444444444444&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.11111111-1111-4111-8111-111111111111&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb&id=eq.11111111-1111-4111-8111-111111111111&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb&id=eq.22222222-2222-4222-8222-222222222222&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_tenant_theme",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/list_published_nav_pages",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_published_page",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_tenant_theme",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/list_published_nav_pages",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/get_published_page",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.22222222-2222-4222-8222-222222222222&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.22222222-2222-4222-8222-222222222222&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=22222222-2222-4222-8222-222222222222"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.22222222-2222-4222-8222-222222222222&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.22222222-2222-4222-8222-222222222222&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=22222222-2222-4222-8222-222222222222"
+    },
+    {
+      "path": "/rest/v1/rpc/tenant_by_slug",
+      "query": ""
+    },
+    {
+      "path": "/rest/v1/vehicles",
+      "query": "?select=id%2Ctenant_id%2Cexternal_id%2Cstock_type%2Cyear%2Cmake%2Cmodel%2Ctrim%2Cprice%2Cmileage%2Cbody_style%2Cexterior_color%2Cinterior_color%2Cdrivetrain%2Cfuel_type%2Cimage_src%2Cseller_city%2Cseller_state%2Cis_special%2Cspecial_image_src%2Cstatus%2Csold_at%2Csold_price%2Cfeed_image_urls&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&id=eq.22222222-2222-4222-8222-222222222222&status=eq.live&limit=1"
+    },
+    {
+      "path": "/rest/v1/vehicle_images",
+      "query": "?select=r2_key%2Cis_primary%2Csort_order%2Ccreated_at%2Cai_description&tenant_id=eq.aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&vehicle_id=eq.22222222-2222-4222-8222-222222222222&order=is_primary.desc%2Csort_order.asc%2Ccreated_at.asc&limit=50"
+    },
+    {
+      "path": "/rest/v1/rpc/get_public_vehicle_price_signal",
+      "query": "?p_tenant_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&p_vehicle_id=22222222-2222-4222-8222-222222222222"
+    }
+  ],
+  "readability": {
+    "chat": {
+      "foreground": "rgb(33, 29, 22)",
+      "background": "rgb(255, 250, 240)",
+      "opacity": "1",
+      "contrast": 16.121828139399835
+    },
+    "inquiry": {
+      "foreground": "rgb(33, 29, 22)",
+      "background": "rgb(255, 250, 240)",
+      "opacity": "1",
+      "contrast": 16.121828139399835
+    }
+  },
+  "browserErrors": []
+}
