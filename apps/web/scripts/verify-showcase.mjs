@@ -333,9 +333,11 @@ try {
       viewport: { width: 1280, height: 900 },
       ...options,
     });
-    await c.addInitScript(() =>
-      localStorage.setItem("lume-cookie-consent", "rejected"),
-    );
+    await c.addInitScript(() => {
+      // A newly created about:blank document has no storage origin.
+      if (location.protocol === "http:" || location.protocol === "https:")
+        localStorage.setItem("lume-cookie-consent", "rejected");
+    });
     await c.addInitScript(browserAudit);
     c.on("page", (page) => {
       page.on("pageerror", (error) =>

@@ -1,0 +1,11 @@
+{
+  "source": "Read-only Vercel Preview binding lookup; no setting change",
+  "checkedAt": "2026-11-02T21:26:18.330Z",
+  "binding": "WEB_PREVIEW_R2_PUBLIC_BASE_URL",
+  "targets": [
+    "preview"
+  ],
+  "branch": null,
+  "publicOrigin": "https://pub-da3069790c6443f883e3991be965f766.r2.dev",
+  "usedByLocalVerification": true
+}

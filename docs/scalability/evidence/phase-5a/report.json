@@ -1,0 +1,587 @@
+{
+  "source": "Local production Next build with synthetic loopback tenant/content data; real public R2 GLB. No hosted Next deployment or remote data/config changes.",
+  "observedAt": "2026-11-02T21:25:38.652Z",
+  "applicationCommit": "b991a8679202eb653d3a1eed75ed8f10edd91357",
+  "unhandledErrors": [],
+  "routes": {
+    "/": {
+      "jsChunks": [
+        "static/chunks/webpack-8a6f431f3d4259c4.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-a5088523c1143921.js",
+        "static/chunks/app/global-error-4b614e46dca95f5b.js",
+        "static/chunks/app/layout-1924b64fa9912553.js",
+        "static/chunks/app/error-0109a65836c5da94.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/5172-6909f1e8f3e292ce.js",
+        "static/chunks/806-261cbed33be343c8.js",
+        "static/chunks/6088-a5c150e08dcb7695.js",
+        "static/chunks/8632-5f763b3aec890f30.js",
+        "static/chunks/app/page-33877feafd3ac961.js"
+      ],
+      "jsBytes": 915713,
+      "gzipBytes": 291115,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/vehicles": {
+      "jsChunks": [
+        "static/chunks/webpack-8a6f431f3d4259c4.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-a5088523c1143921.js",
+        "static/chunks/app/vehicles/error-0dcb120f36c6722b.js",
+        "static/chunks/app/global-error-4b614e46dca95f5b.js",
+        "static/chunks/app/layout-1924b64fa9912553.js",
+        "static/chunks/app/error-0109a65836c5da94.js",
+        "static/chunks/app/vehicles/page-01be16666c8721ec.js"
+      ],
+      "jsBytes": 437082,
+      "gzipBytes": 131555,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase": {
+      "jsChunks": [
+        "static/chunks/webpack-8a6f431f3d4259c4.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-a5088523c1143921.js",
+        "static/chunks/app/global-error-4b614e46dca95f5b.js",
+        "static/chunks/2303-3fa43f0c07180989.js",
+        "static/chunks/app/showcase/page-0d41e35ba38359e6.js",
+        "static/chunks/app/layout-1924b64fa9912553.js",
+        "static/chunks/app/error-0109a65836c5da94.js",
+        "static/chunks/4557.99af95e86de282fa.js"
+      ],
+      "jsBytes": 446226,
+      "gzipBytes": 135067,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase/intro": {
+      "jsChunks": [
+        "static/chunks/webpack-8a6f431f3d4259c4.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-a5088523c1143921.js",
+        "static/chunks/app/global-error-4b614e46dca95f5b.js",
+        "static/chunks/2303-3fa43f0c07180989.js",
+        "static/chunks/app/showcase/intro/page-0d41e35ba38359e6.js",
+        "static/chunks/app/layout-1924b64fa9912553.js",
+        "static/chunks/app/error-0109a65836c5da94.js",
+        "static/chunks/2182.2d6dabe542db5132.js"
+      ],
+      "jsBytes": 446262,
+      "gzipBytes": 135086,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase/experience": {
+      "jsChunks": [
+        "static/chunks/webpack-8a6f431f3d4259c4.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-a5088523c1143921.js",
+        "static/chunks/app/global-error-4b614e46dca95f5b.js",
+        "static/chunks/2303-3fa43f0c07180989.js",
+        "static/chunks/app/showcase/experience/page-0d41e35ba38359e6.js",
+        "static/chunks/app/layout-1924b64fa9912553.js",
+        "static/chunks/app/error-0109a65836c5da94.js",
+        "static/chunks/9d78c252.7a9347a71bd22cf0.js",
+        "static/chunks/1329d575.685714fd1c99a513.js",
+        "static/chunks/5779.c127f460cacd7ff7.js",
+        "static/chunks/488.58b438f53409ce49.js"
+      ],
+      "jsBytes": 1174130,
+      "gzipBytes": 330490,
+      "heavyChunksRequested": [
+        "static/chunks/9d78c252.7a9347a71bd22cf0.js",
+        "static/chunks/1329d575.685714fd1c99a513.js",
+        "static/chunks/5779.c127f460cacd7ff7.js",
+        "static/chunks/488.58b438f53409ce49.js"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "case": "raw SSR",
+      "route": "/showcase",
+      "status": 200,
+      "title": "Showcase | Local showcase fixture",
+      "h1Count": 1,
+      "canonical": "http://127.0.0.1:45059/showcase?tenant=demo",
+      "noindex": "noindex, nofollow, noarchive"
+    },
+    {
+      "case": "raw SSR",
+      "route": "/showcase/intro",
+      "status": 200,
+      "title": "LUME | Local showcase fixture",
+      "h1Count": 1,
+      "canonical": "http://127.0.0.1:45059/showcase?tenant=demo",
+      "noindex": "noindex, nofollow, noarchive"
+    },
+    {
+      "case": "raw SSR",
+      "route": "/showcase/experience",
+      "status": 200,
+      "title": "A cinematic product showcase | Local showcase fixture",
+      "h1Count": 1,
+      "canonical": "http://127.0.0.1:45059/showcase?tenant=demo",
+      "noindex": "noindex, nofollow, noarchive"
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=missing",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&part=6&part=6",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&chapter=1",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&part=abc",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&draft=true",
+      "status": 404
+    },
+    {
+      "case": "explicit suspense/loading",
+      "visible": true,
+      "canvasBeforeReady": 0
+    },
+    {
+      "case": "live reduced-motion toggle",
+      "sameModelAndContext": true,
+      "continuousFramesStopAndResume": true
+    },
+    {
+      "case": "landing → intro → experience",
+      "passed": true
+    },
+    {
+      "case": "model error → retry → rendered",
+      "passed": true
+    },
+    {
+      "case": "empty GLB",
+      "passed": true
+    },
+    {
+      "case": "reduced motion",
+      "continuousFrames": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "case": "WebAssembly unavailable",
+      "fallback": true,
+      "modelNotRequested": true
+    },
+    {
+      "case": "WebGL initialization failure",
+      "fallback": true,
+      "audit": {
+        "workersCreated": 2,
+        "workersTerminated": 2,
+        "bitmapsClosed": 1,
+        "contexts": [],
+        "blobsCreated": 2,
+        "blobsRevoked": 2
+      }
+    },
+    {
+      "case": "navigation during decoder initialization",
+      "passed": true,
+      "audit": {
+        "workersCreated": 2,
+        "workersTerminated": 2,
+        "bitmapsClosed": 1,
+        "contexts": [],
+        "blobsCreated": 2,
+        "blobsRevoked": 2
+      }
+    },
+    {
+      "case": "JavaScript disabled",
+      "routes": 3,
+      "headingAndNoscriptNavigation": true
+    }
+  ],
+  "hydrationErrors": [],
+  "openGates": [
+    "Hosted direct model-render proof (5e) requires owner-approved R2 CORS for Preview origins; no R2 mutation in this task",
+    "Physical iOS/Android GPU/performance and remaining scenes/choreography/audio are outside slice 5a"
+  ],
+  "bundle": {
+    "source": "actual production client webpack compilation",
+    "heavyChunks": [
+      {
+        "name": "static/chunks/9d78c252.7a9347a71bd22cf0.js",
+        "bytes": 515897,
+        "gzipBytes": 127585
+      },
+      {
+        "name": "static/chunks/5779.c127f460cacd7ff7.js",
+        "bytes": 92337,
+        "gzipBytes": 30043
+      },
+      {
+        "name": "static/chunks/1329d575.685714fd1c99a513.js",
+        "bytes": 109698,
+        "gzipBytes": 33957
+      },
+      {
+        "name": "static/chunks/488.58b438f53409ce49.js",
+        "bytes": 10587,
+        "gzipBytes": 4230
+      }
+    ],
+    "moduleChunkReceipt": [
+      {
+        "resource": "node_modules/three/build/three.module.js",
+        "chunks": [
+          "static/chunks/9d78c252.7a9347a71bd22cf0.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/constants.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/index.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/index.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/examples/jsm/loaders/DRACOLoader.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler.production.js",
+        "chunks": [
+          "static/chunks/1329d575.685714fd1c99a513.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/cjs/scheduler.production.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/index.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/cjs/scheduler.production.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/Experience.tsx",
+        "chunks": [
+          "static/chunks/488.58b438f53409ce49.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/useDisposableGLTF.ts",
+        "chunks": [
+          "static/chunks/488.58b438f53409ce49.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/ModelBoundary.tsx",
+        "chunks": [
+          "static/chunks/488.58b438f53409ce49.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/ShowcaseCanvas.tsx",
+        "chunks": [
+          "static/chunks/488.58b438f53409ce49.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/model-resource.ts",
+        "chunks": [
+          "static/chunks/488.58b438f53409ce49.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/loadModel.ts",
+        "chunks": [
+          "static/chunks/488.58b438f53409ce49.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/OpeningScene.tsx",
+        "chunks": [
+          "static/chunks/488.58b438f53409ce49.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/disposeModel.ts",
+        "chunks": [
+          "static/chunks/488.58b438f53409ce49.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/dist/events-f8cd670d.esm.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/drei/core/Sparkles.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/drei/helpers/constants.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/examples/jsm/loaders/GLTFLoader.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/examples/jsm/utils/BufferGeometryUtils.js",
+        "chunks": [
+          "static/chunks/5779.c127f460cacd7ff7.js"
+        ]
+      }
+    ],
+    "emittedLevaModules": 0,
+    "emittedPerfModules": 0
+  },
+  "r2": {
+    "url": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+    "status": 200,
+    "bytes": 603908,
+    "sha256": "de5b04647e34ff1c7496c19cd77ec1719dde671b8bdb4b57ae1ae4d672b944ce",
+    "accessControlAllowOrigin": null,
+    "stablePreview": {
+      "status": 200,
+      "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+      "accessControlAllowOrigin": null
+    },
+    "browser": {
+      "directAccess": "blocked",
+      "errors": [
+        "Access to fetch at 'https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb' from origin 'http://127.0.0.1:45059' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "TypeError: Failed to fetch\n    at h (http://127.0.0.1:45059/_next/static/chunks/488.58b438f53409ce49.js:1:1193)\n    at f (http://127.0.0.1:45059/_next/static/chunks/488.58b438f53409ce49.js:1:2544)\n    at http://127.0.0.1:45059/_next/static/chunks/488.58b438f53409ce49.js:2:406"
+      ]
+    }
+  },
+  "successfulRender": {
+    "pageErrors": [],
+    "consoleErrors": []
+  },
+  "renderDiagnostic": "Same real R2 GLB bytes, Playwright-only Access-Control-Allow-Origin; does not close hosted/direct CORS gate",
+  "loadingDOM": {
+    "display": "block",
+    "height": 2340,
+    "text": "A cinematic product study.\n\nLoading the product…\n\nThe rest of the site remains available.\n\nEvery scene can carry a feature, a detail, or a proof point.\n\nThe structure is ready.\n\nThe brand story can now take its place."
+  },
+  "lifecycle": {
+    "loaded": {
+      "scrollY": 0,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 9,
+          "indexedElements": 1859607,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {},
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    },
+    "disposed": {
+      "scrollY": 0,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 1,
+      "contexts": [
+        {
+          "lost": true,
+          "draws": 51,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 5,
+            "Buffer": 17,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    },
+    "back": {
+      "scrollY": 700,
+      "workersCreated": 4,
+      "workersTerminated": 4,
+      "bitmapsClosed": 1,
+      "contexts": [
+        {
+          "lost": true,
+          "draws": 51,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 5,
+            "Buffer": 17,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        },
+        {
+          "lost": false,
+          "draws": 6,
+          "indexedElements": 1239738,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {},
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        }
+      ],
+      "blobsCreated": 4,
+      "blobsRevoked": 4
+    },
+    "refresh": {
+      "scrollY": 700,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 12,
+          "indexedElements": 2479476,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {},
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    }
+  },
+  "decoderRequests": [
+    {
+      "url": "http://127.0.0.1:45059/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:45059/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:45059/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:45059/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:45059/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:45059/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:45059/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:45059/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    }
+  ]
+}
