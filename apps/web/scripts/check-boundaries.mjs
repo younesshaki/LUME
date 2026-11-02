@@ -200,6 +200,21 @@ export function inspectBoundaries(root = appRoot) {
           "server-only",
           "react",
           "next",
+          // Explicit client-only capability for the showcase framework.
+          // This does not admit these dependencies in server code, other client
+          // surfaces, shared packages, or a helper lacking "use client".
+          ...(node.client &&
+          node.file.startsWith(resolve(root, "components/showcase") + "/")
+            ? [
+                "@react-three/fiber",
+                "@react-three/drei",
+                "@react-three/postprocessing",
+                "three",
+                "postprocessing",
+                "lenis",
+                "gsap",
+              ]
+            : []),
           ...(sharedRoots.some((r) => node.file.startsWith(r + "/"))
             ? [
                 "lucide-react",

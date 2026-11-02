@@ -18,21 +18,27 @@
     "test:concierge": "node --import tsx --conditions=react-server --test checks/concierge.check.mjs",
     "test:visitor": "node --import tsx --conditions=react-server --test checks/visitor.check.mjs",
     "verify:content": "node --import tsx scripts/verify-content.mjs",
-    "verify:concierge": "node --import tsx scripts/verify-concierge.mjs"
+    "verify:concierge": "node --import tsx scripts/verify-concierge.mjs",
+    "verify:showcase": "node --import tsx scripts/verify-showcase.mjs"
   },
   "dependencies": {
     "@lume/blocks": "*",
     "@lume/types": "*",
+    "@react-three/drei": "10.7.7",
+    "@react-three/fiber": "9.4.0",
+    "lenis": "1.3.17",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "three": "0.164.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.2.2",
     "@types/node": "25.6.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/three": "0.164.1",
     "typescript": "5.9.3"
   },
   "engines": {
