@@ -1,0 +1,7 @@
+{
+  "compiledJsFiles": 114,
+  "inheritedCredentialValueMatches": 0,
+  "forbiddenClientModules": 0,
+  "allPreexistingLockEntriesPreservedExceptWebRequirements": true,
+  "scope": "Inherited configured credential values only; no names/values logged. Actual client graph checked for admin/db/rag/Leva/r3f-perf."
+}

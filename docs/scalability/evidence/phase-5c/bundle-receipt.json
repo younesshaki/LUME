@@ -1,0 +1,5214 @@
+{
+  "source": "actual production client webpack compilation",
+  "assets": [
+    {
+      "name": "static/chunks/polyfills-42372ed130431b0a.js",
+      "bytes": 112594,
+      "gzipBytes": 39627
+    },
+    {
+      "name": "server/middleware-react-loadable-manifest.js",
+      "bytes": 1145,
+      "gzipBytes": 546
+    },
+    {
+      "name": "static/LDglc3kWJh5AkqhHYiSLX/_ssgManifest.js",
+      "bytes": 77,
+      "gzipBytes": 61
+    },
+    {
+      "name": "server/middleware-build-manifest.js",
+      "bytes": 450,
+      "gzipBytes": 287
+    },
+    {
+      "name": "static/LDglc3kWJh5AkqhHYiSLX/_buildManifest.js",
+      "bytes": 1092,
+      "gzipBytes": 324
+    },
+    {
+      "name": "server/next-font-manifest.js",
+      "bytes": 106,
+      "gzipBytes": 95
+    },
+    {
+      "name": "static/chunks/main-dba98e1fe81ea9f5.js",
+      "bytes": 277747,
+      "gzipBytes": 85241
+    },
+    {
+      "name": "static/chunks/main-app-8f63d49a63f2dcb4.js",
+      "bytes": 480,
+      "gzipBytes": 225
+    },
+    {
+      "name": "static/chunks/app/_not-found/page-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/_global-error/page-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/not-found-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/layout-62e164b11d159923.js",
+      "bytes": 3878,
+      "gzipBytes": 1721
+    },
+    {
+      "name": "static/chunks/app/error-5769487427b29b73.js",
+      "bytes": 511,
+      "gzipBytes": 347
+    },
+    {
+      "name": "static/chunks/app/global-error-e4eb847cf68a5965.js",
+      "bytes": 501,
+      "gzipBytes": 333
+    },
+    {
+      "name": "static/chunks/next/dist/client/components/builtin/forbidden-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/next/dist/client/components/builtin/unauthorized-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/next/dist/client/components/builtin/app-error-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/robots.txt/route-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/api/consent/route-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/api/chat/route-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/api/leads/route-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/api/vehicles/facets/route-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/api/vehicles/route-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/preview/unavailable/route-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/api/vehicles/[id]/route-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/api/visitor/[...path]/route-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/[slug]/page-7ace7a549670d43e.js",
+      "bytes": 148,
+      "gzipBytes": 137
+    },
+    {
+      "name": "static/chunks/app/page-cf0f0128d1f76d7d.js",
+      "bytes": 148,
+      "gzipBytes": 137
+    },
+    {
+      "name": "static/chunks/app/showcase/experience/page-b47672427bece7c7.js",
+      "bytes": 1108,
+      "gzipBytes": 544
+    },
+    {
+      "name": "static/chunks/app/showcase/intro/page-b47672427bece7c7.js",
+      "bytes": 1108,
+      "gzipBytes": 544
+    },
+    {
+      "name": "static/chunks/app/showcase/page-b47672427bece7c7.js",
+      "bytes": 1108,
+      "gzipBytes": 544
+    },
+    {
+      "name": "static/chunks/app/preview/page-a54deb4cb95056a1.js",
+      "bytes": 358,
+      "gzipBytes": 285
+    },
+    {
+      "name": "static/chunks/app/products/[productId]/page-e264a8366053f99e.js",
+      "bytes": 209,
+      "gzipBytes": 172
+    },
+    {
+      "name": "static/chunks/app/vehicles/error-5c73ab60371666ba.js",
+      "bytes": 499,
+      "gzipBytes": 344
+    },
+    {
+      "name": "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+      "bytes": 3710,
+      "gzipBytes": 1385
+    },
+    {
+      "name": "static/chunks/app/vehicles/[vehicleId]/page-49ae31337f5d6c21.js",
+      "bytes": 2149,
+      "gzipBytes": 949
+    },
+    {
+      "name": "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+      "bytes": 3710,
+      "gzipBytes": 1385
+    },
+    {
+      "name": "static/chunks/webpack-0604cb8d3d888328.js",
+      "bytes": 4988,
+      "gzipBytes": 2430
+    },
+    {
+      "name": "static/chunks/6659.ca84a73a7c12dc24.js",
+      "bytes": 16103,
+      "gzipBytes": 5999
+    },
+    {
+      "name": "static/chunks/2732.45e7b8f38bd48b2a.js",
+      "bytes": 777,
+      "gzipBytes": 462
+    },
+    {
+      "name": "static/chunks/4557.99af95e86de282fa.js",
+      "bytes": 615,
+      "gzipBytes": 392
+    },
+    {
+      "name": "static/chunks/2182.2d6dabe542db5132.js",
+      "bytes": 651,
+      "gzipBytes": 411
+    },
+    {
+      "name": "static/chunks/4570.c439261ba1eac63c.js",
+      "bytes": 17824,
+      "gzipBytes": 6929
+    },
+    {
+      "name": "static/chunks/9d78c252.954df95cd9526de9.js",
+      "bytes": 518276,
+      "gzipBytes": 128192
+    },
+    {
+      "name": "static/chunks/b0045e08.21f4cdd8634adce5.js",
+      "bytes": 77565,
+      "gzipBytes": 18077
+    },
+    {
+      "name": "static/chunks/d1830524.7c706078032c5a92.js",
+      "bytes": 87856,
+      "gzipBytes": 66255
+    },
+    {
+      "name": "static/chunks/87c73c54-014124adcece3495.js",
+      "bytes": 199868,
+      "gzipBytes": 62882
+    },
+    {
+      "name": "static/chunks/1329d575.685714fd1c99a513.js",
+      "bytes": 109698,
+      "gzipBytes": 33957
+    },
+    {
+      "name": "static/chunks/6680-578f400cb60ed0a8.js",
+      "bytes": 227072,
+      "gzipBytes": 69768
+    },
+    {
+      "name": "static/chunks/2303-3fa43f0c07180989.js",
+      "bytes": 11659,
+      "gzipBytes": 4316
+    },
+    {
+      "name": "static/chunks/5172-6909f1e8f3e292ce.js",
+      "bytes": 32432,
+      "gzipBytes": 12084
+    },
+    {
+      "name": "static/chunks/1968-50be65d4271afac6.js",
+      "bytes": 222726,
+      "gzipBytes": 61936
+    },
+    {
+      "name": "static/chunks/1225.289cd1c35eeeeeaf.js",
+      "bytes": 115646,
+      "gzipBytes": 37504
+    },
+    {
+      "name": "static/chunks/806-261cbed33be343c8.js",
+      "bytes": 14230,
+      "gzipBytes": 5403
+    },
+    {
+      "name": "static/chunks/6088-a5c150e08dcb7695.js",
+      "bytes": 72569,
+      "gzipBytes": 19627
+    },
+    {
+      "name": "static/chunks/4810-71135786cac4a6ef.js",
+      "bytes": 136500,
+      "gzipBytes": 54312
+    },
+    {
+      "name": "server/app/_not-found/page_client-reference-manifest.js",
+      "bytes": 13138,
+      "gzipBytes": 1738
+    },
+    {
+      "name": "server/app/_global-error/page_client-reference-manifest.js",
+      "bytes": 13144,
+      "gzipBytes": 1741
+    },
+    {
+      "name": "server/app/robots.txt/route_client-reference-manifest.js",
+      "bytes": 336,
+      "gzipBytes": 203
+    },
+    {
+      "name": "server/app/api/consent/route_client-reference-manifest.js",
+      "bytes": 338,
+      "gzipBytes": 204
+    },
+    {
+      "name": "server/app/api/chat/route_client-reference-manifest.js",
+      "bytes": 332,
+      "gzipBytes": 201
+    },
+    {
+      "name": "server/app/api/leads/route_client-reference-manifest.js",
+      "bytes": 334,
+      "gzipBytes": 201
+    },
+    {
+      "name": "server/app/api/vehicles/facets/route_client-reference-manifest.js",
+      "bytes": 354,
+      "gzipBytes": 211
+    },
+    {
+      "name": "server/app/api/vehicles/route_client-reference-manifest.js",
+      "bytes": 340,
+      "gzipBytes": 203
+    },
+    {
+      "name": "server/app/preview/unavailable/route_client-reference-manifest.js",
+      "bytes": 354,
+      "gzipBytes": 212
+    },
+    {
+      "name": "server/app/api/vehicles/[id]/route_client-reference-manifest.js",
+      "bytes": 350,
+      "gzipBytes": 210
+    },
+    {
+      "name": "server/app/api/visitor/[...path]/route_client-reference-manifest.js",
+      "bytes": 358,
+      "gzipBytes": 214
+    },
+    {
+      "name": "server/app/[slug]/page_client-reference-manifest.js",
+      "bytes": 13229,
+      "gzipBytes": 1755
+    },
+    {
+      "name": "server/app/page_client-reference-manifest.js",
+      "bytes": 13069,
+      "gzipBytes": 1730
+    },
+    {
+      "name": "server/app/showcase/experience/page_client-reference-manifest.js",
+      "bytes": 13804,
+      "gzipBytes": 1817
+    },
+    {
+      "name": "server/app/showcase/intro/page_client-reference-manifest.js",
+      "bytes": 13774,
+      "gzipBytes": 1812
+    },
+    {
+      "name": "server/app/showcase/page_client-reference-manifest.js",
+      "bytes": 13624,
+      "gzipBytes": 1800
+    },
+    {
+      "name": "server/app/preview/page_client-reference-manifest.js",
+      "bytes": 13191,
+      "gzipBytes": 1764
+    },
+    {
+      "name": "server/app/products/[productId]/page_client-reference-manifest.js",
+      "bytes": 13158,
+      "gzipBytes": 1747
+    },
+    {
+      "name": "server/app/vehicles/compare/page_client-reference-manifest.js",
+      "bytes": 13103,
+      "gzipBytes": 1787
+    },
+    {
+      "name": "server/app/vehicles/[vehicleId]/page_client-reference-manifest.js",
+      "bytes": 13815,
+      "gzipBytes": 1846
+    },
+    {
+      "name": "server/app/vehicles/page_client-reference-manifest.js",
+      "bytes": 13023,
+      "gzipBytes": 1776
+    }
+  ],
+  "modules": [
+    {
+      "resource": "node_modules/next/dist/client/next.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/app-next.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/client-page.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/client-segment.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/layout-router.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/render-from-template-context.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/framework/boundary-components.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/app-dir/link.js",
+      "chunks": [
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/http-access-fallback/error-boundary.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/metadata/generate/icon-mark.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/app-webpack.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/app-bootstrap.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/require-instrumentation-client.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/require-instrumentation-client.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/app-index.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/register-deployment-id-global.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/webpack.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/route-params.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/app-router-context.shared-runtime.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/hooks-client-context.shared-runtime.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/shared/src/utils/mergeClasses.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react/index.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/index.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/use-merged-ref.js",
+      "chunks": [
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/add-base-path.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/framework/boundary-constants.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/unresolved-thenable.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/error-boundary.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/redirect-boundary.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/bfcache-state-manager.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/utils.js",
+      "chunks": [
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/links.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/navigation-untracked.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/create-router-cache-key.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/ppr-navigations.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/utils/warn-once.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/router-reducer-types.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/types.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/utils/error-once.js",
+      "chunks": [
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/http-access-fallback/http-access-fallback.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/disable-smooth-scroll.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/app-paths.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/format-url.js",
+      "chunks": [
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/is-local-url.js",
+      "chunks": [
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react-dom/index.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "apps/web/app/error.tsx",
+      "chunks": [
+        "static/chunks/app/error-5769487427b29b73.js"
+      ]
+    },
+    {
+      "resource": "apps/web/app/global-error.tsx",
+      "chunks": [
+        "static/chunks/app/global-error-e4eb847cf68a5965.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/NavHistoryRecorder.tsx",
+      "chunks": [
+        "static/chunks/app/layout-62e164b11d159923.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/ChatLauncher.tsx",
+      "chunks": [
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/content/Consent.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/ShowcaseIsland.tsx",
+      "chunks": [
+        "static/chunks/app/showcase/page-b47672427bece7c7.js",
+        "static/chunks/app/showcase/intro/page-b47672427bece7c7.js",
+        "static/chunks/app/showcase/experience/page-b47672427bece7c7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/client/TenantIdentity.tsx",
+      "chunks": [
+        "static/chunks/app/preview/page-a54deb4cb95056a1.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/register-deployment-id-global.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/app-call-server.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/app-find-source-map-url.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/flight-data-helpers.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/navigation-build-id.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/deployment-id.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/encode-uri-path.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/deployment-id.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react-dom/client.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "apps/web/app/vehicles/error.tsx",
+      "chunks": [
+        "static/chunks/app/vehicles/error-5c73ab60371666ba.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/VehicleInquiry.tsx",
+      "chunks": [
+        "static/chunks/app/vehicles/[vehicleId]/page-49ae31337f5d6c21.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/vehicles/GalleryEnhancement.tsx",
+      "chunks": [
+        "static/chunks/app/vehicles/[vehicleId]/page-49ae31337f5d6c21.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/vehicles/OptionalTools.tsx",
+      "chunks": [
+        "static/chunks/app/vehicles/[vehicleId]/page-49ae31337f5d6c21.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/AnnouncementBar.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react/cjs/react.production.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/is-error.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/has-base-path.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/segment.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/app-router-headers.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/utils.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/app-router-context.shared-runtime.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/hooks-client-context.shared-runtime.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/is-next-router-error.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/readonly-url-search-params.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/segment-cache/segment-value-encoding.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/disable-smooth-scroll.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/is-dynamic.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/querystring.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@swc/helpers/esm/_interop_require_wildcard.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@swc/helpers/esm/_interop_require_default.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@swc/helpers/esm/_interop_require_wildcard.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@swc/helpers/esm/_interop_require_default.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/app-router-instance.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/normalize-trailing-slash.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/navigation.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/redirect.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/redirect-error.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/is-next-router-error.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/nav-failure-handler.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/handle-isr-error.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/add-path-prefix.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/is-bot.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/request/search-params.browser.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/request/params.browser.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/set-attributes-from-props.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/asset-prefix.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/app-globals.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/head-manager-context.shared-runtime.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/head-manager-context.shared-runtime.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/app-router.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/create-initial-router-state.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react-dom/cjs/react-dom.production.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/has-base-path.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/cache-key.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/scheduler.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/page-path/ensure-leading-slash.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/querystring.js",
+      "chunks": [
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/api/navigation.js",
+      "chunks": [
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/6659.ca84a73a7c12dc24.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/api/app-dynamic.js",
+      "chunks": [
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/head-manager.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/page-loader.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/route-announcer.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/router.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/remove-base-path.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/script.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/mitt.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router-context.shared-runtime.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/image-config-context.shared-runtime.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/adapters.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js",
+      "chunks": [
+        "static/chunks/87c73c54-014124adcece3495.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/constants.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/app-router-types.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/match-segments.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/use-action-queue.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/create-href-from-url.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/fetch-server-response.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/is-navigating-to-new-root-layout.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/navigation.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/cache.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/optimistic-routes.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/vary-path.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/bfcache.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/reducers/committed-state.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/inAppHistory.ts",
+      "chunks": [
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/6659.ca84a73a7c12dc24.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/targetActivation.ts",
+      "chunks": [
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/6659.ca84a73a7c12dc24.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/ShowcaseLanding.tsx",
+      "chunks": [
+        "static/chunks/4557.99af95e86de282fa.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/ShowcaseIntro.tsx",
+      "chunks": [
+        "static/chunks/2182.2d6dabe542db5132.js"
+      ]
+    },
+    {
+      "resource": "node_modules/react/jsx-runtime.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/CookieBanner.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js",
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/react-client-callbacks/on-recoverable-error.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/react-client-callbacks/on-recoverable-error.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/react-client-callbacks/error-boundary-callbacks.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/react-dom/client.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/tracing/tracer.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/build/polyfills/polyfill-module.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/pages/_error.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/pages/_app.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/app-router-utils.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/is-plain-object.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/readonly-url-search-params.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/redirect-error.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/http-access-fallback/http-access-fallback.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/path-has-prefix.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/utils/warn-once.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/interception-routes.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/pendingLeadForm.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/invariant-error.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/build/polyfills/polyfill-module.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/redirect-status-code.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/server-inserted-html.shared-runtime.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/unrecognized-action-error.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/navigation.react-server.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/is-thenable.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/lib/javascript-url.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/remove-trailing-slash.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/parse-path.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/compute-changed-path.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/html-bots.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/remove-base-path.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/blockMedia.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/vehicles/Lightbox.tsx",
+      "chunks": [
+        "static/chunks/2732.45e7b8f38bd48b2a.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/props.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/set-attributes-from-props.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/add-base-path.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/app-dynamic.js",
+      "chunks": [
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/path-has-prefix.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/parse-relative-url.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/remove-trailing-slash.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/route-regex.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/index.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/scheduler/index.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/DealershipSection.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react/jsx-runtime.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "apps/web/app/tailwind.css",
+      "chunks": [
+        "static/chunks/app/layout-62e164b11d159923.js"
+      ]
+    },
+    {
+      "resource": "apps/web/app/style.css",
+      "chunks": [
+        "static/chunks/app/layout-62e164b11d159923.js"
+      ]
+    },
+    {
+      "resource": "apps/web/app/content.css",
+      "chunks": [
+        "static/chunks/app/layout-62e164b11d159923.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/styles.css",
+      "chunks": [
+        "static/chunks/app/layout-62e164b11d159923.js"
+      ]
+    },
+    {
+      "resource": "apps/web/app/showcase/showcase.css",
+      "chunks": [
+        "static/chunks/app/showcase/page-b47672427bece7c7.js",
+        "static/chunks/app/showcase/intro/page-b47672427bece7c7.js",
+        "static/chunks/app/showcase/experience/page-b47672427bece7c7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/concierge.css",
+      "chunks": [
+        "static/chunks/app/vehicles/[vehicleId]/page-49ae31337f5d6c21.js",
+        "static/chunks/6659.ca84a73a7c12dc24.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/request/search-params.browser.prod.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/request/params.browser.prod.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/router-reducer.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/prefetch.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/lru.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react-server-dom-webpack/client.browser.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/builtin/global-error.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/app-router-announcer.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/reducers/find-head-in-cache.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/set-cache-busting-search-param.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/navigation-testing-lock.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/segment-cache/cache-map.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/reducers/navigate-reducer.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/route-loader.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/add-locale.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/with-router.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/constants.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/lib/promise.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/request-idle-callback.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/htmlescape.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/image-config.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/router.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/interpolate-as.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/as-path-to-search-params.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/get-asset-path-from-route.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/promise-with-resolvers.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/lazy-dynamic/bailout-to-csr.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/lazy-dynamic/bailout-to-csr.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/segment-cache/vary-params-decoding.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/errors/root-error-boundary.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/is-error.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/redirect-status-code.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/parse-path.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/app-paths.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/portal/index.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/scheduler/cjs/scheduler.production.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/normalize-trailing-slash.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/not-found.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/forbidden.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/unauthorized.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/unstable-rethrow.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/lazy-dynamic/loadable.js",
+      "chunks": [
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/add-path-prefix.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/interception-routes.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/react-client-callbacks/report-global-error.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/react-client-callbacks/report-global-error.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/head.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/icons/arrow-right.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/icons/x.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/constants.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/escape-regexp.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/sorted-routes.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/get-dynamic-param.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/publicPath.ts",
+      "chunks": [
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/react/index.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/encode-uri-path.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/builtin/error-styles.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/cache-busting-search-param.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/classNames.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/reducers/server-patch-reducer.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/reducers/restore-reducer.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/reducers/refresh-reducer.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/reducers/hmr-refresh-reducer.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/reducers/server-action-reducer.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/icons/check.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/icons/arrow-left.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/icons/calculator.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/is-plain-object.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/segment.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js",
+      "chunks": [
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/lazy-dynamic/preload-chunks.js",
+      "chunks": [
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/page-path/ensure-leading-slash.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/route-matcher.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/icons/chevron-down.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/icons/chevron-up.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/lib/javascript-url.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/invariant-error.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/i18n/normalize-locale-path.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/format-url.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/get-next-pathname-info.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/format-next-pathname-info.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/is-local-url.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/is-bot.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/parse-loader-tree.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/routes/app.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/resolve-param-value.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/react/cjs/react-jsx-runtime.production.min.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/trusted-types.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/modern-browserslist-target.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/entry-constants.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react/cjs/react-jsx-runtime.production.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/hash.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/unstable-rethrow.browser.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/errors/graceful-degrade-boundary.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/server-reference-info.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/action-revalidation-kind.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three/build/three.module.js",
+      "chunks": [
+        "static/chunks/9d78c252.954df95cd9526de9.js"
+      ]
+    },
+    {
+      "resource": "node_modules/react-dom/index.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/clsx/dist/clsx.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/tailwind-merge/dist/bundle-mjs.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/detect-domain-locale.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/remove-locale.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/resolve-href.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/is-api-route.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/side-effect.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/bloom-filter.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/page-path/denormalize-page-path.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/compare-states.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/omit.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/server/app-render/work-async-storage.external.js",
+      "chunks": [
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/route-match-utils.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.production.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/remove-path-prefix.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/add-path-suffix.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/add-locale.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/html-bots.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/get-segment-param.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/router/utils/interception-prefix-from-param-type.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/assign-location.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/client/components/router-reducer/reducers/has-interception-route-in-current-tree.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/react/cjs/react.production.min.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/header/AccordionHeader.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/value/use-motion-value.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/components/AnimatePresence/use-presence.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/lenis/dist/lenis.mjs",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/context/LayoutGroupContext.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/context/MotionConfigContext.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/context/PresenceContext.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/createBaseUIEventDetails.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/collapsible/root/CollapsibleRootContext.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/root/AccordionRootContext.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/item/AccordionItemContext.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/lib/route-pattern-normalizer.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/path-to-regexp/index.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/utils/use-constant.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/useStableCallback.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/useMergedRefs.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/useControlled.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/useIsoLayoutEffect.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/shared/lib/page-path/normalize-path-sep.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/react-dom/cjs/react-dom.production.min.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/frameloop/microtask.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/frameloop/sync-time.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/get-final.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/get-value-transition.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/resolve-transition.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/is-css-variable.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/optimized-appear/data-id.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/optimized-appear/get-appear-id.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/generators/inertia.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/generators/spring.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/dom/parse-transform.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/is-keyframes-target.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/keys-position.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/generators/utils/calc-duration.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/generators/utils/create-generator-easing.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/generators/utils/is-generator.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/offsets/default.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/offsets/fill.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/utils/accelerated-values.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/utils/linear.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/constants.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/index.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/index.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/server/app-render/work-async-storage-instance.js",
+      "chunks": [
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/stats/animation-count.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/stats/buffer.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/interpolate.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/is-html-element.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/is-svg-element.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/is-svg-svg-element.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/keys-transform.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/resolve-elements.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/store.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/mix/number.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/test.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/utils/is-motion-value.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/html/HTMLVisualElement.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/is-animation-controls.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/is-controlling-variants.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/is-forced-motion-value.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/is-variant-label.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/resolve-dynamic-variants.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/resolve-variants.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/variant-props.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/geometry/conversion.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/geometry/delta-apply.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/geometry/models.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/utils/has-transform.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/utils/measure.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/animate/single-value.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/color/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/color/hex.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/color/hsla.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/color/rgba.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/maps/defaults.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/numbers/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/numbers/units.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/utils/animatable-none.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/reduced-motion/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/dom/utils/camel-to-dash.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/html/utils/render.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/html/utils/scrape-motion-values.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/svg/utils/is-svg-tag.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/svg/utils/scrape-motion-values.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/reason-parts.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/array.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/clamp.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/errors.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/global-config.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/is-numerical-string.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/is-object.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/is-zero-value-string.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/memo.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/noop.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/pipe.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/progress.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/subscription-manager.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/time-conversion.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/velocity-per-second.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/stateAttributesMapping.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/collapsible/panel/CollapsiblePanelDataAttributes.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/frameloop/frame.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/anticipate.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/back.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/circ.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/cubic-bezier.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/modifiers/mirror.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/modifiers/reverse.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/utils/is-bezier-definition.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/utils/is-easing-array.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/reduced-motion/state.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/formatErrorMessage.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/mergeObjects.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/empty.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/postprocessing/build/index.js",
+      "chunks": [
+        "static/chunks/b0045e08.21f4cdd8634adce5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/useRefWithInit.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/composite/list/CompositeListContext.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/useOnMount.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/useAnimationFrame.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three/examples/jsm/loaders/DRACOLoader.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/build/polyfills/process.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/build/polyfills/process.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "node_modules/n8ao/dist/N8AO.js",
+      "chunks": [
+        "static/chunks/d1830524.7c706078032c5a92.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/WithPromise.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/replace-transition-type.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/generators/utils/velocity.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/utils/unit-conversion.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler.production.js",
+      "chunks": [
+        "static/chunks/1329d575.685714fd1c99a513.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/cjs/scheduler.production.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/use-sync-external-store/shim/with-selector.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/server/app-render/async-local-storage.js",
+      "chunks": [
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/app/vehicles/compare/page-9f5ccb93ecd74ae4.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/2303-3fa43f0c07180989.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/utils/sanitize.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/utils/float-regex.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/complex/filter.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/complex/mask.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/merge-props/mergeProps.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/react-dom/node_modules/scheduler/index.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three/examples/jsm/postprocessing/Pass.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/process/browser.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/next/dist/compiled/process/browser.js",
+      "chunks": [
+        "static/chunks/1968-50be65d4271afac6.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/index.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/use-sync-external-store/cjs/use-sync-external-store-shim/with-selector.production.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/use-sync-external-store/shim/index.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/cjs/scheduler.production.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/react-dom/node_modules/scheduler/cjs/scheduler.production.min.js",
+      "chunks": [
+        "static/chunks/main-dba98e1fe81ea9f5.js"
+      ]
+    },
+    {
+      "resource": "node_modules/use-sync-external-store/cjs/use-sync-external-store-shim.production.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/components/create-proxy.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/components/motion/feature-bundle.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/dom/create-visual-element.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/animations.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/gestures.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/drag.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/layout.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/dom/utils/is-svg-component.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/dom/use-render.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/load-features.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/svg/use-svg-visual-state.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/html/use-html-visual-state.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/context/MotionContext/create.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/utils/use-visual-element.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/context/MotionContext/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/utils/use-visual-state.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/utils/use-motion-ref.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/utils/symbol.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/context/LazyContext.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/definitions.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/animation/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/animation/exit.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/viewport/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/gestures/press.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/gestures/focus.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/gestures/hover.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/gestures/pan/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/gestures/drag/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/node/HTMLProjectionNode.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/layout/MeasureLayout.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/svg/use-props.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/html/use-props.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/dom/utils/filter-props.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/svg/lowercase-elements.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/svg/utils/create-render-state.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/html/utils/create-render-state.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/context/MotionContext/utils.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/context/SwitchLayoutGroupContext.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/utils/is-ref-object.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/gestures/drag/VisualElementDragControls.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/utils/resolve-motion-value.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/node/create-projection-node.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/node/DocumentProjectionNode.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/Feature.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/animation-state.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/features/viewport/observers.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/events/event-info.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/events/add-pointer-event.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/gestures/pan/PanSession.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/press/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/events/add-dom-event.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/hover.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/utils/get-context-window.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/node/state.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/motion/utils/valid-prop.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/drag/state/set-active.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/utils/each-axis.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/geometry/delta-calc.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/gestures/drag/utils/constraints.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/geometry/utils.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/press/utils/is-keyboard-accessible.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/resize/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/utils/flat-tree.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/delay.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/geometry/copy.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/geometry/delta-remove.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/animation/mix-values.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/shared/stack.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/styles/transform.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/interfaces/visual-element.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/get-variant-context.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/shallow-compare.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/calc-child-stagger.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/interfaces/visual-element-variant.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/utils/distance.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/utils/is-primary-pointer.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/drag/state/is-active.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/utils/setup.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/press/utils/state.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/press/utils/keyboard.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/gestures/utils/is-node-or-child.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/resize/handle-window.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/resize/handle-element.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/utils/compare-by-depth.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/content/InteractiveForms.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/TemplateConversionPanel.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/LeadServices.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/DealershipForms.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/TradeInFormVariants.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/TurnstileWidget.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/ConciergeLeadForm.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/BlurFade.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/GlowingEffect.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/templateExperience.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/index.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/ShineBorder.tsx",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/blockTypes.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/validation.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/defaultPages.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/dealerPageTemplates.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/glo3dStarterPages.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/appearance.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/defaultConciergeTargets.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/variants.ts",
+      "chunks": [
+        "static/chunks/6088-a5c150e08dcb7695.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/Experience.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/useDisposableGLTF.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/ModelBoundary.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/ShowcaseCanvas.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/StoryBridge.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/CameraRig.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/StoryNarrative.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/useStoryScroll.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/StoryConsent.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/story-store.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/model-resource.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/model-policy.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/loadModel.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/OpeningScene.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/ShowcaseEffects.tsx",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/composer-ownership.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/camera-path.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/story-cues.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/disposeModel.ts",
+      "chunks": [
+        "static/chunks/4570.c439261ba1eac63c.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/animate/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/animate/sequence.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/animate/subject.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/GroupAnimationWithThen.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/sequence/create.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/utils/is-dom-keyframes.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/animate/resolve-subjects.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/utils/create-visual-element.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/GroupAnimation.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/sequence/utils/calc-time.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/sequence/utils/calc-repeat-duration.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/utils/get-easing-for-segment.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/sequence/utils/edit.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/sequence/utils/normalize-times.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/animation/sequence/utils/sort.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/object/ObjectVisualElement.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/wrap.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/dist/index.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/maath.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/buffer-d2a4726c.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/index-43782085.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/easing-3be59c6d.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/geometry-982366ff.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/matrix-baa530bf.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/misc-7d870b3c.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/triangle-b62b9067.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/three-eb2ad8c0.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/vector2-d2bf51f1.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/vector3-0a088b7f.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/objectSpread2-284232a6.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/classCallCheck-9098b006.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/isNativeReflectConstruct-5594d075.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/interfaces/motion-value.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/is-transition-defined.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/default-transitions.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/make-animation-instant.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/AsyncMotionValueAnimation.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/can-animate.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/supports/waapi.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/NativeAnimationExtended.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/is-animatable.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/utils/is-browser-color.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/utils/unsupported-easing.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/NativeAnimation.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/utils/apply-generator.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/start-waapi-animation.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/supports/scroll-timeline.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/supports/linear-easing.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/easing/map-easing.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/supports/memo.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/easing/cubic-bezier.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/waapi/easing/supported.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/supports/flags.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/trigger/AccordionTrigger.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/composite/composite.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/isElementDisabled.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/use-button/useButton.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/floating-ui-react/utils/event.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/composite/root/CompositeRootContext.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/utils/useFocusableWhenDisabled.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/item/AccordionItem.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/composite/list/useCompositeListItem.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/useBaseUiId.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/collapsible/root/useCollapsibleRoot.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/useTransitionStatus.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/useId.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/safeReact.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "packages/types/src/index.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "packages/types/src/conciergeTargets.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "packages/types/src/conciergeActionCapabilities.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "packages/types/src/tenantTheme.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "packages/types/src/siteTemplates.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "packages/types/src/headerNav.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "packages/types/src/plans.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/value/use-spring.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/value/use-follow-value.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/value/use-transform.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/follow-value.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/value/use-computed.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/transform.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/value/use-combine-values.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/zod/v3/types.js",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/zod/v3/helpers/parseUtil.js",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/zod/v3/ZodError.js",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/zod/v3/locales/en.js",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/zod/v3/errors.js",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/zod/v3/helpers/util.js",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/zod/v3/helpers/errorUtil.js",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/content/ProductGrid.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/InteractiveProductGrid.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/ProductCard.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/ProductGrid.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/productSounds.ts",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/productModel.ts",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/panel/AccordionPanel.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/useOpenChangeComplete.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/collapsible/panel/useCollapsiblePanel.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/panel/AccordionPanelCssVars.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/root/AccordionRootDataAttributes.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/addEventListener.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/useRenderElement.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/utils/resolveClassName.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/utils/resolveStyle.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/getStateAttributesProps.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/getReactElementRef.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/utils/esm/reactVersion.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/mix/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/mix/complex.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/mix/immediate.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/mix/color.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/utils/mix/visibility.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/color/hsla-to-rgba.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/vehicles/ChatEntry.tsx",
+      "chunks": [
+        "static/chunks/6659.ca84a73a7c12dc24.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/chatTransport.ts",
+      "chunks": [
+        "static/chunks/6659.ca84a73a7c12dc24.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/conciergeActions.ts",
+      "chunks": [
+        "static/chunks/6659.ca84a73a7c12dc24.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/conciergeAnalytics.ts",
+      "chunks": [
+        "static/chunks/6659.ca84a73a7c12dc24.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/leadAction.ts",
+      "chunks": [
+        "static/chunks/6659.ca84a73a7c12dc24.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/components/AnimatePresence/utils.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/utils/use-composed-ref.mjs",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/dom/DOMVisualElement.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/DOMKeyframesResolver.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/utils/css-variables-conversion.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/utils/is-none.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/utils/make-none-animatable.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/TrustInteractive.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/NumberTicker.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/Marquee.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/Accordion.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/dist/events-f8cd670d.esm.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/zustand/esm/traditional.mjs",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/suspend-react/index.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/zustand/esm/vanilla.mjs",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/createLucideIcon.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/shared/src/utils/toKebabCase.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/shared/src/utils/toPascalCase.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/shared/src/utils/toCamelCase.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/Icon.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/context.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/defaultAttributes.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/lucide-react/dist/esm/shared/src/utils/hasA11yProp.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/generators/keyframes.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/ease.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-utils/dist/es/easing/utils/map.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/offsets/time.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/content/QuickSearch.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/VehicleQuickSearch.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/VehicleServices.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/root/AccordionRoot.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/direction-context/DirectionContext.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/composite/list/CompositeList.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/drei/core/Sparkles.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/drei/helpers/constants.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@babel/runtime/helpers/esm/extends.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/frameloop/batcher.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/frameloop/order.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/frameloop/render-step.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/VisualElement.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/motion-values.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/utils/find.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/svg/SVGVisualElement.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/svg/utils/camel-case-attrs.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/svg/utils/render.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/maps/number.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/maps/transform.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/int.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/html/utils/build-styles.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/utils/get-as-type.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/html/utils/build-transform.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/styles/scale-correction.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/styles/scale-border-radius.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/projection/styles/scale-box-shadow.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/color/utils.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/utils/single-color-regex.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/utils/is-nullish.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/react/MakeLogo.tsx",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "packages/types/src/vehicleMakeLogos.ts",
+      "chunks": [
+        "static/chunks/4810-71135786cac4a6ef.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/concierge/submitLead.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "packages/blocks/src/leadAttribution.ts",
+      "chunks": [
+        "static/chunks/806-261cbed33be343c8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/utils/collapsibleOpenStateMapping.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/collapsible/trigger/CollapsibleTriggerDataAttributes.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/item/stateAttributesMapping.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/accordion/item/AccordionItemDataAttributes.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/utils/use-in-view.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/render/dom/viewport/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/internals/useAnimationsFinished.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/@base-ui/react/esm/utils/resolveRef.js",
+      "chunks": [
+        "static/chunks/5172-6909f1e8f3e292ce.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/utils/use-isomorphic-effect.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/framer-motion/dist/es/utils/is-browser.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/JSAnimation.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/drivers/frame.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/interfaces/visual-element-target.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/utils/setters.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/KeyframesResolver.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/animation/keyframes/utils/fill-wildcards.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/dom/style-set.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/dom/is-css-var.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/dimensions.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/auto.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/will-change/add-will-change.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/will-change/is.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/complex/index.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/value/types/utils/color-regex.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/svg/utils/build-attrs.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/motion-dom/dist/es/render/svg/utils/path.mjs",
+      "chunks": [
+        "static/chunks/6680-578f400cb60ed0a8.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three/examples/jsm/loaders/GLTFLoader.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three/examples/jsm/utils/BufferGeometryUtils.js",
+      "chunks": [
+        "static/chunks/1225.289cd1c35eeeeeaf.js"
+      ]
+    }
+  ]
+}
