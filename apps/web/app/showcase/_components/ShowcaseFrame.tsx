@@ -54,10 +54,13 @@ export default async function ShowcaseFrame({
           {kind === "experience" &&
             data.assets.scenes.map((scene) => (
               <section key={scene.id}>
-                <h2>{scene.title}</h2>
+                <h2>{scene.label ?? scene.title}</h2>
                 {scene.lines.map((line) => (
                   <p key={line.text}>{line.text}</p>
                 ))}
+                {scene.id === "showcase-scene-12" && (
+                  <a href={`/${query}`}>Continue</a>
+                )}
               </section>
             ))}
         </section>

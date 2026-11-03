@@ -46,7 +46,7 @@ body.standardMode:has(.showcase) {
   position: relative;
 }
 .showcase--experience .showcase__reserved {
-  height: 1700svh;
+  height: 2500svh;
 }
 .showcase__sticky {
   position: sticky;

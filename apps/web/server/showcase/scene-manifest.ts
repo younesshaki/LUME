@@ -1,9 +1,9 @@
 import "server-only";
 import type { ShowcaseScene } from "../../components/showcase/types";
 
-/** First chapter through differentiation (1–8). Narrative copied from Vite's
- * scene-{1..8}/content.ts; no dependency on its DOM/Three runtime.
- * All eight intentionally use the ONE verified catalog model, not the missing
+/** First chapter through the final Product scene (1–12). Narrative copied from Vite's
+ * scene-{1..12}/content.ts; no dependency on its DOM/Three runtime.
+ * All twelve intentionally use the ONE verified catalog model, not the missing
  * hero-product/material-study/product-detail placeholders. Each parse is owned.
  */
 export const sceneManifest: Omit<ShowcaseScene, "modelUrl">[] = [
@@ -223,6 +223,104 @@ export const sceneManifest: Omit<ShowcaseScene, "modelUrl">[] = [
       },
     ],
   },
+  {
+    id: "showcase-scene-9",
+    title: "Momentum",
+    duration: 25,
+    camera: {
+      kind: "orbit",
+      orbitStart: 15.570796326794897,
+    },
+    lines: [
+      {
+        text: "Now move toward action.",
+      },
+      {
+        text: "The visitor has seen the product, the context, and the proof.",
+      },
+      {
+        text: "This is where the story narrows.",
+      },
+      {
+        text: "One clear next step is stronger than five competing options.",
+      },
+      {
+        text: "Keep the path simple.",
+      },
+      {
+        text: "Make the product easy to remember.",
+        highlights: ["easy to remember"],
+      },
+    ],
+  },
+  {
+    id: "showcase-scene-10",
+    title: "Statement",
+    duration: 25,
+    camera: {
+      kind: "orbit",
+      orbitStart: 17.5707963267949,
+    },
+    lines: [
+      {
+        text: "LUME is designed to feel precise, modern, and useful.",
+        flipWords: {
+          target: "precise",
+          words: ["precise", "modern", "useful"],
+          intervalMs: 1500,
+          finalHoldMs: 1500,
+        },
+      },
+      {
+        text: "Every transition should support the product, not distract from it.",
+      },
+      {
+        text: "Every visual should reveal something real.",
+      },
+      {
+        text: "Every line should earn its place.",
+      },
+      {
+        text: "The showcase ends by making the next step feel natural.",
+      },
+    ],
+  },
+  {
+    id: "showcase-scene-11",
+    title: "",
+    label: "Scene 11",
+    duration: 25,
+    camera: {
+      kind: "orbit",
+      orbitStart: 19.5707963267949,
+    },
+    lines: [
+      {
+        text: "This is LUME.",
+        highlights: ["LUME"],
+        flipWords: {
+          target: "LUME",
+          words: ["LUME", "Product", "Brand", "Showcase"],
+          intervalMs: 1500,
+          finalHoldMs: 1500,
+        },
+      },
+    ],
+  },
+  {
+    id: "showcase-scene-12",
+    title: "Product",
+    duration: 20,
+    camera: {
+      kind: "orbit",
+      orbitStart: 21.5707963267949,
+    },
+    lines: [
+      {
+        text: "The final scene is ready for product details, pricing, or contact.",
+      },
+    ],
+  },
 ];
 
 // Server-owned mapping. Neither scene IDs nor asset paths come from the request.
@@ -242,5 +340,13 @@ export const modelKeys = {
   "showcase-scene-7":
     "vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
   "showcase-scene-8":
+    "vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+  "showcase-scene-9":
+    "vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+  "showcase-scene-10":
+    "vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+  "showcase-scene-11":
+    "vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+  "showcase-scene-12":
     "vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
 } as const;

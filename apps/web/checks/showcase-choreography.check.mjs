@@ -19,8 +19,12 @@ import { scene6 } from "../../../src/experience/scenes/showcase/scenes/scene-6/c
 import { scene7 } from "../../../src/experience/scenes/showcase/scenes/scene-7/content.ts";
 import { scene8 } from "../../../src/experience/scenes/showcase/scenes/scene-8/content.ts";
 
+import { scene9 } from "../../../src/experience/scenes/showcase/scenes/scene-9/content.ts";
+import { scene10 } from "../../../src/experience/scenes/showcase/scenes/scene-10/content.ts";
+import { scene11 } from "../../../src/experience/scenes/showcase/scenes/scene-11/content.ts";
+import { scene12 } from "../../../src/experience/scenes/showcase/scenes/scene-12/content.ts";
 const { scenes } = showcaseAssets("https://preview.r2.dev");
-test("batch carries original first-eight narrative cues, with fixed scene-keyed assets", () => {
+test("batch carries original twelve narrative cues, with fixed scene-keyed assets", () => {
   for (const [index, source] of [
     scene1,
     scene2,
@@ -30,6 +34,10 @@ test("batch carries original first-eight narrative cues, with fixed scene-keyed 
     scene6,
     scene7,
     scene8,
+    scene9,
+    scene10,
+    scene11,
+    scene12,
   ].entries()) {
     const scene = scenes[index];
     assert.equal(scene.id, source.id);
@@ -161,4 +169,15 @@ test("same-URL scene leases own and dispose distinct geometries/materials/textur
       texture: 1,
       bitmap: 1,
     });
+});
+
+test("closing scene keeps the source's 20s timing and source-blank title gets only an accessible label", () => {
+  assert.equal(scenes.length, 12);
+  assert.equal(scenes[10].title, "");
+  assert.equal(scenes[10].label, "Scene 11");
+  assert.equal(scenes[11].duration, 20);
+  const start = scenes[11].camera.orbitStart;
+  const end = cameraAt(scenes[11], 1);
+  assert.ok(Math.abs(end[0] - Math.cos(start + 1.6) * 5.2) < 1e-8);
+  assert.ok(Math.abs(end[2] - Math.sin(start + 1.6) * 5.2) < 1e-8);
 });
