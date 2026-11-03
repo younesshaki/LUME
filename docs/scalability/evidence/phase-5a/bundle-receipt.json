@@ -1,0 +1,167 @@
+{
+  "source": "actual production client webpack compilation",
+  "heavyChunks": [
+    {
+      "name": "static/chunks/9d78c252.7a9347a71bd22cf0.js",
+      "bytes": 515897,
+      "gzipBytes": 127585
+    },
+    {
+      "name": "static/chunks/5779.c127f460cacd7ff7.js",
+      "bytes": 92337,
+      "gzipBytes": 30043
+    },
+    {
+      "name": "static/chunks/1329d575.685714fd1c99a513.js",
+      "bytes": 109698,
+      "gzipBytes": 33957
+    },
+    {
+      "name": "static/chunks/488.58b438f53409ce49.js",
+      "bytes": 10587,
+      "gzipBytes": 4230
+    }
+  ],
+  "moduleChunkReceipt": [
+    {
+      "resource": "node_modules/three/build/three.module.js",
+      "chunks": [
+        "static/chunks/9d78c252.7a9347a71bd22cf0.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/constants.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/index.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/index.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three/examples/jsm/loaders/DRACOLoader.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler.production.js",
+      "chunks": [
+        "static/chunks/1329d575.685714fd1c99a513.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/cjs/scheduler.production.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/index.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/cjs/scheduler.production.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/Experience.tsx",
+      "chunks": [
+        "static/chunks/488.58b438f53409ce49.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/useDisposableGLTF.ts",
+      "chunks": [
+        "static/chunks/488.58b438f53409ce49.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/ModelBoundary.tsx",
+      "chunks": [
+        "static/chunks/488.58b438f53409ce49.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/ShowcaseCanvas.tsx",
+      "chunks": [
+        "static/chunks/488.58b438f53409ce49.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/model-resource.ts",
+      "chunks": [
+        "static/chunks/488.58b438f53409ce49.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/loadModel.ts",
+      "chunks": [
+        "static/chunks/488.58b438f53409ce49.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/OpeningScene.tsx",
+      "chunks": [
+        "static/chunks/488.58b438f53409ce49.js"
+      ]
+    },
+    {
+      "resource": "apps/web/components/showcase/disposeModel.ts",
+      "chunks": [
+        "static/chunks/488.58b438f53409ce49.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/fiber/dist/events-f8cd670d.esm.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/drei/core/Sparkles.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "apps/web/node_modules/@react-three/drei/helpers/constants.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three/examples/jsm/loaders/GLTFLoader.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    },
+    {
+      "resource": "node_modules/three/examples/jsm/utils/BufferGeometryUtils.js",
+      "chunks": [
+        "static/chunks/5779.c127f460cacd7ff7.js"
+      ]
+    }
+  ],
+  "emittedLevaModules": 0,
+  "emittedPerfModules": 0
+}

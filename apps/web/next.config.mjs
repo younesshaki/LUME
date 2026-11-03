@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { assertPreviewEnvironment } from "./config/environment.ts";
+import { showcaseBuildAudit } from "./config/showcase-build-audit.mjs";
 
 if (process.env.WEB_PREVIEW_SANITIZED !== "1")
   throw new Error("Use the @lume/web scripts to isolate preview credentials");
@@ -9,7 +10,8 @@ export default {
   transpilePackages: ["@lume/types", "@lume/blocks"],
   htmlLimitedBots: /.*/,
   poweredByHeader: false,
-  webpack(config) {
+  webpack(config, { isServer, dev }) {
+    if (!isServer && !dev) config.plugins.push(showcaseBuildAudit());
     // Vite leaves two already-broken Montserrat URLs as runtime fallbacks.
     // Preserve that behavior without changing the live stylesheet or silently
     // substituting a different font in the parity comparison.

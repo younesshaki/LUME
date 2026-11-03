@@ -1,0 +1,39 @@
+Slice 5a only. Application implementation: b991a8679202eb653d3a1eed75ed8f10edd91357.
+Fresh branch feat/phase5a-showcase-framework based directly on staging 2f22f6f.
+PR #103 is reference only and remains unmerged. No showcase-poc folder/code path is shipped.
+
+Clean web .next/next-env.d.ts/tsconfig.tsbuildinfo deleted before bare tsc; real npm ci, no node_modules directory symlink.
+
+Required local gates (exit code):
+typecheck-all 0
+web-build 0
+all-checks 0
+vite-build 0
+migrations 0
+diff-check 0
+
+Commands:
+ npm run typecheck:all
+ npm run build --workspace=@lume/web (includes boundaries)
+ node --import tsx --conditions=react-server --test apps/web/checks/*.check.mjs
+ npm run build (existing Vite)
+ npm run check:migrations
+ git diff --check
+
+68/68 checks: 55 existing +3 showcase boundary/media +10 loader/ownership/entry cases.
+Browser verifier: npm run verify:showcase --workspace=@lume/web, with only public WEB_PREVIEW_R2_PUBLIC_BASE_URL and external SHOWCASE_EVIDENCE_DIR.
+PASS 18 recorded cases: raw HTML/noindex/h1 for all 3 routes, five invalid/unknown/draft selectors (404), visible suspense, live reduced-motion toggle, landing->intro->experience, model error/retry, empty GLB, mobile reduced-motion demand frames, missing WebAssembly, failed WebGL initialization, navigation during delayed decoder init, and JavaScript-disabled navigation for all 3 routes.
+PASS all browser-page error listeners: zero unhandled browser errors, zero hydration errors. Successful rendering: zero console errors. Expected failing-model/renderer tests retain their explicit error states.
+PASS same-origin decoder fetches HTTP200, no gstatic requests. Two decoder workers terminated; one owned bitmap closed; actual texture/buffer/program deletes and context loss on normal exit. Late decoder cancellation also terminates both workers, closes bitmap/revokes blobs, creates zero canvas contexts.
+PASS Back/refresh restore scrollY700 with an active new rendered context. Live reduced-motion preference stops/resumes frames without reloading the model.
+
+PASS 150 compiled outputs; zero inherited configured credential matches
+PASS environment firewall, Vite/admin/shared code/config and existing lock entries unchanged; no test CORS or gstatic fallback or process.env in runtime showcase
+
+Decoder SHA256/size receipt matches both unmodified pinned files from three@0.164.1. Real clean npm ci --legacy-peer-deps succeeds. New wasm is tracked explicitly; no R2 model binary is committed.
+
+R2 direct/hosted model-render gate remains OPEN: normal browser fails missing allow-origin. Controlled rendering uses the exact real R2 GLB bytes with a Playwright-only CORS response header. No such workaround in runtime code. Preview binding was read-only checked and matches the selected public origin. No bucket/CORS/env/production/admin/tenant setting or data changed. No hosted Next deployment.
+Software ANGLE/SwiftShader only; no physical iOS/Android/performance/parity claim. No 5b-5e work or traffic cutover. Full choreography/audio/postprocessing and production content parity remain later slices.
+
+Root Vitest/admin build and branch GitHub CI were not run/claimed for this slice. No SFTP test modified or masked.
+At preparation time push/PR publication still requires Josh approval. Evidence commit also makes operator consent setup skip origin-less about:blank documents; application runtime unchanged.

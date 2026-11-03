@@ -1,0 +1,119 @@
+/* Shared cinematic CSS locks the viewport. Reset only while this player exists;
+   retained route CSS stops matching after exit and cannot alter Vite/shared CSS. */
+html:has(.showcase),
+body.standardMode:has(.showcase) {
+  height: auto;
+  overflow: visible;
+}
+.showcase {
+  color: #f4ede1;
+  background: #15171d;
+  font-family: system-ui, sans-serif;
+  min-height: 100svh;
+}
+.showcase__header {
+  max-width: 64rem;
+  margin: auto;
+  padding: 2rem 1.5rem;
+}
+.showcase h1,
+.showcase h2 {
+  font-family: inherit;
+  line-height: 1.15;
+  color: inherit;
+}
+.showcase h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}
+.showcase__header nav {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+  display: flex;
+  gap: 1rem;
+  background: #15171d;
+  border: 1px solid #ebc995;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+.showcase a {
+  color: #ebc995;
+  text-decoration: underline;
+}
+.showcase__reserved {
+  height: 100svh;
+  position: relative;
+}
+.showcase--experience .showcase__reserved {
+  height: 260svh;
+}
+.showcase__sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1rem 5rem;
+}
+.showcase__canvas {
+  flex: 1;
+  min-height: 0;
+}
+.showcase__state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 2rem;
+  text-align: center;
+}
+.showcase__state button,
+.showcase__button {
+  padding: 0.8rem 1.3rem;
+  border: 1px solid #ebc995;
+  border-radius: 0.4rem;
+  background: #15171d;
+  color: #ebc995;
+  cursor: pointer;
+}
+.showcase :focus-visible {
+  outline: 3px solid #ebc995;
+  outline-offset: 3px;
+}
+.showcase__caption,
+.showcase [role="status"] {
+  padding: 0.75rem;
+  margin: 0;
+  font-size: 0.95rem;
+}
+.showcase__landing,
+.showcase__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem 1rem 6rem;
+  text-align: center;
+}
+.showcase__narrative {
+  position: absolute;
+  bottom: 0;
+  left: 1.5rem;
+  max-width: 40rem;
+  padding: 1.5rem 0 6rem;
+}
+.showcase__nojs {
+  padding: 2rem 1.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .showcase--experience .showcase__reserved {
+    height: 100svh;
+  }
+  .showcase__narrative {
+    position: relative;
+    padding: 1rem 1.5rem 6rem;
+  }
+}
