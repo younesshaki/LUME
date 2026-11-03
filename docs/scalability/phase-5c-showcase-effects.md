@@ -1,6 +1,6 @@
 # Phase 5c — scenes 4–8 and owned bloom
 
-Application/evidence commit **`10d0d67beecfa06292d00f377149bc8d436269ea`**, branch `feat/phase5c-showcase-effects`, based directly on staging **`2a9fbe0299`**. This is the next reviewable **5c batch**, not a claim that every remaining scene has shipped. Scenes 9–12 are reserved for **5c-2**; audio remains 5d, hosted rendering/physical-device/visual parity remains 5e. No push, deployment, traffic cutover, database or remote configuration change was performed during preparation.
+Application/evidence commit **`636819074df1813032d0b8c65c89a794b3c5d08c`**, branch `feat/phase5c-showcase-effects`, based directly on staging **`2a9fbe0299`**. This is the next reviewable **5c batch**, not a claim that every remaining scene has shipped. Scenes 9–12 are reserved for **5c-2**; audio remains 5d, hosted rendering/physical-device/visual parity remains 5e. No push, deployment, traffic cutover, database or remote configuration change was performed during preparation.
 
 **Local gates pass; hosted R2 model rendering remains blocked.** All successful model screenshots use the exact real R2 bytes with a **Playwright-only CORS response header**. They prove local rendering/lifetimes, not hosted success. Normal direct browser CORS failure is separately captured. No application proxy, CORS bypass or firewall change was added.
 
@@ -42,9 +42,11 @@ Legacy `part=6&chapter=0` is still the only admitted chapter; unknown tenants, d
 
 [Resolved versions and peer ranges](evidence/phase-5c/resolved-dependencies.json). No root dependency upgrade occurred.
 
-`ShowcaseEffects.tsx` lives entirely in the scoped client-only showcase island. It uses the package's React composer with one additive Bloom: intensity **.25**, threshold **.85**, smoothing **.2**, mipmap blur **5 levels**, half-float buffers. MSAA, normal/depth/stencil passes and animated glitch/noise are disabled. There is no N8AO pass. Reduced motion **unmounts the entire effects subtree** and uses the existing stable camera/demand rendering/manual scene controls. The module bytes still download on the experience route; reduced motion avoids composer allocation/rendering, not the code download.
+`ShowcaseEffects.tsx` lives entirely in the scoped client-only showcase island. It integrates the core `postprocessing` composer directly with R3F and one additive Bloom: intensity **.25**, threshold **.85**, smoothing **.2**, mipmap blur **5 levels**, half-float buffers. MSAA, normal/depth/stencil passes and animated glitch/noise are disabled. There is no N8AO pass. Reduced motion **unmounts the entire effects subtree** and uses the existing stable camera/demand rendering/manual scene controls. The module bytes still download on the experience route; reduced motion avoids composer allocation/rendering, not the code download.
 
-The pinned wrapper removes effect passes on React teardown but **does not call composer.dispose()**. Relying on React unmount alone would retain buffers. `ownComposer()` snapshots the attached passes, so a removed EffectPass cannot disappear from teardown ownership. It disposes orphaned pass snapshots and the remaining composer exactly once per lease; EffectPass disposal releases Bloom's internal targets/materials. The wrapper Bloom has `dispose={null}`, preventing R3F from independently disposing that same owned object. The renderer-local owner also immediately releases a late attachment after closure. Reduced-motion detach can release a lease and admit a fresh one when motion returns.
+The initial React wrapper barrel imported an unused N8AO payload and did not dispose its composer automatically. **The final runtime no longer imports that wrapper.** Core composer/pass construction happens in a layout effect, with initialization-failure cleanup, explicit tone-mapping/auto-clear restoration, resize handling and an owned priority-1 R3F render callback. No dependency patch, deep import or webpack exception is used. The originally requested wrapper version stays pinned in web's dependencies but emits no production module.
+
+`ownComposer()` snapshots the passes, so removal ordering cannot hide an EffectPass from teardown. It disposes orphaned pass snapshots and the remaining composer exactly once per lease; EffectPass disposal releases Bloom's internal targets/materials. The pure core objects are never attached as R3F intrinsics, so R3F does not independently dispose them. The renderer-local owner releases late attachments and supports reduced-motion detach/reattach.
 
 On scene exit, R3F rendering is stopped, the composer owner is closed **before renderer.dispose()/context loss**, and the original model hook releases its own geometry/materials/textures/bitmaps/decoder state. A ref detach may happen before the DOM owner's close; the lease is idempotent in either order. The old renderer is never kept in a scene pool.
 
@@ -93,35 +95,37 @@ The final run passes **20 named browser cases plus 16 measured transitions**, wi
 
 The [controlled cost receipt](evidence/phase-5c/effects-cost.json) compares an eight-scene production build **before importing/instantiating effects** with this final eight-scene build. Both had the same pinned dependency declarations. It includes full raw receipts and baseline source hashes; it is not a sum of npm package sizes. Reproduce the control in a throwaway worktree using the final lock/dependencies but `ShowcaseCanvas.tsx` from the preceding scene-only commit `865934b`; the unreferenced effects files do not enter the graph. No runtime switch or firewall exception is needed.
 
-| Async island                     |     JS bytes | Per-file gzip sum |
-| -------------------------------- | -----------: | ----------------: |
-| Eight scenes, no effects runtime |      753,443 |           203,351 |
-| Eight scenes plus owned effects  |      926,865 |           290,914 |
-| **Effects integration overhead** | **+173,422** |       **+87,563** |
+| Async island                                     |    JS bytes | Per-file gzip sum |
+| ------------------------------------------------ | ----------: | ----------------: |
+| Eight scenes, no effects runtime                 |     753,443 |           203,351 |
+| With the unused wrapper/N8AO barrel (historical) |     926,865 |           290,914 |
+| **Final: direct core composer, no N8AO**         | **822,479** |       **220,306** |
+| Effects overhead before cleanup                  |    +173,422 |           +87,563 |
+| **Final effects overhead**                       | **+69,036** |       **+16,955** |
+| **Saved by dropping the barrel**                 | **104,386** |        **70,608** |
 
-That delta includes the wrapper, core effects, ownership integration, added Three code and chunk repartitioning. The published wrapper's barrel retains an **unused N8AO payload: 87,856 bytes /66,255 gzip**. No N8AO effect is mounted. A scoped Next `optimizePackageImports` experiment did not remove it and was reverted; no ineffective config change is shipped. This overhead is disclosed for review and 5e performance budgeting, not silently attributed only to bloom shaders. Remaining effects integration overhead after that payload is 85,566 bytes /21,308 gzip. No dependency-source patch or custom fork was introduced to trim it.
+The historical unused N8AO chunk alone was **87,856 bytes /66,255 gzip**. Dropping the runtime barrel import also removes wrapper overhead, for a combined **70,608 gzip bytes saved**. **N8AO now has zero emitted production modules**, enforced by `verify:showcase`; no N8AO pass is mounted. [Before-cleanup receipt](evidence/phase-5c/with-n8ao-bundle.json) and final receipt are both committed. The delta includes the core effects, owned integration, added Three code and chunk repartitioning, not just shader text. The ineffective Next import-optimization experiment was reverted; `next.config.mjs` remains unchanged. No dependency-source patch, fork or boundary exemption was introduced.
 
 [Full emitted module/chunk receipt](evidence/phase-5c/bundle-receipt.json), with request proof in `report.json`:
 
 | Fresh route            | HTTP |  JS bytes | Gzip bytes | Heavy chunks requested |
 | ---------------------- | ---: | --------: | ---------: | ---------------------: |
-| `/`                    |  200 |   915,903 |    291,205 |                      0 |
-| `/vehicles`            |  200 |   437,161 |    131,603 |                      0 |
-| `/showcase`            |  200 |   446,334 |    135,126 |                      0 |
-| `/showcase/intro`      |  200 |   446,370 |    135,145 |                      0 |
-| `/intro`               |  404 |   432,952 |    129,874 |                      0 |
-| `/showcase/experience` |  200 | 1,372,584 |    425,648 |                      6 |
+| `/`                    |  200 |   915,863 |    291,183 |                      0 |
+| `/vehicles`            |  200 |   437,121 |    131,581 |                      0 |
+| `/showcase`            |  200 |   446,284 |    135,098 |                      0 |
+| `/showcase/intro`      |  200 |   446,320 |    135,117 |                      0 |
+| `/intro`               |  404 |   432,912 |    129,852 |                      0 |
+| `/showcase/experience` |  200 | 1,268,148 |    355,012 |                      5 |
 
-The real intro is `/showcase/intro`; literal `/intro` remains **404** and also loads no engine. All six heavy chunks load only on `/showcase/experience`. They are asynchronous experience assets, not additions to the lighter routes. Leva and r3f-perf each have **0 emitted production modules**.
+The real intro is `/showcase/intro`; literal `/intro` remains **404** and also loads no engine. All 5 heavy chunks load only on `/showcase/experience`. They are asynchronous experience assets, not additions to the lighter routes. Leva and r3f-perf each have **0 emitted production modules**.
 
 | Heavy chunk                    | JS bytes | Gzip bytes |
 | ------------------------------ | -------: | ---------: |
-| `4570.c439261ba1eac63c.js`     |   17,824 |      6,929 |
-| `9d78c252.954df95cd9526de9.js` |  518,276 |    128,192 |
-| `b0045e08.21f4cdd8634adce5.js` |   77,565 |     18,077 |
-| `d1830524.7c706078032c5a92.js` |   87,856 |     66,255 |
+| `4570.33f4cadaeba96381.js`     |   18,325 |      7,120 |
+| `9d78c252.eec5dc9b316a97e1.js` |  517,593 |    127,972 |
+| `b0045e08.a242a15e58e924f1.js` |   66,151 |     16,071 |
 | `1329d575.685714fd1c99a513.js` |  109,698 |     33,957 |
-| `1225.289cd1c35eeeeeaf.js`     |  115,646 |     37,504 |
+| `7655.6fabb6cec9e21f6a.js`     |  110,712 |     35,186 |
 
 These are emitted minified byte sizes and sums of per-file gzip, not Brotli transfer/LCP/TTI. Separate model/decoder bodies remain 603,908 +250,876 bytes. Downloaded JS can remain cached after leaving; mounted model/composer/worker state must be released. The selected source model/art and missing videos remain media-parity work.
 
@@ -138,7 +142,7 @@ Real `npm ci --legacy-peer-deps`; no node_modules directory symlink. Web `.next`
 | Existing `npm run build` (Vite)                                    | PASS                                                                                                        |
 | `npm run check:migrations`                                         | PASS: 92 sequential files, no changes                                                                       |
 | `git diff --check`                                                 | PASS                                                                                                        |
-| Compiled graph and scoped credential scan                          | PASS: 114 JS files, 0 configured inherited credential matches; no client admin/db/rag/Leva/r3f-perf modules |
+| Compiled graph and scoped credential scan                          | PASS: 113 JS files, 0 configured inherited credential matches; no client admin/db/rag/Leva/r3f-perf modules |
 | Lockfile comparison                                                | PASS: all pre-existing entries preserved except added web requirements                                      |
 
 The credential scan is limited to configured inherited values; no secret names/values are recorded and no universal secret-detection claim is made. Boundary graph enforcement remains the independent structural check. Root Vitest/admin build and branch GitHub CI have not been run/claimed for this unpublished slice; no SFTP test was changed or masked.
@@ -163,6 +167,6 @@ The verifier runs a local production Next process with isolated loopback tenant/
 - **5c-2:** scenes 9–11 and the separate product-choice/scene-12/CTA phase. Their final state/navigation/asset semantics need a separate review; none are hidden in this batch.
 - **5d:** actual audio implementation and consent-aware playback. The inherited bridge remains in place with disabled audio; no audio work started here.
 - **5e:** hosted/direct R2 model proof, source-video/media decisions, lighting/bloom visual approval, physical iOS/Android GPU/performance and full parity. R2 still returns no ACAO for the Preview origin. Successful screenshots add the header in Playwright only; no hosted deployment or CORS configuration was touched.
-- **Cost/latency:** repeated scene parses keep exclusive ownership and may show a loading fallback. Composer adds the measured payload and 11 active targets; half-float buffers, DPR cap and no MSAA bound choices but do not establish a physical-device budget. Target-size/memory tuning and the retained N8AO bytes need performance review before rollout.
+- **Cost/latency:** repeated scene parses keep exclusive ownership and may show a loading fallback. Composer adds the measured payload and 11 active targets; half-float buffers, DPR cap and no MSAA bound choices but do not establish a physical-device budget. Target-size/memory tuning and the remaining 16,955-gzip-byte effects overhead need performance review before rollout; N8AO is removed.
 
-Recommendation: **review this 5c batch's lifecycle and cost evidence; keep rollout gates open.** Preparing one draft PR titled **“Phase 5c — remaining scenes + postprocessing”** into staging requires Josh's push approval. No merge, deployment, traffic cutover, 5c-2 or 5d work follows without review.
+Recommendation: **review this 5c batch's lifecycle and cost evidence; keep rollout gates open.** Josh approved pushing this branch and opening one draft PR titled **“Phase 5c — remaining scenes + postprocessing”** into staging; no merge or deployment. No merge, deployment, traffic cutover, 5c-2 or 5d work follows without review.

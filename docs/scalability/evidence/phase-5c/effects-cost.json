@@ -27,6 +27,48 @@
     ]
   },
   "withEffects": {
+    "bytes": 822479,
+    "gzipBytes": 220306,
+    "chunks": [
+      {
+        "name": "static/chunks/4570.33f4cadaeba96381.js",
+        "bytes": 18325,
+        "gzipBytes": 7120
+      },
+      {
+        "name": "static/chunks/9d78c252.eec5dc9b316a97e1.js",
+        "bytes": 517593,
+        "gzipBytes": 127972
+      },
+      {
+        "name": "static/chunks/b0045e08.a242a15e58e924f1.js",
+        "bytes": 66151,
+        "gzipBytes": 16071
+      },
+      {
+        "name": "static/chunks/1329d575.685714fd1c99a513.js",
+        "bytes": 109698,
+        "gzipBytes": 33957
+      },
+      {
+        "name": "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "bytes": 110712,
+        "gzipBytes": 35186
+      }
+    ]
+  },
+  "addedBytes": 69036,
+  "addedGzipBytes": 16955,
+  "postprocessingModules": [
+    {
+      "resource": "node_modules/postprocessing/build/index.js",
+      "chunks": [
+        "static/chunks/b0045e08.a242a15e58e924f1.js"
+      ]
+    }
+  ],
+  "optimizationExperiment": "Next import optimization did not eliminate the barrel side effect and was reverted. Final code removes the wrapper barrel runtime import entirely and integrates the core composer directly; no aliases, dependency patches or boundary changes.",
+  "withUnusedBarrel": {
     "bytes": 926865,
     "gzipBytes": 290914,
     "chunks": [
@@ -62,116 +104,14 @@
       }
     ]
   },
-  "addedBytes": 173422,
-  "addedGzipBytes": 87563,
-  "postprocessingModules": [
-    {
-      "resource": "node_modules/postprocessing/build/index.js",
-      "chunks": [
-        "static/chunks/b0045e08.21f4cdd8634adce5.js"
-      ]
-    },
-    {
-      "resource": "node_modules/n8ao/dist/N8AO.js",
-      "chunks": [
-        "static/chunks/d1830524.7c706078032c5a92.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/dist/index.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/maath.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/buffer-d2a4726c.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/index-43782085.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/easing-3be59c6d.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/geometry-982366ff.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/matrix-baa530bf.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/misc-7d870b3c.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/triangle-b62b9067.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/three-eb2ad8c0.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/vector2-d2bf51f1.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/vector3-0a088b7f.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/objectSpread2-284232a6.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/classCallCheck-9098b006.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    },
-    {
-      "resource": "apps/web/node_modules/@react-three/postprocessing/node_modules/maath/dist/isNativeReflectConstruct-5594d075.esm.js",
-      "chunks": [
-        "static/chunks/1225.289cd1c35eeeeeaf.js"
-      ]
-    }
-  ],
-  "unusedN8AOPayload": {
+  "beforeCleanupAddedBytes": 173422,
+  "beforeCleanupAddedGzipBytes": 87563,
+  "savedGzipBytes": 70608,
+  "savedBytes": 104386,
+  "historicalUnusedN8AOPayload": {
     "name": "static/chunks/d1830524.7c706078032c5a92.js",
     "bytes": 87856,
     "gzipBytes": 66255
   },
-  "optimizationExperiment": "Next optimizePackageImports for the published wrapper entry did not remove N8AO. Configuration was reverted; final next.config.mjs is unchanged. No N8AO pass is mounted."
+  "emittedN8AOModules": 0
 }

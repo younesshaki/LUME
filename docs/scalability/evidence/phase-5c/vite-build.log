@@ -3,7 +3,7 @@
 > tsc && vite build
 
 vite v5.4.21 building for production...
-(node:37388) [vite-plugin-glsl] Warning: 'esbuild' was not found.
+(node:42670) [vite-plugin-glsl] Warning: 'esbuild' was not found.
 Please install it as a dev dependency if your vite version does not use rolldown.
 (Use `node --trace-warnings ...` to show where the warning was created)
 transforming...
@@ -92,7 +92,7 @@ dist/assets/index-DqdmyiMO.js                           1,072.99 kB │ gzip: 33
 - Using dynamic import() to code-split the application
 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 8.83s
+✓ built in 8.54s
 npm notice
 npm notice New major version of npm available! 11.9.0 -> 12.2.1
 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
