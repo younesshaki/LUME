@@ -1,9 +1,9 @@
 "use client";
 import type { EffectComposer } from "postprocessing";
 
-/** react-postprocessing 3.0.4 removes passes on React teardown but does not
- * dispose its composer. Snapshot passes at attachment so detach order cannot
- * hide an EffectPass (and its BloomEffect targets) from the owner.
+/** Snapshot the exclusively owned passes so detach/removal ordering cannot
+ * hide an EffectPass (and its BloomEffect targets) from the owner. The renderer
+ * and the R3F layout cleanup can both close this lease; release is idempotent.
  */
 export function ownComposer(composer: EffectComposer) {
   const passes = [...composer.passes];

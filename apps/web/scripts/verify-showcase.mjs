@@ -368,12 +368,20 @@ try {
     ).length,
     0,
   );
+  assert.equal(
+    receipt.modules.filter((m) =>
+      /(?:^|\/)node_modules\/n8ao\//.test(m.resource),
+    ).length,
+    0,
+    "unused N8AO must not return through a barrel import",
+  );
   report.bundle = {
     source: receipt.source,
     heavyChunks: heavy.map((c) => byName.get(c)),
     moduleChunkReceipt: dependencies,
     emittedLevaModules: 0,
     emittedPerfModules: 0,
+    emittedN8AOModules: 0,
   };
   const remote = await fetch(modelUrl, {
     headers: { Origin: origin },
