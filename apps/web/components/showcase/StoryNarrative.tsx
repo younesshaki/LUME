@@ -30,9 +30,14 @@ export default function StoryNarrative({
         </p>
       )}
       {scene.id === "showcase-scene-12" && (
-        <Link href={`/?tenant=${encodeURIComponent(tenant)}`} prefetch={false}>
-          Continue
-        </Link>
+        <p>
+          <Link
+            href={`/?tenant=${encodeURIComponent(tenant)}`}
+            prefetch={false}
+          >
+            Continue
+          </Link>
+        </p>
       )}
       <span className="showcase__bridge-status">
         Audio unavailable in this preview · consent{" "}
