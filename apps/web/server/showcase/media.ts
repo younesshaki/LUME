@@ -1,9 +1,13 @@
 import "server-only";
 import type { ShowcaseAssets } from "../../components/showcase/types";
+import { sceneManifest, modelKeys } from "./scene-manifest";
 
 /** Only server configuration chooses this origin; no request-controlled URL/key. */
 export function showcaseAssets(base: string | undefined): ShowcaseAssets {
-  if (!base) return { modelUrl: null };
+  if (!base)
+    return {
+      scenes: sceneManifest.map((scene) => ({ ...scene, modelUrl: null })),
+    };
   let origin: URL;
   try {
     origin = new URL(base);
@@ -20,6 +24,9 @@ export function showcaseAssets(base: string | undefined): ShowcaseAssets {
   )
     throw new Error("Invalid public preview media origin");
   return {
-    modelUrl: `${origin.href.replace(/\/$/, "")}/vehicle%20images/3D%20assets/blackredbull6.optimized.glb`,
+    scenes: sceneManifest.map((scene) => ({
+      ...scene,
+      modelUrl: `${origin.href.replace(/\/$/, "")}/${modelKeys[scene.id]}`,
+    })),
   };
 }

@@ -12,10 +12,15 @@ import { join } from "node:path";
 import { showcaseAssets } from "../server/showcase/media.ts";
 import { inspectBoundaries } from "../scripts/check-boundaries.mjs";
 
-test("showcase media uses only an explicit public HTTPS binding and one real catalog asset", () => {
-  assert.deepEqual(showcaseAssets(undefined), { modelUrl: null });
+test("showcase scene manifest uses only the explicit HTTPS binding and fixed server-owned keys", () => {
+  assert.equal(showcaseAssets(undefined).scenes.length, 3);
+  assert.ok(showcaseAssets(undefined).scenes.every((s) => s.modelUrl === null));
+  assert.deepEqual(
+    showcaseAssets(undefined).scenes.map((s) => s.id),
+    ["showcase-scene-1", "showcase-scene-2", "showcase-scene-3"],
+  );
   assert.equal(
-    showcaseAssets("https://preview.r2.dev/").modelUrl,
+    showcaseAssets("https://preview.r2.dev/").scenes[0].modelUrl,
     "https://preview.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
   );
   for (const base of [

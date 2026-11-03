@@ -20,6 +20,11 @@ import {
 } from "three";
 import type { OwnedModel } from "./model-resource";
 import OpeningScene from "./OpeningScene";
+import CameraRig from "./CameraRig";
+import { cameraAt } from "./camera-path";
+import { StoryProvider } from "./StoryBridge";
+import type { StoryStore } from "./story-store";
+import type { ShowcaseScene } from "./types";
 
 extend({
   Group,
@@ -51,9 +56,13 @@ class SceneBoundary extends Component<
 export default function ShowcaseCanvas({
   model,
   reduced,
+  scene,
+  store,
 }: {
   model: OwnedModel;
   reduced: boolean;
+  scene: ShowcaseScene;
+  store: StoryStore;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null),
     preference = useRef(reduced),
@@ -102,8 +111,11 @@ export default function ShowcaseCanvas({
           failed={(failure) => queueMicrotask(() => fail(failure))}
         >
           <Suspense fallback={null}>
-            <color attach="background" args={["#15171d"]} />
-            <OpeningScene model={model} reduced={preference.current} />
+            <StoryProvider store={store}>
+              <color attach="background" args={["#15171d"]} />
+              <OpeningScene model={model} reduced={preference.current} />
+              <CameraRig scene={scene} />
+            </StoryProvider>
           </Suspense>
         </SceneBoundary>,
       );
@@ -142,7 +154,13 @@ export default function ShowcaseCanvas({
           gl: renderer,
           events,
           dpr: [1, 1.5],
-          camera: { position: [-1.2, 0.8, 6.4], fov: 48 },
+          camera: {
+            position: cameraAt(
+              scene,
+              preference.current ? 0 : store.getSnapshot().sceneProgress,
+            ),
+            fov: 48,
+          },
           size: {
             width: Math.max(1, size.width),
             height: Math.max(1, size.height),
@@ -166,7 +184,7 @@ export default function ShowcaseCanvas({
     };
     void start();
     return close;
-  }, [model]);
+  }, [model, scene, store]);
   useEffect(() => refresh.current?.(), [reduced]);
   if (error) throw error;
   return (

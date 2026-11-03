@@ -1,28 +1,58 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
-import type { ShowcaseProps } from "./types";
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import type { ShowcaseProps, ShowcaseScene } from "./types";
 import { useDisposableGLTF } from "./useDisposableGLTF";
 import type { ModelResource } from "./model-resource";
 import ModelBoundary, { LoadingModel } from "./ModelBoundary";
 import ShowcaseCanvas from "./ShowcaseCanvas";
+import { createStoryStore, type StoryStore } from "./story-store";
+import { StoryProvider } from "./StoryBridge";
+import { useStoryScroll } from "./useStoryScroll";
+import StoryNarrative from "./StoryNarrative";
+import StoryConsent from "./StoryConsent";
 function Viewport({
   resource,
   reduced,
+  scene,
+  store,
 }: {
   resource: ModelResource;
   reduced: boolean;
+  scene: ShowcaseScene;
+  store: StoryStore;
 }) {
   const model = resource.read();
   return (
     <>
       <div className="showcase__canvas">
-        <ShowcaseCanvas model={model} reduced={reduced} />
+        <ShowcaseCanvas
+          model={model}
+          reduced={reduced}
+          scene={scene}
+          store={store}
+        />
       </div>
       <p role="status">The product is ready to explore.</p>
     </>
   );
 }
-function ModelView({ url, reduced }: { url: string; reduced: boolean }) {
+function ModelView({
+  url,
+  reduced,
+  scene,
+  store,
+}: {
+  url: string;
+  reduced: boolean;
+  scene: ShowcaseScene;
+  store: StoryStore;
+}) {
   const [attempt, setAttempt] = useState(0);
   const resource = useDisposableGLTF(url, attempt);
   return (
@@ -33,7 +63,12 @@ function ModelView({ url, reduced }: { url: string; reduced: boolean }) {
     >
       <Suspense fallback={<LoadingModel />}>
         {resource ? (
-          <Viewport resource={resource} reduced={reduced} />
+          <Viewport
+            resource={resource}
+            reduced={reduced}
+            scene={scene}
+            store={store}
+          />
         ) : (
           <LoadingModel />
         )}
@@ -41,9 +76,18 @@ function ModelView({ url, reduced }: { url: string; reduced: boolean }) {
     </ModelBoundary>
   );
 }
-export default function Experience({ assets }: ShowcaseProps) {
+export default function Experience({ assets, tenant }: ShowcaseProps) {
+  const [store] = useState(() => createStoryStore(assets.scenes[0].id));
+  const sceneId = useSyncExternalStore(
+    store.subscribe,
+    () => store.getSnapshot().sceneId,
+    () => assets.scenes[0].id,
+  );
+  const scene = assets.scenes.find((s) => s.id === sceneId)!;
+  const element = useRef<HTMLElement>(null);
   const [reduced, setReduced] = useState(true);
   const [wasm, setWasm] = useState<boolean | null>(null);
+  const select = useStoryScroll(element, assets.scenes, store, reduced);
   useEffect(() => {
     const query = matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReduced(query.matches);
@@ -53,42 +97,57 @@ export default function Experience({ assets }: ShowcaseProps) {
     return () => query.removeEventListener("change", update);
   }, []);
   return (
-    <section
-      className="showcase__reserved showcase__experience"
-      data-motion={reduced ? "reduced" : "full"}
-    >
-      <div className="showcase__sticky">
-        <p className="showcase__caption">
-          A cinematic product study.
-          {reduced ? " Reduced motion is enabled." : ""}
-        </p>
-        {!assets.modelUrl ? (
-          <div className="showcase__state" role="status">
-            <h2>No 3D view is available</h2>
-            <p>Product information and navigation remain available.</p>
-          </div>
-        ) : wasm === false ? (
-          <div className="showcase__state" role="status">
-            <p>
-              This view needs WebGL and WebAssembly. Product information and
-              navigation remain available.
-            </p>
-          </div>
-        ) : wasm === null ? (
-          <LoadingModel />
-        ) : (
-          <ModelView
-            key={assets.modelUrl}
-            url={assets.modelUrl}
-            reduced={reduced}
-          />
-        )}
-      </div>
-      <div className="showcase__narrative">
-        <p>Every scene can carry a feature, a detail, or a proof point.</p>
-        <p>The structure is ready.</p>
-        <p>The brand story can now take its place.</p>
-      </div>
-    </section>
+    <StoryProvider store={store}>
+      <section
+        ref={element}
+        className="showcase__reserved showcase__experience"
+        data-motion={reduced ? "reduced" : "full"}
+        data-active-scene={scene.id}
+      >
+        <div className="showcase__sticky">
+          <p className="showcase__caption">
+            A cinematic product study.
+            {reduced ? " Reduced motion is enabled." : ""}
+          </p>
+          <nav className="showcase__scene-picker" aria-label="Story scenes">
+            {assets.scenes.map((s, i) => (
+              <button
+                type="button"
+                key={s.id}
+                aria-current={s.id === scene.id ? "step" : undefined}
+                onClick={() => select(i)}
+              >
+                {s.title}
+              </button>
+            ))}
+          </nav>
+          {!scene.modelUrl ? (
+            <div className="showcase__state" role="status">
+              <h2>No 3D view is available</h2>
+              <p>Product information and navigation remain available.</p>
+            </div>
+          ) : wasm === false ? (
+            <div className="showcase__state" role="status">
+              <p>
+                This view needs WebGL and WebAssembly. Product information and
+                navigation remain available.
+              </p>
+            </div>
+          ) : wasm === null ? (
+            <LoadingModel />
+          ) : (
+            <ModelView
+              key={scene.id}
+              url={scene.modelUrl}
+              reduced={reduced}
+              scene={scene}
+              store={store}
+            />
+          )}
+          <StoryNarrative scene={scene} />
+        </div>
+      </section>
+      <StoryConsent tenant={tenant} store={store} />
+    </StoryProvider>
   );
 }

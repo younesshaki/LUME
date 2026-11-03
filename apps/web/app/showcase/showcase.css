@@ -46,7 +46,7 @@ body.standardMode:has(.showcase) {
   position: relative;
 }
 .showcase--experience .showcase__reserved {
-  height: 260svh;
+  height: 700svh;
 }
 .showcase__sticky {
   position: sticky;
@@ -98,12 +98,63 @@ body.standardMode:has(.showcase) {
   padding: 2rem 1rem 6rem;
   text-align: center;
 }
-.showcase__narrative {
-  position: absolute;
-  bottom: 0;
-  left: 1.5rem;
+.showcase__story {
   max-width: 40rem;
-  padding: 1.5rem 0 6rem;
+  padding: 0.5rem;
+  min-height: 9rem;
+}
+.showcase__story h2 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+.showcase__cue {
+  min-height: 3em;
+}
+.showcase__bridge-status {
+  font-size: 0.75rem;
+}
+.showcase__scene-picker {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.showcase__scene-picker button {
+  background: transparent;
+  color: #ebc995;
+  border: 1px solid currentColor;
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+.showcase__scene-picker button[aria-current] {
+  background: #ebc995;
+  color: #15171d;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+.showcase__experience[data-motion="reduced"] .showcase__sticky {
+  min-height: 100svh;
+  height: auto;
+}
+.showcase__experience[data-motion="reduced"] .showcase__canvas {
+  min-height: 35svh;
+}
+.showcase__experience[data-motion="reduced"] {
+  height: auto;
+  min-height: 100svh;
+}
+@media (max-height: 600px) and (prefers-reduced-motion: no-preference) {
+  .showcase__sticky {
+    padding-bottom: 4rem;
+  }
+  .showcase__story {
+    min-height: 7rem;
+    font-size: 0.85rem;
+  }
 }
 .showcase__nojs {
   padding: 2rem 1.5rem;
@@ -111,9 +162,5 @@ body.standardMode:has(.showcase) {
 @media (prefers-reduced-motion: reduce) {
   .showcase--experience .showcase__reserved {
     height: 100svh;
-  }
-  .showcase__narrative {
-    position: relative;
-    padding: 1rem 1.5rem 6rem;
   }
 }

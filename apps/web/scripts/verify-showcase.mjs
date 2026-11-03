@@ -104,11 +104,28 @@ function browserAudit() {
     workersCreated: 0,
     workersTerminated: 0,
     bitmapsClosed: 0,
+    audioContexts: 0,
+    mediaPlayCalls: 0,
     contexts: [],
     blobsCreated: 0,
     blobsRevoked: 0,
   };
   window.__showcaseAudit = audit;
+  for (const key of ["AudioContext", "webkitAudioContext"]) {
+    const Original = window[key];
+    if (Original)
+      window[key] = class extends Original {
+        constructor(...args) {
+          super(...args);
+          audit.audioContexts++;
+        }
+      };
+  }
+  const mediaPlay = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function (...args) {
+    audit.mediaPlayCalls++;
+    return mediaPlay.apply(this, args);
+  };
   const workers = new WeakSet(),
     oldWorker = window.Worker;
   window.Worker = class extends oldWorker {
@@ -171,6 +188,27 @@ function browserAudit() {
     return gl;
   };
   for (const cls of [WebGLRenderingContext, WebGL2RenderingContext]) {
+    const locations = new WeakMap(),
+      getLocation = cls.prototype.getUniformLocation,
+      writeMatrix = cls.prototype.uniformMatrix4fv;
+    cls.prototype.getUniformLocation = function (...args) {
+      const loc = getLocation.apply(this, args);
+      if (loc) locations.set(loc, args[1]);
+      return loc;
+    };
+    cls.prototype.uniformMatrix4fv = function (loc, transpose, value, ...rest) {
+      const item = contexts.get(this);
+      if (item && locations.get(loc) === "viewMatrix") {
+        const m = Array.from(value);
+        item.cameraPosition = [
+          -(m[0] * m[12] + m[1] * m[13] + m[2] * m[14]),
+          -(m[4] * m[12] + m[5] * m[13] + m[6] * m[14]),
+          -(m[8] * m[12] + m[9] * m[13] + m[10] * m[14]),
+        ];
+        item.cameraSamples = (item.cameraSamples ?? 0) + 1;
+      }
+      return writeMatrix.call(this, loc, transpose, value, ...rest);
+    };
     for (const kind of [
       "Texture",
       "Buffer",
@@ -252,7 +290,7 @@ try {
       /(?:^|\/)node_modules\/(?:@react-three\/|three\/|three-stdlib\/|react-reconciler\/|lenis\/)/.test(
         m.resource,
       ) ||
-      /components\/showcase\/(?:Experience|ShowcaseCanvas|OpeningScene|useDisposableGLTF|model-resource|loadModel|disposeModel|ModelBoundary)\./.test(
+      /components\/showcase\/(?:Experience|ShowcaseCanvas|OpeningScene|useDisposableGLTF|model-resource|loadModel|disposeModel|ModelBoundary|CameraRig|camera-path|useStoryScroll|StoryBridge|StoryConsent|StoryNarrative|story-store|story-cues)\./.test(
         m.resource,
       ),
   );
@@ -592,10 +630,215 @@ try {
     sameModelAndContext: true,
     continuousFramesStopAndResume: true,
   });
+
+  // Measure scene transitions within this document, NOT just final route exit.
+  const sceneSnapshot = async () =>
+    p.evaluate(() => ({
+      scene: document.querySelector(".showcase__experience")?.dataset
+        .activeScene,
+      localProgress: Number(
+        document.querySelector(".showcase__story")?.dataset.progress,
+      ),
+      lenisActive: document.documentElement.classList.contains("lenis"),
+      stickyTop: document
+        .querySelector(".showcase__sticky")
+        ?.getBoundingClientRect().top,
+      ...window.__showcaseAudit,
+    }));
+  const scrub = async (index, local) => {
+    // Use the real scene control first: it stops an in-flight Lenis wheel tween.
+    // Direct scrollTo during that tween is deliberately superseded by Lenis.
+    await p
+      .getByRole("button", {
+        name: ["Showcase", "Signal", "Reveal"][index],
+        exact: true,
+      })
+      .click();
+    await p.evaluate(
+      ({ index, local }) => {
+        const node = document.querySelector(".showcase__experience");
+        window.scrollTo(
+          0,
+          node.getBoundingClientRect().top +
+            scrollY +
+            ((index + local) / 3) * (node.offsetHeight - innerHeight),
+        );
+      },
+      { index, local },
+    );
+    await p.waitForFunction(
+      ({ index, local }) => {
+        const node = document.querySelector(".showcase__story");
+        return (
+          node?.dataset.scene === `showcase-scene-${index + 1}` &&
+          Math.abs(Number(node.dataset.progress) - local) < 0.01
+        );
+      },
+      { index, local },
+    );
+    await ready(p);
+    await p.waitForTimeout(1400);
+    return sceneSnapshot();
+  };
+  const near = await scrub(0, 0.15),
+    far = await scrub(0, 0.75);
+  const cameraNear = near.contexts.at(-1).cameraPosition,
+    cameraFar = far.contexts.at(-1).cameraPosition;
+  assert.ok(
+    cameraNear && cameraFar,
+    "actual GPU view matrices must be sampled",
+  );
+  assert.ok(Math.hypot(...cameraFar.map((v, i) => v - cameraNear[i])) > 0.5);
+  // Authored crane second segment at .75 = [-.15, .175, 5.4].
+  assert.ok(
+    Math.hypot(...cameraFar.map((v, i) => v - [-0.15, 0.175, 5.4][i])) < 0.03,
+  );
+  assert.ok(far.localProgress > near.localProgress);
+  assert.equal(far.lenisActive, true);
+  assert.ok(Math.abs(far.stickyTop) < 2);
+  report.choreography = {
+    near,
+    far,
+    cameraFromGPUViewUniform: true,
+    correctCranePose: true,
+  };
+  report.transitions = [];
+  let previous = far;
+  for (const [index, local] of [
+    [1, 0.35],
+    [2, 0.5],
+    [1, 0.55],
+    [0, 0.25],
+    [2, 0.7],
+    [0, 0.2],
+  ]) {
+    const current = await scrub(index, local);
+    const oldContext = current.contexts[previous.contexts.length - 1];
+    assert.equal(
+      current.contexts.length,
+      previous.contexts.length + 1,
+      "one fresh context per scene lease",
+    );
+    assert.equal(oldContext.lost, true, "old context lost at scene exit");
+    for (const kind of ["Texture", "Buffer", "Program"])
+      assert.ok(
+        oldContext.deleted[kind] > 0,
+        `${kind} released at scene transition`,
+      );
+    assert.ok(current.bitmapsClosed > previous.bitmapsClosed);
+    assert.equal(current.workersCreated, current.workersTerminated);
+    assert.equal(current.blobsCreated, current.blobsRevoked);
+    assert.ok(current.contexts.slice(0, -1).every((c) => c.lost));
+    assert.equal(current.contexts.at(-1).lost, false);
+    const angle = Math.PI / 2 + (index - 1) * 2 + local * 2;
+    const expectedCamera =
+      index > 0
+        ? [Math.cos(angle) * 5.2, 0.05, Math.sin(angle) * 5.2]
+        : local < 0.5
+          ? [-1.2 + 1.8 * local, 0.8 - local, 6.4 - 1.6 * local]
+          : [
+              -0.3 + 0.6 * (local - 0.5),
+              0.3 - 0.5 * (local - 0.5),
+              5.6 - 0.8 * (local - 0.5),
+            ];
+    assert.ok(
+      Math.hypot(
+        ...current.contexts
+          .at(-1)
+          .cameraPosition.map((v, i) => v - expectedCamera[i]),
+      ) < 0.03,
+      "actual camera follows this scene's authored crane/orbit",
+    );
+    report.transitions.push({
+      from: previous.scene,
+      to: current.scene,
+      oldContext,
+      bitmapsClosedDelta: current.bitmapsClosed - previous.bitmapsClosed,
+      workersCreated: current.workersCreated,
+      workersTerminated: current.workersTerminated,
+      blobsCreated: current.blobsCreated,
+      blobsRevoked: current.blobsRevoked,
+      liveContexts: current.contexts.filter((c) => !c.lost).length,
+      cameraPosition: current.contexts.at(-1).cameraPosition,
+      expectedCamera,
+    });
+    await p.screenshot({
+      path: path.join(out, `scene-${index + 1}-desktop.jpg`),
+    });
+    previous = current;
+    save();
+  }
+  // Consent bridge uses the existing contract; no audio even after acceptance.
+  const choices = [];
+  await c.route("**/api/consent?tenant=demo", async (r) => {
+    choices.push(JSON.parse(r.request().postData()));
+    await r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: '{"ok":true}',
+    });
+  });
+  await p
+    .getByRole("button", { name: "Cookie preferences", exact: true })
+    .click();
+  await p
+    .getByRole("button", { name: "Accept analytics", exact: true })
+    .click();
+  await p
+    .getByText("Audio unavailable in this preview · consent accepted", {
+      exact: true,
+    })
+    .waitFor();
+  await p
+    .getByRole("button", { name: "Cookie preferences", exact: true })
+    .click();
+  await p.getByRole("button", { name: "Essential only", exact: true }).click();
+  await p
+    .getByText("Audio unavailable in this preview · consent rejected", {
+      exact: true,
+    })
+    .waitFor();
+  assert.deepEqual(
+    choices.map((c) => c.choice),
+    ["accepted", "rejected"],
+  );
+  const audioAudit = await p.evaluate(() => window.__showcaseAudit);
+  assert.equal(audioAudit.audioContexts, 0);
+  assert.equal(audioAudit.mediaPlayCalls, 0);
+  assert.ok(
+    !requests.some((u) => /\.(?:mp3|mp4|ogg|wav|aac|m4a)(?:[?#]|$)/i.test(u)),
+  );
+  report.consentBridge = {
+    audioContexts: 0,
+    mediaPlayCalls: 0,
+    choices,
+    audio: "stubbed; no playback/media requests",
+  };
+  save();
+
   await p.screenshot({ path: path.join(out, "opening-desktop.jpg") });
+  await p.evaluate(() => window.scrollTo(0, 0));
+  await p.waitForTimeout(400);
+  await p.evaluate(() => {
+    window.__wheelTrail = [];
+    const start = performance.now();
+    const record = () => {
+      window.__wheelTrail.push({ time: performance.now() - start, y: scrollY });
+      if (performance.now() - start < 1800) requestAnimationFrame(record);
+    };
+    requestAnimationFrame(record);
+  });
   await p.mouse.wheel(0, 700);
   await p.waitForFunction(() => scrollY > 600);
-  await p.waitForTimeout(200);
+  await p.waitForTimeout(1900);
+  const wheelTrail = await p.evaluate(() => window.__wheelTrail);
+  assert.ok(
+    new Set(wheelTrail.map((s) => Math.round(s.y))).size > 3,
+    "Lenis smooths wheel across multiple frames",
+  );
+  report.choreography.wheelTrail = wheelTrail;
+  // Restore a later scene, not merely the opening scroll position.
+  await scrub(2, 0.4);
   const before = await snapshot();
   await p.getByRole("link", { name: "Vehicles", exact: true }).click();
   await p.waitForURL((u) => u.pathname === "/vehicles");
@@ -611,17 +854,38 @@ try {
     ),
   );
   assert.equal(disposed.workersCreated, disposed.workersTerminated);
+  assert.equal(
+    await p.evaluate(() =>
+      document.documentElement.classList.contains("lenis"),
+    ),
+    false,
+  );
   report.lifecycle = { loaded, disposed };
   save();
   await p.goBack();
   await ready(p);
   await p.waitForFunction(() => scrollY > 600);
+  await p.waitForFunction(
+    () =>
+      document.querySelector(".showcase__experience")?.dataset.activeScene ===
+      "showcase-scene-3",
+  );
+  await ready(p);
   const back = await snapshot();
   assert.ok(Math.abs(back.scrollY - before.scrollY) < 100);
   report.lifecycle.back = back;
+  report.lifecycle.backScene = await p
+    .locator(".showcase__experience")
+    .getAttribute("data-active-scene");
   await p.reload({ waitUntil: "domcontentloaded" });
   await ready(p);
   await p.waitForFunction(() => scrollY > 600);
+  await p.waitForFunction(
+    () =>
+      document.querySelector(".showcase__experience")?.dataset.activeScene ===
+      "showcase-scene-3",
+  );
+  await ready(p);
   report.lifecycle.refresh = await snapshot();
   assert.ok(Math.abs(report.lifecycle.refresh.scrollY - before.scrollY) < 100);
   await p.getByRole("link", { name: "Showcase", exact: true }).click();
@@ -711,6 +975,28 @@ try {
     await reduced.evaluate(() => window.__showcaseAudit.contexts[0].draws),
     draws,
   );
+  for (const name of ["Signal", "Reveal", "Showcase"]) {
+    const old = await reduced.evaluate(() =>
+      structuredClone(window.__showcaseAudit),
+    );
+    await reduced.getByRole("button", { name, exact: true }).click();
+    await reduced.getByRole("heading", { name, exact: true }).waitFor();
+    await ready(reduced);
+    await reduced.waitForTimeout(700);
+    const now = await reduced.evaluate(() => window.__showcaseAudit);
+    assert.equal(now.contexts.length, old.contexts.length + 1);
+    assert.equal(now.contexts.at(-2).lost, true);
+    assert.ok(now.bitmapsClosed > old.bitmapsClosed);
+    assert.equal(
+      await reduced.evaluate(() =>
+        document.documentElement.classList.contains("lenis"),
+      ),
+      false,
+    );
+    await reduced.screenshot({
+      path: path.join(out, name.toLowerCase() + "-mobile-reduced.jpg"),
+    });
+  }
   await reduced.screenshot({
     path: path.join(out, "opening-mobile-reduced.jpg"),
   });
@@ -832,6 +1118,71 @@ try {
     audit: cancellation,
   });
   await cancelledContext.close();
+  // Cancel a pending parse by changing SCENE, while keeping the route mounted.
+  const sceneCancelContext = await context();
+  await sceneCancelContext.route(modelUrl, (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "model/gltf-binary",
+      body: bytes,
+      headers: { "Access-Control-Allow-Origin": origin },
+    }),
+  );
+  let allowSceneDecoder;
+  const sceneDecoderGate = new Promise((r) => {
+    allowSceneDecoder = r;
+  });
+  await sceneCancelContext.route(
+    "**/showcase-assets/draco/**/*.wasm",
+    async (r) => {
+      await sceneDecoderGate;
+      await r.fulfill({
+        status: 200,
+        contentType: "application/wasm",
+        body: fs.readFileSync(
+          path.join(
+            web,
+            "public/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+          ),
+        ),
+      });
+    },
+  );
+  const sceneCancel = await sceneCancelContext.newPage();
+  const firstDecoder = sceneCancel.waitForRequest((r) =>
+    r.url().endsWith("draco_decoder.wasm"),
+  );
+  await sceneCancel.goto(origin + "/showcase/experience?tenant=demo");
+  await firstDecoder;
+  await sceneCancel
+    .getByRole("button", { name: "Signal", exact: true })
+    .click();
+  await sceneCancel.waitForFunction(
+    () =>
+      document.querySelector(".showcase__experience")?.dataset.activeScene ===
+      "showcase-scene-2",
+  );
+  allowSceneDecoder();
+  await ready(sceneCancel);
+  await sceneCancel.waitForFunction(() => {
+    const a = window.__showcaseAudit;
+    return (
+      a.workersCreated >= 2 &&
+      a.workersCreated === a.workersTerminated &&
+      a.blobsCreated === a.blobsRevoked &&
+      a.bitmapsClosed >= 1
+    );
+  });
+  const sceneCancellation = await sceneCancel.evaluate(
+    () => window.__showcaseAudit,
+  );
+  assert.equal(sceneCancellation.contexts.filter((c) => !c.lost).length, 1);
+  report.cases.push({
+    case: "scene exit during decoder initialization",
+    passed: true,
+    audit: sceneCancellation,
+  });
+  await sceneCancelContext.close();
   const nojsContext = await context({ javaScriptEnabled: false }),
     nojs = await nojsContext.newPage();
   for (const route of [
@@ -860,7 +1211,7 @@ try {
   assert.deepEqual(report.unhandledErrors, []);
   assert.ok(!/ReferenceError: (window|document)/.test(serverLogs));
   report.openGates.push(
-    "Physical iOS/Android GPU/performance and remaining scenes/choreography/audio are outside slice 5a",
+    "Physical iOS/Android GPU/performance and scenes 4–12, video parity and audio are outside slice 5b",
   );
   save();
   console.log(

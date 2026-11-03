@@ -27,6 +27,6 @@ export default function ShowcaseIsland({
   ) : kind === "intro" ? (
     <Intro {...props} />
   ) : (
-    <Experience {...props} />
+    <Experience key={props.tenant} {...props} />
   );
 }
