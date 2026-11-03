@@ -13,11 +13,11 @@ import { showcaseAssets } from "../server/showcase/media.ts";
 import { inspectBoundaries } from "../scripts/check-boundaries.mjs";
 
 test("showcase scene manifest uses only the explicit HTTPS binding and fixed server-owned keys", () => {
-  assert.equal(showcaseAssets(undefined).scenes.length, 3);
+  assert.equal(showcaseAssets(undefined).scenes.length, 8);
   assert.ok(showcaseAssets(undefined).scenes.every((s) => s.modelUrl === null));
   assert.deepEqual(
     showcaseAssets(undefined).scenes.map((s) => s.id),
-    ["showcase-scene-1", "showcase-scene-2", "showcase-scene-3"],
+    Array.from({ length: 8 }, (_, i) => `showcase-scene-${i + 1}`),
   );
   assert.equal(
     showcaseAssets("https://preview.r2.dev/").scenes[0].modelUrl,

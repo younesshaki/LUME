@@ -13,9 +13,24 @@ import { scene1 } from "../../../src/experience/scenes/showcase/scenes/scene-1/c
 import { scene2 } from "../../../src/experience/scenes/showcase/scenes/scene-2/content.ts";
 import { scene3 } from "../../../src/experience/scenes/showcase/scenes/scene-3/content.ts";
 
+import { scene4 } from "../../../src/experience/scenes/showcase/scenes/scene-4/content.ts";
+import { scene5 } from "../../../src/experience/scenes/showcase/scenes/scene-5/content.ts";
+import { scene6 } from "../../../src/experience/scenes/showcase/scenes/scene-6/content.ts";
+import { scene7 } from "../../../src/experience/scenes/showcase/scenes/scene-7/content.ts";
+import { scene8 } from "../../../src/experience/scenes/showcase/scenes/scene-8/content.ts";
+
 const { scenes } = showcaseAssets("https://preview.r2.dev");
-test("batch carries original first-three narrative cues, with fixed scene-keyed assets", () => {
-  for (const [index, source] of [scene1, scene2, scene3].entries()) {
+test("batch carries original first-eight narrative cues, with fixed scene-keyed assets", () => {
+  for (const [index, source] of [
+    scene1,
+    scene2,
+    scene3,
+    scene4,
+    scene5,
+    scene6,
+    scene7,
+    scene8,
+  ].entries()) {
     const scene = scenes[index];
     assert.equal(scene.id, source.id);
     assert.equal(scene.title, source.title);
@@ -72,7 +87,7 @@ test("tenant-local bridge shares state only with subscribers of that instance; a
 test("crane and orbit join continuously, reverse exactly, and produce finite distinct poses", () => {
   assert.deepEqual(cameraAt(scenes[0], 0), [-1.2, 0.8, 6.4]);
   assert.deepEqual(cameraAt(scenes[0], 0.5), [-0.3, 0.3, 5.6]);
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < scenes.length - 1; i++) {
     const last = cameraAt(scenes[i], 1),
       next = cameraAt(scenes[i + 1], 0);
     assert.ok(last.every((v, j) => Math.abs(v - next[j]) < 1e-8));
