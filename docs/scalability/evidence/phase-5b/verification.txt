@@ -1,0 +1,21 @@
+Phase 5b local verification
+Application commit: ad9e9dc97f36f9e18672d67efc6663a6d07890f6
+Base staging: b490224a8
+
+PASS npm ci --legacy-peer-deps (real installation; no directory symlink)
+Removed apps/web/.next, apps/web/next-env.d.ts, apps/web/tsconfig.tsbuildinfo before standalone typecheck.
+PASS npm run typecheck:all
+PASS npm run build --workspace=@lume/web (includes unchanged boundary checker)
+PASS node --import tsx --conditions=react-server --test apps/web/checks/*.check.mjs (74/74)
+PASS npm run verify:showcase --workspace=@lume/web (19 cases + 6 transition samples)
+PASS npm run build (existing root Vite app)
+PASS npm run check:migrations (92 sequential files; no changes)
+PASS git diff --check
+PASS unchanged-surface diff against origin/staging: firewall, boundary checker, root src/build/deploy, admin, shared packages, package manifests/lock and migrations.
+PASS compiled client graph: no admin/db/rag/Leva/r3f-perf modules.
+PASS configured inherited credential-value scan: 112 compiled JS files; zero matches. Scope limited to inherited configured values.
+
+OPEN: direct/hosted R2 rendering needs owner-approved CORS (5e).
+Local controlled-header render/lifecycle diagnostics are not hosted proof.
+Root Vitest/admin build and GitHub CI not run/claimed for this unpublished slice.
+No SFTP test modified or masked. No deployment, push, data/config/CORS mutation or traffic cutover.
