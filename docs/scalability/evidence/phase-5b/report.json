@@ -1,0 +1,1670 @@
+{
+  "source": "Local production Next build with synthetic loopback tenant/content data; real public R2 GLB. No hosted Next deployment or remote data/config changes.",
+  "observedAt": "2026-11-03T16:36:09.684Z",
+  "applicationCommit": "ad9e9dc97f36f9e18672d67efc6663a6d07890f6",
+  "unhandledErrors": [],
+  "routes": {
+    "/": {
+      "jsChunks": [
+        "static/chunks/webpack-ebbc365a42041c55.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-5cffbd1a1be2f6c1.js",
+        "static/chunks/app/global-error-3f31f7ef3e5b8414.js",
+        "static/chunks/app/layout-af985d56a2d4ce0e.js",
+        "static/chunks/app/error-20a99b3b3956a5d3.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/5172-6909f1e8f3e292ce.js",
+        "static/chunks/806-261cbed33be343c8.js",
+        "static/chunks/6088-a5c150e08dcb7695.js",
+        "static/chunks/245-df7fcf2750cf6262.js",
+        "static/chunks/app/page-6eefff8f6342aabb.js"
+      ],
+      "jsBytes": 915822,
+      "gzipBytes": 291155,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/vehicles": {
+      "jsChunks": [
+        "static/chunks/webpack-ebbc365a42041c55.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-5cffbd1a1be2f6c1.js",
+        "static/chunks/app/vehicles/error-e1f19bf905c3f626.js",
+        "static/chunks/app/global-error-3f31f7ef3e5b8414.js",
+        "static/chunks/app/layout-af985d56a2d4ce0e.js",
+        "static/chunks/app/error-20a99b3b3956a5d3.js",
+        "static/chunks/app/vehicles/page-c6db527e3d76eb13.js"
+      ],
+      "jsBytes": 437084,
+      "gzipBytes": 131556,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase": {
+      "jsChunks": [
+        "static/chunks/webpack-ebbc365a42041c55.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-5cffbd1a1be2f6c1.js",
+        "static/chunks/app/global-error-3f31f7ef3e5b8414.js",
+        "static/chunks/2303-3fa43f0c07180989.js",
+        "static/chunks/app/showcase/page-50d498c3af656e61.js",
+        "static/chunks/app/layout-af985d56a2d4ce0e.js",
+        "static/chunks/app/error-20a99b3b3956a5d3.js",
+        "static/chunks/4557.99af95e86de282fa.js"
+      ],
+      "jsBytes": 446235,
+      "gzipBytes": 135073,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase/intro": {
+      "jsChunks": [
+        "static/chunks/webpack-ebbc365a42041c55.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-5cffbd1a1be2f6c1.js",
+        "static/chunks/app/global-error-3f31f7ef3e5b8414.js",
+        "static/chunks/2303-3fa43f0c07180989.js",
+        "static/chunks/app/showcase/intro/page-50d498c3af656e61.js",
+        "static/chunks/app/layout-af985d56a2d4ce0e.js",
+        "static/chunks/app/error-20a99b3b3956a5d3.js",
+        "static/chunks/2182.2d6dabe542db5132.js"
+      ],
+      "jsBytes": 446271,
+      "gzipBytes": 135092,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase/experience": {
+      "jsChunks": [
+        "static/chunks/webpack-ebbc365a42041c55.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-5cffbd1a1be2f6c1.js",
+        "static/chunks/app/global-error-3f31f7ef3e5b8414.js",
+        "static/chunks/2303-3fa43f0c07180989.js",
+        "static/chunks/app/showcase/experience/page-50d498c3af656e61.js",
+        "static/chunks/app/layout-af985d56a2d4ce0e.js",
+        "static/chunks/app/error-20a99b3b3956a5d3.js",
+        "static/chunks/9d78c252.7a9347a71bd22cf0.js",
+        "static/chunks/1329d575.685714fd1c99a513.js",
+        "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "static/chunks/583.5529e6fb064465fd.js"
+      ],
+      "jsBytes": 1199063,
+      "gzipBytes": 338032,
+      "heavyChunksRequested": [
+        "static/chunks/9d78c252.7a9347a71bd22cf0.js",
+        "static/chunks/1329d575.685714fd1c99a513.js",
+        "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "static/chunks/583.5529e6fb064465fd.js"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "case": "raw SSR",
+      "route": "/showcase",
+      "status": 200,
+      "title": "Showcase | Local showcase fixture",
+      "h1Count": 1,
+      "canonical": "http://127.0.0.1:46133/showcase?tenant=demo",
+      "noindex": "noindex, nofollow, noarchive"
+    },
+    {
+      "case": "raw SSR",
+      "route": "/showcase/intro",
+      "status": 200,
+      "title": "LUME | Local showcase fixture",
+      "h1Count": 1,
+      "canonical": "http://127.0.0.1:46133/showcase?tenant=demo",
+      "noindex": "noindex, nofollow, noarchive"
+    },
+    {
+      "case": "raw SSR",
+      "route": "/showcase/experience",
+      "status": 200,
+      "title": "A cinematic product showcase | Local showcase fixture",
+      "h1Count": 1,
+      "canonical": "http://127.0.0.1:46133/showcase?tenant=demo",
+      "noindex": "noindex, nofollow, noarchive"
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=missing",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&part=6&part=6",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&chapter=1",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&part=abc",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&draft=true",
+      "status": 404
+    },
+    {
+      "case": "explicit suspense/loading",
+      "visible": true,
+      "canvasBeforeReady": 0
+    },
+    {
+      "case": "live reduced-motion toggle",
+      "sameModelAndContext": true,
+      "continuousFramesStopAndResume": true
+    },
+    {
+      "case": "landing → intro → experience",
+      "passed": true
+    },
+    {
+      "case": "model error → retry → rendered",
+      "passed": true
+    },
+    {
+      "case": "empty GLB",
+      "passed": true
+    },
+    {
+      "case": "reduced motion",
+      "continuousFrames": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "case": "WebAssembly unavailable",
+      "fallback": true,
+      "modelNotRequested": true
+    },
+    {
+      "case": "WebGL initialization failure",
+      "fallback": true,
+      "audit": {
+        "workersCreated": 2,
+        "workersTerminated": 2,
+        "bitmapsClosed": 1,
+        "audioContexts": 0,
+        "mediaPlayCalls": 0,
+        "contexts": [],
+        "blobsCreated": 2,
+        "blobsRevoked": 2
+      }
+    },
+    {
+      "case": "navigation during decoder initialization",
+      "passed": true,
+      "audit": {
+        "workersCreated": 2,
+        "workersTerminated": 2,
+        "bitmapsClosed": 1,
+        "audioContexts": 0,
+        "mediaPlayCalls": 0,
+        "contexts": [],
+        "blobsCreated": 2,
+        "blobsRevoked": 2
+      }
+    },
+    {
+      "case": "scene exit during decoder initialization",
+      "passed": true,
+      "audit": {
+        "workersCreated": 4,
+        "workersTerminated": 4,
+        "bitmapsClosed": 1,
+        "audioContexts": 0,
+        "mediaPlayCalls": 0,
+        "contexts": [
+          {
+            "lost": false,
+            "draws": 9,
+            "indexedElements": 1859607,
+            "created": {
+              "Texture": 5,
+              "Buffer": 13,
+              "Program": 3
+            },
+            "deleted": {},
+            "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+            "cameraPosition": [
+              -0.10173657239850975,
+              0.0500000004374379,
+              5.19900480751275
+            ],
+            "cameraSamples": 1
+          }
+        ],
+        "blobsCreated": 4,
+        "blobsRevoked": 4
+      }
+    },
+    {
+      "case": "JavaScript disabled",
+      "routes": 3,
+      "headingAndNoscriptNavigation": true
+    }
+  ],
+  "hydrationErrors": [],
+  "openGates": [
+    "Hosted direct model-render proof (5e) requires owner-approved R2 CORS for Preview origins; no R2 mutation in this task",
+    "Physical iOS/Android GPU/performance and scenes 4–12, video parity and audio are outside slice 5b"
+  ],
+  "bundle": {
+    "source": "actual production client webpack compilation",
+    "heavyChunks": [
+      {
+        "name": "static/chunks/9d78c252.7a9347a71bd22cf0.js",
+        "bytes": 515897,
+        "gzipBytes": 127585
+      },
+      {
+        "name": "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "bytes": 110712,
+        "gzipBytes": 35186
+      },
+      {
+        "name": "static/chunks/1329d575.685714fd1c99a513.js",
+        "bytes": 109698,
+        "gzipBytes": 33957
+      },
+      {
+        "name": "static/chunks/583.5529e6fb064465fd.js",
+        "bytes": 17136,
+        "gzipBytes": 6623
+      }
+    ],
+    "moduleChunkReceipt": [
+      {
+        "resource": "node_modules/three/build/three.module.js",
+        "chunks": [
+          "static/chunks/9d78c252.7a9347a71bd22cf0.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/lenis/dist/lenis.mjs",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/constants.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/index.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/index.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler.production.js",
+        "chunks": [
+          "static/chunks/1329d575.685714fd1c99a513.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/cjs/scheduler.production.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/index.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/cjs/scheduler.production.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/examples/jsm/loaders/DRACOLoader.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/Experience.tsx",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/useDisposableGLTF.ts",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/ModelBoundary.tsx",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/ShowcaseCanvas.tsx",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/StoryBridge.tsx",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/CameraRig.tsx",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/StoryNarrative.tsx",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/useStoryScroll.ts",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/StoryConsent.tsx",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/story-store.ts",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/model-resource.ts",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/loadModel.ts",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/OpeningScene.tsx",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/camera-path.ts",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/story-cues.ts",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/disposeModel.ts",
+        "chunks": [
+          "static/chunks/583.5529e6fb064465fd.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/dist/events-f8cd670d.esm.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/drei/core/Sparkles.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/drei/helpers/constants.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/examples/jsm/loaders/GLTFLoader.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/examples/jsm/utils/BufferGeometryUtils.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      }
+    ],
+    "emittedLevaModules": 0,
+    "emittedPerfModules": 0
+  },
+  "r2": {
+    "url": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+    "status": 200,
+    "bytes": 603908,
+    "sha256": "de5b04647e34ff1c7496c19cd77ec1719dde671b8bdb4b57ae1ae4d672b944ce",
+    "accessControlAllowOrigin": null,
+    "stablePreview": {
+      "status": 200,
+      "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+      "accessControlAllowOrigin": null
+    },
+    "browser": {
+      "directAccess": "blocked",
+      "errors": [
+        "Access to fetch at 'https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb' from origin 'http://127.0.0.1:46133' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "TypeError: Failed to fetch\n    at h (http://127.0.0.1:46133/_next/static/chunks/583.5529e6fb064465fd.js:1:3330)\n    at f (http://127.0.0.1:46133/_next/static/chunks/583.5529e6fb064465fd.js:1:4681)\n    at http://127.0.0.1:46133/_next/static/chunks/583.5529e6fb064465fd.js:2:406"
+      ]
+    }
+  },
+  "successfulRender": {
+    "pageErrors": [],
+    "consoleErrors": []
+  },
+  "renderDiagnostic": "Same real R2 GLB bytes, Playwright-only Access-Control-Allow-Origin; does not close hosted/direct CORS gate",
+  "loadingDOM": {
+    "display": "block",
+    "height": 6300,
+    "text": "A cinematic product study.\n\nShowcase\nSignal\nReveal\n\nLoading the product…\n\nThe rest of the site remains available.\n\nShowcase\n\n \n\nAudio unavailable in this preview · consent rejected"
+  },
+  "lifecycle": {
+    "loaded": {
+      "scrollY": 0,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 0,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 12,
+          "indexedElements": 2479476,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {},
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.1999999967973451,
+            0.8000000141580442,
+            6.400000113264355
+          ],
+          "cameraSamples": 1
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    },
+    "disposed": {
+      "scrollY": 0,
+      "workersCreated": 20,
+      "workersTerminated": 20,
+      "bitmapsClosed": 10,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": true,
+          "draws": 111,
+          "indexedElements": 22935153,
+          "created": {
+            "Texture": 5,
+            "Buffer": 17,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.15126176785129353,
+            0.1757975265091183,
+            5.401276220727823
+          ],
+          "cameraSamples": 26
+        },
+        {
+          "lost": true,
+          "draws": 51,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -3.3482057522306254,
+            0.05000000043743791,
+            3.9786331236713584
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 48,
+          "indexedElements": 9917904,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.7360583592252469,
+            0.050000000437437915,
+            -5.147642205318306
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 48,
+          "indexedElements": 9917904,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -4.6332543053945585,
+            0.05000000043743791,
+            2.3607111545463515
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 54,
+          "indexedElements": 11157642,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.7503906218516221,
+            0.5502170119807275,
+            6.000346851137806
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 48,
+          "indexedElements": 9917904,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            1.3266316549007233,
+            0.05000000043743792,
+            -5.027927245974411
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 51,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.8403906199048735,
+            0.6002170198868911,
+            6.080347203231128
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 24,
+          "indexedElements": 4958952,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            3.9353731464797206,
+            0.05000000043743793,
+            -3.3989468876437443
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 51,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.6764213609253461,
+            0.5091229972195065,
+            5.934596807751291
+          ],
+          "cameraSamples": 17
+        },
+        {
+          "lost": true,
+          "draws": 36,
+          "indexedElements": 7438428,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        }
+      ],
+      "blobsCreated": 20,
+      "blobsRevoked": 20
+    },
+    "back": {
+      "scrollY": 4496,
+      "workersCreated": 22,
+      "workersTerminated": 22,
+      "bitmapsClosed": 10,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": true,
+          "draws": 111,
+          "indexedElements": 22935153,
+          "created": {
+            "Texture": 5,
+            "Buffer": 17,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.15126176785129353,
+            0.1757975265091183,
+            5.401276220727823
+          ],
+          "cameraSamples": 26
+        },
+        {
+          "lost": true,
+          "draws": 51,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -3.3482057522306254,
+            0.05000000043743791,
+            3.9786331236713584
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 48,
+          "indexedElements": 9917904,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.7360583592252469,
+            0.050000000437437915,
+            -5.147642205318306
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 48,
+          "indexedElements": 9917904,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -4.6332543053945585,
+            0.05000000043743791,
+            2.3607111545463515
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 54,
+          "indexedElements": 11157642,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.7503906218516221,
+            0.5502170119807275,
+            6.000346851137806
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 48,
+          "indexedElements": 9917904,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            1.3266316549007233,
+            0.05000000043743792,
+            -5.027927245974411
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 51,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.8403906199048735,
+            0.6002170198868911,
+            6.080347203231128
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 24,
+          "indexedElements": 4958952,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            3.9353731464797206,
+            0.05000000043743793,
+            -3.3989468876437443
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 51,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.6764213609253461,
+            0.5091229972195065,
+            5.934596807751291
+          ],
+          "cameraSamples": 17
+        },
+        {
+          "lost": true,
+          "draws": 36,
+          "indexedElements": 7438428,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {
+            "Buffer": 7,
+            "Program": 2,
+            "Texture": 1
+          },
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": false,
+          "draws": 15,
+          "indexedElements": 3099345,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {},
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        }
+      ],
+      "blobsCreated": 22,
+      "blobsRevoked": 22
+    },
+    "backScene": "showcase-scene-3",
+    "refresh": {
+      "scrollY": 4496,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 0,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 15,
+          "indexedElements": 3099345,
+          "created": {
+            "Texture": 5,
+            "Buffer": 13,
+            "Program": 3
+          },
+          "deleted": {},
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    }
+  },
+  "choreography": {
+    "near": {
+      "scene": "showcase-scene-1",
+      "localProgress": 0.15,
+      "lenisActive": true,
+      "stickyTop": 0,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 0,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 66,
+          "indexedElements": 13637118,
+          "created": {
+            "Texture": 5,
+            "Buffer": 17,
+            "Program": 3
+          },
+          "deleted": {},
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.930924526533147,
+            0.6505136267476069,
+            6.160822086130935
+          ],
+          "cameraSamples": 11
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    },
+    "far": {
+      "scene": "showcase-scene-1",
+      "localProgress": 0.75,
+      "lenisActive": true,
+      "stickyTop": 0,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 0,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 102,
+          "indexedElements": 21075546,
+          "created": {
+            "Texture": 5,
+            "Buffer": 17,
+            "Program": 3
+          },
+          "deleted": {},
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.1550821651313132,
+            0.1781237725269591,
+            5.404997704994116
+          ],
+          "cameraSamples": 23
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    },
+    "cameraFromGPUViewUniform": true,
+    "correctCranePose": true,
+    "wheelTrail": [
+      {
+        "time": 7.599999999627471,
+        "y": 0
+      },
+      {
+        "time": 25.700000001117587,
+        "y": 65
+      },
+      {
+        "time": 41.20000000111759,
+        "y": 123
+      },
+      {
+        "time": 58.09999999962747,
+        "y": 176
+      },
+      {
+        "time": 74.80000000074506,
+        "y": 224
+      },
+      {
+        "time": 91.40000000037253,
+        "y": 268
+      },
+      {
+        "time": 108,
+        "y": 308
+      },
+      {
+        "time": 124.80000000074506,
+        "y": 344
+      },
+      {
+        "time": 141.59999999962747,
+        "y": 377
+      },
+      {
+        "time": 158.30000000074506,
+        "y": 406
+      },
+      {
+        "time": 174.90000000037253,
+        "y": 433
+      },
+      {
+        "time": 191.40000000037253,
+        "y": 458
+      },
+      {
+        "time": 208.2000000011176,
+        "y": 480
+      },
+      {
+        "time": 224.7000000011176,
+        "y": 500
+      },
+      {
+        "time": 257.90000000037253,
+        "y": 519
+      },
+      {
+        "time": 260.80000000074506,
+        "y": 536
+      },
+      {
+        "time": 313.30000000074506,
+        "y": 577
+      },
+      {
+        "time": 324.7000000011176,
+        "y": 588
+      },
+      {
+        "time": 558.5,
+        "y": 672
+      },
+      {
+        "time": 646.4000000003725,
+        "y": 683
+      },
+      {
+        "time": 932.0999999996275,
+        "y": 697
+      },
+      {
+        "time": 941.9000000003725,
+        "y": 698
+      },
+      {
+        "time": 1240.0999999996275,
+        "y": 700
+      },
+      {
+        "time": 1414.7000000011176,
+        "y": 700
+      },
+      {
+        "time": 1566.0999999996275,
+        "y": 700
+      },
+      {
+        "time": 1727.5,
+        "y": 700
+      },
+      {
+        "time": 1869.800000000745,
+        "y": 700
+      }
+    ]
+  },
+  "transitions": [
+    {
+      "from": "showcase-scene-1",
+      "to": "showcase-scene-2",
+      "oldContext": {
+        "lost": true,
+        "draws": 111,
+        "indexedElements": 22935153,
+        "created": {
+          "Texture": 5,
+          "Buffer": 17,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -0.15126176785129353,
+          0.1757975265091183,
+          5.401276220727823
+        ],
+        "cameraSamples": 26
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 4,
+      "workersTerminated": 4,
+      "blobsCreated": 4,
+      "blobsRevoked": 4,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -3.3482057522306254,
+        0.05000000043743791,
+        3.9786331236713584
+      ],
+      "expectedCamera": [
+        -3.349931973635994,
+        0.05,
+        3.97717937387934
+      ]
+    },
+    {
+      "from": "showcase-scene-2",
+      "to": "showcase-scene-3",
+      "oldContext": {
+        "lost": true,
+        "draws": 51,
+        "indexedElements": 10537773,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -3.3482057522306254,
+          0.05000000043743791,
+          3.9786331236713584
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 6,
+      "workersTerminated": 6,
+      "blobsCreated": 6,
+      "blobsRevoked": 6,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -0.7360583592252469,
+        0.050000000437437915,
+        -5.147642205318306
+      ],
+      "expectedCamera": [
+        -0.73382404191131,
+        0.05,
+        -5.147960982322316
+      ]
+    },
+    {
+      "from": "showcase-scene-3",
+      "to": "showcase-scene-2",
+      "oldContext": {
+        "lost": true,
+        "draws": 48,
+        "indexedElements": 9917904,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -0.7360583592252469,
+          0.050000000437437915,
+          -5.147642205318306
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 8,
+      "workersTerminated": 8,
+      "blobsCreated": 8,
+      "blobsRevoked": 8,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -4.6332543053945585,
+        0.05000000043743791,
+        2.3607111545463515
+      ],
+      "expectedCamera": [
+        -4.634278272319464,
+        0.05,
+        2.3586998314130025
+      ]
+    },
+    {
+      "from": "showcase-scene-2",
+      "to": "showcase-scene-1",
+      "oldContext": {
+        "lost": true,
+        "draws": 48,
+        "indexedElements": 9917904,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -4.6332543053945585,
+          0.05000000043743791,
+          2.3607111545463515
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 10,
+      "workersTerminated": 10,
+      "blobsCreated": 10,
+      "blobsRevoked": 10,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -0.7503906218516221,
+        0.5502170119807275,
+        6.000346851137806
+      ],
+      "expectedCamera": [
+        -0.75,
+        0.55,
+        6
+      ]
+    },
+    {
+      "from": "showcase-scene-1",
+      "to": "showcase-scene-3",
+      "oldContext": {
+        "lost": true,
+        "draws": 54,
+        "indexedElements": 11157642,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -0.7503906218516221,
+          0.5502170119807275,
+          6.000346851137806
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 12,
+      "workersTerminated": 12,
+      "blobsCreated": 12,
+      "blobsRevoked": 12,
+      "liveContexts": 1,
+      "cameraPosition": [
+        1.3266316549007233,
+        0.05000000043743792,
+        -5.027927245974411
+      ],
+      "expectedCamera": [
+        1.3288137305395245,
+        0.05,
+        -5.027350601413198
+      ]
+    },
+    {
+      "from": "showcase-scene-3",
+      "to": "showcase-scene-1",
+      "oldContext": {
+        "lost": true,
+        "draws": 48,
+        "indexedElements": 9917904,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          1.3266316549007233,
+          0.05000000043743792,
+          -5.027927245974411
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 14,
+      "workersTerminated": 14,
+      "blobsCreated": 14,
+      "blobsRevoked": 14,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -0.8403906199048735,
+        0.6002170198868911,
+        6.080347203231128
+      ],
+      "expectedCamera": [
+        -0.8399999999999999,
+        0.6000000000000001,
+        6.08
+      ]
+    }
+  ],
+  "consentBridge": {
+    "audioContexts": 0,
+    "mediaPlayCalls": 0,
+    "choices": [
+      {
+        "choice": "accepted",
+        "version": 1
+      },
+      {
+        "choice": "rejected",
+        "version": 1
+      }
+    ],
+    "audio": "stubbed; no playback/media requests"
+  },
+  "decoderRequests": [
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:46133/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    }
+  ]
+}

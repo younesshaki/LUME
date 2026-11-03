@@ -1,8 +1,9 @@
 "use client";
 import { Sparkles } from "@react-three/drei";
 import type { OwnedModel } from "./model-resource";
-/** Only the opening showcase scene: original sparkle settings + the existing
- * catalog product. The multi-scene director is deliberately left to 5b/5c. */
+/** Vite's shared ShowcaseScene sparkles and the verified catalog product.
+ * The keyed owner above this scene controls its full lifetime, not useGLTF's
+ * global cache. Video layering and later story beats remain outside 5b. */
 export default function OpeningScene({
   model,
   reduced,

@@ -1,0 +1,31 @@
+{
+  "observedAt": "2026-11-03T16:37:01.705Z",
+  "source": "Read-only public HEADs; no R2 or deployment changes",
+  "base": "https://pub-da3069790c6443f883e3991be965f766.r2.dev",
+  "items": [
+    {
+      "path": "vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+      "status": 200,
+      "bytes": 603908,
+      "accessControlAllowOrigin": null
+    },
+    {
+      "path": "premiumredbull4Khandbrake3.mp4",
+      "status": 200,
+      "bytes": 7569929,
+      "accessControlAllowOrigin": null
+    },
+    {
+      "path": "video/showcase-scene-2-high.mp4",
+      "status": 404,
+      "bytes": null,
+      "accessControlAllowOrigin": null
+    },
+    {
+      "path": "models/hero-product.glb",
+      "status": 404,
+      "bytes": null,
+      "accessControlAllowOrigin": null
+    }
+  ]
+}

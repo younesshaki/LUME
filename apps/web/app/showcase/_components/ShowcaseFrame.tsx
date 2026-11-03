@@ -51,6 +51,15 @@ export default async function ShowcaseFrame({
             navigation remain available.
           </p>
           <a href={`/products${query}`}>Explore products</a>
+          {kind === "experience" &&
+            data.assets.scenes.map((scene) => (
+              <section key={scene.id}>
+                <h2>{scene.title}</h2>
+                {scene.lines.map((line) => (
+                  <p key={line.text}>{line.text}</p>
+                ))}
+              </section>
+            ))}
         </section>
         <style>{`.showcase__reserved{display:none}`}</style>
       </noscript>
