@@ -1,0 +1,117 @@
+{
+  "method": "Controlled eight-scene production build before importing/instantiating effects, compared with the final eight-scene build. Both used the same pinned dependency declarations; no runtime env switch or firewall change. Delta includes composer/wrapper/ownership/extra Three code and chunk repartitioning, not only shader text. Baseline source hashes and full raw receipts committed.",
+  "withoutEffects": {
+    "bytes": 753443,
+    "gzipBytes": 203351,
+    "chunks": [
+      {
+        "name": "static/chunks/583.5529e6fb064465fd.js",
+        "bytes": 17136,
+        "gzipBytes": 6623
+      },
+      {
+        "name": "static/chunks/9d78c252.7a9347a71bd22cf0.js",
+        "bytes": 515897,
+        "gzipBytes": 127585
+      },
+      {
+        "name": "static/chunks/1329d575.685714fd1c99a513.js",
+        "bytes": 109698,
+        "gzipBytes": 33957
+      },
+      {
+        "name": "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "bytes": 110712,
+        "gzipBytes": 35186
+      }
+    ]
+  },
+  "withEffects": {
+    "bytes": 822479,
+    "gzipBytes": 220306,
+    "chunks": [
+      {
+        "name": "static/chunks/4570.33f4cadaeba96381.js",
+        "bytes": 18325,
+        "gzipBytes": 7120
+      },
+      {
+        "name": "static/chunks/9d78c252.eec5dc9b316a97e1.js",
+        "bytes": 517593,
+        "gzipBytes": 127972
+      },
+      {
+        "name": "static/chunks/b0045e08.a242a15e58e924f1.js",
+        "bytes": 66151,
+        "gzipBytes": 16071
+      },
+      {
+        "name": "static/chunks/1329d575.685714fd1c99a513.js",
+        "bytes": 109698,
+        "gzipBytes": 33957
+      },
+      {
+        "name": "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "bytes": 110712,
+        "gzipBytes": 35186
+      }
+    ]
+  },
+  "addedBytes": 69036,
+  "addedGzipBytes": 16955,
+  "postprocessingModules": [
+    {
+      "resource": "node_modules/postprocessing/build/index.js",
+      "chunks": [
+        "static/chunks/b0045e08.a242a15e58e924f1.js"
+      ]
+    }
+  ],
+  "optimizationExperiment": "Next import optimization did not eliminate the barrel side effect and was reverted. Final code removes the wrapper barrel runtime import entirely and integrates the core composer directly; no aliases, dependency patches or boundary changes.",
+  "withUnusedBarrel": {
+    "bytes": 926865,
+    "gzipBytes": 290914,
+    "chunks": [
+      {
+        "name": "static/chunks/4570.c439261ba1eac63c.js",
+        "bytes": 17824,
+        "gzipBytes": 6929
+      },
+      {
+        "name": "static/chunks/9d78c252.954df95cd9526de9.js",
+        "bytes": 518276,
+        "gzipBytes": 128192
+      },
+      {
+        "name": "static/chunks/b0045e08.21f4cdd8634adce5.js",
+        "bytes": 77565,
+        "gzipBytes": 18077
+      },
+      {
+        "name": "static/chunks/d1830524.7c706078032c5a92.js",
+        "bytes": 87856,
+        "gzipBytes": 66255
+      },
+      {
+        "name": "static/chunks/1329d575.685714fd1c99a513.js",
+        "bytes": 109698,
+        "gzipBytes": 33957
+      },
+      {
+        "name": "static/chunks/1225.289cd1c35eeeeeaf.js",
+        "bytes": 115646,
+        "gzipBytes": 37504
+      }
+    ]
+  },
+  "beforeCleanupAddedBytes": 173422,
+  "beforeCleanupAddedGzipBytes": 87563,
+  "savedGzipBytes": 70608,
+  "savedBytes": 104386,
+  "historicalUnusedN8AOPayload": {
+    "name": "static/chunks/d1830524.7c706078032c5a92.js",
+    "bytes": 87856,
+    "gzipBytes": 66255
+  },
+  "emittedN8AOModules": 0
+}

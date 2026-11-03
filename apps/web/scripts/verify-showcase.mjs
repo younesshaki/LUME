@@ -18,6 +18,17 @@ fs.mkdirSync(out, { recursive: true });
 const base = new URL(process.env.WEB_PREVIEW_R2_PUBLIC_BASE_URL ?? "");
 assert.equal(base.protocol, "https:");
 assert.ok(!base.username && !base.password && !base.search && !base.hash);
+const sceneTitles = [
+  "Showcase",
+  "Signal",
+  "Reveal",
+  "Craft",
+  "Experience",
+  "Trust",
+  "Benefits",
+  "Differentiation",
+];
+const sceneCount = sceneTitles.length;
 const modelUrl =
   base.href.replace(/\/$/, "") +
   "/vehicle%20images/3D%20assets/blackredbull6.optimized.glb";
@@ -163,6 +174,9 @@ function browserAudit() {
     if (urls.delete(url)) audit.blobsRevoked++;
     revoke(url);
   };
+  const targets = new WeakMap(),
+    sceneShaders = new WeakSet(),
+    scenePrograms = new WeakSet();
   const contexts = new WeakMap(),
     getContext = HTMLCanvasElement.prototype.getContext;
   HTMLCanvasElement.prototype.getContext = function (...args) {
@@ -175,11 +189,15 @@ function browserAudit() {
         indexedElements: 0,
         created: {},
         deleted: {},
+        deletedWhileLive: {},
+        renderTargetTextures: 0,
+        renderTargetTexturesDeletedWhileLive: 0,
         renderer: debug
           ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)
           : gl.getParameter(gl.RENDERER),
       };
       contexts.set(gl, item);
+      targets.set(gl, { textures: new Set(), deleted: new Set() });
       audit.contexts.push(item);
       this.addEventListener("webglcontextlost", () => {
         item.lost = true;
@@ -188,17 +206,48 @@ function browserAudit() {
     return gl;
   };
   for (const cls of [WebGLRenderingContext, WebGL2RenderingContext]) {
+    // Sample the perspective scene (including Sparkles), not full-screen pass cameras.
+    const shaderSource = cls.prototype.shaderSource,
+      attachShader = cls.prototype.attachShader;
+    cls.prototype.shaderSource = function (shader, source) {
+      if (/#define STANDARD\b|viewMatrix\s*\*\s*modelPosition/.test(source))
+        sceneShaders.add(shader);
+      return shaderSource.call(this, shader, source);
+    };
+    cls.prototype.attachShader = function (program, shader) {
+      if (sceneShaders.has(shader)) scenePrograms.add(program);
+      return attachShader.call(this, program, shader);
+    };
+    const attachTexture = cls.prototype.framebufferTexture2D;
+    cls.prototype.framebufferTexture2D = function (...args) {
+      const item = contexts.get(this),
+        record = targets.get(this),
+        texture = args[3];
+      if (item && texture && !record.textures.has(texture)) {
+        record.textures.add(texture);
+        item.renderTargetTextures++;
+      }
+      return attachTexture.apply(this, args);
+    };
     const locations = new WeakMap(),
       getLocation = cls.prototype.getUniformLocation,
       writeMatrix = cls.prototype.uniformMatrix4fv;
     cls.prototype.getUniformLocation = function (...args) {
       const loc = getLocation.apply(this, args);
-      if (loc) locations.set(loc, args[1]);
+      if (loc)
+        locations.set(loc, {
+          name: args[1],
+          scene: scenePrograms.has(args[0]),
+        });
       return loc;
     };
     cls.prototype.uniformMatrix4fv = function (loc, transpose, value, ...rest) {
       const item = contexts.get(this);
-      if (item && locations.get(loc) === "viewMatrix") {
+      if (
+        item &&
+        locations.get(loc)?.name === "viewMatrix" &&
+        locations.get(loc)?.scene
+      ) {
         const m = Array.from(value);
         item.cameraPosition = [
           -(m[0] * m[12] + m[1] * m[13] + m[2] * m[14]),
@@ -228,7 +277,21 @@ function browserAudit() {
       };
       cls.prototype[deleteName] = function (...args) {
         const r = contexts.get(this);
-        if (r && args[0]) r.deleted[kind] = (r.deleted[kind] ?? 0) + 1;
+        if (r && args[0]) {
+          r.deleted[kind] = (r.deleted[kind] ?? 0) + 1;
+          if (!this.isContextLost()) {
+            r.deletedWhileLive[kind] = (r.deletedWhileLive[kind] ?? 0) + 1;
+            const record = targets.get(this);
+            if (
+              kind === "Texture" &&
+              record.textures.has(args[0]) &&
+              !record.deleted.has(args[0])
+            ) {
+              record.deleted.add(args[0]);
+              r.renderTargetTexturesDeletedWhileLive++;
+            }
+          }
+        }
         return originalDelete.apply(this, args);
       };
     }
@@ -287,10 +350,10 @@ try {
   );
   const dependencies = receipt.modules.filter(
     (m) =>
-      /(?:^|\/)node_modules\/(?:@react-three\/|three\/|three-stdlib\/|react-reconciler\/|lenis\/)/.test(
+      /(?:^|\/)node_modules\/(?:@react-three\/|three\/|three-stdlib\/|react-reconciler\/|lenis\/|postprocessing\/|n8ao\/)/.test(
         m.resource,
       ) ||
-      /components\/showcase\/(?:Experience|ShowcaseCanvas|OpeningScene|useDisposableGLTF|model-resource|loadModel|disposeModel|ModelBoundary|CameraRig|camera-path|useStoryScroll|StoryBridge|StoryConsent|StoryNarrative|story-store|story-cues)\./.test(
+      /components\/showcase\/(?:Experience|ShowcaseCanvas|OpeningScene|useDisposableGLTF|model-resource|loadModel|disposeModel|ModelBoundary|CameraRig|camera-path|useStoryScroll|StoryBridge|StoryConsent|StoryNarrative|story-store|story-cues|ShowcaseEffects|composer-ownership)\./.test(
         m.resource,
       ),
   );
@@ -305,12 +368,20 @@ try {
     ).length,
     0,
   );
+  assert.equal(
+    receipt.modules.filter((m) =>
+      /(?:^|\/)node_modules\/n8ao\//.test(m.resource),
+    ).length,
+    0,
+    "unused N8AO must not return through a barrel import",
+  );
   report.bundle = {
     source: receipt.source,
     heavyChunks: heavy.map((c) => byName.get(c)),
     moduleChunkReceipt: dependencies,
     emittedLevaModules: 0,
     emittedPerfModules: 0,
+    emittedN8AOModules: 0,
   };
   const remote = await fetch(modelUrl, {
     headers: { Origin: origin },
@@ -404,14 +475,23 @@ try {
         .map((p) => decodeURIComponent(p.slice(7))),
     ),
   ];
-  for (const route of ["/", "/vehicles", "/showcase", "/showcase/intro"]) {
+  for (const route of [
+    "/",
+    "/vehicles",
+    "/showcase",
+    "/showcase/intro",
+    "/intro",
+  ]) {
     const c = await context(),
       p = await c.newPage(),
       requests = [],
       errors = [];
     p.on("request", (r) => requests.push(r.url()));
     p.on("pageerror", (e) => errors.push(e.message));
-    await p.goto(origin + route + "?tenant=demo", { waitUntil: "networkidle" });
+    const routeResponse = await p.goto(origin + route + "?tenant=demo", {
+      waitUntil: "networkidle",
+    });
+    if (route === "/intro") assert.equal(routeResponse.status(), 404);
     const chunks = usage(requests);
     assert.ok(
       !chunks.some((c) => heavy.includes(c)),
@@ -419,6 +499,7 @@ try {
     );
     assert.ok(!requests.some((u) => u === modelUrl));
     report.routes[route] = {
+      status: routeResponse.status(),
       jsChunks: chunks,
       jsBytes: chunks.reduce((n, c) => n + (byName.get(c)?.bytes ?? 0), 0),
       gzipBytes: chunks.reduce(
@@ -607,6 +688,23 @@ try {
   save();
   assert.equal(loaded.workersCreated, loaded.workersTerminated);
   assert.ok(loaded.workersCreated > 0);
+  await p.setViewportSize({ width: 1024, height: 768 });
+  await p.waitForTimeout(500);
+  await p.setViewportSize({ width: 1280, height: 900 });
+  await p.waitForTimeout(500);
+  const resized = await snapshot();
+  assert.equal(resized.contexts.length, loaded.contexts.length);
+  assert.equal(resized.workersCreated, loaded.workersCreated);
+  assert.equal(resized.contexts.at(-1).lost, false);
+  assert.ok(resized.contexts.at(-1).deletedWhileLive.Framebuffer > 0);
+  assert.ok(
+    resized.contexts.at(-1).renderTargetTextures >
+      resized.contexts.at(-1).renderTargetTexturesDeletedWhileLive,
+  );
+  report.cases.push({
+    case: "composer resize reuses renderer/model and releases replaced targets",
+    audit: resized,
+  });
   await p.emulateMedia({ reducedMotion: "reduce" });
   await p.waitForFunction(
     () =>
@@ -620,6 +718,17 @@ try {
   const still = await snapshot();
   assert.equal(still.contexts.at(-1).draws, paused.contexts.at(-1).draws);
   assert.equal(still.workersCreated, loaded.workersCreated);
+  const reducedGL = still.contexts.at(-1);
+  assert.equal(reducedGL.lost, false);
+  assert.equal(
+    reducedGL.renderTargetTexturesDeletedWhileLive,
+    reducedGL.renderTargetTextures,
+    "live reduced-motion toggle releases all composer targets without closing the model context",
+  );
+  assert.equal(
+    reducedGL.deletedWhileLive.Framebuffer,
+    reducedGL.created.Framebuffer,
+  );
   await p.emulateMedia({ reducedMotion: "no-preference" });
   await p.waitForFunction(
     (count) => window.__showcaseAudit.contexts.at(-1).draws > count,
@@ -650,21 +759,21 @@ try {
     // Direct scrollTo during that tween is deliberately superseded by Lenis.
     await p
       .getByRole("button", {
-        name: ["Showcase", "Signal", "Reveal"][index],
+        name: sceneTitles[index],
         exact: true,
       })
       .click();
     await p.evaluate(
-      ({ index, local }) => {
+      ({ index, local, count }) => {
         const node = document.querySelector(".showcase__experience");
         window.scrollTo(
           0,
           node.getBoundingClientRect().top +
             scrollY +
-            ((index + local) / 3) * (node.offsetHeight - innerHeight),
+            ((index + local) / count) * (node.offsetHeight - innerHeight),
         );
       },
-      { index, local },
+      { index, local, count: sceneCount },
     );
     await p.waitForFunction(
       ({ index, local }) => {
@@ -705,11 +814,12 @@ try {
   report.transitions = [];
   let previous = far;
   for (const [index, local] of [
-    [1, 0.35],
-    [2, 0.5],
-    [1, 0.55],
-    [0, 0.25],
-    [2, 0.7],
+    ...Array.from({ length: sceneCount - 1 }, (_, i) => [i + 1, 0.4]),
+    ...Array.from({ length: sceneCount - 1 }, (_, i) => [
+      sceneCount - 2 - i,
+      0.6,
+    ]),
+    [sceneCount - 1, 0.7],
     [0, 0.2],
   ]) {
     const current = await scrub(index, local);
@@ -725,6 +835,25 @@ try {
         oldContext.deleted[kind] > 0,
         `${kind} released at scene transition`,
       );
+    assert.ok(
+      oldContext.created.Framebuffer > 0,
+      "composer actually allocated framebuffers",
+    );
+    assert.equal(
+      oldContext.deletedWhileLive.Framebuffer,
+      oldContext.created.Framebuffer,
+      "every composer framebuffer explicitly deleted before context loss",
+    );
+    assert.equal(
+      oldContext.renderTargetTexturesDeletedWhileLive,
+      oldContext.renderTargetTextures,
+      "every attached render-target texture deleted before context loss",
+    );
+    assert.ok(oldContext.renderTargetTextures > 0);
+    assert.equal(
+      oldContext.deletedWhileLive.Renderbuffer ?? 0,
+      oldContext.created.Renderbuffer ?? 0,
+    );
     assert.ok(current.bitmapsClosed > previous.bitmapsClosed);
     assert.equal(current.workersCreated, current.workersTerminated);
     assert.equal(current.blobsCreated, current.blobsRevoked);
@@ -887,6 +1016,9 @@ try {
   );
   await ready(p);
   report.lifecycle.refresh = await snapshot();
+  report.lifecycle.refreshScene = await p
+    .locator(".showcase__experience")
+    .getAttribute("data-active-scene");
   assert.ok(Math.abs(report.lifecycle.refresh.scrollY - before.scrollY) < 100);
   await p.getByRole("link", { name: "Showcase", exact: true }).click();
   await p.waitForURL((u) => u.pathname === "/showcase");
@@ -975,7 +1107,7 @@ try {
     await reduced.evaluate(() => window.__showcaseAudit.contexts[0].draws),
     draws,
   );
-  for (const name of ["Signal", "Reveal", "Showcase"]) {
+  for (const name of [...sceneTitles.slice(1), sceneTitles[0]]) {
     const old = await reduced.evaluate(() =>
       structuredClone(window.__showcaseAudit),
     );
@@ -997,6 +1129,16 @@ try {
       path: path.join(out, name.toLowerCase() + "-mobile-reduced.jpg"),
     });
   }
+  const mobileReducedGL = await reduced.evaluate(
+    () => window.__showcaseAudit.contexts,
+  );
+  assert.ok(
+    mobileReducedGL.every(
+      (c) => !c.created.Framebuffer && c.renderTargetTextures === 0,
+    ),
+    "reduced-motion scenes never allocate composer targets",
+  );
+  report.reducedMotion = { noComposerTargets: true, contexts: mobileReducedGL };
   await reduced.screenshot({
     path: path.join(out, "opening-mobile-reduced.jpg"),
   });
@@ -1211,7 +1353,7 @@ try {
   assert.deepEqual(report.unhandledErrors, []);
   assert.ok(!/ReferenceError: (window|document)/.test(serverLogs));
   report.openGates.push(
-    "Physical iOS/Android GPU/performance and scenes 4–12, video parity and audio are outside slice 5b",
+    "Physical iOS/Android GPU/performance, scenes 9–12 (5c-2), video parity and audio remain outside this 5c batch",
   );
   save();
   console.log(

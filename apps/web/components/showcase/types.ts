@@ -1,6 +1,13 @@
 export type ShowcaseKind = "landing" | "intro" | "experience";
 export type SceneId =
-  "showcase-scene-1" | "showcase-scene-2" | "showcase-scene-3";
+  | "showcase-scene-1"
+  | "showcase-scene-2"
+  | "showcase-scene-3"
+  | "showcase-scene-4"
+  | "showcase-scene-5"
+  | "showcase-scene-6"
+  | "showcase-scene-7"
+  | "showcase-scene-8";
 export type StoryLine = {
   text: string;
   blankBeforeMs?: number;

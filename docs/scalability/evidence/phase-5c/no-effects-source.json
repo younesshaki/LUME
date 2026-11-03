@@ -1,0 +1,12 @@
+{
+  "base": "2a9fbe0299",
+  "description": "Controlled eight-scene build before adding composer runtime; same pinned dependencies already declared, no effects import or runtime toggle",
+  "files": {
+    "apps/web/components/showcase/ShowcaseCanvas.tsx": "3bfff77166c528420a58f9108dd22cc667526732dfadca87044555152a824a47",
+    "apps/web/components/showcase/Experience.tsx": "137450dd0cf36085b4e4376b8960ae71a6c6ca3f6a1ed4795ea9ec937e9a6057",
+    "apps/web/server/showcase/scene-manifest.ts": "ff0695ae20944ac4efd02874d3687c92d7c58aa2109870f93b8c403c903985cd",
+    "apps/web/components/showcase/types.ts": "7de79456357827830047f933fffffc1691362fd7852fc27b22f311f2a8f8b45d",
+    "apps/web/package.json": "6d5bee395d6728f01974c689684a83ff299c1ab3cc2ecb28799f36f2ee4a6ef1",
+    "package-lock.json": "cfa84ec44872b2ad6054f366ce56429b17d5116ad855f3b054b7e16acd141b51"
+  }
+}

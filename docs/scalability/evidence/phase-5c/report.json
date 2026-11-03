@@ -1,0 +1,3610 @@
+{
+  "source": "Local production Next build with synthetic loopback tenant/content data; real public R2 GLB. No hosted Next deployment or remote data/config changes.",
+  "observedAt": "2026-11-03T19:05:28.057Z",
+  "applicationCommit": "636819074df1813032d0b8c65c89a794b3c5d08c",
+  "unhandledErrors": [],
+  "routes": {
+    "/": {
+      "status": 200,
+      "jsChunks": [
+        "static/chunks/webpack-c4a0e7a6fb16fcfa.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-8f63d49a63f2dcb4.js",
+        "static/chunks/app/global-error-e4eb847cf68a5965.js",
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/app/error-5769487427b29b73.js",
+        "static/chunks/6680-578f400cb60ed0a8.js",
+        "static/chunks/5172-6909f1e8f3e292ce.js",
+        "static/chunks/806-261cbed33be343c8.js",
+        "static/chunks/6088-a5c150e08dcb7695.js",
+        "static/chunks/4810-71135786cac4a6ef.js",
+        "static/chunks/app/page-cf0f0128d1f76d7d.js"
+      ],
+      "jsBytes": 915863,
+      "gzipBytes": 291183,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/vehicles": {
+      "status": 200,
+      "jsChunks": [
+        "static/chunks/webpack-c4a0e7a6fb16fcfa.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-8f63d49a63f2dcb4.js",
+        "static/chunks/app/vehicles/error-5c73ab60371666ba.js",
+        "static/chunks/app/global-error-e4eb847cf68a5965.js",
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/app/error-5769487427b29b73.js",
+        "static/chunks/app/vehicles/page-9f5ccb93ecd74ae4.js"
+      ],
+      "jsBytes": 437121,
+      "gzipBytes": 131581,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase": {
+      "status": 200,
+      "jsChunks": [
+        "static/chunks/webpack-c4a0e7a6fb16fcfa.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-8f63d49a63f2dcb4.js",
+        "static/chunks/app/global-error-e4eb847cf68a5965.js",
+        "static/chunks/2303-3fa43f0c07180989.js",
+        "static/chunks/app/showcase/page-9290ee633d21ed8a.js",
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/app/error-5769487427b29b73.js",
+        "static/chunks/4557.99af95e86de282fa.js"
+      ],
+      "jsBytes": 446284,
+      "gzipBytes": 135098,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase/intro": {
+      "status": 200,
+      "jsChunks": [
+        "static/chunks/webpack-c4a0e7a6fb16fcfa.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-8f63d49a63f2dcb4.js",
+        "static/chunks/app/global-error-e4eb847cf68a5965.js",
+        "static/chunks/2303-3fa43f0c07180989.js",
+        "static/chunks/app/showcase/intro/page-9290ee633d21ed8a.js",
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/app/error-5769487427b29b73.js",
+        "static/chunks/2182.2d6dabe542db5132.js"
+      ],
+      "jsBytes": 446320,
+      "gzipBytes": 135117,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/intro": {
+      "status": 404,
+      "jsChunks": [
+        "static/chunks/webpack-c4a0e7a6fb16fcfa.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-8f63d49a63f2dcb4.js",
+        "static/chunks/app/global-error-e4eb847cf68a5965.js",
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/app/error-5769487427b29b73.js"
+      ],
+      "jsBytes": 432912,
+      "gzipBytes": 129852,
+      "heavyChunksRequested": [],
+      "pageErrors": []
+    },
+    "/showcase/experience": {
+      "jsChunks": [
+        "static/chunks/webpack-c4a0e7a6fb16fcfa.js",
+        "static/chunks/87c73c54-014124adcece3495.js",
+        "static/chunks/1968-50be65d4271afac6.js",
+        "static/chunks/main-app-8f63d49a63f2dcb4.js",
+        "static/chunks/app/global-error-e4eb847cf68a5965.js",
+        "static/chunks/2303-3fa43f0c07180989.js",
+        "static/chunks/app/showcase/experience/page-9290ee633d21ed8a.js",
+        "static/chunks/app/layout-62e164b11d159923.js",
+        "static/chunks/app/error-5769487427b29b73.js",
+        "static/chunks/9d78c252.eec5dc9b316a97e1.js",
+        "static/chunks/b0045e08.a242a15e58e924f1.js",
+        "static/chunks/1329d575.685714fd1c99a513.js",
+        "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "static/chunks/4570.33f4cadaeba96381.js"
+      ],
+      "jsBytes": 1268148,
+      "gzipBytes": 355012,
+      "heavyChunksRequested": [
+        "static/chunks/9d78c252.eec5dc9b316a97e1.js",
+        "static/chunks/b0045e08.a242a15e58e924f1.js",
+        "static/chunks/1329d575.685714fd1c99a513.js",
+        "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "static/chunks/4570.33f4cadaeba96381.js"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "case": "raw SSR",
+      "route": "/showcase",
+      "status": 200,
+      "title": "Showcase | Local showcase fixture",
+      "h1Count": 1,
+      "canonical": "http://127.0.0.1:37759/showcase?tenant=demo",
+      "noindex": "noindex, nofollow, noarchive"
+    },
+    {
+      "case": "raw SSR",
+      "route": "/showcase/intro",
+      "status": 200,
+      "title": "LUME | Local showcase fixture",
+      "h1Count": 1,
+      "canonical": "http://127.0.0.1:37759/showcase?tenant=demo",
+      "noindex": "noindex, nofollow, noarchive"
+    },
+    {
+      "case": "raw SSR",
+      "route": "/showcase/experience",
+      "status": 200,
+      "title": "A cinematic product showcase | Local showcase fixture",
+      "h1Count": 1,
+      "canonical": "http://127.0.0.1:37759/showcase?tenant=demo",
+      "noindex": "noindex, nofollow, noarchive"
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=missing",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&part=6&part=6",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&chapter=1",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&part=abc",
+      "status": 404
+    },
+    {
+      "case": "negative selector",
+      "query": "tenant=demo&draft=true",
+      "status": 404
+    },
+    {
+      "case": "explicit suspense/loading",
+      "visible": true,
+      "canvasBeforeReady": 0
+    },
+    {
+      "case": "composer resize reuses renderer/model and releases replaced targets",
+      "audit": {
+        "scrollY": 0,
+        "workersCreated": 2,
+        "workersTerminated": 2,
+        "bitmapsClosed": 0,
+        "audioContexts": 0,
+        "mediaPlayCalls": 0,
+        "contexts": [
+          {
+            "lost": false,
+            "draws": 224,
+            "indexedElements": 9917904,
+            "created": {
+              "Texture": 38,
+              "Framebuffer": 33,
+              "Buffer": 17,
+              "Program": 7
+            },
+            "deleted": {
+              "Framebuffer": 22,
+              "Texture": 22
+            },
+            "deletedWhileLive": {
+              "Framebuffer": 22,
+              "Texture": 22
+            },
+            "renderTargetTextures": 33,
+            "renderTargetTexturesDeletedWhileLive": 22,
+            "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+            "cameraPosition": [
+              -1.1999999967973451,
+              0.8000000141580442,
+              6.400000113264355
+            ],
+            "cameraSamples": 1
+          }
+        ],
+        "blobsCreated": 2,
+        "blobsRevoked": 2
+      }
+    },
+    {
+      "case": "live reduced-motion toggle",
+      "sameModelAndContext": true,
+      "continuousFramesStopAndResume": true
+    },
+    {
+      "case": "landing → intro → experience",
+      "passed": true
+    },
+    {
+      "case": "model error → retry → rendered",
+      "passed": true
+    },
+    {
+      "case": "empty GLB",
+      "passed": true
+    },
+    {
+      "case": "reduced motion",
+      "continuousFrames": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "case": "WebAssembly unavailable",
+      "fallback": true,
+      "modelNotRequested": true
+    },
+    {
+      "case": "WebGL initialization failure",
+      "fallback": true,
+      "audit": {
+        "workersCreated": 2,
+        "workersTerminated": 2,
+        "bitmapsClosed": 1,
+        "audioContexts": 0,
+        "mediaPlayCalls": 0,
+        "contexts": [],
+        "blobsCreated": 2,
+        "blobsRevoked": 2
+      }
+    },
+    {
+      "case": "navigation during decoder initialization",
+      "passed": true,
+      "audit": {
+        "workersCreated": 2,
+        "workersTerminated": 2,
+        "bitmapsClosed": 1,
+        "audioContexts": 0,
+        "mediaPlayCalls": 0,
+        "contexts": [],
+        "blobsCreated": 2,
+        "blobsRevoked": 2
+      }
+    },
+    {
+      "case": "scene exit during decoder initialization",
+      "passed": true,
+      "audit": {
+        "workersCreated": 4,
+        "workersTerminated": 4,
+        "bitmapsClosed": 1,
+        "audioContexts": 0,
+        "mediaPlayCalls": 0,
+        "contexts": [
+          {
+            "lost": false,
+            "draws": 42,
+            "indexedElements": 1859607,
+            "created": {
+              "Texture": 16,
+              "Framebuffer": 11,
+              "Buffer": 15,
+              "Program": 7
+            },
+            "deleted": {},
+            "deletedWhileLive": {},
+            "renderTargetTextures": 11,
+            "renderTargetTexturesDeletedWhileLive": 0,
+            "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+            "cameraPosition": [
+              -0.10173657239850975,
+              0.0500000004374379,
+              5.19900480751275
+            ],
+            "cameraSamples": 1
+          }
+        ],
+        "blobsCreated": 4,
+        "blobsRevoked": 4
+      }
+    },
+    {
+      "case": "JavaScript disabled",
+      "routes": 3,
+      "headingAndNoscriptNavigation": true
+    }
+  ],
+  "hydrationErrors": [],
+  "openGates": [
+    "Hosted direct model-render proof (5e) requires owner-approved R2 CORS for Preview origins; no R2 mutation in this task",
+    "Physical iOS/Android GPU/performance, scenes 9–12 (5c-2), video parity and audio remain outside this 5c batch"
+  ],
+  "bundle": {
+    "source": "actual production client webpack compilation",
+    "heavyChunks": [
+      {
+        "name": "static/chunks/9d78c252.eec5dc9b316a97e1.js",
+        "bytes": 517593,
+        "gzipBytes": 127972
+      },
+      {
+        "name": "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "bytes": 110712,
+        "gzipBytes": 35186
+      },
+      {
+        "name": "static/chunks/b0045e08.a242a15e58e924f1.js",
+        "bytes": 66151,
+        "gzipBytes": 16071
+      },
+      {
+        "name": "static/chunks/1329d575.685714fd1c99a513.js",
+        "bytes": 109698,
+        "gzipBytes": 33957
+      },
+      {
+        "name": "static/chunks/4570.33f4cadaeba96381.js",
+        "bytes": 18325,
+        "gzipBytes": 7120
+      }
+    ],
+    "moduleChunkReceipt": [
+      {
+        "resource": "node_modules/three/build/three.module.js",
+        "chunks": [
+          "static/chunks/9d78c252.eec5dc9b316a97e1.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/lenis/dist/lenis.mjs",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "node_modules/postprocessing/build/index.js",
+        "chunks": [
+          "static/chunks/b0045e08.a242a15e58e924f1.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/constants.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/index.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/index.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/cjs/react-reconciler.production.js",
+        "chunks": [
+          "static/chunks/1329d575.685714fd1c99a513.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/node_modules/scheduler/cjs/scheduler.production.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/index.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/react-reconciler/node_modules/scheduler/cjs/scheduler.production.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/examples/jsm/loaders/DRACOLoader.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/Experience.tsx",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/useDisposableGLTF.ts",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/ModelBoundary.tsx",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/ShowcaseCanvas.tsx",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/StoryBridge.tsx",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/CameraRig.tsx",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/StoryNarrative.tsx",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/useStoryScroll.ts",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/StoryConsent.tsx",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/story-store.ts",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/model-resource.ts",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/loadModel.ts",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/OpeningScene.tsx",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/ShowcaseEffects.tsx",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/composer-ownership.ts",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/camera-path.ts",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/story-cues.ts",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/components/showcase/disposeModel.ts",
+        "chunks": [
+          "static/chunks/4570.33f4cadaeba96381.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/fiber/dist/events-f8cd670d.esm.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/drei/core/Sparkles.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "apps/web/node_modules/@react-three/drei/helpers/constants.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/examples/jsm/loaders/GLTFLoader.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      },
+      {
+        "resource": "node_modules/three/examples/jsm/utils/BufferGeometryUtils.js",
+        "chunks": [
+          "static/chunks/7655.6fabb6cec9e21f6a.js"
+        ]
+      }
+    ],
+    "emittedLevaModules": 0,
+    "emittedPerfModules": 0,
+    "emittedN8AOModules": 0
+  },
+  "r2": {
+    "url": "https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb",
+    "status": 200,
+    "bytes": 603908,
+    "sha256": "de5b04647e34ff1c7496c19cd77ec1719dde671b8bdb4b57ae1ae4d672b944ce",
+    "accessControlAllowOrigin": null,
+    "stablePreview": {
+      "status": 200,
+      "origin": "https://lume-web-phase3-hakicsi89.vercel.app",
+      "accessControlAllowOrigin": null
+    },
+    "browser": {
+      "directAccess": "blocked",
+      "errors": [
+        "Access to fetch at 'https://pub-da3069790c6443f883e3991be965f766.r2.dev/vehicle%20images/3D%20assets/blackredbull6.optimized.glb' from origin 'http://127.0.0.1:37759' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "TypeError: Failed to fetch\n    at h (http://127.0.0.1:37759/_next/static/chunks/4570.33f4cadaeba96381.js:1:1194)\n    at f (http://127.0.0.1:37759/_next/static/chunks/4570.33f4cadaeba96381.js:1:2545)\n    at http://127.0.0.1:37759/_next/static/chunks/4570.33f4cadaeba96381.js:2:406"
+      ]
+    }
+  },
+  "successfulRender": {
+    "pageErrors": [],
+    "consoleErrors": []
+  },
+  "renderDiagnostic": "Same real R2 GLB bytes, Playwright-only Access-Control-Allow-Origin; does not close hosted/direct CORS gate",
+  "loadingDOM": {
+    "display": "block",
+    "height": 15300,
+    "text": "A cinematic product study.\n\nShowcase\nSignal\nReveal\nCraft\nExperience\nTrust\nBenefits\nDifferentiation\n\nLoading the product…\n\nThe rest of the site remains available.\n\nShowcase\n\n \n\nAudio unavailable in this preview · consent rejected"
+  },
+  "lifecycle": {
+    "loaded": {
+      "scrollY": 0,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 0,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 42,
+          "indexedElements": 1859607,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {},
+          "deletedWhileLive": {},
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 0,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.1999999967973451,
+            0.8000000141580442,
+            6.400000113264355
+          ],
+          "cameraSamples": 1
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    },
+    "disposed": {
+      "scrollY": 0,
+      "workersCreated": 40,
+      "workersTerminated": 40,
+      "bitmapsClosed": 20,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": true,
+          "draws": 776,
+          "indexedElements": 35332533,
+          "created": {
+            "Texture": 49,
+            "Framebuffer": 44,
+            "Buffer": 23,
+            "Program": 14
+          },
+          "deleted": {
+            "Framebuffer": 44,
+            "Texture": 45,
+            "Program": 12,
+            "Buffer": 11
+          },
+          "deletedWhileLive": {
+            "Framebuffer": 44,
+            "Texture": 45,
+            "Program": 12,
+            "Buffer": 11
+          },
+          "renderTargetTextures": 44,
+          "renderTargetTexturesDeletedWhileLive": 44,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.1501679077178677,
+            0.1751314530657311,
+            5.400210278419536
+          ],
+          "cameraSamples": 33
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -3.728679184222302,
+            0.050000000437437915,
+            3.624493765366167
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 266,
+          "indexedElements": 11777511,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 308,
+          "indexedElements": 13637118,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            5.180253248475424,
+            0.050000000437437915,
+            0.4527464153923163
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 336,
+          "indexedElements": 14876856,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -2.5674271238568744,
+            0.05000000043743792,
+            4.5219819955218545
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -3.0433996978568705,
+            0.05000000043743792,
+            -4.216363229975713
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 322,
+          "indexedElements": 14256987,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            5.100429637405739,
+            0.05000000043743791,
+            -1.0127294035702763
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 266,
+          "indexedElements": 11777511,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.201655382582807,
+            0.05000000043743792,
+            5.059251651421164
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 252,
+          "indexedElements": 11157642,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            5.092182261786036,
+            0.050000000437437915,
+            1.053415252955326
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 266,
+          "indexedElements": 11777511,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.1612276511339916,
+            0.05000000043743793,
+            -5.068683378448071
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -4.12569975043894,
+            0.05000000043743791,
+            3.165218035543944
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            4.595021545024026,
+            0.05000000043743791,
+            2.4342926664760247
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            0.30129244237055974,
+            0.0500000004374379,
+            -5.191264214031435
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 308,
+          "indexedElements": 13637118,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -4.845785096060523,
+            0.05000000043743791,
+            1.8863638479118816
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 308,
+          "indexedElements": 13637118,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.24013020863537804,
+            0.2501085026603391,
+            5.5201736343042285
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 252,
+          "indexedElements": 11157642,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -3.8484372277969214,
+            0.050000000437437915,
+            3.4970747876432995
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 322,
+          "indexedElements": 14256987,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.8403906199048735,
+            0.6002170198868911,
+            6.080347203231128
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 140,
+          "indexedElements": 6198690,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -5.151158374479081,
+            0.050000000437437915,
+            0.7110335502192183
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.6763954709256624,
+            0.5091085850213374,
+            5.934573830851605
+          ],
+          "cameraSamples": 20
+        },
+        {
+          "lost": true,
+          "draws": 238,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 16,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        }
+      ],
+      "blobsCreated": 40,
+      "blobsRevoked": 40
+    },
+    "back": {
+      "scrollY": 4496,
+      "workersCreated": 42,
+      "workersTerminated": 42,
+      "bitmapsClosed": 20,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": true,
+          "draws": 776,
+          "indexedElements": 35332533,
+          "created": {
+            "Texture": 49,
+            "Framebuffer": 44,
+            "Buffer": 23,
+            "Program": 14
+          },
+          "deleted": {
+            "Framebuffer": 44,
+            "Texture": 45,
+            "Program": 12,
+            "Buffer": 11
+          },
+          "deletedWhileLive": {
+            "Framebuffer": 44,
+            "Texture": 45,
+            "Program": 12,
+            "Buffer": 11
+          },
+          "renderTargetTextures": 44,
+          "renderTargetTexturesDeletedWhileLive": 44,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.1501679077178677,
+            0.1751314530657311,
+            5.400210278419536
+          ],
+          "cameraSamples": 33
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -3.728679184222302,
+            0.050000000437437915,
+            3.624493765366167
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 266,
+          "indexedElements": 11777511,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 308,
+          "indexedElements": 13637118,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            5.180253248475424,
+            0.050000000437437915,
+            0.4527464153923163
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 336,
+          "indexedElements": 14876856,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -2.5674271238568744,
+            0.05000000043743792,
+            4.5219819955218545
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -3.0433996978568705,
+            0.05000000043743792,
+            -4.216363229975713
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 322,
+          "indexedElements": 14256987,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            5.100429637405739,
+            0.05000000043743791,
+            -1.0127294035702763
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 266,
+          "indexedElements": 11777511,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.201655382582807,
+            0.05000000043743792,
+            5.059251651421164
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 252,
+          "indexedElements": 11157642,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            5.092182261786036,
+            0.050000000437437915,
+            1.053415252955326
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 266,
+          "indexedElements": 11777511,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.1612276511339916,
+            0.05000000043743793,
+            -5.068683378448071
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -4.12569975043894,
+            0.05000000043743791,
+            3.165218035543944
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            4.595021545024026,
+            0.05000000043743791,
+            2.4342926664760247
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            0.30129244237055974,
+            0.0500000004374379,
+            -5.191264214031435
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 308,
+          "indexedElements": 13637118,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -4.845785096060523,
+            0.05000000043743791,
+            1.8863638479118816
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 308,
+          "indexedElements": 13637118,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.24013020863537804,
+            0.2501085026603391,
+            5.5201736343042285
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 252,
+          "indexedElements": 11157642,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -3.8484372277969214,
+            0.050000000437437915,
+            3.4970747876432995
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 322,
+          "indexedElements": 14256987,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.8403906199048735,
+            0.6002170198868911,
+            6.080347203231128
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 140,
+          "indexedElements": 6198690,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -5.151158374479081,
+            0.050000000437437915,
+            0.7110335502192183
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": true,
+          "draws": 280,
+          "indexedElements": 12397380,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.6763954709256624,
+            0.5091085850213374,
+            5.934573830851605
+          ],
+          "cameraSamples": 20
+        },
+        {
+          "lost": true,
+          "draws": 238,
+          "indexedElements": 10537773,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 16,
+            "Program": 7
+          },
+          "deleted": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "deletedWhileLive": {
+            "Buffer": 9,
+            "Program": 6,
+            "Texture": 12,
+            "Framebuffer": 11
+          },
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 11,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        },
+        {
+          "lost": false,
+          "draws": 42,
+          "indexedElements": 1859607,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {},
+          "deletedWhileLive": {},
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 0,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        }
+      ],
+      "blobsCreated": 42,
+      "blobsRevoked": 42
+    },
+    "backScene": "showcase-scene-3",
+    "refresh": {
+      "scrollY": 4496,
+      "workersCreated": 4,
+      "workersTerminated": 4,
+      "bitmapsClosed": 1,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 42,
+          "indexedElements": 1859607,
+          "created": {
+            "Texture": 16,
+            "Framebuffer": 11,
+            "Buffer": 15,
+            "Program": 7
+          },
+          "deleted": {},
+          "deletedWhileLive": {},
+          "renderTargetTextures": 11,
+          "renderTargetTexturesDeletedWhileLive": 0,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -1.7440648477263203,
+            0.05000000043743789,
+            -4.898799777030263
+          ],
+          "cameraSamples": 1
+        }
+      ],
+      "blobsCreated": 4,
+      "blobsRevoked": 4
+    },
+    "refreshScene": "showcase-scene-3"
+  },
+  "choreography": {
+    "near": {
+      "scene": "showcase-scene-1",
+      "localProgress": 0.15,
+      "lenisActive": true,
+      "stickyTop": 0,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 0,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 524,
+          "indexedElements": 24174891,
+          "created": {
+            "Texture": 49,
+            "Framebuffer": 44,
+            "Buffer": 23,
+            "Program": 14
+          },
+          "deleted": {
+            "Framebuffer": 33,
+            "Texture": 33,
+            "Program": 4,
+            "Buffer": 2
+          },
+          "deletedWhileLive": {
+            "Framebuffer": 33,
+            "Texture": 33,
+            "Program": 4,
+            "Buffer": 2
+          },
+          "renderTargetTextures": 44,
+          "renderTargetTexturesDeletedWhileLive": 33,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.9304319427441925,
+            0.6502399478321728,
+            6.160384254851067
+          ],
+          "cameraSamples": 15
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    },
+    "far": {
+      "scene": "showcase-scene-1",
+      "localProgress": 0.75,
+      "lenisActive": true,
+      "stickyTop": 0,
+      "workersCreated": 2,
+      "workersTerminated": 2,
+      "bitmapsClosed": 0,
+      "audioContexts": 0,
+      "mediaPlayCalls": 0,
+      "contexts": [
+        {
+          "lost": false,
+          "draws": 720,
+          "indexedElements": 32853057,
+          "created": {
+            "Texture": 49,
+            "Framebuffer": 44,
+            "Buffer": 23,
+            "Program": 14
+          },
+          "deleted": {
+            "Framebuffer": 33,
+            "Texture": 33,
+            "Program": 4,
+            "Buffer": 2
+          },
+          "deletedWhileLive": {
+            "Framebuffer": 33,
+            "Texture": 33,
+            "Program": 4,
+            "Buffer": 2
+          },
+          "renderTargetTextures": 44,
+          "renderTargetTexturesDeletedWhileLive": 33,
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "cameraPosition": [
+            -0.15072784537737857,
+            0.17547240436302405,
+            5.400755708772067
+          ],
+          "cameraSamples": 29
+        }
+      ],
+      "blobsCreated": 2,
+      "blobsRevoked": 2
+    },
+    "cameraFromGPUViewUniform": true,
+    "correctCranePose": true,
+    "wheelTrail": [
+      {
+        "time": 7.199999999254942,
+        "y": 0
+      },
+      {
+        "time": 24.599999997764826,
+        "y": 65
+      },
+      {
+        "time": 40.399999998509884,
+        "y": 124
+      },
+      {
+        "time": 57.099999997764826,
+        "y": 176
+      },
+      {
+        "time": 74.30000000074506,
+        "y": 225
+      },
+      {
+        "time": 90.59999999776483,
+        "y": 268
+      },
+      {
+        "time": 113.39999999850988,
+        "y": 308
+      },
+      {
+        "time": 123.89999999850988,
+        "y": 344
+      },
+      {
+        "time": 140.80000000074506,
+        "y": 377
+      },
+      {
+        "time": 157.5,
+        "y": 406
+      },
+      {
+        "time": 173.89999999850988,
+        "y": 433
+      },
+      {
+        "time": 191.19999999925494,
+        "y": 458
+      },
+      {
+        "time": 207.19999999925494,
+        "y": 480
+      },
+      {
+        "time": 223.80000000074506,
+        "y": 500
+      },
+      {
+        "time": 240.80000000074506,
+        "y": 519
+      },
+      {
+        "time": 263.3999999985099,
+        "y": 536
+      },
+      {
+        "time": 281.30000000074506,
+        "y": 551
+      },
+      {
+        "time": 353.80000000074506,
+        "y": 599
+      },
+      {
+        "time": 358.5999999977648,
+        "y": 608
+      },
+      {
+        "time": 685.1999999992549,
+        "y": 686
+      },
+      {
+        "time": 760.3000000007451,
+        "y": 692
+      },
+      {
+        "time": 881.5,
+        "y": 696
+      },
+      {
+        "time": 997.3999999985099,
+        "y": 698
+      },
+      {
+        "time": 1119.300000000745,
+        "y": 699
+      },
+      {
+        "time": 1245.699999999255,
+        "y": 700
+      },
+      {
+        "time": 1361.199999999255,
+        "y": 700
+      },
+      {
+        "time": 1476.199999999255,
+        "y": 700
+      },
+      {
+        "time": 1716.300000000745,
+        "y": 700
+      },
+      {
+        "time": 1822.300000000745,
+        "y": 700
+      }
+    ]
+  },
+  "transitions": [
+    {
+      "from": "showcase-scene-1",
+      "to": "showcase-scene-2",
+      "oldContext": {
+        "lost": true,
+        "draws": 776,
+        "indexedElements": 35332533,
+        "created": {
+          "Texture": 49,
+          "Framebuffer": 44,
+          "Buffer": 23,
+          "Program": 14
+        },
+        "deleted": {
+          "Framebuffer": 44,
+          "Texture": 45,
+          "Program": 12,
+          "Buffer": 11
+        },
+        "deletedWhileLive": {
+          "Framebuffer": 44,
+          "Texture": 45,
+          "Program": 12,
+          "Buffer": 11
+        },
+        "renderTargetTextures": 44,
+        "renderTargetTexturesDeletedWhileLive": 44,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -0.1501679077178677,
+          0.1751314530657311,
+          5.400210278419536
+        ],
+        "cameraSamples": 33
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 4,
+      "workersTerminated": 4,
+      "blobsCreated": 4,
+      "blobsRevoked": 4,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -3.728679184222302,
+        0.050000000437437915,
+        3.624493765366167
+      ],
+      "expectedCamera": [
+        -3.7302516726775177,
+        0.05,
+        3.6228748886052613
+      ]
+    },
+    {
+      "from": "showcase-scene-2",
+      "to": "showcase-scene-3",
+      "oldContext": {
+        "lost": true,
+        "draws": 280,
+        "indexedElements": 12397380,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -3.728679184222302,
+          0.050000000437437915,
+          3.624493765366167
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 6,
+      "workersTerminated": 6,
+      "blobsCreated": 6,
+      "blobsRevoked": 6,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -1.7440648477263203,
+        0.05000000043743789,
+        -4.898799777030263
+      ],
+      "expectedCamera": [
+        -1.741938380810707,
+        0.05,
+        -4.899556171477022
+      ]
+    },
+    {
+      "from": "showcase-scene-3",
+      "to": "showcase-scene-4",
+      "oldContext": {
+        "lost": true,
+        "draws": 266,
+        "indexedElements": 11777511,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -1.7440648477263203,
+          0.05000000043743789,
+          -4.898799777030263
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 8,
+      "workersTerminated": 8,
+      "blobsCreated": 8,
+      "blobsRevoked": 8,
+      "liveContexts": 1,
+      "cameraPosition": [
+        5.180253248475424,
+        0.050000000437437915,
+        0.4527464153923163
+      ],
+      "expectedCamera": [
+        5.180055965946372,
+        0.05,
+        0.4549947138851209
+      ]
+    },
+    {
+      "from": "showcase-scene-4",
+      "to": "showcase-scene-5",
+      "oldContext": {
+        "lost": true,
+        "draws": 308,
+        "indexedElements": 13637118,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          5.180253248475424,
+          0.050000000437437915,
+          0.4527464153923163
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 10,
+      "workersTerminated": 10,
+      "blobsCreated": 10,
+      "blobsRevoked": 10,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -2.5674271238568744,
+        0.05000000043743792,
+        4.5219819955218545
+      ],
+      "expectedCamera": [
+        -2.5693894259207664,
+        0.05,
+        4.520866949819089
+      ]
+    },
+    {
+      "from": "showcase-scene-5",
+      "to": "showcase-scene-6",
+      "oldContext": {
+        "lost": true,
+        "draws": 336,
+        "indexedElements": 14876856,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -2.5674271238568744,
+          0.05000000043743792,
+          4.5219819955218545
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 12,
+      "workersTerminated": 12,
+      "blobsCreated": 12,
+      "blobsRevoked": 12,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -3.0433996978568705,
+        0.05000000043743792,
+        -4.216363229975713
+      ],
+      "expectedCamera": [
+        -3.041569403037161,
+        0.05,
+        -4.217683673120611
+      ]
+    },
+    {
+      "from": "showcase-scene-6",
+      "to": "showcase-scene-7",
+      "oldContext": {
+        "lost": true,
+        "draws": 280,
+        "indexedElements": 12397380,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -3.0433996978568705,
+          0.05000000043743792,
+          -4.216363229975713
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 14,
+      "workersTerminated": 14,
+      "blobsCreated": 14,
+      "blobsRevoked": 14,
+      "liveContexts": 1,
+      "cameraPosition": [
+        5.100429637405739,
+        0.05000000043743791,
+        -1.0127294035702763
+      ],
+      "expectedCamera": [
+        5.100868396345756,
+        0.05,
+        -1.0105155135677413
+      ]
+    },
+    {
+      "from": "showcase-scene-7",
+      "to": "showcase-scene-8",
+      "oldContext": {
+        "lost": true,
+        "draws": 322,
+        "indexedElements": 14256987,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          5.100429637405739,
+          0.05000000043743791,
+          -1.0127294035702763
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 16,
+      "workersTerminated": 16,
+      "blobsCreated": 16,
+      "blobsRevoked": 16,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -1.201655382582807,
+        0.05000000043743792,
+        5.059251651421164
+      ],
+      "expectedCamera": [
+        -1.2038510905280022,
+        0.05,
+        5.058729341626664
+      ]
+    },
+    {
+      "from": "showcase-scene-8",
+      "to": "showcase-scene-7",
+      "oldContext": {
+        "lost": true,
+        "draws": 266,
+        "indexedElements": 11777511,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -1.201655382582807,
+          0.05000000043743792,
+          5.059251651421164
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 18,
+      "workersTerminated": 18,
+      "blobsCreated": 18,
+      "blobsRevoked": 18,
+      "liveContexts": 1,
+      "cameraPosition": [
+        5.092182261786036,
+        0.050000000437437915,
+        1.053415252955326
+      ],
+      "expectedCamera": [
+        5.0917241915868505,
+        0.05,
+        1.055625291857502
+      ]
+    },
+    {
+      "from": "showcase-scene-7",
+      "to": "showcase-scene-6",
+      "oldContext": {
+        "lost": true,
+        "draws": 252,
+        "indexedElements": 11157642,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          5.092182261786036,
+          0.050000000437437915,
+          1.053415252955326
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 20,
+      "workersTerminated": 20,
+      "blobsCreated": 20,
+      "blobsRevoked": 20,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -1.1612276511339916,
+        0.05000000043743793,
+        -5.068683378448071
+      ],
+      "expectedCamera": [
+        -1.1590275533212882,
+        0.05,
+        -5.069186831301651
+      ]
+    },
+    {
+      "from": "showcase-scene-6",
+      "to": "showcase-scene-5",
+      "oldContext": {
+        "lost": true,
+        "draws": 266,
+        "indexedElements": 11777511,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -1.1612276511339916,
+          0.05000000043743793,
+          -5.068683378448071
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 22,
+      "workersTerminated": 22,
+      "blobsCreated": 22,
+      "blobsRevoked": 22,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -4.12569975043894,
+        0.05000000043743791,
+        3.165218035543944
+      ],
+      "expectedCamera": [
+        -4.127072892015593,
+        0.05,
+        3.1634268355677277
+      ]
+    },
+    {
+      "from": "showcase-scene-5",
+      "to": "showcase-scene-4",
+      "oldContext": {
+        "lost": true,
+        "draws": 280,
+        "indexedElements": 12397380,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -4.12569975043894,
+          0.05000000043743791,
+          3.165218035543944
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 24,
+      "workersTerminated": 24,
+      "blobsCreated": 24,
+      "blobsRevoked": 24,
+      "liveContexts": 1,
+      "cameraPosition": [
+        4.595021545024026,
+        0.05000000043743791,
+        2.4342926664760247
+      ],
+      "expectedCamera": [
+        4.593964209744797,
+        0.05,
+        2.436286690761961
+      ]
+    },
+    {
+      "from": "showcase-scene-4",
+      "to": "showcase-scene-3",
+      "oldContext": {
+        "lost": true,
+        "draws": 280,
+        "indexedElements": 12397380,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          4.595021545024026,
+          0.05000000043743791,
+          2.4342926664760247
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 26,
+      "workersTerminated": 26,
+      "blobsCreated": 26,
+      "blobsRevoked": 26,
+      "liveContexts": 1,
+      "cameraPosition": [
+        0.30129244237055974,
+        0.0500000004374379,
+        -5.191264214031435
+      ],
+      "expectedCamera": [
+        0.30354554582341614,
+        0.05,
+        -5.191132834132716
+      ]
+    },
+    {
+      "from": "showcase-scene-3",
+      "to": "showcase-scene-2",
+      "oldContext": {
+        "lost": true,
+        "draws": 280,
+        "indexedElements": 12397380,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          0.30129244237055974,
+          0.0500000004374379,
+          -5.191264214031435
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 28,
+      "workersTerminated": 28,
+      "blobsCreated": 28,
+      "blobsRevoked": 28,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -4.845785096060523,
+        0.05000000043743791,
+        1.8863638479118816
+      ],
+      "expectedCamera": [
+        -4.846603247029577,
+        0.05,
+        1.884260323278702
+      ]
+    },
+    {
+      "from": "showcase-scene-2",
+      "to": "showcase-scene-1",
+      "oldContext": {
+        "lost": true,
+        "draws": 308,
+        "indexedElements": 13637118,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -4.845785096060523,
+          0.05000000043743791,
+          1.8863638479118816
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 30,
+      "workersTerminated": 30,
+      "blobsCreated": 30,
+      "blobsRevoked": 30,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -0.24013020863537804,
+        0.2501085026603391,
+        5.5201736343042285
+      ],
+      "expectedCamera": [
+        -0.24,
+        0.25,
+        5.52
+      ]
+    },
+    {
+      "from": "showcase-scene-1",
+      "to": "showcase-scene-8",
+      "oldContext": {
+        "lost": true,
+        "draws": 308,
+        "indexedElements": 13637118,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -0.24013020863537804,
+          0.2501085026603391,
+          5.5201736343042285
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 32,
+      "workersTerminated": 32,
+      "blobsCreated": 32,
+      "blobsRevoked": 32,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -3.8484372277969214,
+        0.050000000437437915,
+        3.4970747876432995
+      ],
+      "expectedCamera": [
+        -3.8499546277527323,
+        0.05,
+        3.495404034478034
+      ]
+    },
+    {
+      "from": "showcase-scene-8",
+      "to": "showcase-scene-1",
+      "oldContext": {
+        "lost": true,
+        "draws": 252,
+        "indexedElements": 11157642,
+        "created": {
+          "Texture": 16,
+          "Framebuffer": 11,
+          "Buffer": 15,
+          "Program": 7
+        },
+        "deleted": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "deletedWhileLive": {
+          "Buffer": 9,
+          "Program": 6,
+          "Texture": 12,
+          "Framebuffer": 11
+        },
+        "renderTargetTextures": 11,
+        "renderTargetTexturesDeletedWhileLive": 11,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -3.8484372277969214,
+          0.050000000437437915,
+          3.4970747876432995
+        ],
+        "cameraSamples": 1
+      },
+      "bitmapsClosedDelta": 1,
+      "workersCreated": 34,
+      "workersTerminated": 34,
+      "blobsCreated": 34,
+      "blobsRevoked": 34,
+      "liveContexts": 1,
+      "cameraPosition": [
+        -0.8403906199048735,
+        0.6002170198868911,
+        6.080347203231128
+      ],
+      "expectedCamera": [
+        -0.8399999999999999,
+        0.6000000000000001,
+        6.08
+      ]
+    }
+  ],
+  "consentBridge": {
+    "audioContexts": 0,
+    "mediaPlayCalls": 0,
+    "choices": [
+      {
+        "choice": "accepted",
+        "version": 1
+      },
+      {
+        "choice": "rejected",
+        "version": 1
+      }
+    ],
+    "audio": "stubbed; no playback/media requests"
+  },
+  "decoderRequests": [
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_wasm_wrapper.js",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "bytes": null
+    },
+    {
+      "url": "http://127.0.0.1:37759/showcase-assets/draco/three-0.164.1/draco_decoder.wasm",
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": null
+    }
+  ],
+  "reducedMotion": {
+    "noComposerTargets": true,
+    "contexts": [
+      {
+        "lost": true,
+        "draws": 3,
+        "indexedElements": 619869,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "deletedWhileLive": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderTargetTextures": 0,
+        "renderTargetTexturesDeletedWhileLive": 0,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -1.1999999967973451,
+          0.8000000141580442,
+          6.400000113264355
+        ],
+        "cameraSamples": 1
+      },
+      {
+        "lost": true,
+        "draws": 3,
+        "indexedElements": 619869,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "deletedWhileLive": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderTargetTextures": 0,
+        "renderTargetTexturesDeletedWhileLive": 0,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          3.184081864435593e-16,
+          0.050000000437437915,
+          5.200000084238354
+        ],
+        "cameraSamples": 1
+      },
+      {
+        "lost": true,
+        "draws": 3,
+        "indexedElements": 619869,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "deletedWhileLive": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderTargetTextures": 0,
+        "renderTargetTexturesDeletedWhileLive": 0,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -4.728346781858192,
+          0.05000000043743791,
+          -2.163963605395837
+        ],
+        "cameraSamples": 1
+      },
+      {
+        "lost": true,
+        "draws": 3,
+        "indexedElements": 619869,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "deletedWhileLive": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderTargetTextures": 0,
+        "renderTargetTexturesDeletedWhileLive": 0,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          3.9353731464797206,
+          0.05000000043743793,
+          -3.3989468876437443
+        ],
+        "cameraSamples": 1
+      },
+      {
+        "lost": true,
+        "draws": 3,
+        "indexedElements": 619869,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "deletedWhileLive": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderTargetTextures": 0,
+        "renderTargetTexturesDeletedWhileLive": 0,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          1.45296066357794,
+          0.0500000004374379,
+          4.992885818262494
+        ],
+        "cameraSamples": 1
+      },
+      {
+        "lost": true,
+        "draws": 3,
+        "indexedElements": 619869,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "deletedWhileLive": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderTargetTextures": 0,
+        "renderTargetTexturesDeletedWhileLive": 0,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -5.144663194228372,
+          0.050000000437437915,
+          -0.7566002385263793
+        ],
+        "cameraSamples": 1
+      },
+      {
+        "lost": true,
+        "draws": 3,
+        "indexedElements": 619869,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "deletedWhileLive": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderTargetTextures": 0,
+        "renderTargetTexturesDeletedWhileLive": 0,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          2.828909969506128,
+          0.05000000043743793,
+          -4.3631722812344265
+        ],
+        "cameraSamples": 1
+      },
+      {
+        "lost": true,
+        "draws": 3,
+        "indexedElements": 619869,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "deletedWhileLive": {
+          "Buffer": 7,
+          "Program": 2,
+          "Texture": 1
+        },
+        "renderTargetTextures": 0,
+        "renderTargetTexturesDeletedWhileLive": 0,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          2.7901794157935456,
+          0.05000000043743791,
+          4.388040871159262
+        ],
+        "cameraSamples": 1
+      },
+      {
+        "lost": false,
+        "draws": 3,
+        "indexedElements": 619869,
+        "created": {
+          "Texture": 5,
+          "Buffer": 13,
+          "Program": 3
+        },
+        "deleted": {},
+        "deletedWhileLive": {},
+        "renderTargetTextures": 0,
+        "renderTargetTexturesDeletedWhileLive": 0,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "cameraPosition": [
+          -1.1999999967973451,
+          0.8000000141580442,
+          6.400000113264355
+        ],
+        "cameraSamples": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+
+> lume-cinematic-showcase@0.0.0 check:migrations
+> node scripts/check-migrations.mjs
+
+[migrations] 92 sequential files

@@ -1,0 +1,26 @@
+Phase 5c batch local verification
+Application commit: 636819074df1813032d0b8c65c89a794b3c5d08c
+Base staging: 2a9fbe0299
+Scene cut: new 4–8; total current 1–8. Scenes 9–12 explicitly remain 5c-2.
+
+PASS real npm ci --legacy-peer-deps (no node_modules directory symlink), including after the minimal lockfile update.
+Removed apps/web/.next, apps/web/next-env.d.ts and apps/web/tsconfig.tsbuildinfo before final standalone typecheck.
+PASS npm run typecheck:all
+PASS npm run build --workspace=@lume/web (includes unchanged boundary guard)
+PASS node --import tsx --conditions=react-server --test apps/web/checks/*.check.mjs (78/78)
+PASS npm run verify:showcase --workspace=@lume/web (20 cases +16 measured scene transitions)
+PASS npm run build (existing root Vite app)
+PASS npm run check:migrations (92 sequential files)
+PASS git diff --check
+PASS all 16 old contexts lost, every composer framebuffer/attached target texture deleted WHILE context live, no orphan workers/blob URLs, exactly one live new context.
+PASS resize and live reduced-motion release/recreate; all eight mobile reduced-motion scenes allocate zero composer targets.
+PASS actual perspective-scene camera uniforms match targets through every normal transition, no hydration/unhandled browser errors.
+PASS unchanged protected surfaces: environment, boundary checker, media origin validator, loader/GLB policy, Next config, Vite/admin/shared source, root build/deploy, migrations.
+PASS pre-existing lock entries all preserved except added web requirements; only two new scoped package entries.
+PASS client graph/credential-value scan: 113 compiled JS files; zero inherited configured credential-value matches, no admin/db/rag/Leva/r3f-perf modules.
+
+Effects integration cost WITH unused barrel: +173,422 emitted JS /+87,563 per-file gzip. FINAL WITHOUT barrel: +69,036 /+16,955. Removing it saves 104,386 /70,608; N8AO alone was 87,856/66,255. Final N8AO emitted modules: zero, enforced by verifier. This cost stays off all measured lighter routes. No N8AO pass mounted.
+OPEN: direct/hosted R2 rendering needs owner-approved CORS (5e).
+Successful render screenshots use Playwright-only CORS headers with real R2 bytes, never hosted-success evidence.
+Root Vitest/admin build and branch GitHub CI not run/claimed. No SFTP test altered or masked.
+No push, deployment, tenant data/config/CORS mutation or traffic cutover performed during preparation.
