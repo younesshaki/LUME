@@ -25,6 +25,8 @@ import { cameraAt } from "./camera-path";
 import { StoryProvider } from "./StoryBridge";
 import type { StoryStore } from "./story-store";
 import type { ShowcaseScene } from "./types";
+import ShowcaseEffects from "./ShowcaseEffects";
+import { createEffectsOwner } from "./composer-ownership";
 
 extend({
   Group,
@@ -72,6 +74,7 @@ export default function ShowcaseCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const effectsOwner = createEffectsOwner();
     let root: ReturnType<typeof createRoot> | undefined,
       renderer: WebGLRenderer | undefined,
       observer: ResizeObserver | undefined;
@@ -86,6 +89,9 @@ export default function ShowcaseCanvas({
       refresh.current = null;
       canvas.removeEventListener("webglcontextlost", lost);
       root?.unmount();
+      // Release composer targets/passes while this renderer/context still exists.
+      // The owner also closes a late attachment from the separate React root.
+      effectsOwner.close();
       renderer?.dispose();
       if (renderer) renderer.forceContextLoss();
       else
@@ -115,6 +121,7 @@ export default function ShowcaseCanvas({
               <color attach="background" args={["#15171d"]} />
               <OpeningScene model={model} reduced={preference.current} />
               <CameraRig scene={scene} />
+              {!preference.current && <ShowcaseEffects owner={effectsOwner} />}
             </StoryProvider>
           </Suspense>
         </SceneBoundary>,
