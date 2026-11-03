@@ -1,0 +1,11 @@
+{
+  "compiledJsFiles": 114,
+  "inheritedConfiguredCredentialMatches": 0,
+  "forbiddenClientModules": 0,
+  "removedLockEntries": [
+    "apps/web/node_modules/@react-three/postprocessing",
+    "apps/web/node_modules/@react-three/postprocessing/node_modules/maath"
+  ],
+  "allOtherPreexistingLockEntriesPreservedExceptWebRequirements": true,
+  "scope": "Configured inherited credential values only; client graph independently excludes admin/db/rag/Leva/r3f-perf/N8AO/unused wrapper. No secret names/values logged."
+}

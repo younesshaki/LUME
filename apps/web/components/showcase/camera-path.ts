@@ -1,7 +1,7 @@
 "use client";
 import type { ShowcaseScene } from "./types";
 
-/** Vite's three-point crane, then its .08 rad/s orbit mapped to each 25s beat.
+/** Vite's three-point crane, then its .08 rad/s orbit mapped to each authored duration.
  * Pure sampling lets the scroll and reduced-motion paths share exact endpoints.
  * Original cameraConfig has a chapter path, not three distinct scene cameras.
  */
