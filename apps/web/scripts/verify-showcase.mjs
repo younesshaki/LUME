@@ -34,6 +34,11 @@ const sceneTitles = [
 ];
 const sceneCount = sceneTitles.length;
 const sceneDurations = sceneTitles.map((_, i) => (i === 11 ? 20 : 25));
+const audioUrls = [1, 2, 3, 4].map(
+  (track) =>
+    base.href.replace(/\/$/, "") + `/audio/showcase-track-${track}.mp3`,
+);
+const audioPreferenceStorageKey = "lume.showcase-audio.v1:demo";
 const modelUrl =
   base.href.replace(/\/$/, "") +
   "/vehicle%20images/3D%20assets/blackredbull6.optimized.glb";
@@ -122,6 +127,7 @@ function browserAudit() {
     bitmapsClosed: 0,
     audioContexts: 0,
     mediaPlayCalls: 0,
+    mediaElements: [],
     contexts: [],
     blobsCreated: 0,
     blobsRevoked: 0,
@@ -137,9 +143,70 @@ function browserAudit() {
         }
       };
   }
+  const mediaRecords = new WeakMap(),
+    OriginalAudio = window.Audio;
+  window.Audio = function (...args) {
+    const media = new OriginalAudio(...args),
+      listeners = new Map();
+    const item = {
+      id: audit.mediaElements.length + 1,
+      plays: 0,
+      pauses: 0,
+      loads: 0,
+    };
+    for (const key of [
+      "paused",
+      "currentTime",
+      "volume",
+      "readyState",
+      "networkState",
+    ])
+      Object.defineProperty(item, key, {
+        enumerable: true,
+        get: () => media[key],
+      });
+    Object.defineProperty(item, "src", {
+      enumerable: true,
+      get: () => media.getAttribute("src"),
+    });
+    Object.defineProperty(item, "listeners", {
+      enumerable: true,
+      get: () => [...listeners.values()].reduce((n, s) => n + s.size, 0),
+    });
+    const add = media.addEventListener.bind(media),
+      remove = media.removeEventListener.bind(media);
+    media.addEventListener = (name, callback, ...rest) => {
+      if (!listeners.has(name)) listeners.set(name, new Set());
+      listeners.get(name).add(callback);
+      return add(name, callback, ...rest);
+    };
+    media.removeEventListener = (name, callback, ...rest) => {
+      listeners.get(name)?.delete(callback);
+      return remove(name, callback, ...rest);
+    };
+    mediaRecords.set(media, item);
+    audit.mediaElements.push(item);
+    return media;
+  };
+  window.Audio.prototype = OriginalAudio.prototype;
+  Object.setPrototypeOf(window.Audio, OriginalAudio);
+  const pauseMedia = HTMLMediaElement.prototype.pause,
+    loadMedia = HTMLMediaElement.prototype.load;
+  HTMLMediaElement.prototype.pause = function (...args) {
+    const item = mediaRecords.get(this);
+    if (item) item.pauses++;
+    return pauseMedia.apply(this, args);
+  };
+  HTMLMediaElement.prototype.load = function (...args) {
+    const item = mediaRecords.get(this);
+    if (item) item.loads++;
+    return loadMedia.apply(this, args);
+  };
   const mediaPlay = HTMLMediaElement.prototype.play;
   HTMLMediaElement.prototype.play = function (...args) {
     audit.mediaPlayCalls++;
+    const item = mediaRecords.get(this);
+    if (item) item.plays++;
     return mediaPlay.apply(this, args);
   };
   const workers = new WeakSet(),
@@ -340,6 +407,81 @@ function emptyGLB() {
   data.copy(buffer, 20);
   return buffer;
 }
+function audioFixture() {
+  const samples = 16000,
+    wav = Buffer.alloc(44 + samples * 2);
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(wav.length - 8, 4);
+  wav.write("WAVEfmt ", 8);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(8000, 24);
+  wav.writeUInt32LE(16000, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(samples * 2, 40);
+  for (let i = 0; i < samples; i++)
+    wav.writeInt16LE(
+      Math.round(Math.sin((i * 2 * Math.PI * 220) / 8000) * 1500),
+      44 + i * 2,
+    );
+  return wav;
+}
+const tone = audioFixture();
+async function serveAudioFixture(context) {
+  for (const url of audioUrls)
+    await context.route(url, (r) =>
+      r.fulfill({ status: 200, contentType: "audio/wav", body: tone }),
+    );
+}
+async function audioPlaying(page) {
+  await page
+    .getByRole("status")
+    .filter({ hasText: /^Audio on$/ })
+    .waitFor({ timeout: 15000 });
+  await page.waitForFunction(() =>
+    window.__showcaseAudit.mediaElements.some(
+      (m) => m.src && !m.paused && m.currentTime > 0.05,
+    ),
+  );
+}
+function assertMediaReleased(media) {
+  assert.equal(media.src, null);
+  assert.equal(media.paused, true);
+  assert.equal(media.readyState, 0);
+  assert.equal(media.listeners, 0);
+  assert.ok(media.loads >= 1);
+}
+async function framePacing(page) {
+  const times = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const values = [];
+        let first = 0,
+          previous = 0;
+        function tick(time) {
+          if (!first) first = time;
+          if (previous) values.push(time - previous);
+          previous = time;
+          if (time - first >= 1800) resolve(values);
+          else requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }),
+  );
+  const sorted = [...times].sort((a, b) => a - b);
+  return {
+    source:
+      "requestAnimationFrame cadence, software ANGLE/SwiftShader; not physical GPU timing",
+    samples: times.length,
+    medianMs: sorted[Math.floor(sorted.length * 0.5)],
+    p95Ms: sorted[Math.floor(sorted.length * 0.95)],
+    maxMs: sorted.at(-1),
+    over50ms: times.filter((t) => t > 50).length,
+  };
+}
 let browser;
 try {
   for (let i = 0; i < 150; i++) {
@@ -358,7 +500,7 @@ try {
       /(?:^|\/)node_modules\/(?:@react-three\/|three\/|three-stdlib\/|react-reconciler\/|lenis\/|postprocessing\/|n8ao\/)/.test(
         m.resource,
       ) ||
-      /components\/showcase\/(?:Experience|ShowcaseCanvas|OpeningScene|useDisposableGLTF|model-resource|loadModel|disposeModel|ModelBoundary|CameraRig|camera-path|useStoryScroll|StoryBridge|StoryConsent|StoryNarrative|story-store|story-cues|ShowcaseEffects|composer-ownership)\./.test(
+      /components\/showcase\/(?:Experience|ShowcaseCanvas|OpeningScene|useDisposableGLTF|model-resource|loadModel|disposeModel|ModelBoundary|CameraRig|camera-path|useStoryScroll|StoryBridge|StoryConsent|StoryNarrative|story-store|story-cues|ShowcaseEffects|composer-ownership|ShowcaseAudio|audio-controller|audio-resource|audio-preference)\./.test(
         m.resource,
       ),
   );
@@ -450,16 +592,17 @@ try {
         }
       : {}),
   });
-  const context = async (options = {}) => {
+  const context = async (options = {}, consent = "rejected") => {
     const c = await browser.newContext({
       viewport: { width: 1280, height: 900 },
       ...options,
     });
-    await c.addInitScript(() => {
-      // A newly created about:blank document has no storage origin.
-      if (location.protocol === "http:" || location.protocol === "https:")
-        localStorage.setItem("lume-cookie-consent", "rejected");
-    });
+    await c.addInitScript((choice) => {
+      if (location.protocol !== "http:" && location.protocol !== "https:")
+        return;
+      if (choice === null) localStorage.removeItem("lume-cookie-consent");
+      else localStorage.setItem("lume-cookie-consent", choice);
+    }, consent);
     await c.addInitScript(browserAudit);
     c.on("page", (page) => {
       page.on("pageerror", (error) =>
@@ -511,6 +654,11 @@ try {
       route + " loaded the engine",
     );
     assert.ok(!requests.some((u) => u === modelUrl));
+    assert.ok(!requests.some((u) => audioUrls.includes(u)));
+    const mediaAudit = await p.evaluate(() => window.__showcaseAudit);
+    assert.equal(mediaAudit.mediaElements.length, 0);
+    assert.equal(mediaAudit.mediaPlayCalls, 0);
+    assert.equal(mediaAudit.audioContexts, 0);
     report.routes[route] = {
       status: routeResponse.status(),
       jsChunks: chunks,
@@ -701,6 +849,68 @@ try {
   save();
   assert.equal(loaded.workersCreated, loaded.workersTerminated);
   assert.ok(loaded.workersCreated > 0);
+  await serveAudioFixture(c);
+  await c.route("**/api/consent?tenant=demo", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: '{"ok":true}',
+    }),
+  );
+  assert.equal(loaded.mediaElements.length, 0);
+  assert.equal(loaded.mediaPlayCalls, 0);
+  await p.getByRole("button", { name: "Unmute audio", exact: true }).click();
+  assert.equal((await snapshot()).mediaElements.length, 0);
+  await p.getByRole("button", { name: "Audio consent", exact: true }).click();
+  await p
+    .getByRole("button", { name: "Accept analytics", exact: true })
+    .click();
+  await p.waitForTimeout(200);
+  assert.equal((await snapshot()).mediaElements.length, 0);
+  await p
+    .getByRole("button", { name: "Unmute audio", exact: true })
+    .dispatchEvent("click");
+  assert.equal((await snapshot()).mediaElements.length, 0);
+  assert.ok(!requests.some((u) => audioUrls.includes(u)));
+  report.audioGates = {
+    beforeConsent: loaded,
+    consentAlone: await snapshot(),
+    syntheticClick: await snapshot(),
+    fixture:
+      "Test-only deterministic PCM tone responses at missing R2 source keys, not real soundtrack or hosted proof",
+  };
+  report.framePacing = { audioOff: await framePacing(p) };
+  await p.getByRole("button", { name: "Unmute audio", exact: true }).click();
+  await audioPlaying(p);
+  report.audioGates.enabled = await snapshot();
+  report.framePacing.audioOn = await framePacing(p);
+  await p.getByRole("button", { name: "Mute audio", exact: true }).click();
+  const muted = await snapshot();
+  muted.mediaElements.forEach(assertMediaReleased);
+  assert.equal(
+    await p.evaluate(
+      (key) => localStorage.getItem(key),
+      audioPreferenceStorageKey,
+    ),
+    "off",
+  );
+  report.audioGates.muted = muted;
+  await p.getByRole("button", { name: "Unmute audio", exact: true }).click();
+  await audioPlaying(p);
+  await p.getByRole("button", { name: "Audio consent", exact: true }).click();
+  await p.getByRole("button", { name: "Essential only", exact: true }).click();
+  (await snapshot()).mediaElements.forEach(assertMediaReleased);
+  const beforeRegrant = (await snapshot()).mediaPlayCalls;
+  await p.getByRole("button", { name: "Audio consent", exact: true }).click();
+  await p
+    .getByRole("button", { name: "Accept analytics", exact: true })
+    .click();
+  await p.waitForTimeout(100);
+  assert.equal((await snapshot()).mediaPlayCalls, beforeRegrant);
+  report.audioGates.revocation =
+    "all media unloaded synchronously; regrant alone does not resume";
+  await p.getByRole("button", { name: "Unmute audio", exact: true }).click();
+  await audioPlaying(p);
   await p.setViewportSize({ width: 1024, height: 768 });
   await p.waitForTimeout(500);
   await p.setViewportSize({ width: 1280, height: 900 });
@@ -731,6 +941,7 @@ try {
   const still = await snapshot();
   assert.equal(still.contexts.at(-1).draws, paused.contexts.at(-1).draws);
   assert.equal(still.workersCreated, loaded.workersCreated);
+  still.mediaElements.forEach(assertMediaReleased);
   const reducedGL = still.contexts.at(-1);
   assert.equal(reducedGL.lost, false);
   assert.equal(
@@ -753,6 +964,9 @@ try {
     continuousFramesStopAndResume: true,
   });
 
+  assert.ok((await snapshot()).mediaElements.every((m) => m.src === null));
+  await p.getByRole("button", { name: "Unmute audio", exact: true }).click();
+  await audioPlaying(p);
   // Measure scene transitions within this document, NOT just final route exit.
   const sceneSnapshot = async () =>
     p.evaluate(() => ({
@@ -836,6 +1050,14 @@ try {
     [0, 0.2],
   ]) {
     const current = await scrub(index, local);
+    await audioPlaying(p);
+    const mediaState = await p.evaluate(
+      () => window.__showcaseAudit.mediaElements,
+    );
+    mediaState.slice(0, -1).forEach(assertMediaReleased);
+    assert.equal(mediaState.filter((m) => m.src !== null).length, 1);
+    const track = index < 4 ? 1 : index < 8 ? 2 : index < 11 ? 3 : 4;
+    assert.equal(mediaState.at(-1).src, audioUrls[track - 1]);
     const oldContext = current.contexts[previous.contexts.length - 1];
     assert.equal(
       current.contexts.length,
@@ -904,6 +1126,7 @@ try {
       liveContexts: current.contexts.filter((c) => !c.lost).length,
       cameraPosition: current.contexts.at(-1).cameraPosition,
       expectedCamera,
+      media: mediaState,
     });
     await p.screenshot({
       path: path.join(out, `scene-${index + 1}-desktop.jpg`),
@@ -921,6 +1144,7 @@ try {
     window.__showcaseAudit.contexts.every((c) => c.lost),
   );
   const completed = await snapshot();
+  completed.mediaElements.forEach(assertMediaReleased);
   for (const gl of completed.contexts) {
     assert.equal(
       gl.renderTargetTextures,
@@ -943,6 +1167,9 @@ try {
   );
   await ready(p);
   // Consent bridge uses the existing contract; no audio even after acceptance.
+  const consentStartPlayCalls = (await p.evaluate(() => window.__showcaseAudit))
+    .mediaPlayCalls;
+  const consentStartRequests = requests.length;
   const choices = [];
   await c.route("**/api/consent?tenant=demo", async (r) => {
     choices.push(JSON.parse(r.request().postData()));
@@ -959,7 +1186,7 @@ try {
     .getByRole("button", { name: "Accept analytics", exact: true })
     .click();
   await p
-    .getByText("Audio unavailable in this preview · consent accepted", {
+    .getByText("Optional audio · consent accepted", {
       exact: true,
     })
     .waitFor();
@@ -968,7 +1195,7 @@ try {
     .click();
   await p.getByRole("button", { name: "Essential only", exact: true }).click();
   await p
-    .getByText("Audio unavailable in this preview · consent rejected", {
+    .getByText("Optional audio · consent rejected", {
       exact: true,
     })
     .waitFor();
@@ -978,15 +1205,17 @@ try {
   );
   const audioAudit = await p.evaluate(() => window.__showcaseAudit);
   assert.equal(audioAudit.audioContexts, 0);
-  assert.equal(audioAudit.mediaPlayCalls, 0);
+  assert.equal(audioAudit.mediaPlayCalls, consentStartPlayCalls);
   assert.ok(
-    !requests.some((u) => /\.(?:mp3|mp4|ogg|wav|aac|m4a)(?:[?#]|$)/i.test(u)),
+    !requests
+      .slice(consentStartRequests)
+      .some((u) => /\.(?:mp3|mp4|ogg|wav|aac|m4a)(?:[?#]|$)/i.test(u)),
   );
   report.consentBridge = {
     audioContexts: 0,
-    mediaPlayCalls: 0,
+    mediaPlayCallsAdded: audioAudit.mediaPlayCalls - consentStartPlayCalls,
     choices,
-    audio: "stubbed; no playback/media requests",
+    audio: "consent changes alone add no play calls or media requests",
   };
   save();
 
@@ -1075,6 +1304,10 @@ try {
   await p.getByRole("link", { name: "Play", exact: true }).click();
   await ready(p);
   report.cases.push({ case: "landing → intro → experience", passed: true });
+  assert.equal(
+    (await snapshot()).mediaElements.filter((m) => m.src !== null).length,
+    0,
+  );
   report.successfulRender = { pageErrors: errors, consoleErrors };
   assert.deepEqual(errors, []);
   assert.deepEqual(consoleErrors, []);
@@ -1193,6 +1426,262 @@ try {
     viewport: { width: 390, height: 844 },
   });
   await reducedContext.close();
+  // Saved-on is a preference, never a restored autoplay authorization.
+  const audioMobileContext = await context(
+    {
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      reducedMotion: "reduce",
+    },
+    "accepted",
+  );
+  await audioMobileContext.addInitScript((key) => {
+    if (location.protocol.startsWith("http")) localStorage.setItem(key, "on");
+  }, audioPreferenceStorageKey);
+  await serveAudioFixture(audioMobileContext);
+  await audioMobileContext.route(modelUrl, (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "model/gltf-binary",
+      body: bytes,
+      headers: { "Access-Control-Allow-Origin": origin },
+    }),
+  );
+  await audioMobileContext.route("**/api/consent?tenant=demo", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: '{"ok":true}',
+    }),
+  );
+  const am = await audioMobileContext.newPage();
+  await am.goto(origin + "/showcase/experience?tenant=demo");
+  await ready(am);
+  await am.waitForTimeout(250);
+  const savedOnBeforeGesture = await am.evaluate(() => window.__showcaseAudit);
+  assert.equal(savedOnBeforeGesture.mediaElements.length, 0);
+  assert.equal(savedOnBeforeGesture.mediaPlayCalls, 0);
+  await am.getByRole("button", { name: "Unmute audio", exact: true }).tap();
+  await audioPlaying(am);
+  await am.waitForTimeout(500);
+  const demandDraws = await am.evaluate(
+    () => window.__showcaseAudit.contexts.at(-1).draws,
+  );
+  await am.waitForTimeout(350);
+  assert.equal(
+    await am.evaluate(() => window.__showcaseAudit.contexts.at(-1).draws),
+    demandDraws,
+  );
+  const overflow = await am.evaluate(() => ({
+    width: innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    pickerWidth: document.querySelector(".showcase__scene-picker").clientWidth,
+    pickerScrollWidth: document.querySelector(".showcase__scene-picker")
+      .scrollWidth,
+  }));
+  assert.ok(overflow.scrollWidth <= overflow.width + 1);
+  assert.ok(overflow.pickerScrollWidth > overflow.pickerWidth);
+  const size = await am
+    .getByRole("button", { name: "Mute audio", exact: true })
+    .boundingBox();
+  assert.ok(size.height >= 44);
+  await am.screenshot({ path: path.join(out, "audio-mobile-reduced-on.jpg") });
+  await am.getByRole("button", { name: "Mute audio", exact: true }).tap();
+  const mobileMuted = await am.evaluate(() => window.__showcaseAudit);
+  mobileMuted.mediaElements.forEach(assertMediaReleased);
+  assert.equal(
+    await am.evaluate(
+      (key) => localStorage.getItem(key),
+      audioPreferenceStorageKey,
+    ),
+    "off",
+  );
+  // This context's init script sets ON each fresh document deliberately; still no playback on reload.
+  await am.reload({ waitUntil: "domcontentloaded" });
+  await ready(am);
+  await am.waitForTimeout(250);
+  assert.equal(
+    (await am.evaluate(() => window.__showcaseAudit)).mediaElements.length,
+    0,
+  );
+  await am.getByRole("button", { name: "Unmute audio", exact: true }).tap();
+  await audioPlaying(am);
+  await am.getByRole("button", { name: "Product", exact: true }).tap();
+  await ready(am);
+  await audioPlaying(am);
+  const finalMobileMedia = await am.evaluate(
+    () => window.__showcaseAudit.mediaElements,
+  );
+  finalMobileMedia.slice(0, -1).forEach(assertMediaReleased);
+  assert.equal(finalMobileMedia.at(-1).src, audioUrls[3]);
+  await am.screenshot({ path: path.join(out, "audio-mobile-product.jpg") });
+  await am.getByRole("link", { name: "Continue", exact: true }).tap();
+  await am.waitForURL(
+    (u) => u.pathname === "/" && u.searchParams.get("tenant") === "demo",
+  );
+  await am.waitForFunction(
+    () =>
+      !document.querySelector(".showcase__experience") &&
+      window.__showcaseAudit.contexts.every((c) => c.lost) &&
+      window.__showcaseAudit.mediaElements.every(
+        (m) => m.src === null && m.paused && m.readyState === 0,
+      ),
+  );
+  const mobileExit = await am.evaluate(() => window.__showcaseAudit);
+  mobileExit.mediaElements.forEach(assertMediaReleased);
+  assert.equal(mobileExit.audioContexts, 0);
+  report.audioMobile = {
+    savedOnBeforeGesture,
+    muted: mobileMuted,
+    exit: mobileExit,
+    layout: overflow,
+    tapTarget: size,
+  };
+  report.cases.push({
+    case: "mobile reduced-motion audio needs a fresh trusted tap even with saved-on; mute/scene/Continue cleanup",
+    passed: true,
+  });
+  await audioMobileContext.close();
+
+  // Persisted OFF and ON on ordinary reload: neither is an activation token.
+  const persistedContext = await context(
+    { reducedMotion: "reduce" },
+    "accepted",
+  );
+  await serveAudioFixture(persistedContext);
+  await persistedContext.route(modelUrl, (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "model/gltf-binary",
+      body: bytes,
+      headers: { "Access-Control-Allow-Origin": origin },
+    }),
+  );
+  const persisted = await persistedContext.newPage();
+  await persisted.goto(origin + "/showcase/experience?tenant=demo");
+  await ready(persisted);
+  await persisted
+    .getByRole("button", { name: "Unmute audio", exact: true })
+    .click();
+  await audioPlaying(persisted);
+  await persisted
+    .getByRole("button", { name: "Mute audio", exact: true })
+    .click();
+  await persisted.reload({ waitUntil: "domcontentloaded" });
+  await ready(persisted);
+  await persisted.waitForTimeout(200);
+  assert.equal(
+    await persisted.evaluate(
+      (key) => localStorage.getItem(key),
+      audioPreferenceStorageKey,
+    ),
+    "off",
+  );
+  assert.equal(
+    (await persisted.evaluate(() => window.__showcaseAudit)).mediaElements
+      .length,
+    0,
+  );
+  await persisted
+    .getByRole("button", { name: "Unmute audio", exact: true })
+    .click();
+  await audioPlaying(persisted);
+  await persisted.reload({ waitUntil: "domcontentloaded" });
+  await ready(persisted);
+  await persisted.waitForTimeout(200);
+  assert.equal(
+    await persisted.evaluate(
+      (key) => localStorage.getItem(key),
+      audioPreferenceStorageKey,
+    ),
+    "on",
+  );
+  assert.equal(
+    (await persisted.evaluate(() => window.__showcaseAudit)).mediaElements
+      .length,
+    0,
+  );
+  report.audioPersistence = {
+    savedOn: await persisted.evaluate(
+      (key) => ({
+        value: localStorage.getItem(key),
+        audit: window.__showcaseAudit,
+      }),
+      audioPreferenceStorageKey,
+    ),
+    savedOffVerified: true,
+  };
+  report.cases.push({
+    case: "persisted mute/unmute choices survive reload but neither auto-plays",
+    passed: true,
+  });
+  await persistedContext.close();
+
+  // Actual provider/source failure, no test tone: expected missing-assets gate.
+  const missingAudioContext = await context(
+    { reducedMotion: "reduce" },
+    "accepted",
+  );
+  await missingAudioContext.route(modelUrl, (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "model/gltf-binary",
+      body: bytes,
+      headers: { "Access-Control-Allow-Origin": origin },
+    }),
+  );
+  const missingAudio = await missingAudioContext.newPage();
+  await missingAudio.goto(origin + "/showcase/experience?tenant=demo");
+  await ready(missingAudio);
+  const missingRequests = [],
+    missingResponses = [],
+    missingFailures = [];
+  missingAudio.on("request", (r) => {
+    if (r.url() === audioUrls[0])
+      missingRequests.push({ url: r.url(), type: r.resourceType() });
+  });
+  missingAudio.on("response", (r) => {
+    if (r.url() === audioUrls[0])
+      missingResponses.push({ url: r.url(), status: r.status() });
+  });
+  missingAudio.on("requestfailed", (r) => {
+    if (r.url() === audioUrls[0])
+      missingFailures.push({ url: r.url(), error: r.failure()?.errorText });
+  });
+  await missingAudio
+    .getByRole("button", { name: "Unmute audio", exact: true })
+    .click();
+  await missingAudio
+    .getByRole("status")
+    .filter({ hasText: "Audio could not load." })
+    .waitFor();
+  const failedAudio = await missingAudio.evaluate(() => window.__showcaseAudit);
+  failedAudio.mediaElements.forEach(assertMediaReleased);
+  const realProbe = await fetch(audioUrls[0], {
+    method: "HEAD",
+    signal: AbortSignal.timeout(30000),
+  });
+  assert.equal(realProbe.status, 404);
+  assert.ok(missingRequests.length > 0);
+  assert.equal(failedAudio.audioContexts, 0);
+  report.realAudio = {
+    url: audioUrls[0],
+    sourceHttpStatus: realProbe.status,
+    browserRequests: missingRequests,
+    browserResponses: missingResponses,
+    browserFailures: missingFailures,
+    audit: failedAudio,
+    proof:
+      "Real source fails 404; no soundtrack substitution in app. Test tone cases prove lifecycle only.",
+  };
+  report.cases.push({
+    case: "actual R2 soundtrack 404 is visible and media is unloaded",
+    passed: true,
+  });
+  report.openGates.push(
+    "All four original soundtrack keys are missing (404). Real/hosted soundtrack proof requires owner-provided assets; plain HTML audio needs no CORS, while model-render CORS remains a separate 5e gate.",
+  );
+  await missingAudioContext.close();
   const unsupportedContext = await context();
   await unsupportedContext.addInitScript(() =>
     Object.defineProperty(window, "WebAssembly", {
@@ -1411,7 +1900,7 @@ try {
   assert.deepEqual(report.unhandledErrors, []);
   assert.ok(!/ReferenceError: (window|document)/.test(serverLogs));
   report.openGates.push(
-    "Physical iOS/Android GPU/performance, source-video/product-choice overlay parity and audio remain 5d/5e work; all 12 numbered scenes are present",
+    "Physical iOS/Android GPU/performance, source-video/product-choice overlay parity, real soundtrack assets and hosted/device audio proof remain 5e work; all 12 scenes and gated audio logic are present",
   );
   save();
   console.log(

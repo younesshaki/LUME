@@ -1,5 +1,5 @@
 "use client";
-import type { SceneId } from "./types";
+import type { SceneId, AudioState } from "./types";
 
 export type StorySnapshot = {
   sceneId: SceneId;
@@ -7,8 +7,7 @@ export type StorySnapshot = {
   sceneProgress: number;
   reduced: boolean;
   consent: "accepted" | "rejected" | null;
-  // No AudioContext, media element, fetch or playback until 5d.
-  audio: { status: "stubbed"; enabled: false };
+  audio: AudioState;
 };
 export function createStoryStore(first: SceneId) {
   let snapshot: StorySnapshot = {
@@ -17,7 +16,13 @@ export function createStoryStore(first: SceneId) {
     sceneProgress: 0,
     reduced: true,
     consent: null,
-    audio: { status: "stubbed", enabled: false },
+    audio: {
+      status: "off",
+      enabled: false,
+      preference: "off",
+      reason: "gesture",
+      track: null,
+    },
   };
   const listeners = new Set<() => void>();
   return {
@@ -34,6 +39,16 @@ export function createStoryStore(first: SceneId) {
       );
       if (!changed) return;
       snapshot = { ...snapshot, ...next };
+      listeners.forEach((listener) => listener());
+    },
+    updateAudio(audio: AudioState) {
+      if (
+        Object.entries(audio).every(
+          ([key, value]) => snapshot.audio[key as keyof AudioState] === value,
+        )
+      )
+        return;
+      snapshot = { ...snapshot, audio };
       listeners.forEach((listener) => listener());
     },
   };

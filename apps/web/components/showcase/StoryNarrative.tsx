@@ -32,6 +32,7 @@ export default function StoryNarrative({
       {scene.id === "showcase-scene-12" && (
         <p>
           <Link
+            className="showcase__button showcase__continue"
             href={`/?tenant=${encodeURIComponent(tenant)}`}
             prefetch={false}
           >
@@ -40,8 +41,7 @@ export default function StoryNarrative({
         </p>
       )}
       <span className="showcase__bridge-status">
-        Audio unavailable in this preview · consent{" "}
-        {state.consent ?? "undecided"}
+        Optional audio · consent {state.consent ?? "undecided"}
       </span>
     </div>
   );

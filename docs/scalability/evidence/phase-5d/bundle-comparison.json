@@ -1,0 +1,67 @@
+{
+  "baselineMerged5c2": {
+    "bytes": 822679,
+    "gzipBytes": 220384,
+    "chunks": [
+      {
+        "name": "static/chunks/4570.67a58de0aa69f362.js",
+        "bytes": 18525,
+        "gzipBytes": 7198
+      },
+      {
+        "name": "static/chunks/9d78c252.eec5dc9b316a97e1.js",
+        "bytes": 517593,
+        "gzipBytes": 127972
+      },
+      {
+        "name": "static/chunks/b0045e08.a242a15e58e924f1.js",
+        "bytes": 66151,
+        "gzipBytes": 16071
+      },
+      {
+        "name": "static/chunks/1329d575.685714fd1c99a513.js",
+        "bytes": 109698,
+        "gzipBytes": 33957
+      },
+      {
+        "name": "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "bytes": 110712,
+        "gzipBytes": 35186
+      }
+    ]
+  },
+  "phase5d": {
+    "bytes": 828020,
+    "gzipBytes": 222097,
+    "chunks": [
+      {
+        "name": "static/chunks/9d78c252.eec5dc9b316a97e1.js",
+        "bytes": 517593,
+        "gzipBytes": 127972
+      },
+      {
+        "name": "static/chunks/7655.6fabb6cec9e21f6a.js",
+        "bytes": 110712,
+        "gzipBytes": 35186
+      },
+      {
+        "name": "static/chunks/b0045e08.a242a15e58e924f1.js",
+        "bytes": 66151,
+        "gzipBytes": 16071
+      },
+      {
+        "name": "static/chunks/1329d575.685714fd1c99a513.js",
+        "bytes": 109698,
+        "gzipBytes": 33957
+      },
+      {
+        "name": "static/chunks/7097.0c5512059b99bd8b.js",
+        "bytes": 23866,
+        "gzipBytes": 8911
+      }
+    ]
+  },
+  "addedBytes": 5341,
+  "addedGzipBytes": 1713,
+  "method": "Actual emitted minified files and per-file gzip sums. Delta includes native audio controller/UI and polish/chunk repartitioning, no new runtime libraries. Not CDN transfer or physical performance."
+}

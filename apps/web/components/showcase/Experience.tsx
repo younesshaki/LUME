@@ -16,6 +16,7 @@ import { StoryProvider } from "./StoryBridge";
 import { useStoryScroll } from "./useStoryScroll";
 import StoryNarrative from "./StoryNarrative";
 import StoryConsent from "./StoryConsent";
+import ShowcaseAudio from "./ShowcaseAudio";
 function Viewport({
   resource,
   reduced,
@@ -85,9 +86,20 @@ export default function Experience({ assets, tenant }: ShowcaseProps) {
   );
   const scene = assets.scenes.find((s) => s.id === sceneId)!;
   const element = useRef<HTMLElement>(null);
+  const picker = useRef<HTMLElement>(null);
   const [reduced, setReduced] = useState(true);
   const [wasm, setWasm] = useState<boolean | null>(null);
   const select = useStoryScroll(element, assets.scenes, store, reduced);
+  useEffect(() => {
+    const nav = picker.current;
+    const selected = nav?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (nav && selected && nav.scrollWidth > nav.clientWidth) {
+      const item = selected.getBoundingClientRect(),
+        box = nav.getBoundingClientRect();
+      // Only horizontal movement; never interfere with Lenis/browser restoration.
+      nav.scrollLeft += item.left - box.left - (box.width - item.width) / 2;
+    }
+  }, [scene.id]);
   useEffect(() => {
     const query = matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReduced(query.matches);
@@ -109,7 +121,11 @@ export default function Experience({ assets, tenant }: ShowcaseProps) {
             A cinematic product study.
             {reduced ? " Reduced motion is enabled." : ""}
           </p>
-          <nav className="showcase__scene-picker" aria-label="Story scenes">
+          <nav
+            ref={picker}
+            className="showcase__scene-picker"
+            aria-label="Story scenes"
+          >
             {assets.scenes.map((s, i) => (
               <button
                 type="button"
@@ -121,6 +137,7 @@ export default function Experience({ assets, tenant }: ShowcaseProps) {
               </button>
             ))}
           </nav>
+          <ShowcaseAudio store={store} scenes={assets.scenes} tenant={tenant} />
           {!scene.modelUrl ? (
             <div className="showcase__state" role="status">
               <h2>No 3D view is available</h2>

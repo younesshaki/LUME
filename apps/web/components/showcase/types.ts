@@ -30,8 +30,18 @@ export type ShowcaseScene = {
   label?: string;
   duration: number;
   modelUrl: string | null;
+  audio: { track: AudioTrack; url: string | null };
   lines: StoryLine[];
   camera: { kind: "crane" | "orbit"; orbitStart: number };
+};
+export type AudioTrack = 1 | 2 | 3 | 4;
+export type AudioState = {
+  status: "off" | "starting" | "playing" | "blocked" | "unavailable";
+  enabled: boolean;
+  preference: "on" | "off";
+  reason:
+    "gesture" | "consent" | "reduced-motion" | "hidden" | "missing" | null;
+  track: AudioTrack | null;
 };
 export type ShowcaseAssets = { scenes: ShowcaseScene[] };
 export type ShowcaseEntry = { part: 6; chapter: 0 };
