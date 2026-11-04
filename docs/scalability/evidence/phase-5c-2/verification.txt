@@ -1,0 +1,29 @@
+Phase 5c-2 local verification
+Application commit: 9ac4e45b8ecc804846e81816762c9e47b8702e91
+Base staging: 65944fc713
+Source: exactly 12 numbered content scenes; new 9–12. Josh confirmed sequential scene 12 + Continue → tenant Home, separate unnumbered choice overlay/timing deferred to parity.
+
+PASS real npm ci --legacy-peer-deps (no node_modules directory symlink), repeated after removing web's unused wrapper and its two scoped lock entries.
+Removed apps/web/.next, apps/web/next-env.d.ts and apps/web/tsconfig.tsbuildinfo before final standalone typecheck.
+PASS npm run typecheck:all
+PASS npm run build --workspace=@lume/web (unchanged boundary guard)
+PASS node --import tsx --conditions=react-server --test apps/web/checks/*.check.mjs (79/79)
+PASS npm run verify:showcase --workspace=@lume/web (21 named cases +24 measured transitions)
+PASS existing Vite npm run build (no root source/build changes)
+PASS npm run check:migrations (92 sequential files, no migrations)
+PASS git diff --check
+PASS all 24 old contexts lost, every allocated composer framebuffer/attached target texture deleted while context live, no orphan workers/blob URLs, exactly one live new context.
+PASS all twelve source records, continuous camera joins, final 20-second/1.6-radian arc, source-blank title preserved with accessible label.
+PASS scene 12 Continue → tenant Home; all model/composer contexts close and targets release; Back restores scene 12.
+PASS resize, live reduced-motion release/recreate and all twelve mobile reduced-motion views with zero composer allocations.
+PASS all twelve noscript headings and Continue link; one h1/noindex retained.
+PASS actual scene camera uniforms through all scenes; zero hydration/unhandled browser errors.
+PASS untouched firewall/boundary/media origin policy/Next config/engine/composer/loader and root Vite/admin/shared/build/deploy/migrations.
+PASS lock entries unchanged except web requirement and two removed scoped wrapper entries. Root wrapper declaration preserved.
+PASS 114 compiled JS files, no configured inherited credential matches; no client admin/db/rag/Leva/r3f-perf/N8AO/React-wrapper modules.
+PASS heavy chunks only on /showcase/experience; five chunks total 822,679 JS /220,384 gzip, +200/+78 vs merged eight-scene 5c.
+
+OPEN: hosted/direct R2 model-render proof needs owner-approved CORS in 5e. Successful screenshots use Playwright-only headers and exact real R2 bytes.
+OPEN: unnumbered product-choice/alternate overlay, source video/art/timing parity, physical devices and audio remain later work.
+Root Vitest/admin build and branch GitHub CI not run/claimed. No SFTP test altered/masked.
+No push, deployment, remote tenant/config/CORS mutation or traffic cutover occurred during preparation.

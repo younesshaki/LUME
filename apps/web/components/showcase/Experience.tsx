@@ -117,7 +117,7 @@ export default function Experience({ assets, tenant }: ShowcaseProps) {
                 aria-current={s.id === scene.id ? "step" : undefined}
                 onClick={() => select(i)}
               >
-                {s.title}
+                {s.label ?? s.title}
               </button>
             ))}
           </nav>
@@ -144,7 +144,7 @@ export default function Experience({ assets, tenant }: ShowcaseProps) {
               store={store}
             />
           )}
-          <StoryNarrative scene={scene} />
+          <StoryNarrative scene={scene} tenant={tenant} />
         </div>
       </section>
       <StoryConsent tenant={tenant} store={store} />

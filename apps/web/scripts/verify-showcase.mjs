@@ -27,8 +27,13 @@ const sceneTitles = [
   "Trust",
   "Benefits",
   "Differentiation",
+  "Momentum",
+  "Statement",
+  "Scene 11",
+  "Product",
 ];
 const sceneCount = sceneTitles.length;
+const sceneDurations = sceneTitles.map((_, i) => (i === 11 ? 20 : 25));
 const modelUrl =
   base.href.replace(/\/$/, "") +
   "/vehicle%20images/3D%20assets/blackredbull6.optimized.glb";
@@ -375,6 +380,13 @@ try {
     0,
     "unused N8AO must not return through a barrel import",
   );
+  assert.equal(
+    receipt.modules.filter((m) =>
+      /(?:^|\/)node_modules\/@react-three\/postprocessing\//.test(m.resource),
+    ).length,
+    0,
+    "removed unused React postprocessing wrapper must not enter the client bundle",
+  );
   report.bundle = {
     source: receipt.source,
     heavyChunks: heavy.map((c) => byName.get(c)),
@@ -382,6 +394,7 @@ try {
     emittedLevaModules: 0,
     emittedPerfModules: 0,
     emittedN8AOModules: 0,
+    emittedReactPostprocessingModules: 0,
   };
   const remote = await fetch(modelUrl, {
     headers: { Origin: origin },
@@ -859,7 +872,8 @@ try {
     assert.equal(current.blobsCreated, current.blobsRevoked);
     assert.ok(current.contexts.slice(0, -1).every((c) => c.lost));
     assert.equal(current.contexts.at(-1).lost, false);
-    const angle = Math.PI / 2 + (index - 1) * 2 + local * 2;
+    const angle =
+      Math.PI / 2 + (index - 1) * 2 + local * sceneDurations[index] * 0.08;
     const expectedCamera =
       index > 0
         ? [Math.cos(angle) * 5.2, 0.05, Math.sin(angle) * 5.2]
@@ -897,6 +911,37 @@ try {
     previous = current;
     save();
   }
+  // The closing scene is a full owned view; its real CTA must exit through Next.
+  await scrub(sceneCount - 1, 0.65);
+  await p.getByRole("link", { name: "Continue", exact: true }).click();
+  await p.waitForURL(
+    (u) => u.pathname === "/" && u.searchParams.get("tenant") === "demo",
+  );
+  await p.waitForFunction(() =>
+    window.__showcaseAudit.contexts.every((c) => c.lost),
+  );
+  const completed = await snapshot();
+  for (const gl of completed.contexts) {
+    assert.equal(
+      gl.renderTargetTextures,
+      gl.renderTargetTexturesDeletedWhileLive,
+    );
+    assert.equal(gl.created.Framebuffer, gl.deletedWhileLive.Framebuffer);
+  }
+  assert.equal(completed.workersCreated, completed.workersTerminated);
+  report.completion = { tenant: "demo", pathname: "/", audit: completed };
+  report.cases.push({
+    case: "scene 12 Continue → tenant home releases model and composer",
+    passed: true,
+  });
+  await p.goBack();
+  await ready(p);
+  await p.waitForFunction(
+    () =>
+      document.querySelector(".showcase__experience")?.dataset.activeScene ===
+      "showcase-scene-12",
+  );
+  await ready(p);
   // Consent bridge uses the existing contract; no audio even after acceptance.
   const choices = [];
   await c.route("**/api/consent?tenant=demo", async (r) => {
@@ -1338,6 +1383,19 @@ try {
       .getByRole("link", { name: "Explore products", exact: true })
       .waitFor();
     assert.equal(await nojs.locator("canvas").count(), 0);
+    if (route === "/showcase/experience") {
+      await nojs.getByRole("link", { name: "Continue", exact: true }).waitFor();
+      assert.equal(
+        await nojs
+          .getByRole("link", { name: "Continue", exact: true })
+          .getAttribute("href"),
+        "/?tenant=demo",
+      );
+      assert.equal(
+        await nojs.locator("noscript section section h2").count(),
+        sceneCount,
+      );
+    }
   }
   await nojs.screenshot({ path: path.join(out, "nojs-experience.jpg") });
   report.cases.push({
@@ -1353,7 +1411,7 @@ try {
   assert.deepEqual(report.unhandledErrors, []);
   assert.ok(!/ReferenceError: (window|document)/.test(serverLogs));
   report.openGates.push(
-    "Physical iOS/Android GPU/performance, scenes 9–12 (5c-2), video parity and audio remain outside this 5c batch",
+    "Physical iOS/Android GPU/performance, source-video/product-choice overlay parity and audio remain 5d/5e work; all 12 numbered scenes are present",
   );
   save();
   console.log(

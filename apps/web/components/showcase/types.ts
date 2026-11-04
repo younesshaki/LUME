@@ -7,7 +7,11 @@ export type SceneId =
   | "showcase-scene-5"
   | "showcase-scene-6"
   | "showcase-scene-7"
-  | "showcase-scene-8";
+  | "showcase-scene-8"
+  | "showcase-scene-9"
+  | "showcase-scene-10"
+  | "showcase-scene-11"
+  | "showcase-scene-12";
 export type StoryLine = {
   text: string;
   blankBeforeMs?: number;
@@ -22,6 +26,8 @@ export type StoryLine = {
 export type ShowcaseScene = {
   id: SceneId;
   title: string;
+  /** Accessible navigation label when the source intentionally has no title. */
+  label?: string;
   duration: number;
   modelUrl: string | null;
   lines: StoryLine[];
