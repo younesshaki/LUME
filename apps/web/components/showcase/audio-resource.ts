@@ -89,7 +89,7 @@ export function createAudioResource(
             : 1;
         media.volume =
           initialVolume +
-          (BASE_AUDIO_VOLUME - initialVolume) * (1 - (1 - progress) ** 2);
+          (BASE_AUDIO_VOLUME - initialVolume) * (1 - (1 - progress) ** 3);
         if (progress < 1) frame = clock.frame(fade);
       };
       frame = clock.frame(fade);

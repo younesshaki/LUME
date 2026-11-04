@@ -275,7 +275,7 @@ test("nominal five-second fade is bounded and teardown cancels its callback", as
   let [id, cb] = t.frames.entries().next().value;
   t.frames.delete(id);
   cb(2500);
-  assert.equal(t.media[0].volume, BASE_AUDIO_VOLUME * 0.75);
+  assert.equal(t.media[0].volume, BASE_AUDIO_VOLUME * 0.875);
   [id, cb] = t.frames.entries().next().value;
   t.frames.delete(id);
   cb(5000);
