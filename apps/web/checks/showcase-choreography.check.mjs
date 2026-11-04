@@ -65,7 +65,7 @@ test("scene intervals are reversible and handle endpoints, skipped beats and inv
   assert.deepEqual(sceneAt(-4, 3), sceneAt(0, 3));
   assert.deepEqual(sceneAt(4, 3), sceneAt(1, 3));
 });
-test("tenant-local bridge shares state only with subscribers of that instance; audio always stubbed", () => {
+test("tenant-local bridge shares state only with subscribers of that instance; consent alone never enables audio", () => {
   const a = createStoryStore(scenes[0].id),
     b = createStoryStore(scenes[0].id);
   let calls = 0;
@@ -81,10 +81,8 @@ test("tenant-local bridge shares state only with subscribers of that instance; a
   assert.equal(b.getSnapshot().progress, 0);
   for (const consent of ["accepted", "rejected", null]) {
     a.update({ consent });
-    assert.deepEqual(a.getSnapshot().audio, {
-      status: "stubbed",
-      enabled: false,
-    });
+    assert.equal(a.getSnapshot().audio.enabled, false);
+    assert.equal(a.getSnapshot().audio.status, "off");
     assert.equal(b.getSnapshot().consent, null);
   }
   const before = calls;
