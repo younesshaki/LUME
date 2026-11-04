@@ -113,18 +113,52 @@ body.standardMode:has(.showcase) {
 .showcase__bridge-status {
   font-size: 0.75rem;
 }
+.showcase__audio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+.showcase__audio button {
+  min-height: 44px;
+  padding: 0.45rem 0.75rem;
+}
+.showcase__audio [role="status"] {
+  padding: 0;
+  font-size: 0.8rem;
+}
 .showcase__scene-picker {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
 }
 .showcase__scene-picker button {
+  min-height: 44px;
   background: transparent;
   color: #ebc995;
   border: 1px solid currentColor;
   border-radius: 0.4rem;
   padding: 0.4rem 0.8rem;
   cursor: pointer;
+}
+@media (max-width: 600px) {
+  .showcase__scene-picker {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .showcase__scene-picker button {
+    flex-shrink: 0;
+  }
+  .showcase__audio [role="status"] {
+    flex-basis: 100%;
+  }
+  .showcase__header nav {
+    left: 0.75rem;
+    right: 0.75rem;
+    justify-content: space-around;
+  }
 }
 .showcase__scene-picker button[aria-current] {
   background: #ebc995;
@@ -163,4 +197,11 @@ body.standardMode:has(.showcase) {
   .showcase--experience .showcase__reserved {
     height: 100svh;
   }
+}
+
+.showcase__continue {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
 }
