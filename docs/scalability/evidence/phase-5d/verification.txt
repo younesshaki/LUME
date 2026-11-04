@@ -1,0 +1,33 @@
+Phase 5d local verification
+Application commit: 688178a56e6aa3b2d1762f229275214dedc76372
+Base staging: 4c41f3b1bc
+Scope: gated native HTML audio + polish only. Josh approved original missing source keys with labelled test-only fixture proof.
+
+PASS real npm ci --legacy-peer-deps; no node_modules directory symlink. No new deps or package/lock changes.
+Removed apps/web/.next, apps/web/next-env.d.ts and apps/web/tsconfig.tsbuildinfo before final standalone typecheck.
+PASS npm run typecheck:all
+PASS npm run build --workspace=@lume/web (unchanged boundary guard)
+PASS node --import tsx --conditions=react-server --test apps/web/checks/*.check.mjs (92/92)
+PASS npm run verify:showcase --workspace=@lume/web (24 browser cases +24 scene swaps)
+PASS existing Vite npm run build (root source/build unchanged)
+PASS npm run check:migrations (92 sequential files)
+PASS git diff --check
+PASS no media allocation/play/network before consent+explicit trusted gesture. Consent alone and synthetic click create zero media.
+PASS mute/unmute choice persists, mount authorization does not; saved-on reload silent. Reduced-motion default off, explicit tap can listen without continuous GL frames.
+PASS every previous native media element paused/src removed/load reset/readyState 0/listeners 0 on all 24 swaps; one active owned media, no overlap.
+PASS fade uses source five-second cubic power2.out curve; nominal volume .28; cleanup cancels callbacks and late promise/error state.
+PASS no Web Audio graph allocated (AudioContext/source nodes zero); plain HTML media needs no R2 CORS.
+PASS consent revoke/motion/visibility/remote-off stop/reset; no auto-resume. Source error becomes visible UI and unloads media.
+PASS mobile 390x844 width contained; horizontal picker; controls 44px; touch enable/mute/Product/Continue teardown.
+PASS model/composer/GPU target/worker cleanup remains green on all 24 swaps, resize and live reduced-motion.
+PASS heavier JS/audio only on experience; light fresh routes have zero engine/media/play/AudioContext allocations.
+PASS Leva/r3f-perf/N8AO/unused-wrapper/admin/db/rag client modules zero; scoped inherited credential-value scan zero matches across 114 JS files.
+PASS unchanged env firewall/boundary/Next/engine/loader/root Vite/admin/shared/package/lock/origin/migrations. Media resolver extends outputs but preserves all origin validation conditions.
+
+Native playback positives are TEST-ONLY 2s PCM tone responses at missing original MP3 keys, not real soundtrack or hosted proof. All four source keys are HTTP 404. Actual browser reports ERR_BLOCKED_BY_ORB for missing source and releases it. No tone fallback shipped.
+Model positives use exact real R2 GLB with Playwright-only CORS headers. Direct/hosted model rendering still CORS blocked (5e).
+Frame cadence: software SwiftShader, short sequential RAF samples only. Audio off median 100.0ms/p95 200.0ms; on median 83.4ms/p95 266.6ms. Not a physical GPU/audio performance approval or causal comparison.
+Heavy async island: 828,020 JS /222,097 gzip, +5,341/+1,713 vs merged 5c-2.
+OPEN: actual/hosted soundtracks need real assets; model CORS + unmodified hosted/device/codec/audible-output/performance proof stays 5e.
+Root Vitest/admin build and branch GitHub CI not run/claimed. No SFTP test altered/masked.
+No push, deployment, remote tenant/config/CORS mutation or traffic cutover performed during preparation.

@@ -1,0 +1,26 @@
+{
+  "compiledJsFiles": 114,
+  "inheritedConfiguredCredentialValueMatches": 0,
+  "forbiddenClientModules": 0,
+  "protectedSurfacesUnchanged": [
+    "apps/web/config/environment.ts",
+    "apps/web/scripts/check-boundaries.mjs",
+    "apps/web/next.config.mjs",
+    "apps/web/components/showcase/ShowcaseCanvas.tsx",
+    "apps/web/components/showcase/ShowcaseEffects.tsx",
+    "apps/web/components/showcase/composer-ownership.ts",
+    "apps/web/components/showcase/loadModel.ts",
+    "apps/web/components/showcase/model-resource.ts",
+    "apps/web/components/showcase/model-policy.ts",
+    "src",
+    "apps/admin",
+    "packages",
+    "package.json",
+    "package-lock.json",
+    "apps/web/package.json",
+    "vite.config.ts",
+    "vercel.json",
+    "supabase/migrations"
+  ],
+  "scope": "Inherited configured credential values only; graph independently excludes admin/db/rag/Leva/perf/N8AO/removed wrapper. No secret names/values logged."
+}
