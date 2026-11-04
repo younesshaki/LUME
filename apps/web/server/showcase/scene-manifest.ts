@@ -6,7 +6,7 @@ import type { ShowcaseScene } from "../../components/showcase/types";
  * All twelve intentionally use the ONE verified catalog model, not the missing
  * hero-product/material-study/product-detail placeholders. Each parse is owned.
  */
-export const sceneManifest: Omit<ShowcaseScene, "modelUrl">[] = [
+export const sceneManifest: Omit<ShowcaseScene, "modelUrl" | "audio">[] = [
   {
     id: "showcase-scene-1",
     title: "Showcase",
